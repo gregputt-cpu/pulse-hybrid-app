@@ -28,5 +28,13 @@ test_*.html
 .cache/
 .config/
 .local/
+.npm/
+.gitconfig
 .bash*
 .profile
+*.zip
+zidq*
+server.py
+garmin_sync_service.py
+mnd_sync_service.py
+benefits_engine.py

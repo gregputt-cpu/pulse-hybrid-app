@@ -33,11 +33,5 @@
         }
       ]
     }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://pulse-backend.up.railway.app/api/:path*"
-    }
   ]
 }
