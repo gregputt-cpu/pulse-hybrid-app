@@ -1,8 +1,11 @@
 {
   "framework": null,
+  "buildCommand": "",
   "installCommand": "",
-  "buildCommand": "node build.js",
-  "outputDirectory": "dist",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/manifest.json",
