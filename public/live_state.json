@@ -1,5 +1,5 @@
 {
-  "last_synced": "2026-11-09T10:31:51.071944",
+  "last_synced": "2026-11-09T20:33:06.536903",
   "athlete": {
     "name": "Greg Putt",
     "age": 45,
@@ -20,11 +20,30 @@
     "sleep_score": 69,
     "hrv_status": "balanced",
     "hrv_weekly_avg": 48,
-    "body_battery": 84,
+    "body_battery": 36,
     "resting_hr": 48,
-    "active_calories": 419,
-    "steps": 105,
+    "active_calories": 624,
+    "steps": 9191,
     "recent_activities": [
+      {
+        "id": 25020969123,
+        "name": "Walking",
+        "sub_title": "Runnymede Walking",
+        "date": "2026-11-09 15:27:38",
+        "duration_min": 42.7,
+        "calories": 205,
+        "avg_hr": 75,
+        "max_hr": 100,
+        "aerobic_te": 0.30000001192092896,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+          "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
+        }
+      },
       {
         "id": 25016923422,
         "name": "Indoor_cardio",
@@ -217,18 +236,37 @@
       }
     ],
     "mnd_logged": {
-      "calories": 824,
-      "protein_g": 49,
-      "carbs_g": 115,
-      "fat_g": 23,
-      "fiber_g": 19,
-      "sodium_mg": 275,
+      "calories": 2392,
+      "protein_g": 233,
+      "carbs_g": 231,
+      "fat_g": 67,
+      "fiber_g": 33,
+      "sodium_mg": 1911,
       "water_l": 0.0,
-      "last_pulled": "2026-11-09T10:31:53.484410",
+      "last_pulled": "2026-11-09T20:34:08.721814",
       "source": "live_mynetdiary_cloud"
     },
     "sleep_duration": "7h 21m",
     "today_activities": [
+      {
+        "id": 25020969123,
+        "name": "Walking",
+        "sub_title": "Runnymede Walking",
+        "date": "2026-11-09 15:27:38",
+        "duration_min": 42.7,
+        "calories": 205,
+        "avg_hr": 75,
+        "max_hr": 100,
+        "aerobic_te": 0.30000001192092896,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+          "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
+        }
+      },
       {
         "id": 25016923422,
         "name": "Indoor_cardio",
@@ -263,19 +301,19 @@
     "fat_to_lose_kg": 1.98,
     "ema_7day_weight": 98.77,
     "ema_7day_body_fat": 17.3,
-    "last_synced": "2026-11-09 10:31:53"
+    "last_synced": "2026-11-09 20:34:08"
   },
   "nutrition": {
     "bmr": 2149,
     "pt_neat": 292,
     "tdee": 3091,
-    "calorie_target": 2511,
+    "calorie_target": 2716,
     "deficit": 350,
     "protein_target_g": 200,
     "carbs_target_g": 251,
     "fat_target_g": 80,
-    "calories_remaining": 1687,
-    "protein_remaining": 151,
+    "calories_remaining": 324,
+    "protein_remaining": 0,
     "remaining_calories": 845,
     "remaining_protein_g": 0,
     "protein_achieved_pct": 111.5
@@ -383,12 +421,48 @@
     },
     "dinner": {
       "name": "Dinner",
-      "time": "Pending",
-      "calories": 0,
-      "protein": 0,
-      "carbs": 0,
-      "fat": 0,
-      "items": []
+      "time": "15:59",
+      "calories": 1568,
+      "protein": 184,
+      "carbs": 116,
+      "fat": 44,
+      "items": [
+        {
+          "name": "British Chicken Diced Breast",
+          "cals": 263,
+          "p": 54,
+          "c": 0,
+          "f": 5
+        },
+        {
+          "name": "Egg Noodles Soft & Tender",
+          "cals": 368,
+          "p": 12,
+          "c": 76,
+          "f": 4
+        },
+        {
+          "name": "Beansprouts Tender & Crunchy",
+          "cals": 141,
+          "p": 8,
+          "c": 12,
+          "f": 8
+        },
+        {
+          "name": "Aberdeen Angus Steak Mince",
+          "cals": 660,
+          "p": 110,
+          "c": 0,
+          "f": 24
+        },
+        {
+          "name": "Sweet Chilli Stir Fry Sauce Medium",
+          "cals": 136,
+          "p": 0,
+          "c": 28,
+          "f": 3
+        }
+      ]
     },
     "snacks": {
       "name": "Snacks & Hydration",

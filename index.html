@@ -1810,8 +1810,8 @@
 
               <div class="vital-tile">
                 <div class="vital-title"><span>Active Burn</span></div>
-                <div class="vital-val" id="vitalBurn">419 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small></div>
-                <div class="vital-sub" id="vitalBurnSub" style="color:var(--lime);">fēnix 8 • 105 Steps</div>
+                <div class="vital-val" id="vitalBurn">624 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small></div>
+                <div class="vital-sub" id="vitalBurnSub" style="color:var(--lime);">fēnix 8 • 9,191 Steps</div>
               </div>
 
               <div class="vital-tile">
@@ -1823,24 +1823,24 @@
               <div class="vital-tile">
                 <div class="vital-title"><span>Resting HR</span></div>
                 <div class="vital-val" id="vitalRhr">48 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">bpm</small></div>
-                <div class="vital-sub cyan" id="vitalBbSub">Body Battery: 84%</div>
+                <div class="vital-sub cyan" id="vitalBbSub">Body Battery: 36%</div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- RECENT WORKOUT NOTIFICATION CHIP (TAP TO VIEW BENEFITS) -->
-                <div class="card" id="garminLiveBanner" style="padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="viewWorkoutHistory()">
+        <div class="card" id="garminLiveBanner" style="padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="viewWorkoutHistory()">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:16px;">⚡</span>
             <div>
               <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase;" id="garminBannerTitle">Garmin fēnix 8 Synced • Mon 9 Nov</div>
-              <div style="font-size:13px; font-weight:800; color:#fff;" id="garminBannerSub">1 Workout Today (419 kcal)</div>
+              <div style="font-size:13px; font-weight:800; color:#fff;" id="garminBannerSub">2 Workouts Today (624 kcal)</div>
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:13.5px; font-weight:900; color:var(--lime);" id="garminBannerBurn">419 kcal</div>
-            <div style="font-size:11.5px; color:var(--cyan);" id="garminBannerAction">Today: 419 kcal active burn ➔</div>
+            <div style="font-size:13.5px; font-weight:900; color:var(--lime);" id="garminBannerBurn">624 kcal</div>
+            <div style="font-size:11.5px; color:var(--cyan);" id="garminBannerAction">Today: 624 kcal active burn ➔</div>
           </div>
         </div>
 
@@ -2049,27 +2049,27 @@
             <span class="eq-op">+</span>
             <span class="eq-chip eq-neat" title="Non-Exercise Activity Thermogenesis">292 <small>NEAT</small></span>
             <span class="eq-op">+</span>
-            <span class="eq-chip eq-garmin" id="fuelGarminEqChip" title="Garmin Synced Active Burn">+419 <small>Garmin</small></span>
+            <span class="eq-chip eq-garmin" id="fuelGarminEqChip" title="Garmin Synced Active Burn">+624 <small>Garmin</small></span>
             <span class="eq-op">−</span>
             <span class="eq-chip eq-deficit" title="Target Caloric Deficit for Fat Loss">350 <small>Cut</small></span>
             <span class="eq-op">=</span>
-            <span class="eq-chip eq-budget" title="Total Daily Caloric Budget">3,160 <small>Budget</small></span>
+            <span class="eq-chip eq-budget" title="Total Daily Caloric Budget">2,715 <small>Budget</small></span>
           </div>
 
           <!-- HERO RUNWAY NUMBERS ROW -->
           <div class="fuel-summary-row" style="margin-top:10px;">
             <div>
               <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Target Daily Budget</div>
-              <div style="font-size:28px; font-weight:900; color:#fff; line-height:1.1; margin-top:2px;" id="fuelTargetNum">3,160 <small style="font-size:13px; color:var(--lime); font-weight:800;">+419 active</small></div>
+              <div style="font-size:28px; font-weight:900; color:#fff; line-height:1.1; margin-top:2px;" id="fuelTargetNum">2,715 <small style="font-size:13px; color:var(--lime); font-weight:800;">+624 active</small></div>
               <div style="display:inline-flex; align-items:center; gap:5px; margin-top:4px;">
-                <span style="font-size:11px; background:var(--primary-dim); border:1px solid rgba(48,209,88,0.25); color:var(--primary); padding:2px 7px; border-radius:4px; font-weight:800;">● fēnix 8 Synced (1 Workout Today • 419 kcal)</span>
+                <span style="font-size:11px; background:var(--primary-dim); border:1px solid rgba(48,209,88,0.25); color:var(--primary); padding:2px 7px; border-radius:4px; font-weight:800;">● fēnix 8 Synced (2 Workouts Today • 624 kcal)</span>
               </div>
             </div>
             <div style="text-align:right;">
               <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Runway Remaining</div>
-              <div style="font-size:30px; font-weight:900; color:var(--cyan); line-height:1.1; margin-top:2px;" id="fuelRemainingNum">2,336 <small style="font-size:14px; font-weight:700;">kcal</small></div>
+              <div style="font-size:30px; font-weight:900; color:var(--cyan); line-height:1.1; margin-top:2px;" id="fuelRemainingNum">323 <small style="font-size:14px; font-weight:700;">kcal</small></div>
               <div style="margin-top:4px;">
-                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--lime); background:rgba(204,255,0,0.15); border:1px solid rgba(204,255,0,0.35); padding:2px 8px; border-radius:4px; font-weight:900;">151g Protein Left (49/200g)</span>
+                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--lime); background:rgba(204,255,0,0.15); border:1px solid rgba(204,255,0,0.35); padding:2px 8px; border-radius:4px; font-weight:900;">234g Consumed • Target Met (+34g)</span>
               </div>
             </div>
           </div>
@@ -2077,19 +2077,19 @@
           <!-- DYNAMIC RUNWAY PROGRESS BAR (HIGH VISIBILITY) -->
           <div style="margin-top:10px;">
             <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; font-weight:700;">
-              <span style="color:var(--text-muted);">Intake Consumed: <strong style="color:#fff;" id="fuelConsumedText">824 kcal</strong></span>
-              <span id="intakeProgressPercent" style="color:var(--lime); font-weight:900;">30% (1,917 kcal Runway)</span>
+              <span style="color:var(--text-muted);">Intake Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,392 kcal</strong></span>
+              <span id="intakeProgressPercent" style="color:var(--lime); font-weight:900;">88% (323 kcal Runway)</span>
             </div>
             <div class="macro-bar-container" style="height:10px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
-              <div id="barIntakeConsumed" style="width:30%; background:linear-gradient(90deg, var(--cyan), var(--lime)); height:100%; border-radius:999px; transition:all 0.3s ease; box-shadow:0 0 10px rgba(0,240,255,0.4);"></div>
+              <div id="barIntakeConsumed" style="width:88%; background:linear-gradient(90deg, var(--cyan), var(--lime)); height:100%; border-radius:999px; transition:all 0.3s ease; box-shadow:0 0 10px rgba(0,240,255,0.4);"></div>
             </div>
           </div>
 
           <!-- MACRO BARS (PROTEIN / CARBS / FAT) -->
           <div class="macro-bar-container" style="height:5px; margin-top:5px; background:rgba(255,255,255,0.06);">
-            <div id="barProtein" style="width:47%; background:var(--cyan); height:100%; transition:all 0.3s ease;"></div>
-            <div id="barCarbs" style="width:33%; background:var(--lime); height:100%; transition:all 0.3s ease;"></div>
-            <div id="barFat" style="width:20%; background:var(--amber); height:100%; transition:all 0.3s ease;"></div>
+            <div id="barProtein" style="width:39%; background:var(--cyan); height:100%; transition:all 0.3s ease;"></div>
+            <div id="barCarbs" style="width:39%; background:var(--lime); height:100%; transition:all 0.3s ease;"></div>
+            <div id="barFat" style="width:22%; background:var(--amber); height:100%; transition:all 0.3s ease;"></div>
           </div>
 
           <!-- QUICK ACTION BAR -->
@@ -2108,19 +2108,19 @@
           <div class="card" style="padding:10px 6px; text-align:center; border-top:3px solid var(--cyan);">
             <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Protein Target</div>
             <div style="font-size:22px; font-weight:900; color:var(--cyan); margin:3px 0;" id="macroProtein">200g</div>
-            <div style="font-size:11px; color:var(--lime); font-weight:800;" id="macroProteinSub">49g (25% Met) • 151g Left</div>
+            <div style="font-size:11px; color:var(--lime); font-weight:800;" id="macroProteinSub">234g (117% Met) • Target Secured</div>
           </div>
 
           <div class="card" style="padding:10px 6px; text-align:center; border-top:3px solid var(--lime);">
             <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Carbs Target</div>
             <div style="font-size:22px; font-weight:900; color:var(--lime); margin:3px 0;" id="macroCarbs">251g</div>
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="macroCarbsSub">Glycogen Recharge</div>
+            <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="macroCarbsSub">231g Consumed • 20g Left</div>
           </div>
 
           <div class="card" style="padding:10px 6px; text-align:center; border-top:3px solid var(--amber);">
             <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Fats Target</div>
             <div style="font-size:22px; font-weight:900; color:var(--amber); margin:3px 0;" id="macroFat">80g</div>
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="macroFatSub">Endocrine Support</div>
+            <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="macroFatSub">67g Consumed • 13g Left</div>
           </div>
         </div>
 
@@ -3100,18 +3100,20 @@
           </button>
 
           <div id="garminStatusNotice" style="display:none; flex-direction:column; gap:6px; background:rgba(48,209,88,0.08); border:1px solid rgba(48,209,88,0.3); border-radius:6px; padding:8px; margin-top:4px;">
-            <div style="font-size:12.5px; font-weight:800; color:var(--lime);">✓ Cloud Master Sync Active</div>
+            <div style="font-size:12.5px; font-weight:800; color:var(--lime);">✓ Cloud Master Sync Active (624 kcal Burn)</div>
             <div style="font-size:11.5px; color:#fff; line-height:1.35;">
-              This app runs directly on your phone from Google Drive. Your morning workout has been ingested from Garmin Connect:
+              Both workouts recorded today on your Garmin fēnix 8 have been ingested:
             </div>
-            <div style="font-size:12px; font-weight:700; color:var(--cyan); background:rgba(0,0,0,0.3); padding:6px; border-radius:4px;">
-              Cardio Conditioning (34.4 min) • 419 kcal • Avg HR 126 bpm • Aerobic TE 2.4
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <div style="font-size:11.5px; font-weight:700; color:var(--lime); background:rgba(0,0,0,0.3); padding:5px 7px; border-radius:4px;">
+                🚶 Runnymede Walking (42.7 min) • 205 kcal • Avg HR 75 bpm
+              </div>
+              <div style="font-size:11.5px; font-weight:700; color:var(--cyan); background:rgba(0,0,0,0.3); padding:5px 7px; border-radius:4px;">
+                ⚡ Cardio Conditioning (34.4 min) • 419 kcal • Avg HR 126 bpm • Aerobic TE 2.4
+              </div>
             </div>
-            <div style="font-size:11.5px; color:var(--text-muted); line-height:1.35;">
-              Whenever you record a workout on your Garmin watch, Antigravity syncs your cloud tokens and pushes the fresh telemetry directly into this Google Drive master file.
-            </div>
-            <button class="btn-action-primary" style="height:30px; font-size:12px; background:var(--primary); color:#000; font-weight:800; margin-top:2px;" onclick="loadLiveState(); closeSyncModal(); showToast('✓ Today\'s Garmin workout loaded!');">
-              ✓ View Ingested Workout
+            <button class="btn-action-primary" style="height:32px; font-size:12px; background:var(--primary); color:#000; font-weight:800; margin-top:3px;" onclick="loadLiveState(); closeSyncModal(); showToast('✓ 2 Garmin Workouts Loaded (624 kcal)!');">
+              ✓ View Ingested Workouts (624 kcal)
             </button>
           </div>
         </div>
@@ -3788,6 +3790,27 @@
 
     // REAL INGESTED GARMIN ACTIVITIES WITH DETAILED BENEFITS ENGINE
     let recentActivitiesData = [
+      {
+            "id": "25020969123",
+            "name": "Walking",
+            "subTitle": "Runnymede Walking",
+            "rawDate": "2026-11-09 15:27:38",
+            "date": "Today • 15:27",
+            "durationMin": 42.7,
+            "calories": 205,
+            "avgHr": 75,
+            "maxHr": 100,
+            "aerobicTe": 0.3,
+            "anaerobicTe": 0.0,
+            "isToday": true,
+            "benefits": {
+                  "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+                  "biomechanics": "Low-impact cyclical ground force absorption (~1.2× bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+                  "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+                  "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4–8 hours post-session.",
+                  "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
+            }
+      },
       {
             "id": "25016923422",
             "name": "Indoor_cardio",
@@ -5433,12 +5456,12 @@ function generateWorkoutFromGearAndGoal() {
     // ==================== MYNETDIARY ENGINE STATE & DATA STORE ====================
     let myNetDiaryData = {
       "totals": {
-            "calories": 824,
-            "protein": 49,
-            "carbs": 115,
-            "fat": 23,
-            "fiber": 19,
-            "sodium": 275,
+            "calories": 2392,
+            "protein": 234,
+            "carbs": 231,
+            "fat": 67,
+            "fiber": 33,
+            "sodium": 1911,
             "water": 0.0
       },
       "meals": {
@@ -5484,12 +5507,48 @@ function generateWorkoutFromGearAndGoal() {
             },
             "dinner": {
                   "name": "Dinner",
-                  "time": "Pending",
-                  "calories": 0,
-                  "protein": 0,
-                  "carbs": 0,
-                  "fat": 0,
-                  "items": []
+                  "time": "15:59",
+                  "calories": 1568,
+                  "protein": 184,
+                  "carbs": 116,
+                  "fat": 44,
+                  "items": [
+                        {
+                              "name": "British Chicken Diced Breast",
+                              "cals": 263,
+                              "p": 54,
+                              "c": 0,
+                              "f": 5
+                        },
+                        {
+                              "name": "Egg Noodles Soft & Tender",
+                              "cals": 368,
+                              "p": 12,
+                              "c": 76,
+                              "f": 4
+                        },
+                        {
+                              "name": "Beansprouts Tender & Crunchy",
+                              "cals": 141,
+                              "p": 8,
+                              "c": 12,
+                              "f": 8
+                        },
+                        {
+                              "name": "Aberdeen Angus Steak Mince",
+                              "cals": 660,
+                              "p": 110,
+                              "c": 0,
+                              "f": 24
+                        },
+                        {
+                              "name": "Sweet Chilli Stir Fry Sauce Medium",
+                              "cals": 136,
+                              "p": 0,
+                              "c": 28,
+                              "f": 3
+                        }
+                  ]
             },
             "snacks": {
                   "name": "Snacks & Hydration",
@@ -6209,6 +6268,13 @@ function generateWorkoutFromGearAndGoal() {
 
     function restoreMndFromLocalStorage() {
       try {
+        const CURRENT_MND_VERSION = "v4.7_live_dinner_2392";
+        if (localStorage.getItem('pulse_mnd_version') !== CURRENT_MND_VERSION) {
+          localStorage.removeItem('pulse_mnd_data');
+          localStorage.setItem('pulse_mnd_version', CURRENT_MND_VERSION);
+          saveMndToLocalStorage();
+          return;
+        }
         const raw = localStorage.getItem('pulse_mnd_data');
         if (raw) {
           const parsed = JSON.parse(raw);
@@ -6565,8 +6631,8 @@ function generateWorkoutFromGearAndGoal() {
           }
 
           // 1.1 MyNetDiary Food Ingestion from Live State
-          if (g.mnd_logged) {
-            const ml = g.mnd_logged;
+          const ml = state.mnd_logged || (g && g.mnd_logged);
+          if (ml) {
             myNetDiaryData.totals.calories = ml.calories || 0;
             myNetDiaryData.totals.protein = ml.protein_g || 0;
             myNetDiaryData.totals.carbs = ml.carbs_g || 0;
@@ -6577,6 +6643,7 @@ function generateWorkoutFromGearAndGoal() {
             if (state.mnd_meals) {
               myNetDiaryData.meals = state.mnd_meals;
             }
+            saveMndToLocalStorage();
             renderMyNetDiaryEngine();
           }
         }
