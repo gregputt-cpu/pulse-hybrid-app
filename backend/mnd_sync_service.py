@@ -4,11 +4,11 @@ import pickle
 import requests
 from datetime import datetime, date
 
-MND_DIR = '/shared/user/.gemini/mnd_tokens'
+MND_DIR = os.environ.get('MND_TOKEN_DIR', '/tmp/mnd_tokens' if not os.path.exists('/shared/user/.gemini') else '/shared/user/.gemini/mnd_tokens')
 CREDS_FILE = os.path.join(MND_DIR, 'credentials.json')
 COOKIES_FILE = os.path.join(MND_DIR, 'session_cookies.pkl')
-LIVE_STATE_PATH = '/home/antigravity/live_state.json'
-ARTIFACT_LIVE_STATE_PATH = '/home/antigravity/.gemini/jetski/brain/v1/default/jetski_remote_agents_3p/edd5559b-aa78-4dd1-8c2a-5adb25870227/live_state.json'
+LIVE_STATE_PATH = os.environ.get('LIVE_STATE_PATH', 'live_state.json' if not os.path.exists('/home/antigravity') else '/home/antigravity/live_state.json')
+ARTIFACT_LIVE_STATE_PATH = os.environ.get('ARTIFACT_LIVE_STATE_PATH', LIVE_STATE_PATH)
 
 DEFAULT_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -20,7 +20,10 @@ DEFAULT_HEADERS = {
 
 class MyNetDiarySyncService:
     def __init__(self):
-        os.makedirs(MND_DIR, exist_ok=True)
+        try:
+            os.makedirs(MND_DIR, exist_ok=True)
+        except Exception:
+            pass
         self.session = requests.Session()
         self.session.headers.update(DEFAULT_HEADERS)
         self._load_cookies()
@@ -352,10 +355,10 @@ class MyNetDiarySyncService:
         except Exception:
             pass
 
-        # Sync to permanent storage
-        perm_dir = '/shared/user/.gemini/pulse_backend'
-        os.makedirs(perm_dir, exist_ok=True)
+        # Sync to permanent storage if available
         try:
+            perm_dir = '/shared/user/.gemini/pulse_backend'
+            os.makedirs(perm_dir, exist_ok=True)
             with open(os.path.join(perm_dir, 'live_state.json'), 'w') as f:
                 json.dump(state, f, indent=2)
         except Exception:

@@ -193,10 +193,10 @@ class GarminSyncService:
         except Exception as e:
             print(f"[GarminSync] Warning copying to artifact: {e}")
 
-        # Also save to permanent backend directory
-        perm_dir = '/shared/user/.gemini/pulse_backend'
-        os.makedirs(perm_dir, exist_ok=True)
+        # Also save to permanent backend directory if available
         try:
+            perm_dir = '/shared/user/.gemini/pulse_backend'
+            os.makedirs(perm_dir, exist_ok=True)
             with open(os.path.join(perm_dir, 'live_state.json'), 'w') as f:
                 json.dump(state, f, indent=2)
         except Exception:

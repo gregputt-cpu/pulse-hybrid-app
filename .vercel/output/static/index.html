@@ -1161,10 +1161,12 @@
       background: var(--surface-elevated);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      font-size: 12.5px;
-      font-weight: 800;
-      padding: 5px 8px;
-      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 5px 11px;
+      border-radius: 20px;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.15s ease;
@@ -1173,9 +1175,9 @@
       gap: 3px;
     }
     .btn-diet-strategy.active {
-      background: rgba(204, 255, 0, 0.15);
-      border-color: var(--lime);
-      color: var(--lime);
+      background: rgba(48, 209, 88, 0.14);
+      border-color: rgba(48, 209, 88, 0.4);
+      color: var(--primary);
     }
     .diet-view-panel {
       display: none;
@@ -1428,15 +1430,16 @@
     .nav-btn {
       background: none;
       border: none;
-      color: var(--text-dim);
+      color: var(--text-muted);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
+      gap: 4px;
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
       transition: color 0.15s ease;
     }
     .nav-btn svg {
@@ -1802,28 +1805,28 @@
             </div>
 
             <div class="vitals-grid">
-                            <div class="vital-tile">
+              <div class="vital-tile">
                 <div class="vital-title"><span>Sleep Score</span></div>
-                <div class="vital-val" id="vSleep">69 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">/ 100</small></div>
-                <div class="vital-sub" id="vSleepSub" style="color:var(--cyan);">7h 21m Duration</div>
+                <div class="vital-val" id="vSleep">69 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">/ 100</small></div>
+                <div class="vital-sub" id="vSleepSub" style="color:var(--text-secondary); font-size:11px;">7h 21m Duration</div>
               </div>
 
               <div class="vital-tile">
                 <div class="vital-title"><span>Active Burn</span></div>
-                <div class="vital-val" id="vitalBurn">624 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small></div>
-                <div class="vital-sub" id="vitalBurnSub" style="color:var(--lime);">fēnix 8 • 9,191 Steps</div>
+                <div class="vital-val" id="vitalBurn">624 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">kcal</small></div>
+                <div class="vital-sub" id="vitalBurnSub" style="color:var(--primary); font-size:11px;">fēnix 8 • 9,191 Steps</div>
               </div>
 
               <div class="vital-tile">
-                <div class="vital-title"><span>Renpho Scale</span></div>
-                <div class="vital-val" id="vitalScale">98.90 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kg</small></div>
-                <div class="vital-sub" id="vitalScaleSub" style="color:var(--lime);">16.7% BF (-1.98kg)</div>
+                <div class="vital-title"><span>Scale Weight</span></div>
+                <div class="vital-val" id="vitalScale">98.90 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">kg</small></div>
+                <div class="vital-sub" id="vitalScaleSub" style="color:var(--primary); font-size:11px;">16.7% BF (-1.98kg)</div>
               </div>
 
               <div class="vital-tile">
                 <div class="vital-title"><span>Resting HR</span></div>
-                <div class="vital-val" id="vitalRhr">48 <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">bpm</small></div>
-                <div class="vital-sub cyan" id="vitalBbSub">Body Battery: 36%</div>
+                <div class="vital-val" id="vitalRhr">48 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">bpm</small></div>
+                <div class="vital-sub" id="vitalBbSub" style="color:var(--text-secondary); font-size:11px;">Body Battery: 36%</div>
               </div>
             </div>
           </div>
@@ -1831,16 +1834,18 @@
 
         <!-- RECENT WORKOUT NOTIFICATION CHIP (TAP TO VIEW BENEFITS) -->
         <div class="card" id="garminLiveBanner" style="padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="viewWorkoutHistory()">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:16px;">⚡</span>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-elevated); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
             <div>
-              <div style="font-size:12px; font-weight:800; color:var(--cyan); text-transform:uppercase;" id="garminBannerTitle">Garmin fēnix 8 Synced • Mon 9 Nov</div>
+              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;" id="garminBannerTitle">Garmin fēnix 8 Synced • Mon 9 Nov</div>
               <div style="font-size:13px; font-weight:800; color:#fff;" id="garminBannerSub">2 Workouts Today (624 kcal)</div>
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:13.5px; font-weight:900; color:var(--lime);" id="garminBannerBurn">624 kcal</div>
-            <div style="font-size:11.5px; color:var(--cyan);" id="garminBannerAction">Today: 624 kcal active burn ➔</div>
+            <div style="font-size:14px; font-weight:900; color:var(--primary);" id="garminBannerBurn">624 kcal</div>
+            <div style="font-size:11px; color:var(--text-muted);" id="garminBannerAction">Telemetry & Benefits ➔</div>
           </div>
         </div>
 
@@ -2041,161 +2046,183 @@
       <!-- ==================== TAB 4: FUEL & ADAPTIVE NUTRITION ENGINE ==================== -->
       <main id="tab-fuel" class="tab-panel">
         
-        <!-- TARGET CALORIE & REMAINING RUNWAY HERO (ELEPHANT FOUNDATION + GOLDFISH VISUAL) -->
-        <div class="fuel-metric-card card-highlight">
-          <!-- ELEPHANT CALORIC EQUATION STRIP (GLANCEABLE VISUAL FORMULA INSTEAD OF TEXT) -->
-          <div class="calorie-eq-strip">
-            <span class="eq-chip eq-base" title="Basal Metabolic Rate">2,149 <small>BMR</small></span>
-            <span class="eq-op">+</span>
-            <span class="eq-chip eq-neat" title="Non-Exercise Activity Thermogenesis">292 <small>NEAT</small></span>
-            <span class="eq-op">+</span>
-            <span class="eq-chip eq-garmin" id="fuelGarminEqChip" title="Garmin Synced Active Burn">+624 <small>Garmin</small></span>
-            <span class="eq-op">−</span>
-            <span class="eq-chip eq-deficit" title="Target Caloric Deficit for Fat Loss">350 <small>Cut</small></span>
-            <span class="eq-op">=</span>
-            <span class="eq-chip eq-budget" title="Total Daily Caloric Budget">2,715 <small>Budget</small></span>
+        <!-- UNIFIED HIGH-END NUTRITION HERO -->
+        <div class="card card-highlight" style="padding:14px; border-radius:14px;">
+          <!-- Telemetry Sync Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="header-status-dot" style="width:6px; height:6px;"></span>
+              <span id="mndConnectionStatusBadge" style="font-size:10.5px; font-weight:700; color:var(--text-secondary); letter-spacing:0.06em; text-transform:uppercase; cursor:pointer;" onclick="openMndConnectModal()" title="Manage MyNetDiary Connection">FĒNIX 8 & MND CLOUD SYNCED</span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button class="solver-size-btn" id="btnMndAutoPull" style="background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-size:11px; font-weight:700; padding:4px 9px; border-radius:6px;" onclick="triggerMndAutoPull()" title="Auto-pull today's logged meals from MyNetDiary">Auto-Pull</button>
+              <button class="solver-size-btn" style="background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px;" onclick="openQuickLogModal()">+ Quick Log</button>
+              <button class="solver-size-btn" id="btnMndConnect" style="background:var(--surface-elevated); border:1px solid var(--border); color:var(--text-muted); font-size:11px; font-weight:700; padding:4px 8px; border-radius:6px;" onclick="openMndConnectModal()">Account</button>
+            </div>
           </div>
 
-          <!-- HERO RUNWAY NUMBERS ROW -->
-          <div class="fuel-summary-row" style="margin-top:10px;">
+          <!-- Hero Dual Metrics: Target Budget vs Runway Remaining -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:flex-start;">
             <div>
-              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Target Daily Budget</div>
-              <div style="font-size:28px; font-weight:900; color:#fff; line-height:1.1; margin-top:2px;" id="fuelTargetNum">2,715 <small style="font-size:13px; color:var(--lime); font-weight:800;">+624 active</small></div>
-              <div style="display:inline-flex; align-items:center; gap:5px; margin-top:4px;">
-                <span style="font-size:11px; background:var(--primary-dim); border:1px solid rgba(48,209,88,0.25); color:var(--primary); padding:2px 7px; border-radius:4px; font-weight:800;">● fēnix 8 Synced (2 Workouts Today • 624 kcal)</span>
-              </div>
+              <div style="font-size:10px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase;">Daily Energy Budget</div>
+              <div style="font-size:26px; font-weight:800; color:#fff; line-height:1.15; margin-top:2px;" id="fuelTargetNum">2,715 <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+624 active</span></div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Base 2,092 + Garmin Active</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;">Runway Remaining</div>
-              <div style="font-size:30px; font-weight:900; color:var(--cyan); line-height:1.1; margin-top:2px;" id="fuelRemainingNum">323 <small style="font-size:14px; font-weight:700;">kcal</small></div>
-              <div style="margin-top:4px;">
-                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--lime); background:rgba(204,255,0,0.15); border:1px solid rgba(204,255,0,0.35); padding:2px 8px; border-radius:4px; font-weight:900;">234g Consumed • Target Met (+34g)</span>
+              <div style="font-size:10px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase;">Runway Remaining</div>
+              <div style="font-size:28px; font-weight:800; color:var(--primary); line-height:1.15; margin-top:2px;" id="fuelRemainingNum">323 <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span></div>
+              <div style="margin-top:3px;">
+                <span id="proteinRemainingBadge" style="font-size:10.5px; color:var(--primary); font-weight:700;">234g Consumed • Target Met (+34g)</span>
               </div>
             </div>
           </div>
 
-          <!-- DYNAMIC RUNWAY PROGRESS BAR (HIGH VISIBILITY) -->
-          <div style="margin-top:10px;">
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; font-weight:700;">
-              <span style="color:var(--text-muted);">Intake Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,392 kcal</strong></span>
-              <span id="intakeProgressPercent" style="color:var(--lime); font-weight:900;">88% (323 kcal Runway)</span>
+          <!-- High-Precision Slim Progress Bar -->
+          <div style="margin-top:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
+              <span style="color:var(--text-secondary);">Intake Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,392 kcal</strong></span>
+              <span id="intakeProgressPercent" style="color:var(--primary); font-weight:700;">88% (323 kcal Runway)</span>
             </div>
-            <div class="macro-bar-container" style="height:10px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
-              <div id="barIntakeConsumed" style="width:88%; background:linear-gradient(90deg, var(--cyan), var(--lime)); height:100%; border-radius:999px; transition:all 0.3s ease; box-shadow:0 0 10px rgba(0,240,255,0.4);"></div>
+            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;">
+              <div id="barIntakeConsumed" style="width:88%; background:var(--primary); height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
             </div>
           </div>
 
-          <!-- MACRO BARS (PROTEIN / CARBS / FAT) -->
-          <div class="macro-bar-container" style="height:5px; margin-top:5px; background:rgba(255,255,255,0.06);">
-            <div id="barProtein" style="width:39%; background:var(--cyan); height:100%; transition:all 0.3s ease;"></div>
-            <div id="barCarbs" style="width:39%; background:var(--lime); height:100%; transition:all 0.3s ease;"></div>
-            <div id="barFat" style="width:22%; background:var(--amber); height:100%; transition:all 0.3s ease;"></div>
-          </div>
-
-          <!-- QUICK ACTION BAR -->
-          <div style="display:flex; gap:8px; margin-top:10px;">
-            <button class="btn-action-primary" style="flex:1.4; white-space:nowrap; padding:10px 12px; font-size:13px; font-weight:900; margin:0; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="openQuickLogModal()">
-              <span>⚡</span> Quick Log Meal
-            </button>
-            <button class="btn-action-ghost" style="flex:1; white-space:nowrap; padding:10px 10px; font-size:12.5px; font-weight:800; margin:0; border:1px solid var(--border-bright); display:flex; align-items:center; justify-content:center; gap:5px;" onclick="resetDailyNutritionLog()">
-              <span>↺</span> Reset Log
-            </button>
+          <!-- Formula Subtext (Clean, Minimalist Footnote) -->
+          <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; font-size:10.5px; color:var(--text-muted);">
+            <span>BMR 2,149 + NEAT 292 + Garmin 624 − Cut 350 = 2,715 kcal</span>
+            <span style="cursor:pointer; color:var(--text-secondary);" onclick="openMndSyncModal()">Adjust Totals</span>
           </div>
         </div>
 
-        <!-- MACRO TILES (HIGH CONTRAST TACTILE GAUGE CARDS) -->
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
-          <div class="card" style="padding:10px 6px; text-align:center; border-top:3px solid var(--cyan);">
-            <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Protein Target</div>
-            <div style="font-size:22px; font-weight:900; color:var(--cyan); margin:3px 0;" id="macroProtein">200g</div>
-            <div style="font-size:11px; color:var(--lime); font-weight:800;" id="macroProteinSub">234g (117% Met) • Target Secured</div>
+        <!-- UNIFIED 3-MACRO PRECISION GRID -->
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
+          <!-- Protein Card -->
+          <div class="card" style="padding:10px; border-radius:10px; background:var(--surface);">
+            <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Protein Target</div>
+            <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroProtein">200g</div>
+            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
+              <div id="barProtein" style="width:100%; background:var(--primary); height:100%;"></div>
+            </div>
+            <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">234g (117%) • Target Met</div>
           </div>
 
-          <div class="card" style="padding:10px 6px; text-align:center; border-top:3px solid var(--lime);">
-            <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Carbs Target</div>
-            <div style="font-size:22px; font-weight:900; color:var(--lime); margin:3px 0;" id="macroCarbs">251g</div>
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="macroCarbsSub">231g Consumed • 20g Left</div>
+          <!-- Carbs Card -->
+          <div class="card" style="padding:10px; border-radius:10px; background:var(--surface);">
+            <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Carbs Target</div>
+            <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroCarbs">251g</div>
+            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
+              <div id="barCarbs" style="width:92%; background:#fff; height:100%;"></div>
+            </div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">231g • 20g Left</div>
           </div>
 
-          <div class="card" style="padding:10px 6px; text-align:center; border-top:3px solid var(--amber);">
-            <div style="font-size:11px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Fats Target</div>
-            <div style="font-size:22px; font-weight:900; color:var(--amber); margin:3px 0;" id="macroFat">80g</div>
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;" id="macroFatSub">67g Consumed • 13g Left</div>
+          <!-- Fats Card -->
+          <div class="card" style="padding:10px; border-radius:10px; background:var(--surface);">
+            <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Fats Target</div>
+            <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroFat">80g</div>
+            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
+              <div id="barFat" style="width:84%; background:var(--text-muted); height:100%;"></div>
+            </div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">67g • 13g Left</div>
           </div>
         </div>
 
-        <!-- SECTION: DIETARY STRATEGY ARCHITECTURE (5 PROTOCOLS) -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-          <span style="font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Adaptive Strategy Protocol</span>
-          <span id="dietStrategyBadge" style="font-size:11px; color:var(--lime); background:rgba(204,255,0,0.15); border:1px solid rgba(204,255,0,0.35); padding:2px 8px; border-radius:4px; font-weight:900;">BALANCED HYBRID</span>
+        <!-- Hidden compatibility elements so existing scripts never throw -->
+        <div style="display:none;">
+          <span id="mndCalsVal">2392</span>
+          <span id="mndCalsTarget">2715</span>
+          <span id="mndCalsRemainingBadge">323 left</span>
+          <div id="mndBarCals"></div>
+          <span id="mndProteinVal">234</span>
+          <span id="mndProteinRemainingBadge">Target Met</span>
+          <div id="mndBarProtein"></div>
+          <span id="mndCarbsVal">231</span>
+          <span id="mndCarbsRemainingBadge">20g left</span>
+          <div id="mndBarCarbs"></div>
+          <span id="mndFatVal">67</span>
+          <span id="mndFatRemainingBadge">13g left</span>
+          <div id="mndBarFat"></div>
+          <span id="fuelGarminEqChip"></span>
+        </div>
+
+        <!-- MACRO ENERGY DISTRIBUTION & MICRONUTRIENTS BAR -->
+        <div class="card" style="padding:10px 12px; border-radius:10px; background:var(--surface);">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:5px;">
+            <span style="color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Energy Split</span>
+            <span style="color:#fff; font-weight:700;" id="mndMacroRatioText">24% Protein • 56% Carbs • 20% Fat</span>
+          </div>
+          <div class="macro-bar-container" style="height:5px; margin:0 0 8px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,0.06);">
+            <div id="mndSplitP" style="width:24%; background:var(--primary); height:100%;"></div>
+            <div id="mndSplitC" style="width:56%; background:#fff; height:100%;"></div>
+            <div id="mndSplitF" style="width:20%; background:var(--text-muted); height:100%;"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; font-size:11.5px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px;">
+            <div><span style="color:var(--text-muted);">Fiber:</span> <strong style="color:#fff;" id="mndFiberVal">33g</strong> <small style="color:var(--text-muted);">/ 38g</small></div>
+            <div><span style="color:var(--text-muted);">Sodium:</span> <strong style="color:#fff;" id="mndSodiumVal">1,911mg</strong></div>
+            <div><span style="color:var(--text-muted);">Water:</span> <strong style="color:#fff;" id="mndWaterVal">2.4L</strong> <small style="color:var(--text-muted);">/ 3.5L</small></div>
+          </div>
+        </div>
+
+        <!-- SECTION: DIETARY STRATEGY ARCHITECTURE (CLEAN PILL SEGMENTS) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
+          <span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em;">Strategy Protocol</span>
+          <span id="dietStrategyBadge" style="font-size:10px; color:var(--primary); font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">BALANCED HYBRID</span>
         </div>
 
         <div class="diet-strategy-nav">
-          <button class="btn-diet-strategy active" id="btnDietBalanced" onclick="selectDietStrategy('balanced')">
-            <span>⚡</span> Balanced
-          </button>
-          <button class="btn-diet-strategy" id="btnDietLowCarb" onclick="selectDietStrategy('lowcarb')">
-            <span>🥩</span> Low Carb / Keto
-          </button>
-          <button class="btn-diet-strategy" id="btnDietCarbCycle" onclick="selectDietStrategy('carbcycle')">
-            <span>🔄</span> Carb Cycling
-          </button>
-          <button class="btn-diet-strategy" id="btnDietFasting" onclick="selectDietStrategy('fasting')">
-            <span>⏳</span> Fasting Hub
-          </button>
-          <button class="btn-diet-strategy" id="btnDietCustom" onclick="selectDietStrategy('custom')">
-            <span>🎛️</span> Pro-Dial
-          </button>
+          <button class="btn-diet-strategy active" id="btnDietBalanced" onclick="selectDietStrategy('balanced')">Balanced</button>
+          <button class="btn-diet-strategy" id="btnDietLowCarb" onclick="selectDietStrategy('lowcarb')">Low Carb</button>
+          <button class="btn-diet-strategy" id="btnDietCarbCycle" onclick="selectDietStrategy('carbcycle')">Carb Cycling</button>
+          <button class="btn-diet-strategy" id="btnDietFasting" onclick="selectDietStrategy('fasting')">Fasting Hub</button>
+          <button class="btn-diet-strategy" id="btnDietCustom" onclick="selectDietStrategy('custom')">Pro-Dial</button>
         </div>
 
         <!-- STRATEGY PANEL 1: BALANCED HYBRID -->
         <div class="diet-view-panel active" id="panelDietBalanced">
-          <div class="card" style="padding:10px 12px;">
-            <div style="font-weight:900; font-size:13px; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-              <span>⚡ High Glycogen Replenishment</span>
-              <span style="color:var(--lime); font-size:12px; background:rgba(204,255,0,0.12); padding:2px 7px; border-radius:4px;">41% C • 33% P • 26% F</span>
+          <div class="card" style="padding:10px 12px; border-radius:10px;">
+            <div style="font-weight:800; font-size:12.5px; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+              <span>High Glycogen Replenishment</span>
+              <span style="color:var(--primary); font-size:11px; font-weight:700;">41% C • 33% P • 26% F</span>
             </div>
-            <div style="color:#cbd5e1; font-size:12.5px; line-height:1.4; margin-top:5px;">
-              Allocates <strong>251g carbs</strong> to replenish fast-twitch muscle glycogen drained by strength & conditioning, while <strong>200g protein</strong> (2.4g/kg LBM) preserves all 82.38 kg lean muscle during your cut.
+            <div style="color:var(--text-secondary); font-size:12px; line-height:1.45; margin-top:4px;">
+              Allocates <strong>251g carbs</strong> to replenish fast-twitch muscle glycogen drained by compound lifting and conditioning, while <strong>200g protein</strong> (2.4g/kg LBM) protects all 82.38 kg lean muscle mass.
             </div>
           </div>
         </div>
 
         <!-- STRATEGY PANEL 2: LOW CARB / KETO -->
         <div class="diet-view-panel" id="panelDietLowCarb">
-          <div class="card" style="padding:10px 12px;">
-            <div style="font-weight:900; font-size:13px; color:var(--amber); display:flex; justify-content:space-between; align-items:center;">
-              <span>🥩 Low Carb / Ketogenic Protocol</span>
-              <span style="font-size:12px; background:rgba(255,184,0,0.12); padding:2px 7px; border-radius:4px;">Sub-40g Carbs</span>
+          <div class="card" style="padding:10px 12px; border-radius:10px;">
+            <div style="font-weight:800; font-size:12.5px; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+              <span>Low Carb / Ketogenic Protocol</span>
+              <span style="font-size:11px; color:var(--text-muted);">Sub-40g Carbs</span>
             </div>
-            <div style="color:#cbd5e1; font-size:12.5px; line-height:1.4; margin-top:5px;">
-              Forces maximum fatty acid oxidation. Macros reallocated to <strong>200g Protein</strong>, <strong>40g Carbs</strong>, and <strong>198g Fats</strong> (holding your exact 2,741 kcal target and 350 kcal fat-loss deficit).
-            </div>
-            <div style="margin-top:5px; font-size:12px; color:var(--cyan); background:rgba(0,240,255,0.08); padding:5px 8px; border-radius:6px; line-height:1.35;">
-              💡 <strong>Coach Hydration Protocol:</strong> Low insulin causes sodium excretion. Drink 500ml water with 1g sodium (pinch of salt) before workouts to avoid cramping.
+            <div style="color:var(--text-secondary); font-size:12px; line-height:1.45; margin-top:4px;">
+              Prioritizes fatty acid oxidation. Macros calibrated to <strong>200g Protein</strong>, <strong>40g Carbs</strong>, and <strong>198g Fats</strong> holding your exact caloric runway.
             </div>
           </div>
         </div>
 
-        <!-- STRATEGY PANEL 3: CARB CYCLING (GARMIN LOAD ADAPTIVE) -->
+        <!-- STRATEGY PANEL 3: CARB CYCLING -->
         <div class="diet-view-panel" id="panelDietCarbCycle">
-          <div class="card" style="padding:10px 12px;">
+          <div class="card" style="padding:10px 12px; border-radius:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:900; font-size:13px; color:#fff;">🔄 Garmin Load-Adaptive Carb Cycle</span>
-              <span style="color:var(--lime); font-size:11px; font-weight:800; background:rgba(204,255,0,0.12); padding:2px 6px; border-radius:4px;">TRAINING DAY AUTO-DETECT</span>
+              <span style="font-weight:800; font-size:12.5px; color:#fff;">Garmin Load-Adaptive Carb Cycle</span>
+              <span style="color:var(--primary); font-size:10.5px; font-weight:700;">TRAINING DAY AUTO-DETECT</span>
             </div>
-            <div style="color:#cbd5e1; font-size:12.5px; line-height:1.4; margin-top:5px;">
-              Auto-calibrates carbohydrate density based on Garmin Readiness (<strong>80</strong>) and today's 649 kcal active burn (2 workouts).
+            <div style="color:var(--text-secondary); font-size:12px; line-height:1.4; margin-top:4px;">
+              Auto-calibrates carbohydrate density based on Garmin Readiness (<strong>71</strong>) and today's 624 kcal active burn.
             </div>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-top:8px;">
-              <button class="solver-size-btn active" id="btnCcHigh" onclick="setCarbCycleLevel('high')" style="padding:6px 8px; font-size:12px;">
-                <strong>High (Training)</strong><br><span style="color:var(--lime);">300g C • 58g F</span>
+              <button class="solver-size-btn active" id="btnCcHigh" onclick="setCarbCycleLevel('high')" style="padding:6px; font-size:11.5px; border-radius:6px;">
+                <strong>High (Training)</strong><br><span style="color:var(--primary);">300g C • 58g F</span>
               </button>
-              <button class="solver-size-btn" id="btnCcMod" onclick="setCarbCycleLevel('mod')" style="padding:6px 8px; font-size:12px;">
+              <button class="solver-size-btn" id="btnCcMod" onclick="setCarbCycleLevel('mod')" style="padding:6px; font-size:11.5px; border-radius:6px;">
                 <strong>Moderate</strong><br><span style="color:#fff;">200g C • 102g F</span>
               </button>
-              <button class="solver-size-btn" id="btnCcLow" onclick="setCarbCycleLevel('low')" style="padding:6px 8px; font-size:12px;">
-                <strong>Low (Rest)</strong><br><span style="color:var(--amber);">80g C • 155g F</span>
+              <button class="solver-size-btn" id="btnCcLow" onclick="setCarbCycleLevel('low')" style="padding:6px; font-size:11.5px; border-radius:6px;">
+                <strong>Low (Rest)</strong><br><span style="color:var(--text-muted);">80g C • 155g F</span>
               </button>
             </div>
           </div>
@@ -2203,39 +2230,25 @@
 
         <!-- STRATEGY PANEL 4: INTERMITTENT FASTING HUB -->
         <div class="diet-view-panel" id="panelDietFasting">
-          <div class="card" style="padding:10px 12px;">
+          <div class="card" style="padding:10px 12px; border-radius:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:900; font-size:13px; color:#fff;">⏳ Intermittent Fasting Control Hub</span>
-              <span style="color:var(--cyan); font-size:11.5px; font-weight:800; background:rgba(0,240,255,0.12); padding:2px 7px; border-radius:4px;" id="fastingProtocolTag">16:8 Protocol</span>
+              <span style="font-weight:800; font-size:12.5px; color:#fff;">Intermittent Fasting Control Hub</span>
+              <span style="color:var(--primary); font-size:11px; font-weight:700;" id="fastingProtocolTag">16:8 Protocol</span>
             </div>
-            
             <div style="display:flex; gap:5px; margin:6px 0; overflow-x:auto;">
-              <button class="solver-size-btn active" id="btnFast16_8" onclick="setFastingProtocol('16_8')" style="font-size:12px; padding:5px 9px;">16:8</button>
-              <button class="solver-size-btn" id="btnFast18_6" onclick="setFastingProtocol('18_6')" style="font-size:12px; padding:5px 9px;">18:6</button>
-              <button class="solver-size-btn" id="btnFast20_4" onclick="setFastingProtocol('20_4')" style="font-size:12px; padding:5px 9px;">20:4 (Warrior)</button>
-              <button class="solver-size-btn" id="btnFastOMAD" onclick="setFastingProtocol('omad')" style="font-size:12px; padding:5px 9px;">OMAD (24h)</button>
+              <button class="solver-size-btn active" id="btnFast16_8" onclick="setFastingProtocol('16_8')" style="font-size:11.5px; padding:4px 8px; border-radius:5px;">16:8</button>
+              <button class="solver-size-btn" id="btnFast18_6" onclick="setFastingProtocol('18_6')" style="font-size:11.5px; padding:4px 8px; border-radius:5px;">18:6</button>
+              <button class="solver-size-btn" id="btnFast20_4" onclick="setFastingProtocol('20_4')" style="font-size:11.5px; padding:4px 8px; border-radius:5px;">20:4</button>
+              <button class="solver-size-btn" id="btnFastOMAD" onclick="setFastingProtocol('omad')" style="font-size:11.5px; padding:4px 8px; border-radius:5px;">OMAD</button>
             </div>
-
             <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-elevated); padding:8px 10px; border-radius:8px;">
               <div>
-                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Current Fast Elapsed</div>
-                <div style="font-size:20px; font-weight:900; color:#fff;" id="fastingTimerDisplay">14h 25m</div>
+                <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Fast Elapsed</div>
+                <div style="font-size:18px; font-weight:800; color:#fff;" id="fastingTimerDisplay">14h 25m</div>
               </div>
               <div style="display:flex; gap:5px;">
-                <button class="solver-size-btn" id="btnToggleFastTimer" onclick="toggleFastingTimer()" style="background:rgba(0,255,135,0.2); color:var(--lime); border-color:var(--lime); font-size:12px; padding:6px 12px;">▶ Running</button>
-                <button class="solver-size-btn" onclick="resetFastingTimer()" style="font-size:12px; padding:6px 10px;">Reset</button>
-              </div>
-            </div>
-
-            <!-- MEAL PARTITIONS -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px;" id="fastingPartitionsContainer">
-              <div style="background:var(--surface-elevated); padding:6px 8px; border-radius:8px; font-size:12px;">
-                <strong style="color:var(--lime);">Meal 1 (Break-Fast):</strong> 1,350 kcal<br>
-                <span style="color:var(--text-muted);">95g P • 125g C • 40g F</span>
-              </div>
-              <div style="background:var(--surface-elevated); padding:6px 8px; border-radius:8px; font-size:12px;">
-                <strong style="color:var(--cyan);">Meal 2 (Feast):</strong> 1,391 kcal<br>
-                <span style="color:var(--text-muted);">105g P • 126g C • 40g F</span>
+                <button class="solver-size-btn" id="btnToggleFastTimer" onclick="toggleFastingTimer()" style="background:rgba(48,209,88,0.15); color:var(--primary); border:1px solid rgba(48,209,88,0.4); font-size:11px; padding:5px 10px; border-radius:6px;">Running</button>
+                <button class="solver-size-btn" onclick="resetFastingTimer()" style="font-size:11px; padding:5px 8px; border-radius:6px;">Reset</button>
               </div>
             </div>
           </div>
@@ -2243,154 +2256,34 @@
 
         <!-- STRATEGY PANEL 5: CUSTOM PRO-DIAL -->
         <div class="diet-view-panel" id="panelDietCustom">
-          <div class="card" style="padding:10px 12px;">
+          <div class="card" style="padding:10px 12px; border-radius:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:900; font-size:13px; color:#fff;">🎛️ Pro-Dial Adaptive Solver</span>
-              <span style="color:var(--cyan); font-size:13px; font-weight:900;" id="proDialCals">2,741 kcal</span>
+              <span style="font-weight:800; font-size:12.5px; color:#fff;">Pro-Dial Adaptive Solver</span>
+              <span style="color:var(--primary); font-size:12px; font-weight:800;" id="proDialCals">2,715 kcal</span>
             </div>
-            
             <div class="pro-slider-row" style="margin-top:6px;">
-              <span style="width:130px; color:var(--text-muted); font-size:12.5px;">Protein: <strong style="color:var(--cyan);" id="sliderValProtein">200g</strong> <small>(2.4g/kg)</small></span>
+              <span style="width:130px; color:var(--text-muted); font-size:12px;">Protein: <strong style="color:#fff;" id="sliderValProtein">200g</strong></span>
               <input type="range" id="sliderProtein" min="150" max="250" value="200" step="5" oninput="updateProDial()">
             </div>
-
             <div class="pro-slider-row">
-              <span style="width:130px; color:var(--text-muted); font-size:12.5px;">Fats %: <strong style="color:var(--crimson);" id="sliderValFat">30%</strong> <small>(91g)</small></span>
+              <span style="width:130px; color:var(--text-muted); font-size:12px;">Fats %: <strong style="color:#fff;" id="sliderValFat">30%</strong></span>
               <input type="range" id="sliderFat" min="15" max="65" value="30" step="1" oninput="updateProDial()">
             </div>
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; background:var(--surface-elevated); padding:6px 10px; border-radius:8px; font-size:12px;">
-              <span>Auto-balanced Carbs: <strong style="color:var(--lime); font-size:13px;" id="sliderValCarbs">280g</strong></span>
-              <button class="solver-size-btn" style="background:var(--cyan); color:#000; font-weight:900; font-size:12px; padding:5px 12px;" onclick="applyCustomProDial()">Lock & Apply</button>
+              <span>Auto-balanced Carbs: <strong style="color:var(--primary); font-size:12.5px;" id="sliderValCarbs">251g</strong></span>
+              <button class="solver-size-btn" style="background:var(--primary); color:#000; font-weight:800; font-size:11px; padding:4px 10px; border-radius:5px;" onclick="applyCustomProDial()">Apply</button>
             </div>
           </div>
         </div>
 
-        <!-- ==================== SECTION: MYNETDIARY DAILY MACRO BREAKDOWN ==================== -->
-        <div class="card" style="padding:12px 14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <!-- SECTION: CHRONOLOGICAL MEAL STREAM -->
+        <div class="card" style="padding:12px 14px; border-radius:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="font-size:16px;">📱</span>
-                <strong style="color:#fff; font-size:14px; font-weight:900;">MyNetDiary Daily Macro Breakdown</strong>
-              </div>
-              <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
-                <span id="mndConnectionStatusBadge" style="font-size:11px; font-weight:800; color:var(--lime); background:rgba(204,255,0,0.15); border:1px solid rgba(204,255,0,0.35); padding:2px 7px; border-radius:4px; cursor:pointer;" onclick="openMndConnectModal()" title="Click to configure MyNetDiary account">🟢 MND CLOUD SYNCED</span>
-                <span style="font-size:11px; color:var(--text-muted);">Consumed vs Targets • Garmin Caloric Runway</span>
-              </div>
+              <strong style="color:#fff; font-size:13px; font-weight:800; letter-spacing:0.02em;">Logged Meals & Food Stream</strong>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Synchronized from MyNetDiary Cloud API</div>
             </div>
-            <div style="display:flex; gap:5px; flex-wrap:wrap; align-items:center;">
-              <button class="solver-size-btn" id="btnMndAutoPull" style="background:rgba(204,255,0,0.2); border-color:var(--lime); color:var(--lime); font-size:12px; font-weight:900; padding:6px 12px;" onclick="triggerMndAutoPull()" title="Automatically pull today's logged meals and macros from MyNetDiary cloud">⚡ Auto-Pull MND</button>
-              <button class="solver-size-btn" id="btnMndConnect" style="background:rgba(0,240,255,0.15); border-color:var(--cyan); color:var(--cyan); font-size:12px; font-weight:800; padding:6px 10px;" onclick="openMndConnectModal()">🔗 Connect</button>
-              <button class="solver-size-btn" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.25); color:#fff; font-size:12px; padding:6px 10px;" onclick="openMndSyncModal()" title="Manually edit or paste summary">📥 Edit</button>
-              <button class="solver-size-btn" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.25); color:#fff; font-size:12px; padding:6px 10px;" onclick="openMndLogModal()">+ Log</button>
-            </div>
-          </div>
-
-          <!-- 4 MACRO RINGS / PROGRESS GAUGES (SPACIOUS 2x2 TACTILE GRID) -->
-          <div class="mnd-macro-grid" style="margin-top:10px;">
-            <!-- CALORIES -->
-            <div class="mnd-macro-card" style="border-left:3px solid var(--lime); padding:10px 12px;">
-              <div class="mnd-macro-title">
-                <span style="color:var(--text-muted); font-size:11px;">Energy</span>
-                <span style="color:var(--lime); font-size:11px; font-weight:800;" id="mndCalsRemainingBadge">1,917 left</span>
-              </div>
-              <div class="mnd-macro-val" style="margin:4px 0;">
-                <span id="mndCalsVal" style="font-size:22px; font-weight:900;">824</span>
-                <small style="font-size:11.5px; color:var(--text-muted); font-weight:600;">/ <span id="mndCalsTarget">2,741</span> kcal</small>
-              </div>
-              <div class="mnd-bar-track" style="height:8px;">
-                <div class="mnd-bar-fill" id="mndBarCals" style="width:30%; background:linear-gradient(90deg, var(--cyan), var(--lime));"></div>
-              </div>
-              <div class="mnd-macro-sub" style="font-size:11.5px; color:var(--lime); font-weight:700; margin-top:2px;">🔥 Burn: +0 Garmin (Ready 71)</div>
-            </div>
-
-            <!-- PROTEIN -->
-            <div class="mnd-macro-card" style="border-left:3px solid var(--cyan); padding:10px 12px;">
-              <div class="mnd-macro-title">
-                <span style="color:var(--text-muted); font-size:11px;">Protein</span>
-                <span style="color:var(--cyan); font-size:11px; font-weight:800;" id="mndProteinRemainingBadge">151g left</span>
-              </div>
-              <div class="mnd-macro-val" style="margin:4px 0;">
-                <span id="mndProteinVal" style="font-size:22px; font-weight:900; color:var(--cyan);">49</span>
-                <small style="font-size:11.5px; color:var(--text-muted); font-weight:600;">/ 200g</small>
-              </div>
-              <div class="mnd-bar-track" style="height:8px;">
-                <div class="mnd-bar-fill" id="mndBarProtein" style="width:25%; background:var(--cyan);"></div>
-              </div>
-              <div class="mnd-macro-sub" style="font-size:11.5px; color:var(--cyan); font-weight:700; margin-top:2px;">🛡️ 2.43g/kg lean anchor</div>
-            </div>
-
-            <!-- CARBS -->
-            <div class="mnd-macro-card" style="border-left:3px solid var(--lime); padding:10px 12px;">
-              <div class="mnd-macro-title">
-                <span style="color:var(--text-muted); font-size:11px;">Carbs</span>
-                <span style="color:var(--lime); font-size:11px; font-weight:800;" id="mndCarbsRemainingBadge">125g left</span>
-              </div>
-              <div class="mnd-macro-val" style="margin:4px 0;">
-                <span id="mndCarbsVal" style="font-size:22px; font-weight:900; color:var(--lime);">115</span>
-                <small style="font-size:11.5px; color:var(--text-muted); font-weight:600;">/ 240g</small>
-              </div>
-              <div class="mnd-bar-track" style="height:8px;">
-                <div class="mnd-bar-fill" id="mndBarCarbs" style="width:48%; background:var(--lime);"></div>
-              </div>
-              <div class="mnd-macro-sub" style="font-size:11.5px; color:var(--text-muted); font-weight:700; margin-top:2px;">⚡ Glycogen recharge</div>
-            </div>
-
-            <!-- FAT -->
-            <div class="mnd-macro-card" style="border-left:3px solid var(--amber); padding:10px 12px;">
-              <div class="mnd-macro-title">
-                <span style="color:var(--text-muted); font-size:11px;">Fats</span>
-                <span style="color:var(--amber); font-size:11px; font-weight:800;" id="mndFatRemainingBadge">42g left</span>
-              </div>
-              <div class="mnd-macro-val" style="margin:4px 0;">
-                <span id="mndFatVal" style="font-size:22px; font-weight:900; color:var(--amber);">23</span>
-                <small style="font-size:11.5px; color:var(--text-muted); font-weight:600;">/ 65g</small>
-              </div>
-              <div class="mnd-bar-track" style="height:8px;">
-                <div class="mnd-bar-fill" id="mndBarFat" style="width:35%; background:var(--amber);"></div>
-              </div>
-              <div class="mnd-macro-sub" style="font-size:11.5px; color:var(--text-muted); font-weight:700; margin-top:2px;">🧬 Cell & hormone baseline</div>
-            </div>
-          </div>
-
-          <!-- MACRO ENERGY SPLIT & MICRONUTRIENT STRIP -->
-          <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-top:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:5px;">
-              <span style="color:var(--text-muted); font-weight:700;">Macro Energy Distribution (MyNetDiary):</span>
-              <span style="color:#fff; font-weight:800;" id="mndMacroRatioText">24% Protein • 56% Carbs • 20% Fat</span>
-            </div>
-            <div class="macro-bar-container" style="height:8px; border-radius:999px; overflow:hidden;">
-              <div id="mndSplitP" style="width:24%; background:var(--cyan); height:100%;"></div>
-              <div id="mndSplitC" style="width:56%; background:var(--lime); height:100%;"></div>
-              <div id="mndSplitF" style="width:20%; background:var(--amber); height:100%;"></div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:12px;">
-              <div>
-                <span style="color:var(--text-muted);">Fiber:</span>
-                <strong style="color:#fff; font-size:13px;" id="mndFiberVal">19g</strong> <small style="color:var(--text-muted);">/ 38g</small>
-              </div>
-              <div>
-                <span style="color:var(--text-muted);">Sodium:</span>
-                <strong style="color:#fff; font-size:13px;" id="mndSodiumVal">275mg</strong> <small style="color:var(--text-muted);">/ 2.3g</small>
-              </div>
-              <div>
-                <span style="color:var(--text-muted);">Water:</span>
-                <strong style="color:var(--cyan); font-size:13px;" id="mndWaterVal">0.0L</strong> <small style="color:var(--text-muted);">/ 3.5L</small>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ==================== SECTION: CHRONOLOGICAL MEAL STREAM ==================== -->
-        <div class="card" style="padding:12px 14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div>
-              <strong style="color:#fff; font-size:14px; font-weight:900;">📋 Logged Meals & Food Breakdown</strong>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Synchronized food items from MyNetDiary Cloud API</div>
-            </div>
-            <span style="font-size:11.5px; color:var(--lime); font-weight:900; background:rgba(204,255,0,0.14); border:1px solid rgba(204,255,0,0.3); padding:3px 8px; border-radius:5px;" id="mndMealsCountBadge">1 Logged (3 Items)</span>
+            <span style="font-size:10.5px; color:var(--primary); font-weight:700; background:rgba(48,209,88,0.1); border:1px solid rgba(48,209,88,0.25); padding:2px 7px; border-radius:5px;" id="mndMealsCountBadge">2 Logged (8 Items)</span>
           </div>
 
           <div id="mndMealsStreamContainer" style="display:flex; flex-direction:column; gap:8px;">
@@ -2398,20 +2291,20 @@
           </div>
         </div>
 
-        <!-- ==================== SECTION: RECOMPOSITION RUNWAY AUTOREGULATION ==================== -->
-        <div class="card" style="padding:12px 14px; background:linear-gradient(135deg, rgba(0,240,255,0.08), rgba(14,19,29,0.95)); border:1px solid rgba(0,240,255,0.3);">
+        <!-- SECTION: AUTOREGULATION INSIGHT -->
+        <div class="card" style="padding:12px 14px; border-radius:12px; background:var(--surface); border:1px solid rgba(48,209,88,0.25);">
           <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
-            <span style="font-size:16px;">🧠</span>
-            <strong style="color:var(--cyan); font-size:12.5px; text-transform:uppercase; letter-spacing:0.5px; font-weight:900;">Runway Autoregulation Coach</strong>
+            <div style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(48,209,88,0.6);"></div>
+            <strong style="color:var(--primary); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">Runway Autoregulation Insight</strong>
           </div>
-          <div id="mndCoachAdvice" style="font-size:12.5px; color:#cbd5e1; line-height:1.4;">
-            Loading personalized advice...
+          <div id="mndCoachAdvice" style="font-size:12px; color:var(--text-secondary); line-height:1.45;">
+            Daily protein target achieved (234g / 200g target). Remaining 323 kcal runway provides flexibility for pre-bed casein or clean fuel before tomorrow's strength session.
           </div>
         </div>
 
         <!-- REFRESH LIVE NUTRITION SYNC -->
-        <button class="btn-action-primary" style="margin-top:4px; min-height:46px; font-size:13.5px; font-weight:900;" onclick="refreshLiveNutritionTelemetry()">
-          <span>↻</span> REFRESH GARMIN ACTIVE BURN & RUNWAY
+        <button class="btn-action-primary" style="margin-top:2px; min-height:44px; font-size:12.5px; font-weight:800; letter-spacing:0.04em;" onclick="refreshLiveNutritionTelemetry()">
+          REFRESH GARMIN ACTIVE BURN & RUNWAY
         </button>
 
       </main>
@@ -5689,6 +5582,77 @@ function generateWorkoutFromGearAndGoal() {
       updateRunwayUI();
     }
 
+    function updateRunwayUI() {
+      const burnEl = document.getElementById('vitalBurn');
+      let activeBurn = 624;
+      if (burnEl) {
+        const parsed = parseInt(burnEl.innerText);
+        if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
+      }
+      const totalBudget = athleteDailyBudget > 2092 ? athleteDailyBudget : (2092 + activeBurn);
+      const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
+      const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
+      const carbs = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.carbs) || 0;
+      const fats = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.fat) || 0;
+      const pTarget = athleteProteinAnchor || 200;
+      const cTarget = 251;
+      const fTarget = 80;
+
+      const remainingCals = Math.max(0, totalBudget - cals);
+      const pct = Math.min(100, Math.round((cals / totalBudget) * 100));
+
+      const ftEl = document.getElementById('fuelTargetNum');
+      if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+${activeBurn} active</span>`;
+
+      const frEl = document.getElementById('fuelRemainingNum');
+      if (frEl) frEl.innerHTML = `${remainingCals.toLocaleString()} <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span>`;
+
+      const fcText = document.getElementById('fuelConsumedText');
+      if (fcText) fcText.innerText = `${cals.toLocaleString()} kcal`;
+
+      const ipPct = document.getElementById('intakeProgressPercent');
+      if (ipPct) ipPct.innerText = `${pct}% (${remainingCals.toLocaleString()} kcal Runway)`;
+
+      const barIntake = document.getElementById('barIntakeConsumed');
+      if (barIntake) barIntake.style.width = `${pct}%`;
+
+      const pBadge = document.getElementById('proteinRemainingBadge');
+      if (pBadge) {
+        if (prot >= pTarget) {
+          pBadge.innerText = `${prot}g Consumed • Target Met (+${prot - pTarget}g)`;
+          pBadge.style.color = 'var(--primary)';
+        } else {
+          pBadge.innerText = `${prot}g Consumed • ${pTarget - prot}g Left`;
+          pBadge.style.color = '#fff';
+        }
+      }
+
+      const mp = document.getElementById('macroProtein');
+      if (mp) mp.innerText = `${pTarget}g`;
+      const mpSub = document.getElementById('macroProteinSub');
+      if (mpSub) {
+        const pPct = Math.round((prot / pTarget) * 100);
+        mpSub.innerText = prot >= pTarget ? `${prot}g (${pPct}%) • Target Met` : `${prot}g / ${pTarget}g (${pPct}%)`;
+      }
+
+      const mc = document.getElementById('macroCarbs');
+      if (mc) mc.innerText = `${cTarget}g`;
+      const mcSub = document.getElementById('macroCarbsSub');
+      if (mcSub) mcSub.innerText = `${carbs}g • ${Math.max(0, cTarget - carbs)}g Left`;
+
+      const mf = document.getElementById('macroFat');
+      if (mf) mf.innerText = `${fTarget}g`;
+      const mfSub = document.getElementById('macroFatSub');
+      if (mfSub) mfSub.innerText = `${fats}g • ${Math.max(0, fTarget - fats)}g Left`;
+
+      const barP = document.getElementById('barProtein');
+      if (barP) barP.style.width = `${Math.min(100, Math.round((prot / pTarget) * 100))}%`;
+      const barC = document.getElementById('barCarbs');
+      if (barC) barC.style.width = `${Math.min(100, Math.round((carbs / cTarget) * 100))}%`;
+      const barF = document.getElementById('barFat');
+      if (barF) barF.style.width = `${Math.min(100, Math.round((fats / fTarget) * 100))}%`;
+    }
+
     function renderMndMealStream() {
       const container = document.getElementById('mndMealsStreamContainer');
       if (!container) return;
@@ -5711,26 +5675,18 @@ function generateWorkoutFromGearAndGoal() {
         const mealCard = document.createElement('div');
         mealCard.className = 'mnd-meal-card';
         if (mKey === 'dinner' && !hasItems) {
-          mealCard.style.borderLeft = '3px solid rgba(255,255,255,0.15)';
-        } else if (mKey === 'breakfast') {
-          mealCard.style.borderLeft = '3px solid var(--cyan)';
-        } else if (mKey === 'lunch') {
-          mealCard.style.borderLeft = '3px solid var(--lime)';
-        } else if (mKey === 'snacks') {
-          mealCard.style.borderLeft = '3px solid var(--amber)';
-        } else {
-          mealCard.style.borderLeft = '3px solid var(--lime)';
+          mealCard.style.opacity = '0.6';
         }
 
         let itemsHtml = '';
         if (hasItems) {
           itemsHtml = meal.items.map((item, itemIdx) => `
             <div class="mnd-item-row">
-              <span style="color:#e2e8f0;">${item.name}</span>
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="color:var(--text-muted); font-weight:700;">${item.cals} kcal</span>
-                <span style="color:var(--cyan); font-weight:800;">${item.p}g P</span>
-                <span style="color:var(--crimson); cursor:pointer; font-size:11px; padding:0 3px;" title="Remove food item" onclick="deleteMndMealItem('${mKey}', ${itemIdx})">✕</span>
+              <span style="color:#FFFFFF; font-weight:500;">${item.name}</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:var(--text-muted); font-size:11px;">${item.cals} kcal</span>
+                <span style="color:var(--primary); font-weight:700; font-size:11px;">${item.p}g P</span>
+                <span style="color:var(--text-muted); cursor:pointer; font-size:10px; padding:0 2px;" title="Remove food item" onclick="deleteMndMealItem('${mKey}', ${itemIdx})">✕</span>
               </div>
             </div>
           `).join('');
@@ -5745,14 +5701,14 @@ function generateWorkoutFromGearAndGoal() {
         mealCard.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <div>
-              <strong style="color:#fff; font-size:12.5px;">${meal.name}</strong>
-              <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">• ${meal.time}</span>
+              <strong style="color:#fff; font-size:12px; font-weight:700;">${meal.name}</strong>
+              <span style="font-size:10.5px; color:var(--text-muted); margin-left:4px;">• ${meal.time}</span>
             </div>
-            <div style="display:flex; gap:3px;">
-              <span class="macro-pill" style="color:var(--cyan); font-weight:900;">${meal.protein}g P</span>
-              <span class="macro-pill" style="color:var(--lime);">${meal.carbs}g C</span>
-              <span class="macro-pill" style="color:var(--amber);">${meal.fat}g F</span>
-              <span class="macro-pill" style="color:#fff; font-weight:800;">${meal.calories} kcal</span>
+            <div style="display:flex; gap:4px;">
+              <span class="macro-pill" style="color:var(--primary); font-weight:700; background:rgba(48,209,88,0.1);">${meal.protein}g P</span>
+              <span class="macro-pill" style="color:#fff; background:rgba(255,255,255,0.06);">${meal.carbs}g C</span>
+              <span class="macro-pill" style="color:var(--text-muted); background:rgba(255,255,255,0.06);">${meal.fat}g F</span>
+              <span class="macro-pill" style="color:#fff; font-weight:700; background:rgba(255,255,255,0.08);">${meal.calories} kcal</span>
             </div>
           </div>
           <div>${itemsHtml}</div>
