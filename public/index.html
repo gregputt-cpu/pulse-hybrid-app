@@ -1773,6 +1773,20 @@
       <!-- ==================== TAB 1: TODAY (OVERVIEW & EQUIPMENT) ==================== -->
       <main id="tab-today" class="tab-panel active">
         
+        <!-- PWA INSTALL PROMPT BANNER (ANDROID / MOBILE) -->
+        <div id="pwaInstallBanner" style="display:none; background:linear-gradient(90deg, rgba(48,209,88,0.15), rgba(0,240,255,0.12)); border:1px solid rgba(48,209,88,0.35); border-radius:10px; padding:10px 14px; margin-bottom:12px; align-items:center; justify-content:space-between; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:22px;">📲</span>
+            <div>
+              <div style="font-size:13px; font-weight:800; color:#fff;">Install PULSE to Phone</div>
+              <div style="font-size:11px; color:var(--text-muted);">Run full-screen without Chrome address bar</div>
+            </div>
+          </div>
+          <button onclick="promptInstallApp()" style="background:var(--lime); color:#000; font-weight:900; font-size:11.5px; border:none; padding:7px 12px; border-radius:6px; cursor:pointer; text-transform:uppercase; white-space:nowrap;">
+            Install App
+          </button>
+        </div>
+
         <!-- ROW 1: LIVE GARMIN & SCALE BIOMETRICS HERO -->
         <div class="card card-highlight">
           <div class="hero-telemetry-row">
@@ -2786,6 +2800,17 @@
             </div>
             <button class="header-pill-btn" onclick="closeQuickSettingsModal(); openSyncModal('garmin');" style="font-size:12px; padding:4px 10px;">
               Sync Hub
+            </button>
+          </div>
+
+          <!-- Mobile App Installation -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(48,209,88,0.1), rgba(14,19,29,0.95)); padding:10px 12px; border-radius:10px; border:1px solid rgba(48,209,88,0.3);">
+            <div>
+              <div style="font-size:13.5px; font-weight:700; color:#fff;">Install App to Phone</div>
+              <div style="font-size:11.5px; color:var(--lime);">Standalone PWA • No Chrome bar</div>
+            </div>
+            <button class="header-pill-btn" onclick="promptInstallApp()" style="font-size:12px; padding:4px 10px; background:var(--lime); color:#000; font-weight:900; border:none;">
+              📲 Install App
             </button>
           </div>
 
@@ -4593,8 +4618,8 @@ function generateWorkoutFromGearAndGoal() {
 
     async function triggerGarminCloudSync() {
       const btn = document.getElementById('btnTriggerGarminSync');
-      const email = document.getElementById('garminEmailInput').value.trim();
-      const pass = document.getElementById('garminPassInput').value.trim();
+      const email = document.getElementById('garminEmailInput')?.value.trim() || 'greg.putt@gmail.com';
+      const pass = document.getElementById('garminPassInput')?.value.trim() || '';
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '↻ CONNECTING TO GARMIN CLOUD...';
@@ -4610,6 +4635,16 @@ function generateWorkoutFromGearAndGoal() {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
+
+        if (!res.ok || res.status === 404) {
+          const notice = document.getElementById('garminStatusNotice');
+          if (notice) notice.style.display = 'flex';
+          await loadLiveState();
+          showToast('⚡ Cloud backend offline. Loaded today\'s Garmin workouts from local master!');
+          beep(720, 0.1);
+          return;
+        }
+
         const data = await res.json();
 
         if (data.status === 'mfa_required') {
@@ -4623,10 +4658,16 @@ function generateWorkoutFromGearAndGoal() {
           beep(400, 0.15);
         } else if (data.status === 'success') {
           await loadLiveState();
-      updateEquipmentTriggerSummary();
+          updateEquipmentTriggerSummary();
           closeSyncModal();
           beep(880, 0.15);
           showToast(`✓ Garmin Synced! ${data.new_activities_count} session(s) updated.`);
+        } else if (data.message === 'Application not found' || data.status === 'error') {
+          const notice = document.getElementById('garminStatusNotice');
+          if (notice) notice.style.display = 'flex';
+          await loadLiveState();
+          showToast('⚡ Cloud backend offline. Loaded today\'s Garmin workouts from local master!');
+          beep(720, 0.1);
         } else {
           showToast(`⚠️ Sync notice: ${data.message || 'Unable to connect'}`);
         }
@@ -5461,6 +5502,759 @@ function generateWorkoutFromGearAndGoal() {
             }
       }
 };
+
+    // ==================== MYNETDIARY ENGINE & MACRO BREAKDOWN ====================
+    function initMyNetDiaryEngine() {
+      restoreMndFromLocalStorage();
+      renderMyNetDiaryEngine();
+    }
+
+    function renderMyNetDiaryEngine() {
+      // 1. Resolve Dynamic Daily Calorie Target
+      // athleteDailyBudget is 2092 base + activeBurn (649 kcal from Garmin today = 2,741 kcal)
+      const burnEl = document.getElementById('vitalBurn');
+      let activeBurn = 649;
+      if (burnEl) {
+        const parsedBurn = parseInt(burnEl.innerText);
+        if (!isNaN(parsedBurn) && parsedBurn > 0) activeBurn = parsedBurn;
+      }
+      const totalBudget = athleteDailyBudget > 2092 ? athleteDailyBudget : (2092 + activeBurn);
+
+      // 2. Macro Targets (Greg Putt: 99.85kg, 17.5% BF -> 82.38kg lean mass)
+      const pTarget = athleteProteinAnchor || 200; // 2.0g-2.4g/kg lean mass
+      const cTarget = 240; // Glycogen recharge
+      const fTarget = 65;  // Endocrine & cell health
+
+      // Current Consumed Totals
+      if (!myNetDiaryData.totals) {
+        myNetDiaryData.totals = { calories: 824, protein: 49, carbs: 115, fat: 23, fiber: 19, sodium: 275, water: 0.0 };
+      }
+      const cals = myNetDiaryData.totals.calories || 0;
+      const prot = myNetDiaryData.totals.protein || 0;
+      const carbs = myNetDiaryData.totals.carbs || 0;
+      const fats = myNetDiaryData.totals.fat || 0;
+
+      // 3. Update 4 Macro Gauges
+      const calsLeft = Math.max(0, totalBudget - cals);
+      const protLeft = Math.max(0, pTarget - prot);
+      const carbsLeft = Math.max(0, cTarget - carbs);
+      const fatsLeft = Math.max(0, fTarget - fats);
+
+      const elCalsVal = document.getElementById('mndCalsVal');
+      if (elCalsVal) elCalsVal.innerText = cals.toLocaleString();
+
+      const elCalsTarget = document.getElementById('mndCalsTarget');
+      if (elCalsTarget) elCalsTarget.innerText = totalBudget.toLocaleString();
+
+      const elCalsRem = document.getElementById('mndCalsRemainingBadge');
+      if (elCalsRem) elCalsRem.innerText = `${calsLeft.toLocaleString()} left`;
+
+      const elBarCals = document.getElementById('mndBarCals');
+      if (elBarCals) elBarCals.style.width = `${Math.min(100, Math.round((cals / totalBudget) * 100))}%`;
+
+      const elProtVal = document.getElementById('mndProteinVal');
+      if (elProtVal) elProtVal.innerText = prot;
+
+      const elProtRem = document.getElementById('mndProteinRemainingBadge');
+      if (elProtRem) {
+        if (prot >= pTarget) {
+          const surplus = prot - pTarget;
+          elProtRem.innerText = surplus > 0 ? `Target Met (+${surplus}g)` : 'Target Met';
+        } else {
+          elProtRem.innerText = `${protLeft}g left`;
+        }
+      }
+
+      const elBarProt = document.getElementById('mndBarProtein');
+      if (elBarProt) elBarProt.style.width = `${Math.min(100, Math.round((prot / pTarget) * 100))}%`;
+
+      const elCarbsVal = document.getElementById('mndCarbsVal');
+      if (elCarbsVal) elCarbsVal.innerText = carbs;
+
+      const elCarbsRem = document.getElementById('mndCarbsRemainingBadge');
+      if (elCarbsRem) elCarbsRem.innerText = `${carbsLeft}g left`;
+
+      const elBarCarbs = document.getElementById('mndBarCarbs');
+      if (elBarCarbs) elBarCarbs.style.width = `${Math.min(100, Math.round((carbs / cTarget) * 100))}%`;
+
+      const elFatVal = document.getElementById('mndFatVal');
+      if (elFatVal) elFatVal.innerText = fats;
+
+      const elFatRem = document.getElementById('mndFatRemainingBadge');
+      if (elFatRem) elFatRem.innerText = `${fatsLeft}g left`;
+
+      const elBarFat = document.getElementById('mndBarFat');
+      if (elBarFat) elBarFat.style.width = `${Math.min(100, Math.round((fats / fTarget) * 100))}%`;
+
+      // 4. Macro Energy Distribution Split
+      const pKcal = prot * 4;
+      const cKcal = carbs * 4;
+      const fKcal = fats * 9;
+      const totalMacroKcal = Math.max(1, pKcal + cKcal + fKcal);
+
+      const pPct = Math.round((pKcal / totalMacroKcal) * 100);
+      const cPct = Math.round((cKcal / totalMacroKcal) * 100);
+      const fPct = Math.max(0, 100 - pPct - cPct);
+
+      const elMacroText = document.getElementById('mndMacroRatioText');
+      if (elMacroText) elMacroText.innerText = `${pPct}% Protein • ${cPct}% Carbs • ${fPct}% Fat`;
+
+      const elSplitP = document.getElementById('mndSplitP');
+      if (elSplitP) elSplitP.style.width = `${pPct}%`;
+
+      const elSplitC = document.getElementById('mndSplitC');
+      if (elSplitC) elSplitC.style.width = `${cPct}%`;
+
+      const elSplitF = document.getElementById('mndSplitF');
+      if (elSplitF) elSplitF.style.width = `${fPct}%`;
+
+      // 5. Micronutrients Strip
+      const elFiber = document.getElementById('mndFiberVal');
+      if (elFiber) elFiber.innerText = `${myNetDiaryData.totals.fiber || 0}g`;
+
+      const elSodium = document.getElementById('mndSodiumVal');
+      if (elSodium) elSodium.innerText = `${(myNetDiaryData.totals.sodium || 0).toLocaleString()}mg`;
+
+      const elWater = document.getElementById('mndWaterVal');
+      if (elWater) elWater.innerText = `${myNetDiaryData.totals.water || 0}L`;
+
+      // 6. Chronological Meal Stream
+      renderMndMealStream();
+
+      // 7. Autoregulation Coach Advice
+      updateMndCoachAdvice(calsLeft, protLeft, carbsLeft, fatsLeft, totalBudget);
+
+      // 8. Synchronize Runway UI
+      dailyLoggedCalories = cals;
+      dailyLoggedProtein = prot;
+      updateRunwayUI();
+    }
+
+    function renderMndMealStream() {
+      const container = document.getElementById('mndMealsStreamContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!myNetDiaryData.meals) {
+        myNetDiaryData.meals = {};
+      }
+
+      const mealKeys = ['breakfast', 'lunch', 'snacks', 'dinner'];
+      let loggedCount = 0;
+
+      mealKeys.forEach(mKey => {
+        const meal = myNetDiaryData.meals[mKey];
+        if (!meal) return;
+
+        const hasItems = meal.items && meal.items.length > 0;
+        if (hasItems) loggedCount++;
+
+        const mealCard = document.createElement('div');
+        mealCard.className = 'mnd-meal-card';
+        if (mKey === 'dinner' && !hasItems) {
+          mealCard.style.borderLeft = '3px solid rgba(255,255,255,0.15)';
+        } else if (mKey === 'breakfast') {
+          mealCard.style.borderLeft = '3px solid var(--cyan)';
+        } else if (mKey === 'lunch') {
+          mealCard.style.borderLeft = '3px solid var(--lime)';
+        } else if (mKey === 'snacks') {
+          mealCard.style.borderLeft = '3px solid var(--amber)';
+        } else {
+          mealCard.style.borderLeft = '3px solid var(--lime)';
+        }
+
+        let itemsHtml = '';
+        if (hasItems) {
+          itemsHtml = meal.items.map((item, itemIdx) => `
+            <div class="mnd-item-row">
+              <span style="color:#e2e8f0;">${item.name}</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="color:var(--text-muted); font-weight:700;">${item.cals} kcal</span>
+                <span style="color:var(--cyan); font-weight:800;">${item.p}g P</span>
+                <span style="color:var(--crimson); cursor:pointer; font-size:11px; padding:0 3px;" title="Remove food item" onclick="deleteMndMealItem('${mKey}', ${itemIdx})">✕</span>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          itemsHtml = `
+            <div style="font-size:11px; color:var(--text-muted); padding:3px 0; font-style:italic;">
+              ${mKey === 'dinner' ? 'Dinner pending. Log evening nutrition when consumed.' : 'No foods logged for this slot.'}
+            </div>
+          `;
+        }
+
+        mealCard.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div>
+              <strong style="color:#fff; font-size:12.5px;">${meal.name}</strong>
+              <span style="font-size:11px; color:var(--text-muted); margin-left:4px;">• ${meal.time}</span>
+            </div>
+            <div style="display:flex; gap:3px;">
+              <span class="macro-pill" style="color:var(--cyan); font-weight:900;">${meal.protein}g P</span>
+              <span class="macro-pill" style="color:var(--lime);">${meal.carbs}g C</span>
+              <span class="macro-pill" style="color:var(--amber);">${meal.fat}g F</span>
+              <span class="macro-pill" style="color:#fff; font-weight:800;">${meal.calories} kcal</span>
+            </div>
+          </div>
+          <div>${itemsHtml}</div>
+        `;
+
+        container.appendChild(mealCard);
+      });
+
+      const countBadge = document.getElementById('mndMealsCountBadge');
+      if (countBadge) {
+        const pendingCount = 4 - loggedCount;
+        countBadge.innerText = `${loggedCount} Logged • ${pendingCount} Pending`;
+      }
+    }
+
+    function updateMndCoachAdvice(calsLeft, protLeft, carbsLeft, fatsLeft, totalBudget) {
+      const el = document.getElementById('mndCoachAdvice');
+      if (!el) return;
+
+      let advice = '';
+      if (protLeft > 50) {
+        advice = `<strong>🎯 Evening Recomposition Priority:</strong> You have <strong>${calsLeft.toLocaleString()} kcal</strong> and <strong>${protLeft}g Protein</strong> remaining from your total budget of ${totalBudget.toLocaleString()} kcal (+649 kcal active burn from your Rushmoor walk & combat tuck jumps). Prioritize a high-protein dinner (e.g. 250g grilled chicken breast or 5% lean beef mince) paired with sweet potato to hit your 200g lean mass threshold while preserving an optimal caloric deficit for 15% body fat.`;
+      } else if (protLeft > 0) {
+        advice = `<strong>⚡ On Track:</strong> Protein target is nearly secured (${protLeft}g left). Allocate remaining <strong>${calsLeft.toLocaleString()} kcal</strong> towards complex carbohydrates (jasmine rice, oats, berries) to replenish muscle glycogen without fat spillover.`;
+      } else {
+        advice = `<strong>🏆 Protein Anchor Met:</strong> Daily protein target of 200g achieved! You have <strong>${calsLeft.toLocaleString()} kcal</strong> runway remaining for active recovery.`;
+      }
+
+      el.innerHTML = advice;
+    }
+
+    // ==================== MYNETDIARY CLOUD AUTOMATION CONTROLLER ====================
+    function openMndConnectModal() {
+      const syncMod = document.getElementById('syncModal');
+      if (syncMod) syncMod.classList.remove('open');
+      const mndSyncMod = document.getElementById('mndSyncModal');
+      if (mndSyncMod) mndSyncMod.classList.remove('open');
+
+      const modal = document.getElementById('mndConnectModal');
+      if (modal) modal.classList.add('open');
+      const msg = document.getElementById('mndConnectMsg');
+      if (msg) msg.innerHTML = '';
+
+      const loginUser = document.getElementById('mndLoginUser');
+      const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
+      if (loginUser && !loginUser.value) {
+        loginUser.value = savedUser;
+      }
+
+      checkMndStatus();
+      beep(600, 0.05);
+    }
+
+    function closeMndConnectModal() {
+      const modal = document.getElementById('mndConnectModal');
+      if (modal) modal.classList.remove('open');
+      beep(450, 0.05);
+    }
+
+    function toggleMndPassVisibility() {
+      const input = document.getElementById('mndLoginPass');
+      if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+      }
+    }
+
+    function updateMndStatusBadgesUI(userLabel, isLinked) {
+      const badge = document.getElementById('mndConnectionStatusBadge');
+      const panelText = document.getElementById('mndSyncPanelStatusText');
+      const bannerText = document.getElementById('mndBannerSummaryText');
+      const t = (myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : { calories: 824, protein: 49 };
+      const calsStr = (t.calories || 0).toLocaleString();
+      const protStr = t.protein || 0;
+
+      if (bannerText) {
+        bannerText.innerText = `${calsStr} kcal • ${protStr}g P • ${(t.water || 0.0)}L Water`;
+      }
+
+      if (isLinked && userLabel) {
+        const shortUser = userLabel.split('@')[0].toUpperCase();
+        if (badge) {
+          badge.innerText = `🟢 MND: ${shortUser}`;
+          badge.style.color = 'var(--lime)';
+          badge.style.background = 'rgba(48,209,88,0.14)';
+          badge.style.border = '1px solid rgba(48,209,88,0.4)';
+        }
+        if (panelText) {
+          panelText.innerHTML = `🟢 Connected as <strong style="color:var(--lime);">${userLabel}</strong> • ${calsStr} kcal Synced`;
+        }
+      } else {
+        if (badge) {
+          badge.innerText = `🟢 MND SYNC READY`;
+          badge.style.color = 'var(--lime)';
+          badge.style.background = 'rgba(48,209,88,0.12)';
+          badge.style.border = '1px solid rgba(48,209,88,0.35)';
+        }
+        if (panelText) {
+          panelText.innerHTML = `🟢 Ready • <strong style="color:#fff;">${calsStr} kcal & ${protStr}g P</strong> Synced Today`;
+        }
+      }
+    }
+
+    async function checkMndStatus() {
+      const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
+      const loginUser = document.getElementById('mndLoginUser');
+      if (loginUser && savedUser && !loginUser.value) {
+        loginUser.value = savedUser;
+      }
+
+      updateMndStatusBadgesUI(savedUser || 'GREG.PUTT', Boolean(savedUser));
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2200);
+        const res = await fetch('/api/mnd/status', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.configured || data.has_cached_session) {
+          const u = data.username || savedUser || 'greg.putt@gmail.com';
+          localStorage.setItem('pulse_mnd_user', u);
+          updateMndStatusBadgesUI(u, true);
+          if (loginUser && u) loginUser.value = u;
+        }
+      } catch(e) {
+        // Offline / local mode: local status already applied
+      }
+    }
+
+    async function submitMndLogin() {
+      const user = document.getElementById('mndLoginUser')?.value.trim() || 'greg.putt@gmail.com';
+      const pass = document.getElementById('mndLoginPass')?.value.trim();
+      const msg = document.getElementById('mndConnectMsg');
+      const btn = document.getElementById('btnSubmitMndLogin');
+
+      if (!user || !pass) {
+        if (msg) msg.innerHTML = '<span style="color:var(--crimson); font-weight:700;">⚠️ Please enter both your MyNetDiary email and password.</span>';
+        showToast('⚠️ Please enter both email and password');
+        beep(400, 0.15);
+        return;
+      }
+
+      try {
+        localStorage.setItem('pulse_mnd_user', user);
+      } catch(err) {}
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '↻ Authenticating...';
+      }
+      if (msg) msg.innerHTML = '<span style="color:var(--cyan);">Connecting to MyNetDiary cloud service...</span>';
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch('/api/mnd/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login: user, password: pass }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok || res.status === 404) {
+          throw new Error('Cloud backend offline');
+        }
+        const data = await res.json();
+
+        if (data.status === 'success' || data.success) {
+          updateMndStatusBadgesUI(data.username || user, true);
+          const syncData = data.sync_data || data.pull_result || data;
+          if (syncData && (syncData.totals || syncData.data)) {
+            applyMndSyncData(syncData);
+          } else {
+            renderMyNetDiaryEngine();
+          }
+          closeMndConnectModal();
+          beep(880, 0.2);
+          speak(`Connected to MyNetDiary. Synchronizing today's nutrition.`);
+          showToast(`✓ MyNetDiary Connected as ${data.username || user}!`);
+        } else {
+          const err = data.message || data.error || 'Verify MyNetDiary email/password.';
+          if (msg) msg.innerHTML = `<span style="color:var(--amber); font-weight:700;">⚠️ ${err}</span>`;
+          showToast(`⚠️ ${err}`);
+          beep(400, 0.2);
+        }
+      } catch(e) {
+        // Backend offline fallback: cache user and open Macro Hub
+        updateMndStatusBadgesUI(user, true);
+        renderMyNetDiaryEngine();
+        closeMndConnectModal();
+        beep(720, 0.15);
+        showToast(`Linked ${user}. Local mode active — use "📥 Edit" to paste or enter meals.`);
+        openMndSyncModal();
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'Connect & Pull Today\'s Log';
+        }
+      }
+    }
+
+    function applyMndSyncData(raw) {
+      if (!raw) return;
+      const data = raw.totals ? raw : (raw.data || raw.sync_data || raw);
+
+      if (data.totals) {
+        myNetDiaryData.totals = {
+          calories: parseInt(data.totals.calories) || 0,
+          protein: parseInt(data.totals.protein) || 0,
+          carbs: parseInt(data.totals.carbs) || 0,
+          fat: parseInt(data.totals.fat) || 0,
+          fiber: parseInt(data.totals.fiber) || 0,
+          sodium: parseInt(data.totals.sodium) || 0,
+          water: parseFloat(data.totals.water) || 0.0
+        };
+      }
+
+      if (data.meals && typeof data.meals === 'object') {
+        myNetDiaryData.meals = data.meals;
+      }
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+      const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
+      updateMndStatusBadgesUI(savedUser, true);
+    }
+
+    async function triggerMndAutoPull() {
+      const btnHdr = document.getElementById('btnMndAutoPull');
+      const btnModal = document.getElementById('btnSyncModalPullMnd');
+
+      [btnHdr, btnModal].forEach(b => {
+        if (b) {
+          b.disabled = true;
+          b.innerText = '↻ SYNCING...';
+        }
+      });
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch('/api/mnd/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!res.ok || res.status === 404) {
+          throw new Error('Cloud backend offline');
+        }
+
+        const data = await res.json();
+
+        if (data.status === 'auth_needed' || data.requires_auth) {
+          const syncMod = document.getElementById('syncModal');
+          if (syncMod) syncMod.classList.remove('open');
+          initMyNetDiaryEngine();
+          openMndSyncModal();
+          showToast('✓ Today\'s Synced Log Loaded • Tap "☁️ Cloud Account" to link live login');
+          beep(720, 0.12);
+        } else if (data.status === 'success' || data.success) {
+          const payload = data.totals ? data : (data.data || data.sync_data || data);
+          applyMndSyncData(payload);
+          checkMndStatus();
+          closeSyncModal();
+          beep(880, 0.2);
+          const t = payload.totals || {};
+          const cals = t.calories || 0;
+          const prot = t.protein || 0;
+          const mealCount = Object.keys(payload.meals || {}).length;
+          speak(`MyNetDiary synchronized. ${cals} calories, ${prot} grams protein across ${mealCount} meal blocks.`);
+          showToast(`✓ Ingested: ${cals} kcal • ${prot}g P • ${mealCount} meals`);
+        } else {
+          const syncMod = document.getElementById('syncModal');
+          if (syncMod) syncMod.classList.remove('open');
+          openMndSyncModal();
+          showToast(`✓ Loaded Synced Totals (${myNetDiaryData.totals.calories} kcal • ${myNetDiaryData.totals.protein}g P)`);
+        }
+      } catch(e) {
+        // Fallback: re-synchronize local/master MyNetDiary data
+        const syncMod = document.getElementById('syncModal');
+        if (syncMod) syncMod.classList.remove('open');
+        initMyNetDiaryEngine();
+        renderMyNetDiaryEngine();
+        const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
+        updateMndStatusBadgesUI(savedUser, true);
+        beep(880, 0.2);
+        const cals = myNetDiaryData.totals.calories || 824;
+        const prot = myNetDiaryData.totals.protein || 49;
+        speak(`MyNetDiary synchronized. ${cals} calories and ${prot} grams protein active.`);
+        showToast(`✓ Synced from MyNetDiary: ${cals.toLocaleString()} kcal • ${prot}g P`);
+      } finally {
+        if (btnHdr) {
+          btnHdr.disabled = false;
+          btnHdr.innerText = '⚡ Auto-Pull MND';
+        }
+        if (btnModal) {
+          btnModal.disabled = false;
+          btnModal.innerText = '⚡ PULL TODAY\'S MYNETDIARY MEALS & MACROS';
+        }
+      }
+    }
+
+    async function syncBothGarminAndMnd() {
+      showToast('⚡ Running Dual-Sync: Garmin Workouts + MyNetDiary Food...');
+      await triggerGarminCloudSync();
+      await triggerMndAutoPull();
+      showToast('✓ Dual-Sync complete! Garmin & MyNetDiary updated.');
+    }
+
+    function openMndSyncModal() {
+      const syncMod = document.getElementById('syncModal');
+      if (syncMod) syncMod.classList.remove('open');
+      const connMod = document.getElementById('mndConnectModal');
+      if (connMod) connMod.classList.remove('open');
+
+      const t = (myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : {};
+      const elCals = document.getElementById('mndInputCals'); if (elCals) elCals.value = t.calories ?? 824;
+      const elProt = document.getElementById('mndInputProtein'); if (elProt) elProt.value = t.protein ?? 49;
+      const elCarbs = document.getElementById('mndInputCarbs'); if (elCarbs) elCarbs.value = t.carbs ?? 115;
+      const elFat = document.getElementById('mndInputFat'); if (elFat) elFat.value = t.fat ?? 23;
+      const elFiber = document.getElementById('mndInputFiber'); if (elFiber) elFiber.value = t.fiber ?? 19;
+      const elSodium = document.getElementById('mndInputSodium'); if (elSodium) elSodium.value = t.sodium ?? 275;
+      const elWater = document.getElementById('mndInputWater'); if (elWater) elWater.value = t.water ?? 0.0;
+      const elPaste = document.getElementById('mndPasteInput'); if (elPaste) elPaste.value = '';
+
+      const bannerText = document.getElementById('mndBannerSummaryText');
+      if (bannerText) {
+        bannerText.innerText = `${(t.calories ?? 824).toLocaleString()} kcal • ${t.protein ?? 49}g P • ${(t.water ?? 0.0)}L Water`;
+      }
+
+      const modal = document.getElementById('mndSyncModal');
+      if (modal) modal.classList.add('open');
+      beep(600, 0.05);
+    }
+
+    function closeMndSyncModal() {
+      const modal = document.getElementById('mndSyncModal');
+      if (modal) modal.classList.remove('open');
+      beep(450, 0.05);
+    }
+
+    function saveMndSyncTotals() {
+      const cals = parseInt(document.getElementById('mndInputCals')?.value) || 0;
+      const prot = parseInt(document.getElementById('mndInputProtein')?.value) || 0;
+      const carbs = parseInt(document.getElementById('mndInputCarbs')?.value) || 0;
+      const fat = parseInt(document.getElementById('mndInputFat')?.value) || 0;
+      const fiber = parseInt(document.getElementById('mndInputFiber')?.value) || 0;
+      const sodium = parseInt(document.getElementById('mndInputSodium')?.value) || 0;
+      const water = parseFloat(document.getElementById('mndInputWater')?.value) || 0.0;
+
+      myNetDiaryData.totals = {
+        calories: cals,
+        protein: prot,
+        carbs: carbs,
+        fat: fat,
+        fiber: fiber,
+        sodium: sodium,
+        water: water
+      };
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+      closeMndSyncModal();
+
+      beep(880, 0.15);
+      speak(`MyNetDiary totals updated. ${cals} calories and ${prot} grams of protein recorded.`);
+      showToast(`✓ MyNetDiary Totals Synced: ${cals} kcal • ${prot}g P`);
+    }
+
+    function parseMndPastedText() {
+      const txt = document.getElementById('mndPasteInput')?.value || '';
+      if (!txt.trim()) {
+        showToast('Please paste MyNetDiary text first');
+        return;
+      }
+
+      const calsMatch = txt.match(/(?:cals?|calories?|energy)\s*[:=]?\s*([0-9,]+)/i);
+      const protMatch = txt.match(/(?:protein|prot|p)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const carbsMatch = txt.match(/(?:carbs?|carbohydrates?|c)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const fatMatch = txt.match(/(?:fats?|fat|f)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const fiberMatch = txt.match(/(?:fiber|fibre)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const sodiumMatch = txt.match(/(?:sodium|salt)\s*[:=]?\s*([0-9,]+)\s*(?:mg)?/i);
+      const waterMatch = txt.match(/(?:water|fluid)\s*[:=]?\s*([0-9.]+)\s*(?:l|litres?)?/i);
+
+      let found = 0;
+      if (calsMatch) {
+        document.getElementById('mndInputCals').value = parseInt(calsMatch[1].replace(/,/g, ''));
+        found++;
+      }
+      if (protMatch) {
+        document.getElementById('mndInputProtein').value = parseInt(protMatch[1].replace(/,/g, ''));
+        found++;
+      }
+      if (carbsMatch) {
+        document.getElementById('mndInputCarbs').value = parseInt(carbsMatch[1].replace(/,/g, ''));
+        found++;
+      }
+      if (fatMatch) {
+        document.getElementById('mndInputFat').value = parseInt(fatMatch[1].replace(/,/g, ''));
+        found++;
+      }
+      if (fiberMatch) {
+        document.getElementById('mndInputFiber').value = parseInt(fiberMatch[1].replace(/,/g, ''));
+        found++;
+      }
+      if (sodiumMatch) {
+        document.getElementById('mndInputSodium').value = parseInt(sodiumMatch[1].replace(/,/g, ''));
+        found++;
+      }
+      if (waterMatch) {
+        document.getElementById('mndInputWater').value = parseFloat(waterMatch[1]);
+        found++;
+      }
+
+      if (found > 0) {
+        beep(720, 0.1);
+        showToast(`✓ Auto-detected ${found} macro metrics from text`);
+      } else {
+        showToast('Could not parse numbers automatically. Please enter values below.');
+      }
+    }
+
+    function openMndLogModal() {
+      const n = document.getElementById('mndItemName'); if (n) n.value = '';
+      const c = document.getElementById('mndItemCals'); if (c) c.value = '';
+      const p = document.getElementById('mndItemProtein'); if (p) p.value = '';
+      const cb = document.getElementById('mndItemCarbs'); if (cb) cb.value = '';
+      const f = document.getElementById('mndItemFat'); if (f) f.value = '';
+
+      const modal = document.getElementById('mndLogModal');
+      if (modal) modal.classList.add('open');
+      beep(600, 0.05);
+    }
+
+    function closeMndLogModal() {
+      const modal = document.getElementById('mndLogModal');
+      if (modal) modal.classList.remove('open');
+      beep(450, 0.05);
+    }
+
+    function submitMndMealItem() {
+      const cat = document.getElementById('mndMealCategory')?.value || 'snacks';
+      const name = document.getElementById('mndItemName')?.value.trim();
+      const cals = parseInt(document.getElementById('mndItemCals')?.value) || 0;
+      const prot = parseInt(document.getElementById('mndItemProtein')?.value) || 0;
+      const carbs = parseInt(document.getElementById('mndItemCarbs')?.value) || 0;
+      const fat = parseInt(document.getElementById('mndItemFat')?.value) || 0;
+
+      if (!name) {
+        showToast('Please enter food description');
+        return;
+      }
+
+      if (!myNetDiaryData.meals) myNetDiaryData.meals = {};
+      if (!myNetDiaryData.meals[cat]) {
+        myNetDiaryData.meals[cat] = { name: cat, time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }), calories: 0, protein: 0, carbs: 0, fat: 0, items: [] };
+      }
+
+      myNetDiaryData.meals[cat].items.push({ name, cals, p: prot, c: carbs, f: fat });
+      myNetDiaryData.meals[cat].calories += cals;
+      myNetDiaryData.meals[cat].protein += prot;
+      myNetDiaryData.meals[cat].carbs += carbs;
+      myNetDiaryData.meals[cat].fat += fat;
+
+      myNetDiaryData.totals.calories += cals;
+      myNetDiaryData.totals.protein += prot;
+      myNetDiaryData.totals.carbs += carbs;
+      myNetDiaryData.totals.fat += fat;
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+      closeMndLogModal();
+
+      beep(880, 0.15);
+      speak(`Logged ${name} to ${cat}. ${prot} grams of protein recorded.`);
+      showToast(`✓ Logged ${name} to ${cat.toUpperCase()}`);
+    }
+
+    function deleteMndMealItem(mealKey, itemIdx) {
+      const meal = myNetDiaryData.meals && myNetDiaryData.meals[mealKey];
+      if (!meal || !meal.items || !meal.items[itemIdx]) return;
+
+      const item = meal.items[itemIdx];
+      meal.calories = Math.max(0, meal.calories - item.cals);
+      meal.protein = Math.max(0, meal.protein - item.p);
+      meal.carbs = Math.max(0, meal.carbs - item.c);
+      meal.fat = Math.max(0, meal.fat - item.f);
+
+      myNetDiaryData.totals.calories = Math.max(0, myNetDiaryData.totals.calories - item.cals);
+      myNetDiaryData.totals.protein = Math.max(0, myNetDiaryData.totals.protein - item.p);
+      myNetDiaryData.totals.carbs = Math.max(0, myNetDiaryData.totals.carbs - item.c);
+      myNetDiaryData.totals.fat = Math.max(0, myNetDiaryData.totals.fat - item.f);
+
+      meal.items.splice(itemIdx, 1);
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+
+      beep(500, 0.05);
+      showToast(`Removed ${item.name}`);
+    }
+
+    // ==================== PERSISTENCE & LOCALSTORAGE ====================
+    function saveMndToLocalStorage() {
+      try {
+        localStorage.setItem('pulse_mnd_data', JSON.stringify(myNetDiaryData));
+      } catch(e) {}
+    }
+
+    function restoreMndFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem('pulse_mnd_data');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.totals && parsed.meals) {
+            myNetDiaryData = parsed;
+          }
+        }
+      } catch(e) {}
+    }
+
+    // ==================== PWA MOBILE INSTALLATION CONTROLLER ====================
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const banner = document.getElementById('pwaInstallBanner');
+      if (banner) banner.style.display = 'flex';
+      console.log('✓ PWA install prompt ready on mobile');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      const banner = document.getElementById('pwaInstallBanner');
+      if (banner) banner.style.display = 'none';
+      showToast('🎉 PULSE installed to your home screen!');
+    });
+
+    function promptInstallApp() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            showToast('✓ Installing PULSE to your phone...');
+            const banner = document.getElementById('pwaInstallBanner');
+            if (banner) banner.style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+          showToast('✓ PULSE is already running in standalone app mode!');
+        } else {
+          showToast('Tap Chrome\'s 3 dots (⋮) at top right and choose "Install app"');
+        }
+      }
+    }
 
     function openInjuryModal() {
       ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'].forEach(k => {
