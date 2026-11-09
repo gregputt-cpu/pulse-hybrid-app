@@ -1,8 +1,8 @@
 {
   "framework": null,
-  "buildCommand": "",
   "installCommand": "",
-  "outputDirectory": "public",
+  "buildCommand": "node build.js",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/manifest.json",
