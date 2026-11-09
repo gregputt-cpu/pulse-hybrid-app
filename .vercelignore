@@ -1,7 +1,5 @@
-# Ignore all Python backend files so Vercel builds a pure static Edge PWA
 backend/
-*.py
-*.pyc
 __pycache__/
 docs/
-*.md
+*.log
+upload/
