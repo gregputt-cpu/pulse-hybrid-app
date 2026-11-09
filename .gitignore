@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Environment and sensitive credentials
+.env
+*.pkl
+garmin_tokens/
+mnd_tokens/
+token_*.json
+
+# Logs, uploads, and scratch media
+*.log
+upload/
+Screenshot_*.jpg
+Screenshot_*.png
+download*.png
+download_*.png
+*.bak*
+preview_*.html
+test_*.html
+
+# System & Toolchain
+.gemini
+.cache/
+.config/
+.local/
+.bash*
+.profile
