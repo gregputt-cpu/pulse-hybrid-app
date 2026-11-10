@@ -92,26 +92,48 @@
       letter-spacing: -0.01em;
     }
 
-    /* Precision Telemetry Monospace & Tabular Nums */
+    /* HERO NUMBERS: Athletic Space Grotesk (Clean open zeroes, no terminal slashes) */
+    .hero-num,
     .dial-num,
+    #todayDialNum,
+    #vitalScale,
+    #vitalScaleSub,
+    #bodyScaleWeight,
+    #bodyScaleBf,
+    #bodyTargetWeightNum,
+    #fuelTargetNum,
+    #fuelRemainingNum,
+    #macroProtein,
+    #macroCarbs,
+    #macroFat,
+    #vSleep,
+    #vitalBattery,
+    #vitalRhrVal,
+    .hero-athletic-num {
+      font-family: var(--font-display) !important;
+      font-weight: 700 !important;
+      font-variant-numeric: tabular-nums !important;
+      letter-spacing: -0.03em !important;
+    }
+
+    /* Soft neon text glow to primary colored numbers (17.2%, 541 kcal / remaining) */
+    #vitalScaleSub,
+    #fuelRemainingNum,
+    .hero-glow-cyan {
+      text-shadow: 0 0 18px rgba(0, 240, 255, 0.45) !important;
+    }
+
+    /* PRECISION TELEMETRY MONOSPACE (JetBrains Mono) for small data tables, timestamps, sub-rows */
     .vital-val,
     .big-timer-digits,
     .rest-digits,
     .set-input-box,
     .hstat-num,
     .fuel-calc-row strong,
-    #todayDialNum,
     #vitalSleepVal,
-    #vSleep,
-    #vitalBattery,
     #vitalBatteryVal,
-    #vitalRhrVal,
-    #vitalScale,
-    #vitalScaleSub,
     #vitalBurn,
     #vitalPclStatus,
-    #bodyScaleWeight,
-    #bodyScaleBf,
     #bodyFatToBurnNum,
     #normBfVal,
     #calcFatToBurn,
@@ -119,12 +141,8 @@
     #calcRunwayWeeks,
     #calcDailyLossRate,
     #fastingTimerDisplay,
-    #fuelTargetNum,
-    #fuelRemainingNum,
     #fuelConsumedText,
-    #macroProtein,
-    #macroCarbs,
-    #macroFat,
+    #renphoSyncTime,
     .architect-calc-val,
     .mnd-macro-val,
     .eq-chip,
@@ -561,17 +579,76 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    /* CARDS */
+    /* 3D GLASSMORPHIC CARDS WITH SPECULAR RIM LIGHTING & INNER AMBIENT GLOWS */
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 13px;
-      padding: 7px 10px;
+      background: linear-gradient(165deg, rgba(30, 41, 59, 0.55) 0%, rgba(10, 15, 29, 0.85) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      border-top: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 
+        0 12px 32px -4px rgba(0, 0, 0, 0.7),
+        0 0 24px -2px rgba(14, 165, 233, 0.12),
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -12px 24px -8px rgba(14, 165, 233, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 18px;
+      padding: 12px 14px;
       position: relative;
     }
     .card-highlight {
-      border: 1px solid var(--border);
-      background: var(--surface);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-top: 1px solid rgba(255, 255, 255, 0.28);
+      box-shadow: 
+        0 12px 32px -4px rgba(0, 0, 0, 0.7),
+        0 0 28px -2px rgba(0, 240, 255, 0.20),
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -12px 24px -8px rgba(0, 240, 255, 0.1);
+    }
+
+    /* Nested Mini-Boxes (e.g., Muscle, Lean Mass, Water, Visceral) */
+    .glass-mini-box {
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.45) 0%, rgba(15, 23, 42, 0.75) 100%) !important;
+      border: 1px solid rgba(148, 163, 184, 0.15) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+      border-radius: 12px !important;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    /* 3-Column Split Glowing Glass Cards (Left: Cyan, Middle: Indigo, Right: Coral) */
+    .glass-metric-col-cyan {
+      background: radial-gradient(circle at 50% 110%, rgba(34, 211, 238, 0.22) 0%, rgba(15, 23, 42, 0.75) 70%) !important;
+      border: 1px solid rgba(34, 211, 238, 0.35) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+      border-radius: 14px !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .glass-metric-col-indigo {
+      background: radial-gradient(circle at 50% 110%, rgba(139, 92, 246, 0.22) 0%, rgba(15, 23, 42, 0.75) 70%) !important;
+      border: 1px solid rgba(139, 92, 246, 0.35) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+      border-radius: 14px !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .glass-metric-col-coral {
+      background: radial-gradient(circle at 50% 110%, rgba(249, 115, 22, 0.20) 0%, rgba(15, 23, 42, 0.75) 70%) !important;
+      border: 1px solid rgba(249, 115, 22, 0.35) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+      border-radius: 14px !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Multi-stop horizontal gradient progress bar with glow */
+    .progress-bar-telemetry {
+      background: linear-gradient(90deg, #00F0FF 0%, #3B82F6 60%, #A855F7 100%) !important;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.5) !important;
     }
 
     /* TODAY HERO TELEMETRY BOX */
@@ -2005,87 +2082,115 @@
             TRAINING READINESS
           </div>
 
-          <div style="position:relative; width:154px; height:154px; display:flex; align-items:center; justify-content:center;">
+          <div style="position:relative; width:158px; height:158px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, rgba(0, 240, 255, 0.14) 0%, transparent 65%); border-radius:50%;">
             <svg viewBox="0 0 160 160" style="width:100%; height:100%; transform:rotate(-90deg);">
+              <defs>
+                <linearGradient id="readinessGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#00F0FF" />
+                  <stop offset="60%" stop-color="#3B82F6" />
+                  <stop offset="100%" stop-color="#8B5CF6" />
+                </linearGradient>
+              </defs>
               <!-- Background Track -->
               <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7" />
               <!-- Subtle tick marks indicator / glow -->
               <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2, 6" />
               <!-- Progress Arc (88% = circumference 427.26, offset = 51.27) -->
-              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="var(--primary)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="51.27" style="filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.6)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
+              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="51.27" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
             </svg>
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-              <div id="todayDialNum" style="font-size:44px; font-weight:900; color:#ffffff; line-height:1; letter-spacing:-1px;">88</div>
-              <div style="font-size:12.5px; font-weight:700; color:#a1a1aa; margin-top:4px; letter-spacing:0.02em;">Optimal Readiness</div>
+              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">88</div>
+              <div style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Optimal Readiness</div>
             </div>
           </div>
         </div>
 
         <!-- 3-PILLAR VISUAL BIOMETRIC GAUGES (SLEEP, BODY BATTERY, RHR) -->
-        <div class="card" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:12px 10px; display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
           
-          <!-- SLEEP GAUGE -->
-          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 2px;">
+          <!-- SLEEP GAUGE (Cyan Accent) -->
+          <div class="glass-metric-col-cyan" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
+                <defs>
+                  <linearGradient id="sleepGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00F0FF" />
+                    <stop offset="60%" stop-color="#38BDF8" />
+                    <stop offset="100%" stop-color="#3B82F6" />
+                  </linearGradient>
+                </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle cx="30" cy="30" r="25" fill="none" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="18.8" style="filter:drop-shadow(0 0 4px rgba(56,189,248,0.3));" />
+                <circle cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="18.8" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vSleep" style="font-size:16px; font-weight:800; color:#fff;">88</span>
+                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">88</span>
               </div>
             </div>
-            <div style="font-size:11px; font-weight:700; color:#fff; margin-top:6px;">Sleep</div>
-            <div id="vSleepSub" style="font-size:10px; color:var(--text-muted); margin-top:1px;">7h 43m</div>
+            <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Sleep</div>
+            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 43m</div>
           </div>
 
-          <!-- BODY BATTERY GAUGE -->
-          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 2px; border-left:1px solid rgba(255,255,255,0.05); border-right:1px solid rgba(255,255,255,0.05);">
+          <!-- BODY BATTERY GAUGE (Indigo Accent) -->
+          <div class="glass-metric-col-indigo" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
+                <defs>
+                  <linearGradient id="batteryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#38BDF8" />
+                    <stop offset="50%" stop-color="#818CF8" />
+                    <stop offset="100%" stop-color="#8B5CF6" />
+                  </linearGradient>
+                </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle cx="30" cy="30" r="25" fill="none" stroke="var(--primary)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="3.1" style="filter:drop-shadow(0 0 6px rgba(0,229,255,0.45));" />
+                <circle cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="3.1" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalBattery" style="font-size:15px; font-weight:800; color:#fff;">98%</span>
+                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">98%</span>
               </div>
             </div>
-            <div style="font-size:11px; font-weight:700; color:#fff; margin-top:6px;">Body Battery</div>
-            <div id="vitalBbSub" style="font-size:10px; color:var(--text-muted); margin-top:1px;">Fully Charged</div>
+            <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Body Battery</div>
+            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Fully Charged</div>
           </div>
 
-          <!-- RESTING HEART RATE GAUGE -->
-          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 2px;">
+          <!-- RESTING HEART RATE GAUGE (Coral Accent) -->
+          <div class="glass-metric-col-coral" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
+                <defs>
+                  <linearGradient id="rhrGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#F97316" />
+                    <stop offset="70%" stop-color="#FB923C" />
+                    <stop offset="100%" stop-color="#F43F5E" />
+                  </linearGradient>
+                </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle cx="30" cy="30" r="25" fill="none" stroke="#a78bfa" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="45" style="filter:drop-shadow(0 0 4px rgba(167,139,250,0.3));" />
+                <circle cx="30" cy="30" r="25" fill="none" stroke="url(#rhrGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="45" style="filter:drop-shadow(0 0 4px rgba(249,115,22,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalRhrVal" style="font-size:16px; font-weight:800; color:#fff;">48</span>
+                <span id="vitalRhrVal" style="font-size:17px; font-weight:700; color:#fff;">48</span>
               </div>
             </div>
-            <div style="font-size:11px; font-weight:700; color:#fff; margin-top:6px;">Resting HR</div>
-            <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">bpm (Low)</div>
+            <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Resting HR</div>
+            <div style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">bpm (Low)</div>
           </div>
 
         </div>
 
         <!-- LIVE SCALE & BODY COMPOSITION (PULLED DIRECTLY FROM RENPHO CLOUD) -->
-        <div class="card" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:14px 16px;">
+        <div class="card" style="padding:14px 16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(0,229,255,0.6);"></span>
               <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">RENPHO SMART SCALE DIRECT</span>
             </div>
-            <span style="font-size:11px; font-weight:600; color:var(--text-secondary);" id="renphoSyncTime">Live Ingested • 13:35</span>
+            <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Live Ingested • 13:35</span>
           </div>
 
           <!-- Dual Main Value Columns -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:baseline;">
             <div>
               <div style="display:flex; align-items:baseline; gap:3px;">
-                <span id="vitalScale" style="font-size:28px; font-weight:900; color:#ffffff; line-height:1;">98.0</span>
+                <span id="vitalScale" style="font-size:28px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">98.0</span>
                 <span style="font-size:13px; font-weight:600; color:var(--text-muted);">kg</span>
               </div>
               <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE WEIGHT</div>
@@ -2093,41 +2198,41 @@
 
             <div style="text-align:right;">
               <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:2px;">
-                <span id="vitalScaleSub" style="font-size:28px; font-weight:900; color:var(--primary); line-height:1;">17.2</span>
-                <span style="font-size:14px; font-weight:700; color:var(--primary);">%</span>
+                <span id="vitalScaleSub" style="font-size:28px; font-weight:700; color:var(--primary); line-height:1; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);">17.2</span>
+                <span style="font-size:14px; font-weight:700; color:var(--primary); text-shadow:0 0 18px rgba(0,240,255,0.45);">%</span>
               </div>
               <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE BODY FAT</div>
             </div>
           </div>
 
-          <!-- 4-Pillar Renpho Bioelectrical Impedance Breakdown -->
+          <!-- 4-Pillar Renpho Bioelectrical Impedance Breakdown (Nested Mini-Boxes) -->
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 2px;">
-              <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Muscle</div>
-              <div style="font-size:12.5px; font-weight:800; color:#fff; margin-top:1px;">53.4kg</div>
+            <div class="glass-mini-box" style="padding:8px 3px;">
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Muscle</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;">53.4kg</div>
             </div>
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 2px;">
-              <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Lean Mass</div>
-              <div style="font-size:12.5px; font-weight:800; color:#fff; margin-top:1px;">81.1kg</div>
+            <div class="glass-mini-box" style="padding:8px 3px;">
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Lean Mass</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;">81.1kg</div>
             </div>
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 2px;">
-              <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Water</div>
-              <div style="font-size:12.5px; font-weight:800; color:#38bdf8; margin-top:1px;">59.8%</div>
+            <div class="glass-mini-box" style="padding:8px 3px;">
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Water</div>
+              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;">59.8%</div>
             </div>
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 2px;">
-              <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Visceral</div>
-              <div style="font-size:12.5px; font-weight:800; color:var(--primary); margin-top:1px;">10.0</div>
+            <div class="glass-mini-box" style="padding:8px 3px;">
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Visceral</div>
+              <div style="font-size:13px; font-weight:800; color:var(--primary); margin-top:2px;">10.0</div>
             </div>
           </div>
 
-          <!-- Recomposition Progress Bar -->
+          <!-- Recomposition Progress Bar with Multi-stop Gradient & Glow -->
           <div style="margin-top:12px;">
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-bottom:5px;">
               <span>17.2% Scale Measured</span>
               <span style="color:var(--primary); font-weight:700;">2.54 kg to 15.0% Goal (95.46kg)</span>
             </div>
             <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
-              <div style="width:78%; height:100%; background:linear-gradient(90deg, #0284c7, var(--primary)); border-radius:3px; box-shadow:0 0 8px rgba(0, 229, 255, 0.3);"></div>
+              <div class="progress-bar-telemetry" style="width:78%; height:100%; border-radius:3px;"></div>
             </div>
           </div>
         </div>
@@ -2145,7 +2250,7 @@
           </div>
 
           <!-- HEAD COACH PRESCRIPTION & WHY CARD (GOLDFISH HERO) -->
-          <div class="card" style="background:#131722; border:1px solid rgba(0, 229, 255, 0.35); border-radius:16px; padding:14px 16px; box-shadow:0 0 15px rgba(0, 229, 255, 0.08);">
+          <div class="card card-highlight" style="padding:14px 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <div style="display:flex; align-items:center; gap:6px;">
                 <span style="background:rgba(0, 229, 255, 0.12); border:1px solid rgba(0, 229, 255, 0.35); color:var(--primary); font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">
@@ -2193,7 +2298,7 @@
           <!-- THE 3 WORKOUT ARCHETYPE CARDS -->
 
           <!-- CARD 1: OPTION A (RECOMMENDED BEST PICK) -->
-          <div class="card" style="background:#11141c; border:1px solid rgba(0, 229, 255, 0.35); border-radius:16px; padding:14px; position:relative; box-shadow:0 0 15px rgba(0, 229, 255, 0.08);">
+          <div class="card card-highlight" style="padding:14px; position:relative;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <div style="display:flex; align-items:center; gap:6px;">
@@ -2265,7 +2370,7 @@
           </div>
 
           <!-- CARD 2: OPTION B (HYBRID ATHLETE WORK CAPACITY) -->
-          <div class="card" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:14px;">
+          <div class="card" style="padding:14px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION B</span>
@@ -2334,7 +2439,7 @@
           </div>
 
           <!-- CARD 3: OPTION C (AEROBIC FLUSH & JOINT RESTORATION) -->
-          <div class="card" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:14px;">
+          <div class="card" style="padding:14px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
               <div>
                 <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION C</span>
@@ -2399,7 +2504,7 @@
         </div>
 
         <!-- GARMIN FĒNIX 8 SYNC & ACTIVITY STATUS BANNER -->
-        <div class="card" onclick="openSyncModal()" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div class="card" onclick="openSyncModal()" style="padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
           <div style="display:flex; align-items:center; gap:10px;">
             <div style="width:32px; height:32px; border-radius:8px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.25); display:flex; align-items:center; justify-content:center;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(0,229,255,0.4));"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -2568,7 +2673,7 @@
       <main id="tab-fuel" class="tab-panel">
         
         <!-- 1. SYNC & QUICK ACTIONS BAR -->
-        <div class="card card-highlight" style="padding:12px 14px; border-radius:14px;">
+        <div class="card card-highlight" style="padding:14px 16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);">
             <div style="display:flex; align-items:center; gap:6px;">
               <span class="header-status-dot" style="width:6px; height:6px;"></span>
@@ -2581,30 +2686,30 @@
             </div>
           </div>
 
-          <!-- Hero Dual Metrics: Target Budget vs Runway Remaining -->
+          <!-- Hero Dual Metrics: Target Budget vs Runway Remaining (Space Grotesk Hero Numbers) -->
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:flex-start;">
             <div>
               <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">Daily Calorie Budget</div>
-              <div style="font-size:26px; font-weight:800; color:#fff; line-height:1.15; margin-top:2px;" id="fuelTargetNum">2,437 <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+345 active</span></div>
+              <div style="font-size:26px; font-weight:700; color:#fff; line-height:1.15; margin-top:2px; letter-spacing:-0.03em;" id="fuelTargetNum">2,437 <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+345 active</span></div>
               <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">Base 2,092 + Garmin Active</div>
             </div>
             <div style="text-align:right;">
               <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">Calories Remaining</div>
-              <div style="font-size:28px; font-weight:800; color:var(--primary); line-height:1.15; margin-top:2px;" id="fuelRemainingNum">154 <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span></div>
+              <div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1.15; margin-top:2px; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);" id="fuelRemainingNum">154 <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span></div>
               <div style="margin-top:3px;">
                 <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">✓ Protein Anchor Met (275g • +75g)</span>
               </div>
             </div>
           </div>
 
-          <!-- High-Precision Slim Progress Bar -->
+          <!-- High-Precision Multi-Stop Gradient Progress Bar with Glow -->
           <div style="margin-top:14px;">
             <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
               <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,283 kcal</strong></span>
               <span id="intakeProgressPercent" style="color:var(--primary); font-weight:700;">94% (154 kcal Runway)</span>
             </div>
             <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;">
-              <div id="barIntakeConsumed" style="width:94%; background:var(--primary); height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
+              <div id="barIntakeConsumed" class="progress-bar-telemetry" style="width:94%; height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
             </div>
           </div>
 
@@ -2649,34 +2754,34 @@
           </details>
         </div>
 
-        <!-- 2. UNIFIED 3-MACRO PRECISION GRID -->
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
-          <!-- Protein Card -->
-          <div class="card" style="padding:10px; border-radius:10px; background:var(--surface);">
+        <!-- 2. UNIFIED 3-MACRO PRECISION GRID (SPLIT GLOWING GLASS CARDS) -->
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+          <!-- Protein Card (Cyan Accent) -->
+          <div class="card glass-metric-col-cyan" style="padding:12px 10px;">
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Protein Anchor</div>
-            <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroProtein">200g</div>
-            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barProtein" style="width:100%; background:var(--primary); height:100%;"></div>
+            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroProtein">200g</div>
+            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin:5px 0; overflow:hidden;">
+              <div id="barProtein" style="width:100%; background:linear-gradient(90deg, #00F0FF, #38BDF8); height:100%; box-shadow:0 0 8px rgba(0,240,255,0.5);"></div>
             </div>
             <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">275g (138%) • Anchor Met (+75g)</div>
           </div>
 
-          <!-- Carbs Card -->
-          <div class="card" style="padding:10px; border-radius:10px; background:var(--surface);">
+          <!-- Carbs Card (Indigo Accent) -->
+          <div class="card glass-metric-col-indigo" style="padding:12px 10px;">
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Energy Carbs</div>
-            <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroCarbs">251g</div>
-            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barCarbs" style="width:56%; background:#fff; height:100%;"></div>
+            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroCarbs">251g</div>
+            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin:5px 0; overflow:hidden;">
+              <div id="barCarbs" style="width:56%; background:linear-gradient(90deg, #818CF8, #A78BFA); height:100%;"></div>
             </div>
             <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">121g net (140g) • 111g Left</div>
           </div>
 
-          <!-- Fats Card -->
-          <div class="card" style="padding:10px; border-radius:10px; background:var(--surface);">
+          <!-- Fats Card (Coral Accent) -->
+          <div class="card glass-metric-col-coral" style="padding:12px 10px;">
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Healthy Fats</div>
-            <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroFat">80g</div>
-            <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barFat" style="width:91%; background:var(--text-muted); height:100%;"></div>
+            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroFat">80g</div>
+            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin:5px 0; overflow:hidden;">
+              <div id="barFat" style="width:91%; background:linear-gradient(90deg, #F97316, #FB923C); height:100%;"></div>
             </div>
             <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">73g • 7g Left</div>
           </div>
@@ -6621,7 +6726,8 @@ function generateWorkoutFromGearAndGoal() {
       const barIntake = document.getElementById('barIntakeConsumed');
       if (barIntake) {
         barIntake.style.width = `${pct}%`;
-        barIntake.style.background = diff <= 0 ? '#ff9f0a' : 'var(--primary)';
+        barIntake.style.background = diff <= 0 ? 'linear-gradient(90deg, #ff9f0a, #f97316)' : 'linear-gradient(90deg, #00F0FF 0%, #3B82F6 60%, #A855F7 100%)';
+        barIntake.style.boxShadow = diff <= 0 ? '0 0 12px rgba(255, 159, 10, 0.5)' : '0 0 12px rgba(0, 240, 255, 0.5)';
       }
 
       const pBadge = document.getElementById('proteinRemainingBadge');
