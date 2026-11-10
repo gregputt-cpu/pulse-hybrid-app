@@ -2493,9 +2493,9 @@
             </div>
             <div style="text-align:right;">
               <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">Calories Remaining</div>
-              <div style="font-size:28px; font-weight:800; color:var(--primary); line-height:1.15; margin-top:2px;" id="fuelRemainingNum">541 <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span></div>
+              <div style="font-size:28px; font-weight:800; color:var(--primary); line-height:1.15; margin-top:2px;" id="fuelRemainingNum">0 <span style="font-size:13px; font-weight:600; color:#ff9f0a;">kcal</span></div>
               <div style="margin-top:3px;">
-                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">✓ Protein Anchor Met (223g)</span>
+                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">✓ Protein Anchor Met (298g)</span>
               </div>
             </div>
           </div>
@@ -2503,11 +2503,11 @@
           <!-- High-Precision Slim Progress Bar -->
           <div style="margin-top:14px;">
             <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
-              <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">1,896 kcal</strong></span>
-              <span id="intakeProgressPercent" style="color:var(--primary); font-weight:700;">78% (541 kcal Runway)</span>
+              <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,701 kcal</strong></span>
+              <span id="intakeProgressPercent" style="color:#ff9f0a; font-weight:700;">100% (Target Reached • At Maintenance)</span>
             </div>
             <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;">
-              <div id="barIntakeConsumed" style="width:78%; background:var(--primary); height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
+              <div id="barIntakeConsumed" style="width:100%; background:#ff9f0a; height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
             </div>
           </div>
 
@@ -2520,33 +2520,33 @@
             <div class="fuel-accordion-content" style="font-size:11.5px; padding:8px 10px 10px;">
               <div class="fuel-calc-row">
                 <span>Base Metabolism (Renpho Scale BMR)</span>
-                <strong>2,101 kcal</strong>
+                <strong id="fuelCalcBmr">2,101 kcal</strong>
               </div>
               <div class="fuel-calc-row">
                 <span>Daily Baseline Steps & Movement (NEAT)</span>
-                <strong>+292 kcal</strong>
+                <strong id="fuelCalcNeat">+292 kcal</strong>
               </div>
               <div class="fuel-calc-row">
                 <span>Garmin Workout Active Burn (Cardio)</span>
-                <strong style="color:var(--primary);">+345 kcal</strong>
+                <strong id="fuelCalcBurn" style="color:var(--primary);">+345 kcal</strong>
               </div>
               <div class="fuel-calc-row">
                 <span>Target Deficit for 15.0% Body Fat Goal</span>
-                <strong style="color:var(--text-muted);">-350 kcal</strong>
+                <strong id="fuelCalcDeficit" style="color:var(--text-muted);">-350 kcal</strong>
               </div>
               <div class="fuel-calc-divider"></div>
               <div class="fuel-calc-row" style="font-size:12px;">
                 <span>Total Daily Calorie Target</span>
-                <strong>= 2,437 kcal</strong>
+                <strong id="fuelCalcTarget">= 2,437 kcal</strong>
               </div>
               <div class="fuel-calc-row" style="font-size:12px;">
                 <span>Food Logged Today (MyNetDiary)</span>
-                <strong>-1,896 kcal</strong>
+                <strong id="fuelCalcConsumed">-2,701 kcal</strong>
               </div>
               <div class="fuel-calc-divider"></div>
               <div class="fuel-calc-row" style="font-size:12.5px; font-weight:700;">
                 <span style="color:var(--primary);">Remaining Energy Runway</span>
-                <strong style="color:var(--primary);">= 541 kcal</strong>
+                <strong id="fuelCalcRemaining" style="color:#ff9f0a;">= 0 kcal (At Maintenance)</strong>
               </div>
             </div>
           </details>
@@ -2561,7 +2561,7 @@
             <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
               <div id="barProtein" style="width:100%; background:var(--primary); height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">223g (111%) • Goal Met</div>
+            <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">298g (149%) • Anchor Met (+98g)</div>
           </div>
 
           <!-- Carbs Card -->
@@ -2569,9 +2569,9 @@
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Energy Carbs</div>
             <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroCarbs">251g</div>
             <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barCarbs" style="width:63%; background:#fff; height:100%;"></div>
+              <div id="barCarbs" style="width:84%; background:#fff; height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">157g • 94g Left</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">188g net (212g) • 39g Left</div>
           </div>
 
           <!-- Fats Card -->
@@ -2579,26 +2579,26 @@
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Healthy Fats</div>
             <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroFat">80g</div>
             <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barFat" style="width:55%; background:var(--text-muted); height:100%;"></div>
+              <div id="barFat" style="width:98%; background:var(--text-muted); height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">44g • 36g Left</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">78g • 2g Left</div>
           </div>
         </div>
 
         <!-- Hidden compatibility elements so existing scripts never throw -->
         <div style="display:none;">
-          <span id="mndCalsVal">1896</span>
+          <span id="mndCalsVal">2701</span>
           <span id="mndCalsTarget">2437</span>
-          <span id="mndCalsRemainingBadge">541 left</span>
+          <span id="mndCalsRemainingBadge">0 left</span>
           <div id="mndBarCals"></div>
-          <span id="mndProteinVal">223</span>
-          <span id="mndProteinRemainingBadge">Target Met</span>
+          <span id="mndProteinVal">298</span>
+          <span id="mndProteinRemainingBadge">Anchor Met (+98g)</span>
           <div id="mndBarProtein"></div>
-          <span id="mndCarbsVal">157</span>
-          <span id="mndCarbsRemainingBadge">94g left</span>
+          <span id="mndCarbsVal">212</span>
+          <span id="mndCarbsRemainingBadge">39g left</span>
           <div id="mndBarCarbs"></div>
-          <span id="mndFatVal">44</span>
-          <span id="mndFatRemainingBadge">36g left</span>
+          <span id="mndFatVal">78</span>
+          <span id="mndFatRemainingBadge">2g left</span>
           <div id="mndBarFat"></div>
           <span id="fuelGarminEqChip"></span>
           <span id="fuelBudgetNum">2437</span>
@@ -2611,7 +2611,7 @@
             <strong style="color:var(--primary); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">Daily Fuel Coach</strong>
           </div>
           <div id="mndCoachAdvice" style="font-size:12px; color:var(--text-secondary); line-height:1.45;">
-            Protein target is crushed for today (223g / 200g target). You have 541 kcal of runway left. Keep dinner or your evening snack clean and light to stay on track for your 15% body fat goal.
+            <strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>2,701 kcal</strong> and <strong>298g protein</strong> today (crushing your 200g anchor by +98g). You've matched your active maintenance expenditure (~2,738 kcal), preserving all 81.1kg of lean muscle without gaining fat. Hydrate well tonight for tomorrow's strength lifting session!
           </div>
         </div>
 
@@ -6358,19 +6358,18 @@ function generateWorkoutFromGearAndGoal() {
 
     function renderMyNetDiaryEngine() {
       // 1. Resolve Dynamic Daily Calorie Target
-      // athleteDailyBudget is 2092 base + activeBurn (649 kcal from Garmin today = 2,741 kcal)
       const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = 649;
+      let activeBurn = 345;
       if (burnEl) {
         const parsedBurn = parseInt(burnEl.innerText);
         if (!isNaN(parsedBurn) && parsedBurn > 0) activeBurn = parsedBurn;
       }
-      const totalBudget = athleteDailyBudget > 2092 ? athleteDailyBudget : (2092 + activeBurn);
+      const totalBudget = athleteDailyBudget > 2000 ? athleteDailyBudget : (2092 + activeBurn);
 
-      // 2. Macro Targets (Greg Putt: 99.85kg, 17.5% BF -> 82.38kg lean mass)
-      const pTarget = athleteProteinAnchor || 200; // 2.0g-2.4g/kg lean mass
-      const cTarget = 240; // Glycogen recharge
-      const fTarget = 65;  // Endocrine & cell health
+      // 2. Macro Targets (Greg Putt: 98.0kg, 17.2% BF -> 81.14kg lean mass)
+      const pTarget = athleteProteinAnchor || 200; // 2.46g/kg lean mass
+      const cTarget = 251; // Glycogen recharge for hybrid lifting + cardio
+      const fTarget = 80;  // Endocrine & cell health floor
 
       // Current Consumed Totals
       if (!myNetDiaryData.totals) {
@@ -6479,42 +6478,59 @@ function generateWorkoutFromGearAndGoal() {
 
     function updateRunwayUI() {
       const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = 624;
+      let activeBurn = 345;
       if (burnEl) {
         const parsed = parseInt(burnEl.innerText);
         if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
       }
-      const totalBudget = athleteDailyBudget > 2092 ? athleteDailyBudget : (2092 + activeBurn);
+      const totalBudget = athleteDailyBudget > 2000 ? athleteDailyBudget : (2092 + activeBurn);
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
       const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
       const carbs = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.carbs) || 0;
       const fats = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.fat) || 0;
+      const fiber = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.fiber) || 0;
       const pTarget = athleteProteinAnchor || 200;
       const cTarget = 251;
       const fTarget = 80;
 
-      const remainingCals = Math.max(0, totalBudget - cals);
+      const diff = totalBudget - cals;
+      const remainingCals = Math.max(0, diff);
       const pct = Math.min(100, Math.round((cals / totalBudget) * 100));
 
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+${activeBurn} active</span>`;
 
       const frEl = document.getElementById('fuelRemainingNum');
-      if (frEl) frEl.innerHTML = `${remainingCals.toLocaleString()} <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span>`;
+      if (frEl) {
+        if (diff <= 0) {
+          frEl.innerHTML = `0 <span style="font-size:13px; font-weight:600; color:#ff9f0a;">kcal</span>`;
+        } else {
+          frEl.innerHTML = `${remainingCals.toLocaleString()} <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span>`;
+        }
+      }
 
       const fcText = document.getElementById('fuelConsumedText');
       if (fcText) fcText.innerText = `${cals.toLocaleString()} kcal`;
 
       const ipPct = document.getElementById('intakeProgressPercent');
-      if (ipPct) ipPct.innerText = `${pct}% (${remainingCals.toLocaleString()} kcal Runway)`;
+      if (ipPct) {
+        if (diff <= 0) {
+          ipPct.innerHTML = `<span style="color:#ff9f0a; font-weight:700;">100% (Target Reached • At Maintenance)</span>`;
+        } else {
+          ipPct.innerText = `${pct}% (${remainingCals.toLocaleString()} kcal Runway)`;
+        }
+      }
 
       const barIntake = document.getElementById('barIntakeConsumed');
-      if (barIntake) barIntake.style.width = `${pct}%`;
+      if (barIntake) {
+        barIntake.style.width = `${pct}%`;
+        barIntake.style.background = diff <= 0 ? '#ff9f0a' : 'var(--primary)';
+      }
 
       const pBadge = document.getElementById('proteinRemainingBadge');
       if (pBadge) {
         if (prot >= pTarget) {
-          pBadge.innerText = `${prot}g Consumed • Target Met (+${prot - pTarget}g)`;
+          pBadge.innerText = `✓ Protein Anchor Met (${prot}g • +${prot - pTarget}g)`;
           pBadge.style.color = 'var(--primary)';
         } else {
           pBadge.innerText = `${prot}g Consumed • ${pTarget - prot}g Left`;
@@ -6527,13 +6543,18 @@ function generateWorkoutFromGearAndGoal() {
       const mpSub = document.getElementById('macroProteinSub');
       if (mpSub) {
         const pPct = Math.round((prot / pTarget) * 100);
-        mpSub.innerText = prot >= pTarget ? `${prot}g (${pPct}%) • Target Met` : `${prot}g / ${pTarget}g (${pPct}%)`;
+        mpSub.innerText = prot >= pTarget ? `${prot}g (${pPct}%) • Anchor Met (+${prot - pTarget}g)` : `${prot}g / ${pTarget}g (${pPct}%)`;
       }
 
       const mc = document.getElementById('macroCarbs');
       if (mc) mc.innerText = `${cTarget}g`;
       const mcSub = document.getElementById('macroCarbsSub');
-      if (mcSub) mcSub.innerText = `${carbs}g • ${Math.max(0, cTarget - carbs)}g Left`;
+      if (mcSub) {
+        const netCarbs = fiber > 0 ? Math.max(0, carbs - fiber) : carbs;
+        mcSub.innerText = fiber > 0 
+          ? `${netCarbs}g net (${carbs}g) • ${Math.max(0, cTarget - carbs)}g Left` 
+          : `${carbs}g • ${Math.max(0, cTarget - carbs)}g Left`;
+      }
 
       const mf = document.getElementById('macroFat');
       if (mf) mf.innerText = `${fTarget}g`;
@@ -6546,6 +6567,24 @@ function generateWorkoutFromGearAndGoal() {
       if (barC) barC.style.width = `${Math.min(100, Math.round((carbs / cTarget) * 100))}%`;
       const barF = document.getElementById('barFat');
       if (barF) barF.style.width = `${Math.min(100, Math.round((fats / fTarget) * 100))}%`;
+
+      // Update Progressive Disclosure Math Drawer
+      const elBmr = document.getElementById('fuelCalcBmr');
+      if (elBmr) elBmr.innerText = '2,101 kcal';
+      const elBurn = document.getElementById('fuelCalcBurn');
+      if (elBurn) elBurn.innerText = `+${activeBurn} kcal`;
+      const elTarget = document.getElementById('fuelCalcTarget');
+      if (elTarget) elTarget.innerText = `= ${totalBudget.toLocaleString()} kcal`;
+      const elConsumed = document.getElementById('fuelCalcConsumed');
+      if (elConsumed) elConsumed.innerText = `-${cals.toLocaleString()} kcal`;
+      const elRem = document.getElementById('fuelCalcRemaining');
+      if (elRem) {
+        if (diff <= 0) {
+          elRem.innerHTML = `<span style="color:#ff9f0a;">= 0 kcal (At Maintenance)</span>`;
+        } else {
+          elRem.innerHTML = `= ${remainingCals.toLocaleString()} kcal`;
+        }
+      }
     }
 
     function renderMndMealStream() {
@@ -6641,8 +6680,13 @@ function generateWorkoutFromGearAndGoal() {
       const el = document.getElementById('mndCoachAdvice');
       if (!el) return;
 
+      const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
+      const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
       let advice = '';
-      if (protLeft > 0) {
+
+      if (cals >= totalBudget && prot >= 200) {
+        advice = `<strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>${cals.toLocaleString()} kcal</strong> and <strong>${prot}g protein</strong> today (crushing your 200g anchor by +${prot - 200}g). You've matched your active maintenance expenditure (~2,738 kcal), preserving all 81.1kg of lean muscle without gaining fat. Hydrate well tonight for tomorrow's strength lifting session!`;
+      } else if (protLeft > 0) {
         advice = `You have <strong>${calsLeft.toLocaleString()} kcal</strong> and <strong>${protLeft}g of protein</strong> left to reach your daily anchor. Aim for lean protein (chicken breast, egg whites, or 5% mince) to protect muscle while continuing to burn fat toward your 15% goal.`;
       } else {
         advice = `<strong>✓ Protein Goal Reached!</strong> You've locked in your 200g protein anchor to protect all 81.1kg of muscle. You have <strong>${calsLeft.toLocaleString()} kcal</strong> of room remaining today. Keep your evening meal or snack clean and drink plenty of water before tomorrow's strength workout.`;
