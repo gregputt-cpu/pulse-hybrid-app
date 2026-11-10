@@ -39,7 +39,7 @@ const config = {
     },
     {
       src: '/api/(.*)',
-      dest: 'https://pulse-backend.up.railway.app/api/$1'
+      dest: 'https://pulse-hybrid-app-production.up.railway.app/api/$1'
     },
     {
       src: '/((?!.*\\.).*)',

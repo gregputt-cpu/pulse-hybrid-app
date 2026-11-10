@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v10-workout-ingested';
+const CACHE_NAME = 'pulse-cache-v11-railway-live';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
