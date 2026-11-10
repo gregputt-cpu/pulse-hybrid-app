@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from benefits_engine import PhysiologicalBenefitsEngine
 from garmin_sync_service import GarminSyncService
 from mnd_sync_service import MyNetDiarySyncService
+from renpho_sync_service import RenphoSyncService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("pulse-backend")
@@ -35,6 +36,7 @@ if not os.path.exists(LIVE_STATE_PATH):
 
 garmin_service = GarminSyncService()
 mnd_service = MyNetDiarySyncService()
+renpho_service = RenphoSyncService()
 benefits_engine = PhysiologicalBenefitsEngine()
 
 def load_live_state() -> Dict[str, Any]:
@@ -123,9 +125,10 @@ def sync_mnd(payload: Optional[DatePayload] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/renpho/sync")
+@app.post("/api/renpho/sync")
 def sync_renpho():
     try:
-        mnd_res = mnd_service.fetch_today_data()
+        res = renpho_service.sync_latest()
         state = load_live_state()
         return {"success": True, "renpho": state.get("renpho", {}), "state": state}
     except Exception as e:
@@ -147,10 +150,11 @@ def sync_set(payload: SetLogPayload):
 from apscheduler.schedulers.background import BackgroundScheduler
 
 def run_scheduled_sync():
-    logger.info("[Scheduler] Starting scheduled sync with Garmin and MyNetDiary...")
+    logger.info("[Scheduler] Starting scheduled sync with Garmin, MyNetDiary, and Renpho...")
     try:
         garmin_service.sync_today()
         mnd_service.fetch_today_data()
+        renpho_service.sync_latest()
         logger.info("[Scheduler] Periodic sync completed successfully.")
     except Exception as e:
         logger.warning(f"[Scheduler] Sync warning: {e}")
