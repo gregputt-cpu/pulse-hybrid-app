@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v4-luxury';
+const CACHE_NAME = 'pulse-cache-v6-luxury-whoop';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

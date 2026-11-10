@@ -1735,7 +1735,18 @@
       font-weight: 800;
       white-space: nowrap;
     }
-</style>
+
+    * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+
+    </style>
 </head>
 <body>
 
@@ -1778,142 +1789,181 @@
     <!-- MAIN VIEWPORT CONTAINER -->
     <div class="app-main">
 
-      <!-- ==================== TAB 1: TODAY (OVERVIEW & EQUIPMENT) ==================== -->
-      <main id="tab-today" class="tab-panel active">
+      <!-- ==================== TAB 1: TODAY (LUXURY ATHLETE DASHBOARD) ==================== -->
+      <main id="tab-today" class="tab-panel active" style="padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
         
-        <!-- PWA INSTALL PROMPT BANNER (ANDROID / MOBILE) -->
-        <div id="pwaInstallBanner" style="display:none; background:linear-gradient(90deg, rgba(48,209,88,0.15), rgba(0,240,255,0.12)); border:1px solid rgba(48,209,88,0.35); border-radius:10px; padding:10px 14px; margin-bottom:12px; align-items:center; justify-content:space-between; gap:10px;">
+        <!-- PWA INSTALL PROMPT BANNER (IF APPLICABLE) -->
+        <div id="pwaInstallBanner" style="display:none; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 14px; align-items:center; justify-content:space-between;">
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:22px;">📲</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
             <div>
-              <div style="font-size:13px; font-weight:800; color:#fff;">Install PULSE to Phone</div>
-              <div style="font-size:11px; color:var(--text-muted);">Run full-screen without Chrome address bar</div>
+              <div style="font-size:12.5px; font-weight:700; color:#fff;">Install PULSE to Phone</div>
+              <div style="font-size:11px; color:var(--text-muted);">Standalone full-screen display</div>
             </div>
           </div>
-          <button onclick="promptInstallApp()" style="background:var(--lime); color:#000; font-weight:900; font-size:11.5px; border:none; padding:7px 12px; border-radius:6px; cursor:pointer; text-transform:uppercase; white-space:nowrap;">
-            Install App
+          <button onclick="promptInstallApp()" class="btn-action-primary" style="width:auto; height:30px; padding:0 12px; font-size:11px;">
+            Install
           </button>
         </div>
 
-        <!-- ROW 1: LUXURY BIOMETRIC READINESS HERO (TUE 10 NOV) -->
-        <div class="card card-highlight" style="padding:14px; border-radius:14px;">
-          <!-- Top Row: Dial + Peak Readiness Description -->
-          <div style="display:flex; align-items:center; gap:14px;">
-            <div class="dial-box" style="width:78px; height:78px;">
-              <svg class="dial-svg" viewBox="0 0 80 80">
-                <circle class="dial-bg" cx="40" cy="40" r="36" />
-                <circle class="dial-bar" id="todayDialRing" cx="40" cy="40" r="36" style="stroke-dashoffset: 27;" />
-              </svg>
-              <div class="dial-center">
-                <div class="dial-num" id="todayDialNum" style="font-size:26px; font-weight:800;">88</div>
-                <div class="dial-sub" style="font-size:10.5px; font-weight:800; letter-spacing:0.06em;">READY</div>
-              </div>
-            </div>
-
-            <div style="flex:1; min-width:0;">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span class="header-status-dot" style="width:6px; height:6px;"></span>
-                <span style="font-size:10.5px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em;">OPTIMAL READINESS (88)</span>
-              </div>
-              <div style="font-size:13.5px; font-weight:800; color:#fff; margin-top:2px;">Well Recovered & Restored</div>
-              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.35; margin-top:2px;">
-                Sleep score 88 (7h 43m) • Body Battery 98%. Systemic CNS ready for heavy axial compound strength.
-              </div>
-            </div>
+        <!-- HERO SECTION: CENTERED WHOOP / APPLE READINESS RING -->
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 12px 0 8px;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; color:var(--text-muted); text-transform:uppercase; margin-bottom:14px;">
+            TRAINING READINESS
           </div>
 
-          <!-- Horizontal Hairline Divider -->
-          <div style="border-top:1px solid rgba(255,255,255,0.06); margin:12px 0 10px;"></div>
-
-          <!-- 4-Pillar Modern Biometric Grid -->
-          <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
-            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center;">
-              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Sleep</div>
-              <div style="font-size:16px; font-weight:800; color:#fff; margin-top:1px;" id="vSleep">88</div>
-              <div style="font-size:10px; color:var(--text-secondary); margin-top:1px;" id="vSleepSub">7h 43m</div>
-            </div>
-
-            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center;">
-              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Battery</div>
-              <div style="font-size:16px; font-weight:800; color:var(--primary); margin-top:1px;" id="vitalBattery">98%</div>
-              <div style="font-size:10px; color:var(--text-secondary); margin-top:1px;" id="vitalBbSub">RHR 48 bpm</div>
-            </div>
-
-            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center;">
-              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Burn</div>
-              <div style="font-size:16px; font-weight:800; color:#fff; margin-top:1px;" id="vitalBurn">0 <small style="font-size:10px; color:var(--text-muted); font-weight:400;">kcal</small></div>
-              <div style="font-size:10px; color:var(--text-secondary); margin-top:1px;" id="vitalBurnSub">117 Steps</div>
-            </div>
-
-            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center; cursor:pointer;" onclick="openWeightModal()" title="Tap to enter today's weigh-in">
-              <div style="display:flex; justify-content:center; align-items:center; gap:2px;">
-                <span style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Scale</span>
-                <span style="font-size:9px; color:var(--primary);">✎</span>
-              </div>
-              <div style="font-size:16px; font-weight:800; color:#fff; margin-top:1px;" id="vitalScale">98.90 <small style="font-size:10px; color:var(--text-muted); font-weight:400;">kg</small></div>
-              <div style="font-size:10px; color:var(--primary); margin-top:1px;" id="vitalScaleSub">16.7% BF</div>
+          <div style="position:relative; width:154px; height:154px; display:flex; align-items:center; justify-content:center;">
+            <svg viewBox="0 0 160 160" style="width:100%; height:100%; transform:rotate(-90deg);">
+              <!-- Background Track -->
+              <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7" />
+              <!-- Subtle tick marks indicator / glow -->
+              <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2, 6" />
+              <!-- Progress Arc (88% = circumference 427.26, offset = 51.27) -->
+              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="#22c55e" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="51.27" style="filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.45)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
+            </svg>
+            <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+              <div id="todayDialNum" style="font-size:44px; font-weight:900; color:#ffffff; line-height:1; letter-spacing:-1px;">88</div>
+              <div style="font-size:12.5px; font-weight:700; color:#a1a1aa; margin-top:4px; letter-spacing:0.02em;">Optimal Readiness</div>
             </div>
           </div>
         </div>
 
-        <!-- ROW 2: GARMIN FĒNIX 8 SYNC STATUS CHIP -->
-        <div class="card" id="garminLiveBanner" style="padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="viewWorkoutHistory()">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:30px; height:30px; border-radius:8px; background:var(--surface-elevated); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-            </div>
-            <div>
-              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;" id="garminBannerTitle">Garmin fēnix 8 Synced • Tue 10 Nov</div>
-              <div style="font-size:12.5px; font-weight:800; color:#fff;" id="garminBannerSub">Morning baseline recorded • 0 workouts today</div>
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:12px; font-weight:700; color:var(--primary);">History (624 kcal) ➔</div>
-          </div>
-        </div>
-
-        <!-- ROW 3: TARGET & EQUIPMENT PILL BAR -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-          <div class="card" style="padding:8px 10px; border-radius:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="openGoalModal()">
-            <div>
-              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Target</div>
-              <div style="font-size:12px; font-weight:800; color:#fff;" id="todayGoalTitle">15.0% Body Fat (96.92kg)</div>
-            </div>
-            <span style="font-size:11px; color:var(--text-muted);">Switch</span>
-          </div>
-
-          <div class="card" style="padding:8px 10px; border-radius:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="openEquipmentModal()">
-            <div>
-              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Equipment</div>
-              <div style="font-size:12px; font-weight:800; color:#fff;" id="gearTriggerTitle">GYM Profile (Barbell)</div>
-            </div>
-            <span style="font-size:11px; color:var(--primary);">Adjust</span>
-          </div>
-        </div>
-
-        <!-- ROW 4: DYNAMIC AI WORKOUT GENERATED FOR TODAY -->
-        <div class="card" style="padding:14px; border-radius:14px; background:var(--surface);">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em;" id="aiRecBadge">TIER 1 • MAXIMAL COMPOUND STRENGTH</span>
-            <span style="font-size:11px; color:var(--text-muted);" id="aiRecGearCount">5 Exercises Loaded</span>
-          </div>
-          <div style="font-size:14.5px; font-weight:800; color:#fff;" id="aiRecTitle">Gym Barbell Strength & Upper Push Density</div>
+        <!-- 3-PILLAR VISUAL BIOMETRIC GAUGES (SLEEP, BODY BATTERY, RHR) -->
+        <div class="card" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:12px 10px; display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
           
-          <div class="workout-rec-list" id="aiRecList" style="margin: 8px 0 6px;"></div>
-
-          <!-- RATIONALE EXPANDER -->
-          <div class="rationale-toggle-btn" onclick="toggleTodayRationale()" style="padding:6px 10px; border-radius:7px;">
-            <span id="rationaleToggleText">Coaching Rationale & Physiological Focus</span>
-            <span class="accordion-arrow" id="rationaleArrow">▾</span>
+          <!-- SLEEP GAUGE -->
+          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 2px;">
+            <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+              <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
+                <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
+                <circle cx="30" cy="30" r="25" fill="none" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="18.8" style="filter:drop-shadow(0 0 4px rgba(56,189,248,0.3));" />
+              </svg>
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                <span id="vSleep" style="font-size:16px; font-weight:800; color:#fff;">88</span>
+              </div>
+            </div>
+            <div style="font-size:11px; font-weight:700; color:#fff; margin-top:6px;">Sleep</div>
+            <div id="vSleepSub" style="font-size:10px; color:var(--text-muted); margin-top:1px;">7h 43m</div>
           </div>
-          <div class="workout-rec-summary" id="aiRecSummary" style="display:none; margin-top:6px; padding:10px 12px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid var(--border); font-size:12px; line-height:1.45; color:var(--text-secondary);">
-            Tailored for Readiness 88. Heavy axial barbell compounds paired with dip bar transfer to accelerate push-up capacity while holding 200g protein recomposition.
+
+          <!-- BODY BATTERY GAUGE -->
+          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 2px; border-left:1px solid rgba(255,255,255,0.05); border-right:1px solid rgba(255,255,255,0.05);">
+            <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+              <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
+                <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
+                <circle cx="30" cy="30" r="25" fill="none" stroke="#22c55e" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="3.1" style="filter:drop-shadow(0 0 4px rgba(34,197,94,0.3));" />
+              </svg>
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                <span id="vitalBattery" style="font-size:15px; font-weight:800; color:#fff;">98%</span>
+              </div>
+            </div>
+            <div style="font-size:11px; font-weight:700; color:#fff; margin-top:6px;">Body Battery</div>
+            <div id="vitalBbSub" style="font-size:10px; color:var(--text-muted); margin-top:1px;">Fully Charged</div>
+          </div>
+
+          <!-- RESTING HEART RATE GAUGE -->
+          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 2px;">
+            <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
+              <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
+                <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
+                <circle cx="30" cy="30" r="25" fill="none" stroke="#a78bfa" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="45" style="filter:drop-shadow(0 0 4px rgba(167,139,250,0.3));" />
+              </svg>
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                <span id="vitalRhrVal" style="font-size:16px; font-weight:800; color:#fff;">48</span>
+              </div>
+            </div>
+            <div style="font-size:11px; font-weight:700; color:#fff; margin-top:6px;">Resting HR</div>
+            <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">bpm (Low)</div>
+          </div>
+
+        </div>
+
+        <!-- LIVE SCALE & BODY COMPOSITION (PULLED FROM RENPHO SCALES) -->
+        <div class="card" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:14px 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#22c55e;"></span>
+              <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">SCALE BIOMETRICS (RENPHO)</span>
+            </div>
+            <span style="font-size:11px; font-weight:600; color:var(--text-secondary);" id="renphoSyncTime">Synced Today • 06:45</span>
+          </div>
+
+          <!-- Dual Main Value Columns -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:baseline;">
+            <div>
+              <div style="display:flex; align-items:baseline; gap:3px;">
+                <span id="vitalScale" style="font-size:28px; font-weight:900; color:#ffffff; line-height:1;">98.0</span>
+                <span style="font-size:13px; font-weight:600; color:var(--text-muted);">kg</span>
+              </div>
+              <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE WEIGHT</div>
+            </div>
+
+            <div style="text-align:right;">
+              <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:2px;">
+                <span id="vitalScaleSub" style="font-size:28px; font-weight:900; color:#22c55e; line-height:1;">15.9</span>
+                <span style="font-size:14px; font-weight:700; color:#22c55e;">%</span>
+              </div>
+              <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">BODY FAT</div>
+            </div>
+          </div>
+
+          <!-- Recomposition Progress Bar -->
+          <div style="margin-top:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-bottom:6px;">
+              <span>15.9% Current</span>
+              <span style="color:#22c55e; font-weight:700;">1.08 kg to 15.0% Target (96.92kg)</span>
+            </div>
+            <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+              <div style="width:82%; height:100%; background:linear-gradient(90deg, #38bdf8, #22c55e); border-radius:3px;"></div>
+            </div>
           </div>
         </div>
 
-        <button class="btn-action-primary" onclick="launchWorkoutPlayer()">
-          <span>▶</span> START WORKOUT SESSION
-        </button>
+        <!-- TODAY'S AUTOREGULATED WORKOUT CARD -->
+        <div class="card" style="background:#131722; border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#22c55e; text-transform:uppercase;">TODAY'S TRAINING</span>
+            <div style="display:flex; gap:6px;">
+              <span style="font-size:11px; color:var(--text-muted); cursor:pointer;" onclick="openEquipmentModal()">Gym Profile ⚙</span>
+            </div>
+          </div>
+
+          <div style="font-size:16px; font-weight:800; color:#fff; line-height:1.2;">Gym Barbell Strength & Upper Push Density</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">
+            Autoregulated for Readiness 88. High axial compound loading with zero joint compromise.
+          </div>
+
+          <!-- Exercise Pills -->
+          <div style="display:flex; flex-wrap:wrap; gap:5px; margin:12px 0 14px;">
+            <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:4px 8px; border-radius:6px; font-size:11.5px; color:#fff;">Romanian Deadlift (110kg × 8)</span>
+            <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:4px 8px; border-radius:6px; font-size:11.5px; color:#fff;">Floor Press (95kg × 6)</span>
+            <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:4px 8px; border-radius:6px; font-size:11.5px; color:#fff;">Bench Press (95kg × 8)</span>
+            <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:4px 8px; border-radius:6px; font-size:11.5px; color:#fff;">Chest & Tricep Dips (Body × 12)</span>
+            <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); padding:4px 8px; border-radius:6px; font-size:11.5px; color:#fff;">Zercher Squat (75kg × 10)</span>
+          </div>
+
+          <!-- PRIMARY CTA BUTTON -->
+          <button class="btn-action-primary" onclick="launchWorkoutPlayer()" style="height:44px; font-size:13px; font-weight:700; letter-spacing:0.06em;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            START WORKOUT SESSION
+          </button>
+        </div>
+
+        <!-- GARMIN FĒNIX 8 SYNC & ACTIVITY STATUS BANNER -->
+        <div class="card" onclick="openSyncModal()" style="background:#11141c; border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <div>
+              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">GARMIN FĒNIX 8 SYNCED</div>
+              <div style="font-size:12px; font-weight:700; color:#fff; margin-top:1px;">Tue 10 Nov • Morning Baseline Active</div>
+            </div>
+          </div>
+          <div style="font-size:11.5px; font-weight:700; color:#22c55e;">
+            Sync / History ➔
+          </div>
+        </div>
 
       </main>
 
@@ -3464,7 +3514,7 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
-    window.BAKED_LIVE_STATE = {"last_synced": "2026-11-09T10:05:49.673693", "athlete": {"name": "Greg Putt", "age": 45, "height_cm": 190.0, "weight_kg": 98.9, "body_fat_pct": 16.7, "target_body_fat_pct": 15.0, "lean_mass_kg": 82.38, "muscle_mass_kg": 53.2, "fat_to_lose_kg": 1.98, "target_weight_kg": 96.92}, "garmin": {"device": "f\u0113nix 8 - 51mm AMOLED", "training_readiness": 71, "readiness_level": "MODERATE", "readiness_feedback": "GOOD_SLEEP_HISTORY", "sleep_score": 69, "hrv_status": "balanced", "hrv_weekly_avg": 48, "body_battery": 84, "resting_hr": 48, "active_calories": 419, "steps": 105, "recent_activities": [{"id": 25016923422, "name": "Indoor_cardio", "sub_title": "Cardio", "date": "2026-11-09 08:18:44", "duration_min": 34.4, "calories": 419, "avg_hr": 126, "max_hr": 151, "aerobic_te": 2.4000000953674316, "anaerobic_te": 2.0999999046325684, "benefits": {"muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain", "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.", "cardio": "Average HR 126 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.4 + Anaerobic TE 2.1 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.", "metabolic": "419 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.", "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."}}, {"id": 25007961560, "name": "Walking", "sub_title": "Rushmoor Walking", "date": "2026-11-08 11:01:35", "duration_min": 56.5, "calories": 294, "avg_hr": 80, "max_hr": 106, "aerobic_te": 0.30000001192092896, "anaerobic_te": 0.0, "benefits": {"muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Core Stabilizers, Tibialis Anterior", "biomechanics": "Low-impact cyclical steady cadence absorbing ~1.2\u00d7 bodyweight (~119.8kg) per stride. Promotes joint synovial fluid circulation, venous blood return, and lumbar decompression without CNS or axial strain.", "cardio": "Average HR 80 bpm with peak anaerobic spike at 106 bpm (55% HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.", "metabolic": "294 kcal active burn contributed to yesterday's 649 kcal active burn while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.", "autoregulation": "Zero recovery debt; high parasympathetic tone stimulus that accelerates metabolic waste clearance and promotes recovery for subsequent lifting."}}, {"id": 25006317774, "name": "Indoor_cardio", "sub_title": "10m Combat Warm-up + 300 Tuck Jumps", "date": "2026-11-08 09:47:33", "duration_min": 28.2, "calories": 355, "avg_hr": 128, "max_hr": 165, "aerobic_te": 2.5, "anaerobic_te": 2.4000000953674316, "benefits": {"muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex (gastrocnemius/soleus), Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis, Rotator cuff & Deltoids, Obliques & Transverse Abdominis, Serratus anterior, Calf spring complex", "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~349\u2013449kg peak eccentric ground reaction force per jump at 99.8kg bodyweight). Significantly enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.", "cardio": "Average HR 128 bpm with peak anaerobic spike at 165 bpm (86% HRmax). Aerobic TE 2.5 + Anaerobic TE 2.4 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.", "metabolic": "355 kcal active burn natively expands today's caloric runway while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.", "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy axial squats."}}, {"id": 24994235032, "name": "Cardio", "sub_title": "Aerobic Base Conditioning (73.8 min)", "date": "2026-11-07 07:37:10", "duration_min": 73.8, "calories": 656, "avg_hr": 118, "max_hr": 168, "aerobic_te": 2.5, "anaerobic_te": 1.3, "benefits": {"muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.", "cardio": "Avg HR 118 bpm, Max HR 168 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.", "metabolic": "656 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24983208933, "name": "Cardio", "sub_title": "Aerobic Base Conditioning (49.2 min)", "date": "2026-11-06 06:07:11", "duration_min": 49.2, "calories": 514, "avg_hr": 123, "max_hr": 157, "aerobic_te": 2.5, "anaerobic_te": 1.6, "benefits": {"muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.", "cardio": "Avg HR 123 bpm, Max HR 157 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.", "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24977983886, "name": "Cardio", "sub_title": "Cardio (26.2 min)", "date": "2026-11-05 17:09:29", "duration_min": 26.2, "calories": 277, "avg_hr": 124, "max_hr": 162, "aerobic_te": 2.3, "anaerobic_te": 0.8, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 124 bpm, Max HR 162 bpm. Aerobic Training Effect 2.3 reinforces baseline aerobic engine.", "metabolic": "277 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24971876362, "name": "Cardio", "sub_title": "Cardio (34.6 min)", "date": "2026-11-05 06:29:03", "duration_min": 34.6, "calories": 514, "avg_hr": 145, "max_hr": 170, "aerobic_te": 3.4, "anaerobic_te": 1.1, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 145 bpm, Max HR 170 bpm. Aerobic Training Effect 3.4 reinforces baseline aerobic engine.", "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24959919457, "name": "Cardio", "sub_title": "Cardio (22.9 min)", "date": "2026-11-04 06:13:36", "duration_min": 22.9, "calories": 279, "avg_hr": 128, "max_hr": 162, "aerobic_te": 2.5, "anaerobic_te": 0.4, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 128 bpm, Max HR 162 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.", "metabolic": "279 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24948635377, "name": "Cardio", "sub_title": "High-Intensity Plyometrics (26.6 min)", "date": "2026-11-03 08:17:44", "duration_min": 26.6, "calories": 372, "avg_hr": 136, "max_hr": 162, "aerobic_te": 3.0, "anaerobic_te": 2.0, "benefits": {"muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex, Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis", "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~350\u2013450kg peak eccentric ground reaction force per jump at 99.85kg bodyweight). Enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.", "cardio": "Average HR 136 bpm with peak anaerobic spike at 162 bpm (94% HRmax). Aerobic TE 3.0 + Anaerobic TE 2.0 drives rapid lactate shuttling and anaerobic glycolytic buffering.", "metabolic": "372 kcal active burn natively expands today's caloric runway from 2,092 kcal to 2464 kcal while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours.", "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy squats."}}, {"id": 24938502919, "name": "Hart Walking", "sub_title": "Hart Walking (4.7 min)", "date": "2026-11-02 12:12:37", "duration_min": 4.7, "calories": 24, "avg_hr": 86, "max_hr": 108, "aerobic_te": 0.0, "anaerobic_te": 0.0, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 86 bpm, Max HR 108 bpm. Aerobic Training Effect 0.0 reinforces baseline aerobic engine.", "metabolic": "24 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}], "mnd_logged": {"calories": 824, "protein_g": 49, "carbs_g": 115, "fat_g": 23, "fiber_g": 19, "sodium_mg": 275, "water_l": 0.0, "last_pulled": "2026-11-09T06:49:20.731755", "source": "live_mynetdiary_cloud"}, "sleep_duration": "7h 21m", "today_activities": [{"id": 25016923422, "name": "Indoor_cardio", "sub_title": "Cardio", "date": "2026-11-09 08:18:44", "duration_min": 34.4, "calories": 419, "avg_hr": 126, "max_hr": 151, "aerobic_te": 2.4000000953674316, "anaerobic_te": 2.0999999046325684, "benefits": {"muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain", "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.", "cardio": "Average HR 126 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.4 + Anaerobic TE 2.1 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.", "metabolic": "419 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.", "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."}}]}, "renpho": {"source": "live_renpho_cloud", "weight_kg": 98.9, "body_fat_pct": 16.7, "lean_mass_kg": 82.38, "muscle_mass_kg": 53.2, "visceral_fat": 10, "water_pct": 59.6, "bmr": 2139, "target_weight_at_15pct": 96.92, "fat_to_lose_kg": 1.98, "ema_7day_weight": 98.77, "ema_7day_body_fat": 17.3, "last_synced": "2026-11-09 06:49:20"}, "nutrition": {"bmr": 2149, "pt_neat": 292, "tdee": 3091, "calorie_target": 2511, "deficit": 350, "protein_target_g": 200, "carbs_target_g": 251, "fat_target_g": 80, "calories_remaining": 1687, "protein_remaining": 151, "remaining_calories": 845, "remaining_protein_g": 0, "protein_achieved_pct": 111.5}, "strength_prescriptions": {"barbell_squat": {"weight": 100.0, "reps": 8, "e1rm": 126.7, "status": "baseline", "last_logged_weight": 102.5, "last_logged_reps": 8, "last_e1rm": 129.8}, "barbell_rdl": {"weight": 110.0, "reps": 8, "e1rm": 139.3, "status": "baseline"}, "barbell_floor_press": {"weight": 95.0, "reps": 6, "e1rm": 114.0, "status": "baseline"}, "pushups": {"reps": 15, "status": "baseline"}, "barbell_zercher_squat": {"weight": 75.0, "reps": 10, "e1rm": 100.0, "status": "baseline"}, "barbell_pendlay_row": {"weight": 85.0, "reps": 8, "e1rm": 107.7, "status": "baseline"}, "barbell_z_press": {"weight": 45.0, "reps": 10, "e1rm": 60.0, "status": "baseline"}, "kb_goblet_lunge": {"weight": 32.0, "reps": 20, "status": "baseline"}, "kb_swing": {"weight": 32.0, "reps": 15, "status": "baseline"}, "slam_ball_slam": {"weight": 15.0, "reps": 12, "status": "baseline"}}, "mnd_meals": {"breakfast": {"name": "Breakfast", "time": "6:14", "calories": 824, "protein": 49, "carbs": 115, "fat": 23, "items": [{"name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 120, "p": 5, "c": 4, "f": 10}, {"name": "Old Fashioned Jumbo Oats", "cals": 563, "p": 16, "c": 104, "f": 12}, {"name": "Snickers Impact Whey Isolate", "cals": 141, "p": 28, "c": 7, "f": 1}]}, "lunch": {"name": "Lunch", "time": "12:45", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": []}, "dinner": {"name": "Dinner", "time": "Pending", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": []}, "snacks": {"name": "Snacks & Hydration", "time": "15:15", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": []}}, "mnd_logged": {"calories": 1896, "protein_g": 223, "carbs_g": 157, "fat_g": 44, "fiber_g": 32, "sodium_mg": 1162, "water_l": 2.4}, "injuries": {"lumbar": false, "shoulders": false, "knees": false, "elbows": false, "wrists": false, "ankles": false, "notes": ""}, "date": "2026-11-09"};
+    window.BAKED_LIVE_STATE = {"last_synced": "2026-11-10T06:45:21.000000", "athlete": {"name": "Greg Putt", "age": 45, "height_cm": 190.0, "weight_kg": 98.0, "body_fat_pct": 15.9, "target_body_fat_pct": 15.0, "lean_mass_kg": 82.38, "muscle_mass_kg": 53.2, "fat_to_lose_kg": 1.08, "target_weight_kg": 96.92}, "garmin": {"device": "f\u0113nix 8 - 51mm AMOLED", "training_readiness": 88, "readiness_level": "HIGH", "readiness_feedback": "WELL_RECOVERED", "sleep_score": 88, "hrv_status": "balanced", "hrv_weekly_avg": 49, "body_battery": 98, "resting_hr": 48, "active_calories": 0, "steps": 117, "recent_activities": [{"id": 25020969123, "name": "Walking", "sub_title": "Runnymede Walking", "date": "2026-11-09 15:27:38", "duration_min": 42.7, "calories": 205, "avg_hr": 75, "max_hr": 100, "aerobic_te": 0.30000001192092896, "anaerobic_te": 0.0, "benefits": {"muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles", "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.", "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.", "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.", "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."}}, {"id": 25016923422, "name": "Indoor_cardio", "sub_title": "Cardio", "date": "2026-11-09 08:18:44", "duration_min": 34.4, "calories": 419, "avg_hr": 126, "max_hr": 151, "aerobic_te": 2.4000000953674316, "anaerobic_te": 2.0999999046325684, "benefits": {"muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain", "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.", "cardio": "Average HR 126 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.4 + Anaerobic TE 2.1 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.", "metabolic": "419 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.", "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."}}, {"id": 25007961560, "name": "Walking", "sub_title": "Rushmoor Walking", "date": "2026-11-08 11:01:35", "duration_min": 56.5, "calories": 294, "avg_hr": 80, "max_hr": 106, "aerobic_te": 0.30000001192092896, "anaerobic_te": 0.0, "benefits": {"muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Core Stabilizers, Tibialis Anterior", "biomechanics": "Low-impact cyclical steady cadence absorbing ~1.2\u00d7 bodyweight (~119.8kg) per stride. Promotes joint synovial fluid circulation, venous blood return, and lumbar decompression without CNS or axial strain.", "cardio": "Average HR 80 bpm with peak anaerobic spike at 106 bpm (55% HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.", "metabolic": "294 kcal active burn contributed to yesterday's 649 kcal active burn while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.", "autoregulation": "Zero recovery debt; high parasympathetic tone stimulus that accelerates metabolic waste clearance and promotes recovery for subsequent lifting."}}, {"id": 25006317774, "name": "Indoor_cardio", "sub_title": "10m Combat Warm-up + 300 Tuck Jumps", "date": "2026-11-08 09:47:33", "duration_min": 28.2, "calories": 355, "avg_hr": 128, "max_hr": 165, "aerobic_te": 2.5, "anaerobic_te": 2.4000000953674316, "benefits": {"muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex (gastrocnemius/soleus), Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis, Rotator cuff & Deltoids, Obliques & Transverse Abdominis, Serratus anterior, Calf spring complex", "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~349\u2013449kg peak eccentric ground reaction force per jump at 99.8kg bodyweight). Significantly enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.", "cardio": "Average HR 128 bpm with peak anaerobic spike at 165 bpm (86% HRmax). Aerobic TE 2.5 + Anaerobic TE 2.4 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.", "metabolic": "355 kcal active burn natively expands today's caloric runway while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.", "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy axial squats."}}, {"id": 24994235032, "name": "Cardio", "sub_title": "Aerobic Base Conditioning (73.8 min)", "date": "2026-11-07 07:37:10", "duration_min": 73.8, "calories": 656, "avg_hr": 118, "max_hr": 168, "aerobic_te": 2.5, "anaerobic_te": 1.3, "benefits": {"muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.", "cardio": "Avg HR 118 bpm, Max HR 168 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.", "metabolic": "656 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24983208933, "name": "Cardio", "sub_title": "Aerobic Base Conditioning (49.2 min)", "date": "2026-11-06 06:07:11", "duration_min": 49.2, "calories": 514, "avg_hr": 123, "max_hr": 157, "aerobic_te": 2.5, "anaerobic_te": 1.6, "benefits": {"muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.", "cardio": "Avg HR 123 bpm, Max HR 157 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.", "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24977983886, "name": "Cardio", "sub_title": "Cardio (26.2 min)", "date": "2026-11-05 17:09:29", "duration_min": 26.2, "calories": 277, "avg_hr": 124, "max_hr": 162, "aerobic_te": 2.3, "anaerobic_te": 0.8, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 124 bpm, Max HR 162 bpm. Aerobic Training Effect 2.3 reinforces baseline aerobic engine.", "metabolic": "277 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24971876362, "name": "Cardio", "sub_title": "Cardio (34.6 min)", "date": "2026-11-05 06:29:03", "duration_min": 34.6, "calories": 514, "avg_hr": 145, "max_hr": 170, "aerobic_te": 3.4, "anaerobic_te": 1.1, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 145 bpm, Max HR 170 bpm. Aerobic Training Effect 3.4 reinforces baseline aerobic engine.", "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24959919457, "name": "Cardio", "sub_title": "Cardio (22.9 min)", "date": "2026-11-04 06:13:36", "duration_min": 22.9, "calories": 279, "avg_hr": 128, "max_hr": 162, "aerobic_te": 2.5, "anaerobic_te": 0.4, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 128 bpm, Max HR 162 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.", "metabolic": "279 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}, {"id": 24948635377, "name": "Cardio", "sub_title": "High-Intensity Plyometrics (26.6 min)", "date": "2026-11-03 08:17:44", "duration_min": 26.6, "calories": 372, "avg_hr": 136, "max_hr": 162, "aerobic_te": 3.0, "anaerobic_te": 2.0, "benefits": {"muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex, Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis", "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~350\u2013450kg peak eccentric ground reaction force per jump at 99.85kg bodyweight). Enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.", "cardio": "Average HR 136 bpm with peak anaerobic spike at 162 bpm (94% HRmax). Aerobic TE 3.0 + Anaerobic TE 2.0 drives rapid lactate shuttling and anaerobic glycolytic buffering.", "metabolic": "372 kcal active burn natively expands today's caloric runway from 2,092 kcal to 2464 kcal while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours.", "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy squats."}}, {"id": 24938502919, "name": "Hart Walking", "sub_title": "Hart Walking (4.7 min)", "date": "2026-11-02 12:12:37", "duration_min": 4.7, "calories": 24, "avg_hr": 86, "max_hr": 108, "aerobic_te": 0.0, "anaerobic_te": 0.0, "benefits": {"muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain", "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.", "cardio": "Avg HR 86 bpm, Max HR 108 bpm. Aerobic Training Effect 0.0 reinforces baseline aerobic engine.", "metabolic": "24 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.", "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."}}], "mnd_logged": {"calories": 958, "protein_g": 68, "carbs_g": 119, "fat_g": 26, "fiber_g": 13, "sodium_mg": 1056, "water_l": 0.0, "last_pulled": "2026-11-10T06:45:21.157999", "source": "live_mynetdiary_cloud"}, "sleep_duration": "7h 43m", "today_activities": []}, "renpho": {"source": "live_renpho_cloud", "weight_kg": 98.0, "body_fat_pct": 15.9, "lean_mass_kg": 82.38, "muscle_mass_kg": 53.2, "visceral_fat": 10, "water_pct": 59.6, "bmr": 2139, "target_weight_at_15pct": 96.92, "fat_to_lose_kg": 1.08, "ema_7day_weight": 98.77, "ema_7day_body_fat": 17.3, "last_synced": "2026-11-10 06:45:21"}, "nutrition": {"bmr": 2149, "pt_neat": 292, "tdee": 3091, "calorie_target": 2092, "deficit": 350, "protein_target_g": 200, "carbs_target_g": 251, "fat_target_g": 80, "calories_remaining": 1134, "protein_remaining": 132, "remaining_calories": 845, "remaining_protein_g": 0, "protein_achieved_pct": 111.5}, "strength_prescriptions": {"barbell_squat": {"weight": 100.0, "reps": 8, "e1rm": 126.7, "status": "baseline", "last_logged_weight": 102.5, "last_logged_reps": 8, "last_e1rm": 129.8}, "barbell_rdl": {"weight": 110.0, "reps": 8, "e1rm": 139.3, "status": "baseline"}, "barbell_floor_press": {"weight": 95.0, "reps": 6, "e1rm": 114.0, "status": "baseline"}, "pushups": {"reps": 15, "status": "baseline"}, "barbell_zercher_squat": {"weight": 75.0, "reps": 10, "e1rm": 100.0, "status": "baseline"}, "barbell_pendlay_row": {"weight": 85.0, "reps": 8, "e1rm": 107.7, "status": "baseline"}, "barbell_z_press": {"weight": 45.0, "reps": 10, "e1rm": 60.0, "status": "baseline"}, "kb_goblet_lunge": {"weight": 32.0, "reps": 20, "status": "baseline"}, "kb_swing": {"weight": 32.0, "reps": 15, "status": "baseline"}, "slam_ball_slam": {"weight": 15.0, "reps": 12, "status": "baseline"}}, "mnd_meals": {"breakfast": {"name": "Breakfast", "time": "6:08", "calories": 958, "protein": 68, "carbs": 119, "fat": 26, "items": [{"name": "Egg Protein Pot", "cals": 134, "p": 13, "c": 2, "f": 8}, {"name": "Chicken Salad Lemon & Pepper Mayo Sandwich", "cals": 720, "p": 52, "c": 106, "f": 12}, {"name": "Carrot and Houmous", "cals": 104, "p": 3, "c": 11, "f": 6}]}, "lunch": {"name": "Lunch", "time": "12:45", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": []}, "dinner": {"name": "Dinner", "time": "Pending", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": []}, "snacks": {"name": "Snacks & Hydration", "time": "15:15", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": []}}, "mnd_logged": {"calories": 1896, "protein_g": 223, "carbs_g": 157, "fat_g": 44, "fiber_g": 32, "sodium_mg": 1162, "water_l": 2.4}, "injuries": {"lumbar": false, "shoulders": false, "knees": false, "elbows": false, "wrists": false, "ankles": false, "notes": ""}, "date": "2026-11-10"}};
     window.userInteracted = false;
     document.addEventListener('pointerdown', () => { window.userInteracted = true; }, { once: true });
     let globalAudioCtx = null;
@@ -6610,26 +6660,28 @@ function generateWorkoutFromGearAndGoal() {
             if (numEl) numEl.innerText = g.training_readiness;
             const ringEl = document.getElementById('todayDialRing');
             if (ringEl) {
-              const circ = 226;
+              const circ = 427.26;
               const offset = circ * (1 - (g.training_readiness / 100));
-              ringEl.style.strokeDashoffset = offset.toFixed(0);
+              ringEl.style.strokeDashoffset = offset.toFixed(1);
             }
             const hdrEl = document.getElementById('hdrReadiness');
             if (hdrEl) hdrEl.innerText = `${g.training_readiness} READY`;
           }
           if (g.sleep_score !== undefined) {
             const el = document.getElementById('vSleep');
-            if (el) el.innerHTML = `${g.sleep_score} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">/ 100</small>`;
+            if (el) el.innerText = g.sleep_score;
             const elSub = document.getElementById('vSleepSub');
-            if (elSub && g.sleep_duration) elSub.innerText = `${g.sleep_duration} Duration`;
+            if (elSub && g.sleep_duration) elSub.innerText = g.sleep_duration;
           }
           if (g.resting_hr !== undefined) {
-            const el = document.getElementById('vitalRhr') || document.getElementById('vRhr');
-            if (el) el.innerHTML = `${g.resting_hr} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">bpm</small>`;
+            const el = document.getElementById('vitalRhrVal') || document.getElementById('vitalRhr') || document.getElementById('vRhr');
+            if (el) el.innerText = g.resting_hr;
           }
           if (g.body_battery !== undefined) {
-            const el = document.getElementById('vitalBbSub');
-            if (el) el.innerText = `Body Battery: ${g.body_battery}%`;
+            const el = document.getElementById('vitalBattery');
+            if (el) el.innerText = `${g.body_battery}%`;
+            const elSub = document.getElementById('vitalBbSub');
+            if (elSub) elSub.innerText = g.body_battery >= 80 ? 'Fully Charged' : 'Restored';
           }
           if (g.active_calories !== undefined) {
             const el1 = document.getElementById('vitalBurn');
@@ -6749,13 +6801,13 @@ function generateWorkoutFromGearAndGoal() {
           const r = state.renpho;
           if (r.weight_kg) {
             const el1 = document.getElementById('vitalScale');
-            if (el1) el1.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kg</small>`;
+            if (el1) el1.innerText = r.weight_kg.toFixed(1);
             const el2 = document.getElementById('bodyScaleWeight');
             if (el2) el2.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
           }
           if (r.body_fat_pct) {
             const el1 = document.getElementById('vitalScaleSub');
-            if (el1) el1.innerText = `${r.body_fat_pct}% BF (-${r.fat_to_lose_kg || 1.98}kg)`;
+            if (el1) el1.innerText = `${r.body_fat_pct}`;
             const el2 = document.getElementById('bodyScaleBf');
             if (el2) el2.innerText = `${r.body_fat_pct}% Body Fat (Synced Today)`;
             const el3 = document.getElementById('normBfVal');
