@@ -1,5 +1,5 @@
 {
-  "last_synced": "2026-11-10T06:45:21.000000",
+  "last_synced": "2026-11-10T10:38:18.429095",
   "athlete": {
     "name": "Greg Putt",
     "age": 45,
@@ -20,11 +20,30 @@
     "sleep_score": 88,
     "hrv_status": "balanced",
     "hrv_weekly_avg": 49,
-    "body_battery": 98,
+    "body_battery": 75,
     "resting_hr": 48,
-    "active_calories": 0,
-    "steps": 117,
+    "active_calories": 345,
+    "steps": 867,
     "recent_activities": [
+      {
+        "id": 25028242260,
+        "name": "Indoor_cardio",
+        "sub_title": "Cardio",
+        "date": "2026-11-10 08:05:03",
+        "duration_min": 30.7,
+        "calories": 345,
+        "avg_hr": 119,
+        "max_hr": 151,
+        "aerobic_te": 2.200000047683716,
+        "anaerobic_te": 1.5,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 119 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.2 + Anaerobic TE 1.5 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "345 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        }
+      },
       {
         "id": 25020969123,
         "name": "Walking",
@@ -247,7 +266,27 @@
       "source": "live_mynetdiary_cloud"
     },
     "sleep_duration": "7h 43m",
-    "today_activities": []
+    "today_activities": [
+      {
+        "id": 25028242260,
+        "name": "Indoor_cardio",
+        "sub_title": "Morning Cardio Conditioning",
+        "date": "2026-11-10 08:05:03",
+        "duration_min": 30.7,
+        "calories": 345,
+        "avg_hr": 119,
+        "max_hr": 151,
+        "aerobic_te": 2.2,
+        "anaerobic_te": 1.5,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Posterior & Anterior Chain",
+          "biomechanics": "Controlled functional cadence maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 119 bpm with peak anaerobic spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.2 + Anaerobic TE 1.5 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "345 kcal active expenditure dynamically expands today's caloric runway while protecting your deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular stimulus sustained. Systemic CNS fatigue is minimal; knee extensors and posterior chain primed for subsequent strength work."
+        }
+      }
+    ]
   },
   "renpho": {
     "source": "renpho_direct_cloud",
@@ -272,12 +311,12 @@
     "bmr": 2149,
     "pt_neat": 292,
     "tdee": 3091,
-    "calorie_target": 2092,
+    "calorie_target": 2437,
     "deficit": 350,
     "protein_target_g": 200,
     "carbs_target_g": 251,
     "fat_target_g": 80,
-    "calories_remaining": 1134,
+    "calories_remaining": 541,
     "protein_remaining": 132,
     "remaining_calories": 845,
     "remaining_protein_g": 0,
