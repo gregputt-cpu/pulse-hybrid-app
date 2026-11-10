@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v17-glassmorphic-glow';
+const CACHE_NAME = 'pulse-cache-v18-injury-assessment-engine';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

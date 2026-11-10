@@ -146,6 +146,13 @@ def sync_set(payload: SetLogPayload):
     save_live_state(state)
     return {"success": True, "result": sp}
 
+@app.post("/api/athlete/injuries")
+def save_athlete_injuries(payload: Dict[str, Any]):
+    state = load_live_state()
+    state["injuries"] = payload
+    save_live_state(state)
+    return {"success": True, "injuries": payload}
+
 # Background Continuous Sync (APScheduler)
 from apscheduler.schedulers.background import BackgroundScheduler
 

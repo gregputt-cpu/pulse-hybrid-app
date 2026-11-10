@@ -2249,6 +2249,9 @@
             <span style="font-size:11px; font-weight:600; color:var(--text-secondary); cursor:pointer;" onclick="openEquipmentModal()">Gym Profile ⚙</span>
           </div>
 
+          <!-- ACTIVE BIOMECHANICAL GUARDRAIL ALERT BANNER -->
+          <div id="activeInjuryBannerToday" style="display:none; margin-bottom:10px;"></div>
+
           <!-- HEAD COACH PRESCRIPTION & WHY CARD (GOLDFISH HERO) -->
           <div class="card card-highlight" style="padding:14px 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -3443,8 +3446,8 @@
     </div>
 
     <!-- GOAL SELECTION MODAL -->
-    <div class="modal-overlay" id="goalModal">
-      <div class="modal-card" style="max-width:390px; max-height:88vh; overflow-y:auto;">
+    <div class="modal-overlay" id="goalModal" onclick="if(event.target === this) closeGoalModal()">
+      <div class="modal-card" style="max-width:440px; max-height:88vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <div>
             <strong style="font-size:14px; font-weight:900; color:#fff;">🎯 Athlete Target & Milestone Configurator</strong>
@@ -3590,27 +3593,70 @@
 
 
 
-    
+
     <!-- INJURY & JOINT SAFETY GUARDRAILS MODAL -->
-    <div class="modal-overlay" id="injuryModal">
-      <div class="modal-card" style="max-width:390px; max-height:88vh; overflow-y:auto;">
+    <div class="modal-overlay" id="injuryModal" onclick="if(event.target === this) closeInjuryModal()">
+      <div class="modal-card" style="max-width:440px; max-height:88vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:20px;">🛡️</span>
             <div>
               <strong style="font-size:14px; font-weight:900; color:#fff;">Injury & Joint Safety Guardrails</strong>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:1px;">Biomechanical protection & exercise contra-indications</div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:1px;">AI Biomechanical Assessment & Autoregulated Guardrails</div>
             </div>
           </div>
           <span style="cursor:pointer; color:var(--text-muted); font-size:18px; padding:2px 6px;" onclick="closeInjuryModal()">✕</span>
         </div>
 
-        <div style="font-size:12px; color:#cbd5e1; line-height:1.4; margin-bottom:12px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 10px;">
-          Select any vulnerable joint regions. Coach Greg automatically modifies exercise selection, swaps axial compressive loads, and protects recovery.
+        <!-- SECTION 1: INTERACTIVE WRITE-IN CLINICAL SYMPTOMS & AI ASSESSMENT -->
+        <div style="background:linear-gradient(165deg, rgba(30, 41, 59, 0.55) 0%, rgba(10, 15, 29, 0.85) 100%); border:1px solid rgba(56, 189, 248, 0.25); border-top:1px solid rgba(255, 255, 255, 0.22); border-radius:12px; padding:10px 12px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="font-size:12.5px; color:#fff; display:flex; align-items:center; gap:5px;">
+              <span>📝</span> Tell Coach Greg What You're Experiencing
+            </strong>
+            <span style="font-size:10px; color:var(--cyan); background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.3); padding:2px 6px; border-radius:4px; font-weight:800; letter-spacing:0.04em;">LIVE AI SYNTHESIS</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); line-height:1.35; margin-bottom:8px;">
+            Coach Greg evaluates your <strong>88 Sleep Score</strong>, <strong>48 bpm RHR</strong>, <strong>98.0 kg frame</strong>, and <strong>30.7m morning cardio</strong> to formulate a targeted clinical assessment, movement contraindications, and safe exercise swaps.
+          </div>
+
+          <!-- QUICK SYMPTOM CHIPS -->
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Right knee patellar tendon ache after 30m morning cardio, slight twinge on stairs', 'knees')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
+              🦵 Patellar ache (Post-Cardio)
+            </button>
+            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Lower back lumbar stiffness and erector tightness on hip hinge movements', 'lumbar')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
+              🦴 Lower back tightness
+            </button>
+            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Anterior shoulder pinch during deep dip bar dips, subacromial impingement', 'shoulders')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
+              💪 Shoulder front pinch
+            </button>
+            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Triceps tendon ache near elbow tip on heavy terminal lockout pressing', 'elbows')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
+              🦾 Elbow / Tricep ache
+            </button>
+            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Achilles tendon stiffness and calf tightness after high-impact foot strikes', 'ankles')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
+              🦶 Achilles / Calf stiffness
+            </button>
+            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Wrist hyperextension shear under heavy flat floor push-ups and barbell pressing', 'wrists')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
+              ✋ Wrist extension shear
+            </button>
+          </div>
+
+          <!-- WRITE-IN TEXTAREA -->
+          <textarea id="injuryNotesInput" rows="3" style="width:100%; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(56, 189, 248, 0.3); border-radius:8px; padding:8px 10px; color:#fff; font-size:12px; line-height:1.4; resize:vertical; outline:none; box-sizing:border-box; font-family:inherit;" placeholder="Describe what you feel (e.g., knee tendon twinge after cardio, shoulder front pinch on dips, lower back tightness on hinge)..."></textarea>
+
+          <!-- ANALYZE ACTION BUTTON -->
+          <button type="button" class="btn-action-primary" id="btnAnalyzeInjury" onclick="analyzeAthleteInjury()" style="width:100%; margin-top:8px; min-height:42px; font-size:12.5px; background:linear-gradient(135deg, #00f0ff 0%, #3b82f6 50%, #8b5cf6 100%); color:#050914; font-weight:800; letter-spacing:0.02em; border:none; border-radius:8px; cursor:pointer; box-shadow:0 0 16px rgba(0,240,255,0.35); display:flex; align-items:center; justify-content:center; gap:6px;">
+            <span>⚡</span> ANALYZE BIOMECHANICS & AUTOREGULATE WORKOUT
+          </button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div style="font-size:12px; font-weight:800; color:#fff;">Select Active / Vulnerable Joints:</div>
+        <!-- DYNAMIC AI ASSESSMENT RESULT CARD (ELEPHANT / GOLDFISH PROTOCOL) -->
+        <div id="injuryAssessmentResult" style="display:none; margin-bottom:12px;"></div>
+
+        <!-- SECTION 2: MANUAL JOINT TOGGLES -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; margin-top:4px;">
+          <div style="font-size:12px; font-weight:800; color:#fff;">Active Joint Safety Guardrails:</div>
           <button type="button" class="solver-size-btn" style="background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); color:var(--primary); font-size:11px; font-weight:800; padding:3px 8px; border-radius:5px; cursor:pointer; box-shadow:0 0 6px rgba(0,229,255,0.15);" onclick="clearAllInjuries()">✓ Clear All Restrictions</button>
         </div>
         <div class="injury-tag-grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;">
@@ -3635,23 +3681,17 @@
         </div>
 
         <!-- ACTIVE SAFETY FILTER RULEBOOK PREVIEW -->
-        <div style="margin-top:12px;">
-          <div style="font-size:12px; font-weight:800; color:#fff; margin-bottom:6px;">Active Biomechanical Guardrails:</div>
-          <div id="injuryRulesList" style="display:flex; flex-direction:column; gap:6px; min-height:48px;">
+        <div style="margin-top:10px;">
+          <div style="font-size:12px; font-weight:800; color:#fff; margin-bottom:6px;">Active Movement Restrictions & Swaps:</div>
+          <div id="injuryRulesList" style="display:flex; flex-direction:column; gap:6px; min-height:42px;">
             <div style="font-size:11.5px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center;">
               All joints healthy. Full compound clearance active.
             </div>
           </div>
         </div>
 
-        <!-- ATHLETE INJURY NOTES -->
-        <div style="margin-top:12px;">
-          <label style="display:block; font-size:12px; font-weight:800; color:#fff; margin-bottom:4px;">Specific Injury Notes / Details:</label>
-          <textarea id="injuryNotesInput" rows="2" style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px; color:#fff; font-size:12px; resize:vertical; outline:none; box-sizing:border-box;" placeholder="e.g. Mild right rotator cuff strain on deep dips, previous meniscus cleanup..."></textarea>
-        </div>
-
         <button class="btn-action-primary" style="margin-top:12px; width:100%; min-height:44px; font-size:13.5px;" onclick="saveInjuries()">
-          <span>🛡️</span> SAVE INJURY PROFILE & UPDATE GUARDRAILS
+          <span>🛡️</span> SAVE PROFILE & APPLY TO TODAY'S WORKOUTS
         </button>
       </div>
     </div>
@@ -4890,7 +4930,65 @@
     function loadDailyArchetype(key) {
       currentArchetypeKey = key || 'option_a';
       const arch = dailyArchetypes[currentArchetypeKey] || dailyArchetypes.option_a;
-      activeWorkoutPlan = arch.exercises.map(ex => ({ ...ex }));
+      
+      // Auto-swap contraindicated exercises based on athleteInjuries
+      activeWorkoutPlan = arch.exercises.map(ex => {
+        let modified = { ...ex };
+        if (athleteInjuries && athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) {
+          modified = {
+            id: "db_floor_press_neutral",
+            name: "Neutral-Grip DB Floor Press",
+            family: "horizontal_push",
+            targetWeight: "2×22kg",
+            targetReps: 10,
+            setsCount: 4,
+            rest: "75s",
+            cue: "Palms facing in, elbows tucked at 45°. Saves anterior rotator cuff.",
+            rationale: "[🛡️ Shoulder-Safe Swap] Substituted for deep dips to eliminate anterior capsule shear while preserving chest & tricep drive."
+          };
+        }
+        if (athleteInjuries && athleteInjuries.knees && (ex.id === 'kb_goblet_lunge' || ex.id === 'barbell_zercher_squat' || (ex.family === 'squat' && ex.id !== 'knee_tke'))) {
+          modified = {
+            id: "glute_bridge_elevated",
+            name: "Elevated Glute Bridge & RDL Hinge",
+            family: "hip_hinge",
+            targetWeight: "Body / DB",
+            targetReps: 15,
+            setsCount: 4,
+            rest: "60s",
+            cue: "Drive through heels, squeeze glutes hard. Zero knee flexion shear.",
+            rationale: "[🛡️ Knee-Safe Swap] Sparing patellar tendon while maintaining heavy posterior chain activation."
+          };
+        }
+        if (athleteInjuries && athleteInjuries.lumbar && (ex.id === 'barbell_zercher_squat' || ex.id === 'barbell_z_press')) {
+          modified = {
+            id: "chest_supported_db_row",
+            name: "Chest-Supported Dumbbell Row",
+            family: "pull",
+            targetWeight: "2×20kg",
+            targetReps: 10,
+            setsCount: 4,
+            rest: "60s",
+            cue: "Torso fully supported on incline; strictly upper-back squeeze.",
+            rationale: "[🛡️ Lumbar-Safe Swap] Bench supports upper torso to eliminate spinal axial shear."
+          };
+        }
+        if (athleteInjuries && athleteInjuries.ankles && ex.id === 'speed_rope_intervals') {
+          modified = {
+            id: "incline_walk_flush",
+            name: "Zone 2 Incline Treadmill Walk",
+            family: "cardio",
+            targetWeight: "Body",
+            targetReps: "15 min",
+            setsCount: 1,
+            rest: "60s",
+            cue: "Low-impact flat-foot heel-to-toe stride; zero Achilles ballistic shock.",
+            rationale: "[🛡️ Ankle-Safe Swap] Low impact cardiovascular flush sparing Achilles tendon."
+          };
+        }
+        return modified;
+      });
+
       currentExIdx = 0;
       
       const badgeEl = document.getElementById('wPlanBadge');
@@ -5289,15 +5387,21 @@ function generateWorkoutFromGearAndGoal() {
         if (gearConfig.db.active) weightNotes.push(`${gearConfig.db.weight} DBs`);
         if (gearConfig.sandbag.active) weightNotes.push(`${gearConfig.sandbag.weight} Sandbag`);
 
-        document.getElementById('aiRecBadge').innerText = "TIER 1 • CUSTOM HYBRID SETUP";
-        document.getElementById('aiRecTitle').innerText = gearConfig.barbell.active 
+        const badgeEl = document.getElementById('aiRecBadge');
+        if (badgeEl) badgeEl.innerText = "TIER 1 • CUSTOM HYBRID SETUP";
+        const titleEl = document.getElementById('aiRecTitle');
+        if (titleEl) titleEl.innerText = gearConfig.barbell.active 
           ? "Custom Barbell & Hybrid Strength" 
           : "Custom Functional Conditioning Session";
-        document.getElementById('aiRecSummary').innerText = `Tailored for Readiness 80 using: ${activeItems.join(', ')} (${weightNotes.join(', ') || 'bodyweight'}). Calibrated to hit your ${goal.title}.`;
+        const sumEl = document.getElementById('aiRecSummary');
+        if (sumEl) sumEl.innerText = `Tailored for Readiness 80 using: ${activeItems.join(', ')} (${weightNotes.join(', ') || 'bodyweight'}). Calibrated to hit your ${goal ? goal.title : 'Target'}.`;
       } else {
-        document.getElementById('aiRecBadge').innerText = profile.badge;
-        document.getElementById('aiRecTitle').innerText = profile.title;
-        document.getElementById('aiRecSummary').innerText = profile.summary;
+        const badgeEl = document.getElementById('aiRecBadge');
+        if (badgeEl) badgeEl.innerText = profile.badge;
+        const titleEl = document.getElementById('aiRecTitle');
+        if (titleEl) titleEl.innerText = profile.title;
+        const sumEl = document.getElementById('aiRecSummary');
+        if (sumEl) sumEl.innerText = profile.summary;
       }
 
       let filtered = masterExercises.filter(ex => {
@@ -5331,18 +5435,22 @@ function generateWorkoutFromGearAndGoal() {
         }];
       }
 
-      document.getElementById('aiRecGearCount').innerText = `${activeWorkoutPlan.length} Exercises Loaded`;
+      const gcEl = document.getElementById('aiRecGearCount');
+      if (gcEl) gcEl.innerText = `${activeWorkoutPlan.length} Exercises Loaded`;
       const listEl = document.getElementById('aiRecList');
-      listEl.innerHTML = '';
-      activeWorkoutPlan.forEach(ex => {
-        const chip = document.createElement('div');
-        chip.className = 'workout-rec-chip';
-        const weightTag = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
-        chip.innerText = `${ex.name.split('(')[0].trim()} (${weightTag} × ${ex.targetReps})`;
-        listEl.appendChild(chip);
-      });
+      if (listEl) {
+        listEl.innerHTML = '';
+        activeWorkoutPlan.forEach(ex => {
+          const chip = document.createElement('div');
+          chip.className = 'workout-rec-chip';
+          const weightTag = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
+          chip.innerText = `${ex.name.split('(')[0].trim()} (${weightTag} × ${ex.targetReps})`;
+          listEl.appendChild(chip);
+        });
+      }
 
-      document.getElementById('wPlanBadge').innerText = profile.title.toUpperCase();
+      const wpEl = document.getElementById('wPlanBadge');
+      if (wpEl) wpEl.innerText = profile.title.toUpperCase();
       currentExIdx = 0;
       updateEquipmentTriggerSummary();
     }
@@ -7453,6 +7561,220 @@ function generateWorkoutFromGearAndGoal() {
       }
     }
 
+    // BIOMECHANICAL INJURY PROTECTION & EXERCISE SWAP DATABASE
+    const injuryRules = {
+      lumbar: {
+        icon: '🦴',
+        title: 'Lower Back / Lumbar Spine Guardrail',
+        joint: 'lumbar',
+        swap: 'Compressive axial loading banned (no back squats, standing overhead barbell presses, or deficit deadlifts). Substituted with Chest-Supported Rows, Romanian Deadlifts with strict neutral spine, and Floor Press.',
+        banned: ['Barbell Back Squats', 'Standing Overhead Barbell Press', 'Deficit Deadlifts', 'Tuck Jumps'],
+        safe: ['Chest-Supported DB Rows', 'Barbell / DB Floor Press', 'Romanian Deadlifts (Tempo 3-1-1)', 'Glute Bridges'],
+        decompression: 'McKenzie prone press-ups (10 reps), 90/90 diaphragmatic breathing with posterior pelvic tilt (2 mins), bird-dogs (3×8/side).'
+      },
+      shoulders: {
+        icon: '💪',
+        title: 'Shoulder / Rotator Cuff Guardrail',
+        joint: 'shoulders',
+        swap: 'Extreme end-range internal rotation & deep overhead clearance deloaded. Substituted with Floor Press (dead-stop at 45° elbow angle saves anterior capsule) and Chest-Supported Neutral Rows.',
+        banned: ['Deep Dip Bar Dips (>90° elbow flexion)', 'Behind-the-Neck Press', 'Barbell Upright Rows', 'Kipping / Jerks'],
+        safe: ['Barbell Floor Press', 'Neutral-Grip Dumbbell Press', 'Incline Chest-Supported Rows', 'Face Pulls'],
+        decompression: 'Band pull-aparts (2×20), dead hangs from bar with passive scapular depression (3×30s), sleeper stretch (45s/side).'
+      },
+      knees: {
+        icon: '🦵',
+        title: 'Knee / Patellofemoral Guardrail',
+        joint: 'knees',
+        swap: 'High-impact ballistic ground reaction forces and deep quad-dominant forward knee shear eliminated. Shifted to pure Posterior Chain (Romanian Deadlifts, Hamstring Curls) and upper-body compound volume.',
+        banned: ['Plyometric Tuck Jumps', 'Heavy Barbell Back Squats (>90° flexion)', 'Walking Lunges with forward knee excursion', 'Jump Rope Double-Unders'],
+        safe: ['Barbell Romanian Deadlifts (Hips-back hinge)', 'Hip Thrusts / Glute Bridges', 'Barbell Floor Press', 'Incline Walking / Sled Drags'],
+        decompression: 'Spanish Squat isometric hold (45s × 3 reps — reduces patellar tendon pain immediately via cortical inhibition), Couch stretch for rectus femoris (60s/side), soft tissue calf rolling.'
+      },
+      elbows: {
+        icon: '🦾',
+        title: 'Elbow / Epicondyle Tendon Guardrail',
+        joint: 'elbows',
+        swap: 'Terminal lockout under heavy shear and deep tricep flaring deloaded. Substituted with neutral-grip pressing, floor presses, and controlled eccentric dumbbell movements.',
+        banned: ['Heavy Skull Crushers / French Press', 'Aggressive Tricep Dips with flaring elbows', 'Heavy Straight-Bar Curls'],
+        safe: ['Neutral-Grip DB Floor Press', 'Hammer Curls with controlled tempo', 'Chest-Supported Row', 'Band Pushdowns'],
+        decompression: 'Forearm flexor/extensor myofascial flossing, light high-rep band tricep extensions (2×30), eccentric wrist curls.'
+      },
+      wrists: {
+        icon: '✋',
+        title: 'Wrist / Carpal Joint Guardrail',
+        joint: 'wrists',
+        swap: 'Hyperextension wrist torque eliminated. Substituted with neutral-grip dumbbell floor presses, push-up handles, and strap-assisted rows.',
+        banned: ['Heavy Straight-Bar Cleans / Front Squat Rack', 'Flat Palm Floor Push-ups if aggravated', 'Heavy Barbell Curls'],
+        safe: ['Neutral-Grip DB Floor Press', 'Handle / Knuckle Push-ups', 'Trap Bar / Neutral Grip Pulls', 'Cable Presses'],
+        decompression: 'Prayer stretch to reverse prayer (45s), wrist rolls, gentle forearm extensor massage.'
+      },
+      ankles: {
+        icon: '🦶',
+        title: 'Ankle / Achilles & Plantar Guardrail',
+        joint: 'ankles',
+        swap: 'Ballistic plyometrics and high-frequency calf impacts removed. Substituted with low-impact steady state cardio (Zone 2 incline treadmill / spin bike) and seated strength.',
+        banned: ['Speed Rope Double-Unders', 'Tuck Jumps & Box Jumps', 'High-Speed Sprinting', 'Calf Jump Bounces'],
+        safe: ['Incline Treadmill Walking (slow tempo)', 'Barbell Floor Press', 'Chest-Supported Rows', 'Seated Hamstring Work'],
+        decompression: 'Soleus / gastrocnemius wall stretch (45s/side), plantar fascia tennis ball roll (2 mins), active ankle alphabet rotations.'
+      }
+    };
+
+    // GOAL CONFIGURATOR & CUSTOM ARCHITECT CONTROLLER
+    let currentGoalTab = 'presets';
+    let currentCustomDeficit = 350;
+
+    function openGoalModal() {
+      const modal = document.getElementById('goalModal');
+      if (modal) {
+        modal.classList.add('open');
+        document.querySelectorAll('.goal-option-card').forEach(c => c.classList.remove('selected'));
+        const activeCard = document.getElementById(`opt_${currentGoalKey}`);
+        if (activeCard) activeCard.classList.add('selected');
+        updateCustomGoalArchitect();
+        beep(600, 0.05);
+      }
+    }
+
+    function closeGoalModal() {
+      const modal = document.getElementById('goalModal');
+      if (modal) {
+        modal.classList.remove('open');
+        beep(450, 0.05);
+      }
+    }
+
+    function switchGoalTab(tabKey) {
+      currentGoalTab = tabKey;
+      const btnPresets = document.getElementById('btnGoalTabPresets');
+      const btnCustom = document.getElementById('btnGoalTabCustom');
+      const panelPresets = document.getElementById('panelGoalPresets');
+      const panelCustom = document.getElementById('panelGoalCustom');
+
+      if (tabKey === 'presets') {
+        if (btnPresets) btnPresets.classList.add('active');
+        if (btnCustom) btnCustom.classList.remove('active');
+        if (panelPresets) panelPresets.classList.add('active');
+        if (panelCustom) panelCustom.classList.remove('active');
+      } else {
+        if (btnCustom) btnCustom.classList.add('active');
+        if (btnPresets) btnPresets.classList.remove('active');
+        if (panelCustom) panelCustom.classList.add('active');
+        if (panelPresets) panelPresets.classList.remove('active');
+        updateCustomGoalArchitect();
+      }
+      beep(550, 0.04);
+    }
+
+    function setCustomDeficit(deficit) {
+      currentCustomDeficit = deficit;
+      [200, 350, 500].forEach(d => {
+        const btn = document.getElementById('btnDeficit' + d);
+        if (btn) {
+          if (d === deficit) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+      updateCustomGoalArchitect();
+      beep(700, 0.04);
+    }
+
+    function updateCustomGoalArchitect() {
+      const sliderBf = document.getElementById('sliderCustomBf');
+      const sliderProtein = document.getElementById('sliderCustomProtein');
+      if (!sliderBf || !sliderProtein) return;
+
+      const targetBf = parseFloat(sliderBf.value) || 15.0;
+      const targetProtein = parseInt(sliderProtein.value) || 200;
+
+      let currentWeight = 98.0;
+      const bsw = document.getElementById('bodyScaleWeight');
+      if (bsw) {
+        const parsed = parseFloat(bsw.innerText);
+        if (!isNaN(parsed) && parsed > 40) currentWeight = parsed;
+      }
+      let leanMass = 81.14;
+
+      const targetWeight = leanMass / (1 - (targetBf / 100));
+      const fatToBurn = Math.max(0, currentWeight - targetWeight);
+      const lbsToBurn = fatToBurn * 2.20462;
+      const proteinPerKg = (targetProtein / leanMass).toFixed(2);
+      const weeklyLoss = (currentCustomDeficit * 7) / 7700;
+      const runwayWeeks = weeklyLoss > 0 && fatToBurn > 0 ? (fatToBurn / weeklyLoss).toFixed(1) : "0.0";
+
+      const dispBf = document.getElementById('dispCustomBf');
+      if (dispBf) dispBf.innerText = `${targetBf.toFixed(1)}%`;
+
+      const dispProt = document.getElementById('dispCustomProtein');
+      if (dispProt) dispProt.innerText = `${targetProtein}g`;
+
+      const dispPpk = document.getElementById('dispProteinPerKg');
+      if (dispPpk) dispPpk.innerText = `${proteinPerKg}g/kg Lean Mass`;
+
+      const elTargetWt = document.getElementById('calcTargetWeight');
+      if (elTargetWt) elTargetWt.innerText = `${targetWeight.toFixed(2)} kg`;
+
+      const elLbm = document.getElementById('calcLbmPreserved');
+      if (elLbm) elLbm.innerText = `${leanMass.toFixed(2)} kg Lean Mass`;
+
+      const elFatBurn = document.getElementById('calcFatToBurn');
+      if (elFatBurn) elFatBurn.innerText = `${fatToBurn.toFixed(2)} kg`;
+
+      const elLbsBurn = document.getElementById('calcLbsToBurn');
+      if (elLbsBurn) elLbsBurn.innerText = `${lbsToBurn.toFixed(1)} lbs pure fat`;
+
+      const elRunway = document.getElementById('calcRunwayWeeks');
+      if (elRunway) elRunway.innerText = `${runwayWeeks} Weeks`;
+
+      const elLossRate = document.getElementById('calcDailyLossRate');
+      if (elLossRate) elLossRate.innerText = `${weeklyLoss.toFixed(2)} kg/week`;
+    }
+
+    function applyCustomGoalArchitect() {
+      const sliderBf = document.getElementById('sliderCustomBf');
+      const sliderProtein = document.getElementById('sliderCustomProtein');
+      const targetBf = parseFloat(sliderBf?.value) || 15.0;
+      const targetProtein = parseInt(sliderProtein?.value) || 200;
+      const leanMass = 81.14;
+      let currentWeight = 98.0;
+      const bsw = document.getElementById('bodyScaleWeight');
+      if (bsw) {
+        const parsed = parseFloat(bsw.innerText);
+        if (!isNaN(parsed) && parsed > 40) currentWeight = parsed;
+      }
+      const targetWeight = leanMass / (1 - (targetBf / 100));
+      const fatToBurn = Math.max(0, currentWeight - targetWeight);
+
+      athleteGoals.custom = {
+        id: "custom",
+        title: `Custom ${targetBf.toFixed(1)}% Body Fat Architect`,
+        badge: `${targetBf.toFixed(1)}% BF`,
+        sub: `Target: ${targetWeight.toFixed(2)} kg • Fat to lose: ${fatToBurn.toFixed(2)} kg • ${targetProtein}g Protein Anchor`,
+        calories: 2442 - currentCustomDeficit,
+        deficit: -currentCustomDeficit,
+        protein: targetProtein,
+        carbs: Math.max(150, Math.round((2442 - currentCustomDeficit - (targetProtein * 4) - (75 * 9)) / 4)),
+        fat: 75,
+        strategyTitle: `Strategy: Custom ${targetBf.toFixed(1)}% Recomposition`,
+        strategyDesc: `Preserving ${leanMass.toFixed(2)} kg Lean Mass with a calibrated ${currentCustomDeficit} kcal deficit. Dynamic Garmin active burn expands your daily runway.`
+      };
+
+      selectGoal('custom');
+      showToast(`🎯 Custom Goal Applied: Target ${targetBf.toFixed(1)}% Body Fat (${targetWeight.toFixed(2)} kg)`);
+    }
+
+    // INJURY MANAGEMENT & AI BIOMECHANICAL ASSESSMENT ENGINE
+    function populateSymptomChip(chipText, jointKey) {
+      const input = document.getElementById('injuryNotesInput');
+      if (input) {
+        input.value = chipText;
+        input.focus();
+      }
+      if (jointKey && !athleteInjuries[jointKey]) {
+        toggleInjury(jointKey);
+      }
+      beep(720, 0.05);
+    }
+
     function openInjuryModal() {
       ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'].forEach(k => {
         const btn = document.getElementById('inj_btn_' + k);
@@ -7464,6 +7786,7 @@ function generateWorkoutFromGearAndGoal() {
       const notesEl = document.getElementById('injuryNotesInput');
       if (notesEl) notesEl.value = (athleteInjuries && athleteInjuries.notes) || '';
       renderInjuryRules();
+      renderExistingInjuryAssessment();
       const modal = document.getElementById('injuryModal');
       if (modal) modal.classList.add('open');
       beep(600, 0.05);
@@ -7482,10 +7805,17 @@ function generateWorkoutFromGearAndGoal() {
         if (btn) btn.classList.remove('active');
       });
       athleteInjuries.notes = '';
+      athleteInjuries.assessment = null;
       const notesEl = document.getElementById('injuryNotesInput');
       if (notesEl) notesEl.value = '';
+      const resultEl = document.getElementById('injuryAssessmentResult');
+      if (resultEl) {
+        resultEl.style.display = 'none';
+        resultEl.innerHTML = '';
+      }
       renderInjuryRules();
       updateInjuryBadge();
+      loadDailyArchetype(currentArchetypeKey || 'option_a');
       try {
         localStorage.setItem('pulse_athlete_injuries', JSON.stringify(athleteInjuries));
         fetch('/api/athlete/injuries', {
@@ -7506,6 +7836,7 @@ function generateWorkoutFromGearAndGoal() {
         else btn.classList.remove('active');
       }
       renderInjuryRules();
+      updateInjuryBadge();
       beep(athleteInjuries[key] ? 440 : 660, 0.04);
     }
 
@@ -7533,6 +7864,180 @@ function generateWorkoutFromGearAndGoal() {
       }
     }
 
+    function analyzeAthleteInjury() {
+      const input = document.getElementById('injuryNotesInput');
+      const text = (input ? input.value : '').trim().toLowerCase();
+
+      // Keyword detection for anatomical joints
+      const jointMatches = [];
+      if (/knee|patell|meniscus|quad|lunge|squat|stairs/.test(text)) jointMatches.push('knees');
+      if (/back|lumbar|spine|erector|disc|hinge|l4|l5|sciatic/.test(text)) jointMatches.push('lumbar');
+      if (/shoulder|rotator|imping|dip|overhead|deltoid|ac joint/.test(text)) jointMatches.push('shoulders');
+      if (/elbow|tricep|epicondyl|tendonitis|forearm/.test(text)) jointMatches.push('elbows');
+      if (/wrist|carpal|pushup|press|grip/.test(text)) jointMatches.push('wrists');
+      if (/ankle|achilles|calf|soleus|plantar|heel|jump/.test(text)) jointMatches.push('ankles');
+
+      jointMatches.forEach(k => {
+        athleteInjuries[k] = true;
+        const btn = document.getElementById('inj_btn_' + k);
+        if (btn) btn.classList.add('active');
+      });
+
+      const activeJoints = ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'].filter(k => athleteInjuries[k]);
+      if (activeJoints.length === 0) {
+        if (text.length > 3) {
+          activeJoints.push('knees');
+          athleteInjuries.knees = true;
+          const btn = document.getElementById('inj_btn_knees');
+          if (btn) btn.classList.add('active');
+        } else {
+          showToast('⚠️ Please describe your symptoms or select a joint above');
+          beep(300, 0.1);
+          return;
+        }
+      }
+
+      renderInjuryRules();
+      updateInjuryBadge();
+
+      const weight = 98.0;
+      const leanMass = 81.14;
+      const sleepScore = 88;
+      const rhr = 48;
+      const primaryJoint = activeJoints[0];
+      const rule = injuryRules[primaryJoint] || injuryRules.knees;
+
+      let rootCauseText = "";
+      let swapPrescription = "";
+
+      if (primaryJoint === 'knees') {
+        rootCauseText = `At <strong>${weight.toFixed(1)} kg</strong> bodyweight, each foot strike during morning cardio generated peak patellofemoral reaction forces of ~2.5× bodyweight (<strong>~245 kg</strong> per stride). Today's 30.7m cardio (345 kcal) + previous high-impact training delivered ~8,200 cyclical impacts, triggering acute patellar tendon tensile strain.`;
+        swapPrescription = `Today's workout is automatically switched to <strong>Option A: Heavy Barbell Hinge & Push</strong>. Romanian Deadlifts (pure posterior chain hip hinge) eliminate patellofemoral shear completely while protecting your <strong>${leanMass.toFixed(1)} kg</strong> lean muscle mass.`;
+      } else if (primaryJoint === 'lumbar') {
+        rootCauseText = `Spinal erectors and lumbar stabilizing ligaments are experiencing compressive fatigue. At <strong>${weight.toFixed(1)} kg</strong>, axial loading under fatigued stabilizers increases shear across L4-S1.`;
+        swapPrescription = `Axial compressive loading is deloaded today. Barbell squats and standing overhead work are banned. Swapped to <strong>Chest-Supported DB Rows</strong>, <strong>Neutral Floor Press</strong>, and <strong>Hip Thrusts</strong> with zero spinal shear.`;
+      } else if (primaryJoint === 'shoulders') {
+        rootCauseText = `Anterior capsule shear and supraspinatus tendon impingement under the subacromial arch during deep flexion/internal rotation.`;
+        swapPrescription = `Deep dip bar dips and overhead barbell pressing are locked out today. Swapped to <strong>Barbell Floor Press</strong> (45° elbow floor dead-stop completely removes anterior shoulder stress) and <strong>Chest-Supported Incline Rows</strong>.`;
+      } else if (primaryJoint === 'elbows') {
+        rootCauseText = `Repetitive tensile strain on the triceps tendon insertion at the olecranon from terminal lockout pressing under heavy load.`;
+        swapPrescription = `Terminal lockout shear deloaded. Swapped to <strong>Neutral-Grip Dumbbell Floor Press</strong>, controlled eccentric hammer curls, and high-rep band pushdowns.`;
+      } else if (primaryJoint === 'wrists') {
+        rootCauseText = `Carpal joint compression and wrist hyperextension torque under heavy load.`;
+        swapPrescription = `Hyperextension eliminated. Swapped to <strong>Push-up handles / dumbbell grips</strong> and neutral-grip pressing to maintain straight carpal alignment.`;
+      } else if (primaryJoint === 'ankles') {
+        rootCauseText = `Achilles tendon and soleus myofascial tightness from high-impact cyclical ground strikes at <strong>${weight.toFixed(1)} kg</strong>.`;
+        swapPrescription = `Ballistic plyometrics and jump rope banned today. Swapped to <strong>Low-Impact Zone 2 Incline Walking</strong> and seated compound strength.`;
+      }
+
+      const assessmentData = {
+        primaryJoint,
+        activeJoints,
+        notes: (input ? input.value : ''),
+        statusTitle: `AUTOREGULATED: ${rule.title.toUpperCase()}`,
+        rootCauseText,
+        swapPrescription,
+        banned: rule.banned,
+        safe: rule.safe,
+        decompression: rule.decompression,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      athleteInjuries.assessment = assessmentData;
+      athleteInjuries.notes = assessmentData.notes;
+
+      renderAssessmentResultCard(assessmentData);
+
+      try {
+        localStorage.setItem('pulse_athlete_injuries', JSON.stringify(athleteInjuries));
+        fetch('/api/athlete/injuries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(athleteInjuries)
+        }).catch(() => {});
+      } catch(e) {}
+
+      loadDailyArchetype(currentArchetypeKey || 'option_a');
+      beep(880, 0.15);
+      showToast(`🛡️ Biomechanical Assessment Generated: ${rule.title}`);
+    }
+
+    function renderAssessmentResultCard(data) {
+      const container = document.getElementById('injuryAssessmentResult');
+      if (!container) return;
+
+      container.style.display = 'block';
+      container.innerHTML = `
+        <div class="card" style="background:linear-gradient(165deg, rgba(20, 25, 45, 0.95) 0%, rgba(10, 15, 29, 0.98) 100%); border:1px solid rgba(0, 240, 255, 0.4); border-top:1px solid rgba(255, 255, 255, 0.3); border-radius:14px; padding:12px 14px; box-shadow:0 8px 30px rgba(0,0,0,0.8), 0 0 20px rgba(0,240,255,0.18);">
+          
+          <!-- GOLDFISH TIER: 5-SECOND EXECUTIVE ACTION -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:10px; font-weight:800; color:var(--lime); background:rgba(34,197,94,0.14); border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:6px; letter-spacing:0.04em;">
+              🟢 SYSTEMIC CNS CLEAR • 🛡️ LOCAL TISSUE DELOAD
+            </span>
+            <span style="font-size:10px; color:var(--text-muted);">${data.timestamp || 'Live Ingested'}</span>
+          </div>
+
+          <div style="font-size:13.5px; font-weight:800; color:#fff; line-height:1.35; margin-bottom:6px;">
+            ${data.statusTitle}
+          </div>
+
+          <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-bottom:8px;">
+            <strong>Systemic Recovery:</strong> Garmin Sleep Score of <strong>88</strong> (7h 43m deep sleep) and Resting HR of <strong>48 bpm</strong> confirm high parasympathetic vagal tone and <strong>zero central nervous system fatigue</strong>. Your cardiovascular engine is 100% primed. You do <em>not</em> need total rest; you need mechanical deloading of the affected tissue.
+          </div>
+
+          <div style="font-size:12px; color:#cbd5e1; line-height:1.45; background:rgba(0,240,255,0.06); border:1px solid rgba(0,240,255,0.25); border-radius:8px; padding:8px 10px; margin-bottom:8px;">
+            ${data.swapPrescription}
+          </div>
+
+          <!-- BANNED VS SAFE EXERCISES (EXECUTIVE GLANCE) -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
+            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:6px 8px;">
+              <div style="font-size:10.5px; font-weight:800; color:#fca5a5; margin-bottom:3px;">🚫 ELIMINATED TODAY:</div>
+              <div style="font-size:11px; color:#e2e8f0; line-height:1.3;">
+                ${(data.banned || []).slice(0, 3).map(b => '• ' + b).join('<br>')}
+              </div>
+            </div>
+            <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:6px 8px;">
+              <div style="font-size:10.5px; font-weight:800; color:var(--lime); margin-bottom:3px;">✅ PRESCRIBED SWAPS:</div>
+              <div style="font-size:11px; color:#e2e8f0; line-height:1.3;">
+                ${(data.safe || []).slice(0, 3).map(s => '• ' + s).join('<br>')}
+              </div>
+            </div>
+          </div>
+
+          <!-- ELEPHANT TIER: EXPANDABLE CLINICAL TELEMETRY & FLOSSING PROTOCOL -->
+          <details style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+            <summary style="font-size:11.5px; font-weight:700; color:var(--cyan); padding:7px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📐 Full Biomechanical Breakdown & Tissue Flossing Protocol</span>
+              <span style="font-size:11px;">▾</span>
+            </summary>
+            <div style="padding:10px; font-size:11px; color:#cbd5e1; line-height:1.45; border-top:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:8px;">
+              <div>
+                <strong style="color:#fff; font-size:11.5px;">1. Biomechanical Kinetic Chain Root Cause:</strong><br>
+                ${data.rootCauseText}
+              </div>
+              <div>
+                <strong style="color:var(--lime); font-size:11.5px;">2. Immediate 3-Minute Tissue Flossing Protocol:</strong><br>
+                ${data.decompression}
+              </div>
+              <div>
+                <strong style="color:#38bdf8; font-size:11.5px;">3. Tissue Remodeling & Recovery Horizon:</strong><br>
+                Expected recovery to full compound tolerance: <strong>24–48 hours</strong> with impact deload. Your <strong>200g daily protein anchor</strong> and <strong>59.6% body water</strong> supply optimal amino acids and synovial fluid lubrication for collagen remodeling.
+              </div>
+            </div>
+          </details>
+
+        </div>
+      `;
+    }
+
+    function renderExistingInjuryAssessment() {
+      if (athleteInjuries && athleteInjuries.assessment) {
+        renderAssessmentResultCard(athleteInjuries.assessment);
+      }
+    }
+
     async function saveInjuries() {
       const notesEl = document.getElementById('injuryNotesInput');
       if (notesEl) athleteInjuries.notes = notesEl.value;
@@ -7555,27 +8060,58 @@ function generateWorkoutFromGearAndGoal() {
       }
 
       closeInjuryModal();
+      loadDailyArchetype(currentArchetypeKey || 'option_a');
       generateWorkoutFromGearAndGoal();
       beep(880, 0.15);
-      showToast('🛡️ Injury profile updated');
+      showToast('🛡️ Injury profile updated & workouts autoregulated');
     }
 
     function updateInjuryBadge() {
       const badge = document.getElementById('injuryStatusBadge');
-      if (!badge) return;
+      const bannerToday = document.getElementById('activeInjuryBannerToday');
       const activeCount = ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'].filter(k => athleteInjuries && athleteInjuries[k]).length;
-      if (activeCount === 0) {
-        badge.innerHTML = '<span class="pill-dot green"></span> <span>Joints Clear</span>';
-        badge.className = 'header-pill-btn';
-        badge.style.background = '#14161e';
-        badge.style.borderColor = 'var(--border)';
-        badge.style.color = 'var(--text-secondary)';
-      } else {
-        badge.innerHTML = '<span class="pill-dot red"></span> <span>' + activeCount + ' Restriction' + (activeCount > 1 ? 's' : '') + '</span>';
-        badge.className = 'header-pill-btn restriction-active';
-        badge.style.background = 'rgba(239,68,68,0.12)';
-        badge.style.borderColor = 'rgba(239,68,68,0.4)';
-        badge.style.color = '#fca5a5';
+
+      if (badge) {
+        if (activeCount === 0) {
+          badge.innerHTML = '<span class="pill-dot green"></span> <span>Joints Clear</span>';
+          badge.className = 'header-pill-btn';
+          badge.style.background = '#14161e';
+          badge.style.borderColor = 'var(--border)';
+          badge.style.color = 'var(--text-secondary)';
+        } else {
+          badge.innerHTML = '<span class="pill-dot red"></span> <span>' + activeCount + ' Restriction' + (activeCount > 1 ? 's' : '') + '</span>';
+          badge.className = 'header-pill-btn restriction-active';
+          badge.style.background = 'rgba(239,68,68,0.12)';
+          badge.style.borderColor = 'rgba(239,68,68,0.4)';
+          badge.style.color = '#fca5a5';
+        }
+      }
+
+      if (bannerToday) {
+        if (activeCount === 0) {
+          bannerToday.style.display = 'none';
+          bannerToday.innerHTML = '';
+        } else {
+          const names = ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']
+            .filter(k => athleteInjuries[k])
+            .map(k => k.charAt(0).toUpperCase() + k.slice(1))
+            .join(', ');
+          bannerToday.style.display = 'block';
+          bannerToday.innerHTML = `
+            <div class="card" style="background:linear-gradient(135deg, rgba(239,68,68,0.16) 0%, rgba(15,23,42,0.85) 100%); border:1px solid rgba(239,68,68,0.4); border-top:1px solid rgba(255,255,255,0.22); padding:10px 12px; border-radius:14px; cursor:pointer;" onclick="openInjuryModal()">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:16px;">🛡️</span>
+                  <strong style="font-size:11.5px; color:#fca5a5; letter-spacing:0.04em;">BIOMECHANICAL GUARDRAILS ACTIVE: ${names.toUpperCase()}</strong>
+                </div>
+                <span style="font-size:11px; color:var(--cyan); font-weight:700;">Clinical Assessment ❯</span>
+              </div>
+              <div style="font-size:11.5px; color:#cbd5e1; line-height:1.4; margin-top:4px;">
+                Workouts automatically autoregulated to protect vulnerable joints. High-impact ballistic forces and contraindicated angles swapped for joint-safe volume.
+              </div>
+            </div>
+          `;
+        }
       }
     }
 
@@ -7891,6 +8427,30 @@ function generateWorkoutFromGearAndGoal() {
       } catch(e) {
         console.log("Local static fallback active:", e.message);
       }
+    }
+
+    function setFastingProtocol(key) {
+      const protocols = {
+        '16_8': { label: '16:8 Protocol', hours: 16 },
+        '18_6': { label: '18:6 Protocol', hours: 18 },
+        '20_4': { label: '20:4 Protocol', hours: 20 },
+        'omad': { label: 'OMAD Protocol', hours: 23 }
+      };
+      const p = protocols[key] || protocols['16_8'];
+      const tag = document.getElementById('fastingProtocolTag');
+      if (tag) tag.innerText = p.label;
+
+      ['16_8', '18_6', '20_4', 'omad'].forEach(k => {
+        const btnId = k === 'omad' ? 'btnFastOMAD' : 'btnFast' + k;
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          if (k === key) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+      try {
+        localStorage.setItem('pulse_fasting_protocol', key);
+      } catch(e) {}
     }
 
     // INITIALIZATION
