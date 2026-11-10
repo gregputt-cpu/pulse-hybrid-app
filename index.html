@@ -7692,12 +7692,18 @@ function generateWorkoutFromGearAndGoal() {
       } catch(e) {}
       updateInjuryBadge();
 
-      if (window.location.hash) {
-        const tabKey = window.location.hash.replace('#', '');
-        if (['today', 'train', 'timer', 'fuel', 'body'].includes(tabKey)) {
-          switchTab(tabKey);
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam && ['today', 'train', 'timer', 'fuel', 'body'].includes(tabParam)) {
+          switchTab(tabParam);
+        } else if (window.location.hash) {
+          const tabKey = window.location.hash.replace('#', '');
+          if (['today', 'train', 'timer', 'fuel', 'body'].includes(tabKey)) {
+            switchTab(tabKey);
+          }
         }
-      }
+      } catch(e) {}
 
       if (restored) {
         const badge = document.getElementById('saveStatusIndicator');
