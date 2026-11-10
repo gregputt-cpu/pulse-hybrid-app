@@ -1790,109 +1790,119 @@
           </button>
         </div>
 
-        <!-- ROW 1: LIVE GARMIN & SCALE BIOMETRICS HERO -->
-        <div class="card card-highlight">
-          <div class="hero-telemetry-row">
-            <div class="dial-box">
+        <!-- ROW 1: LUXURY BIOMETRIC READINESS HERO (TUE 10 NOV) -->
+        <div class="card card-highlight" style="padding:14px; border-radius:14px;">
+          <!-- Top Row: Dial + Peak Readiness Description -->
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div class="dial-box" style="width:78px; height:78px;">
               <svg class="dial-svg" viewBox="0 0 80 80">
                 <circle class="dial-bg" cx="40" cy="40" r="36" />
-                <circle class="dial-bar" id="todayDialRing" cx="40" cy="40" r="36" />
+                <circle class="dial-bar" id="todayDialRing" cx="40" cy="40" r="36" style="stroke-dashoffset: 27;" />
               </svg>
               <div class="dial-center">
-                <div class="dial-num" id="todayDialNum">71</div>
-                <div class="dial-sub">READY</div>
+                <div class="dial-num" id="todayDialNum" style="font-size:26px; font-weight:800;">88</div>
+                <div class="dial-sub" style="font-size:10.5px; font-weight:800; letter-spacing:0.06em;">READY</div>
               </div>
             </div>
 
-            <div class="vitals-grid">
-              <div class="vital-tile">
-                <div class="vital-title"><span>Sleep Score</span></div>
-                <div class="vital-val" id="vSleep">69 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">/ 100</small></div>
-                <div class="vital-sub" id="vSleepSub" style="color:var(--text-secondary); font-size:11px;">7h 21m Duration</div>
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="header-status-dot" style="width:6px; height:6px;"></span>
+                <span style="font-size:10.5px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em;">OPTIMAL READINESS (88)</span>
               </div>
+              <div style="font-size:13.5px; font-weight:800; color:#fff; margin-top:2px;">Well Recovered & Restored</div>
+              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.35; margin-top:2px;">
+                Sleep score 88 (7h 43m) • Body Battery 98%. Systemic CNS ready for heavy axial compound strength.
+              </div>
+            </div>
+          </div>
 
-              <div class="vital-tile">
-                <div class="vital-title"><span>Active Burn</span></div>
-                <div class="vital-val" id="vitalBurn">624 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">kcal</small></div>
-                <div class="vital-sub" id="vitalBurnSub" style="color:var(--primary); font-size:11px;">fēnix 8 • 9,191 Steps</div>
-              </div>
+          <!-- Horizontal Hairline Divider -->
+          <div style="border-top:1px solid rgba(255,255,255,0.06); margin:12px 0 10px;"></div>
 
-              <div class="vital-tile">
-                <div class="vital-title"><span>Scale Weight</span></div>
-                <div class="vital-val" id="vitalScale">98.90 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">kg</small></div>
-                <div class="vital-sub" id="vitalScaleSub" style="color:var(--primary); font-size:11px;">16.7% BF (-1.98kg)</div>
-              </div>
+          <!-- 4-Pillar Modern Biometric Grid -->
+          <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
+            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center;">
+              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Sleep</div>
+              <div style="font-size:16px; font-weight:800; color:#fff; margin-top:1px;" id="vSleep">88</div>
+              <div style="font-size:10px; color:var(--text-secondary); margin-top:1px;" id="vSleepSub">7h 43m</div>
+            </div>
 
-              <div class="vital-tile">
-                <div class="vital-title"><span>Resting HR</span></div>
-                <div class="vital-val" id="vitalRhr">48 <small style="font-size:11.5px;font-weight:500;color:var(--text-muted);">bpm</small></div>
-                <div class="vital-sub" id="vitalBbSub" style="color:var(--text-secondary); font-size:11px;">Body Battery: 36%</div>
+            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center;">
+              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Battery</div>
+              <div style="font-size:16px; font-weight:800; color:var(--primary); margin-top:1px;" id="vitalBattery">98%</div>
+              <div style="font-size:10px; color:var(--text-secondary); margin-top:1px;" id="vitalBbSub">RHR 48 bpm</div>
+            </div>
+
+            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center;">
+              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Burn</div>
+              <div style="font-size:16px; font-weight:800; color:#fff; margin-top:1px;" id="vitalBurn">0 <small style="font-size:10px; color:var(--text-muted); font-weight:400;">kcal</small></div>
+              <div style="font-size:10px; color:var(--text-secondary); margin-top:1px;" id="vitalBurnSub">117 Steps</div>
+            </div>
+
+            <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; padding:7px 5px; text-align:center; cursor:pointer;" onclick="openWeightModal()" title="Tap to enter today's weigh-in">
+              <div style="display:flex; justify-content:center; align-items:center; gap:2px;">
+                <span style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Scale</span>
+                <span style="font-size:9px; color:var(--primary);">✎</span>
               </div>
+              <div style="font-size:16px; font-weight:800; color:#fff; margin-top:1px;" id="vitalScale">98.90 <small style="font-size:10px; color:var(--text-muted); font-weight:400;">kg</small></div>
+              <div style="font-size:10px; color:var(--primary); margin-top:1px;" id="vitalScaleSub">16.7% BF</div>
             </div>
           </div>
         </div>
 
-        <!-- RECENT WORKOUT NOTIFICATION CHIP (TAP TO VIEW BENEFITS) -->
-        <div class="card" id="garminLiveBanner" style="padding:10px 12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="viewWorkoutHistory()">
+        <!-- ROW 2: GARMIN FĒNIX 8 SYNC STATUS CHIP -->
+        <div class="card" id="garminLiveBanner" style="padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="viewWorkoutHistory()">
           <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:32px; height:32px; border-radius:8px; background:var(--surface-elevated); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            <div style="width:30px; height:30px; border-radius:8px; background:var(--surface-elevated); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
             </div>
             <div>
-              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;" id="garminBannerTitle">Garmin fēnix 8 Synced • Mon 9 Nov</div>
-              <div style="font-size:13px; font-weight:800; color:#fff;" id="garminBannerSub">2 Workouts Today (624 kcal)</div>
+              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;" id="garminBannerTitle">Garmin fēnix 8 Synced • Tue 10 Nov</div>
+              <div style="font-size:12.5px; font-weight:800; color:#fff;" id="garminBannerSub">Morning baseline recorded • 0 workouts today</div>
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:14px; font-weight:900; color:var(--primary);" id="garminBannerBurn">624 kcal</div>
-            <div style="font-size:11px; color:var(--text-muted);" id="garminBannerAction">Telemetry & Benefits ➔</div>
+            <div style="font-size:12px; font-weight:700; color:var(--primary);">History (624 kcal) ➔</div>
           </div>
         </div>
 
-        <!-- ROW 2: ACTIVE ATHLETE GOAL STRIP -->
-        <div class="goal-strip">
-          <div class="goal-info">
-            <div class="goal-label">Primary Training Target</div>
-            <div class="goal-title" id="todayGoalTitle">15.0% Body Fat Recomposition</div>
-            <div class="goal-sub" id="todayGoalSub">Target: 96.92 kg • Fat to lose: 2.93 kg • 200g Protein Anchor</div>
-          </div>
-          <button class="btn-goal-switch" onclick="openGoalModal()">Change Goal</button>
-        </div>
-
-        <!-- ROW 3: EQUIPMENT SETUP (PROGRESSIVE DISCLOSURE) -->
-        <div class="gear-trigger-bar" onclick="openEquipmentModal()" title="Customize available equipment and weights">
-          <div class="gear-trigger-left">
-            <div class="gear-trigger-icon-box">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"></path></svg>
-            </div>
+        <!-- ROW 3: TARGET & EQUIPMENT PILL BAR -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+          <div class="card" style="padding:8px 10px; border-radius:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="openGoalModal()">
             <div>
-              <div class="gear-trigger-title" id="gearTriggerTitle">Equipment Setup • GYM Profile</div>
-              <div class="gear-trigger-sub" id="gearTriggerSub">Barbell, Bench, Dip Bar, DB (22.5kg), KB (24kg)</div>
+              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Target</div>
+              <div style="font-size:12px; font-weight:800; color:#fff;" id="todayGoalTitle">15.0% Body Fat (96.92kg)</div>
             </div>
+            <span style="font-size:11px; color:var(--text-muted);">Switch</span>
           </div>
-          <div class="gear-trigger-action">
-            <span>Adjust</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+
+          <div class="card" style="padding:8px 10px; border-radius:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="openEquipmentModal()">
+            <div>
+              <div style="font-size:9.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Equipment</div>
+              <div style="font-size:12px; font-weight:800; color:#fff;" id="gearTriggerTitle">GYM Profile (Barbell)</div>
+            </div>
+            <span style="font-size:11px; color:var(--primary);">Adjust</span>
           </div>
         </div>
 
         <!-- ROW 4: DYNAMIC AI WORKOUT GENERATED FOR TODAY -->
-        <div class="workout-rec-card">
-          <div class="workout-rec-top">
-            <div class="workout-rec-badge" id="aiRecBadge" style="background:var(--primary-dim); color:var(--primary); border:1px solid rgba(48,209,88,0.3); font-size:11px; padding:2px 7px; border-radius:4px;">TIER 1 • MAXIMAL COMPOUND STRENGTH</div>
-            <div class="workout-rec-gear-count" id="aiRecGearCount" style="font-size:12px; color:var(--text-muted);">5 Exercises Loaded</div>
+        <div class="card" style="padding:14px; border-radius:14px; background:var(--surface);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.06em;" id="aiRecBadge">TIER 1 • MAXIMAL COMPOUND STRENGTH</span>
+            <span style="font-size:11px; color:var(--text-muted);" id="aiRecGearCount">5 Exercises Loaded</span>
           </div>
-          <div class="workout-rec-title" id="aiRecTitle" style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Gym Barbell Strength & Upper Push Density</div>
+          <div style="font-size:14.5px; font-weight:800; color:#fff;" id="aiRecTitle">Gym Barbell Strength & Upper Push Density</div>
           
-          <div class="workout-rec-list" id="aiRecList" style="margin: 4px 0;"></div>
+          <div class="workout-rec-list" id="aiRecList" style="margin: 8px 0 6px;"></div>
 
-          <!-- RATIONALE EXPANDER (PROGRESSIVE DISCLOSURE) -->
-          <div class="rationale-toggle-btn" onclick="toggleTodayRationale()">
+          <!-- RATIONALE EXPANDER -->
+          <div class="rationale-toggle-btn" onclick="toggleTodayRationale()" style="padding:6px 10px; border-radius:7px;">
             <span id="rationaleToggleText">Coaching Rationale & Physiological Focus</span>
             <span class="accordion-arrow" id="rationaleArrow">▾</span>
           </div>
-          <div class="workout-rec-summary" id="aiRecSummary" style="display:none; margin-top:4px; padding:8px 10px; background:rgba(0,0,0,0.35); border-radius:8px; border:1px solid var(--border); font-size:12px; line-height:1.4; color:var(--text-secondary);">
-            Tailored for Readiness 80. Heavy axial barbell compounds paired with dip bar transfer to accelerate push-up capacity while holding 200g protein recomposition.
+          <div class="workout-rec-summary" id="aiRecSummary" style="display:none; margin-top:6px; padding:10px 12px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid var(--border); font-size:12px; line-height:1.45; color:var(--text-secondary);">
+            Tailored for Readiness 88. Heavy axial barbell compounds paired with dip bar transfer to accelerate push-up capacity while holding 200g protein recomposition.
           </div>
         </div>
 
@@ -2503,6 +2513,34 @@
         <span>Body</span>
       </button>
     </nav>
+
+    
+    <!-- MODAL: MANUAL WEIGHT ENTRY & OVERRIDE -->
+    <div class="modal-overlay" id="weightModal" onclick="if(event.target === this) closeWeightModal()">
+      <div class="modal-card" style="max-width:340px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div>
+            <strong style="font-size:14px; font-weight:800; color:#fff;">Update Scale Weigh-In</strong>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:1px;">Enter today's scale weight (Renpho)</div>
+          </div>
+          <span style="cursor:pointer; color:var(--text-muted); font-size:16px;" onclick="closeWeightModal()">✕</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div>
+            <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Weight (kg)</label>
+            <input type="number" step="0.05" id="inputManualWeight" placeholder="98.7" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:16px; font-weight:800; padding:8px 10px; border-radius:8px; outline:none; margin-top:2px;">
+          </div>
+          <div>
+            <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Body Fat % (Optional)</label>
+            <input type="number" step="0.1" id="inputManualBf" placeholder="16.5" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:8px 10px; border-radius:8px; outline:none; margin-top:2px;">
+          </div>
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button class="btn-action-ghost" style="flex:1; margin:0; height:36px;" onclick="closeWeightModal()">Cancel</button>
+            <button class="btn-action-primary" style="flex:2; margin:0; height:36px; font-size:12.5px;" onclick="saveManualWeight()">Save Weigh-In</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- MODAL: EQUIPMENT & WEIGHT SELECTION SHEET -->
     <div class="modal-overlay" id="equipmentModal" onclick="if(event.target === this) closeEquipmentModal()">
@@ -4234,6 +4272,55 @@
       if (arrEl) arrEl.classList.toggle('open', isHidden);
       if (txtEl) txtEl.innerText = isHidden ? 'Hide Coaching Rationale' : 'Show Coaching Rationale & Biomechanics';
       beep(700, 0.04);
+    }
+
+    
+    function openWeightModal() {
+      const cur = document.getElementById('vitalScale')?.innerText || '98.90';
+      const parsed = parseFloat(cur) || 98.9;
+      const inp = document.getElementById('inputManualWeight');
+      if (inp) inp.value = parsed.toFixed(2);
+      const modal = document.getElementById('weightModal');
+      if (modal) modal.classList.add('open');
+      beep(600, 0.05);
+    }
+    function closeWeightModal() {
+      const modal = document.getElementById('weightModal');
+      if (modal) modal.classList.remove('open');
+      beep(450, 0.05);
+    }
+    function saveManualWeight() {
+      const inp = document.getElementById('inputManualWeight');
+      const val = parseFloat(inp?.value);
+      if (!val || isNaN(val) || val < 40 || val > 200) {
+        showToast('Please enter a valid weight in kg');
+        return;
+      }
+      const lbm = 82.38;
+      const fatKg = Math.max(0, val - lbm);
+      const inpBf = parseFloat(document.getElementById('inputManualBf')?.value);
+      const bfPct = (!isNaN(inpBf) && inpBf > 5 && inpBf < 50) ? inpBf : parseFloat(((fatKg / val) * 100).toFixed(1));
+      const targetWt = parseFloat((lbm / 0.85).toFixed(2));
+      const fatToBurn = parseFloat(Math.max(0, val - targetWt).toFixed(2));
+
+      // Update DOM
+      const vs = document.getElementById('vitalScale');
+      if (vs) vs.innerHTML = `${val.toFixed(2)} <small style="font-size:10px;color:var(--text-muted);font-weight:400;">kg</small>`;
+      const vss = document.getElementById('vitalScaleSub');
+      if (vss) vss.innerText = `${bfPct}% BF (-${fatToBurn}kg)`;
+      const bsw = document.getElementById('bodyScaleWeight');
+      if (bsw) bsw.innerHTML = `${val.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+      const bsbf = document.getElementById('bodyScaleBf');
+      if (bsbf) bsbf.innerText = `${bfPct}% Body Fat (Logged Today)`;
+      const bfb = document.getElementById('bodyFatToBurnNum');
+      if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
+
+      localStorage.setItem('pulse_athlete_weight', val.toFixed(2));
+      localStorage.setItem('pulse_athlete_bf', bfPct.toFixed(1));
+
+      closeWeightModal();
+      showToast(`✓ Weigh-in saved: ${val.toFixed(2)} kg (${bfPct}% BF)`);
+      beep(880, 0.15);
     }
 
     function openEquipmentModal() {
@@ -6529,7 +6616,8 @@ function generateWorkoutFromGearAndGoal() {
           }
           const bTitle = document.getElementById('garminBannerTitle');
           const bSub = document.getElementById('garminBannerSub');
-          if (bTitle) bTitle.innerText = `Garmin fēnix 8 Synced • Mon 9 Nov`;
+          const syncDateStr = state.date === '2026-11-10' ? 'Tue 10 Nov' : 'Mon 9 Nov';
+          if (bTitle) bTitle.innerText = `Garmin fēnix 8 Synced • ${syncDateStr}`;
           if (bSub) {
             const todayActsCount = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities.length : 0;
             if (todayActsCount > 0) {

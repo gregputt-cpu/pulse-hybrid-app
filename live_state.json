@@ -1,5 +1,5 @@
 {
-  "last_synced": "2026-11-09T20:33:06.536903",
+  "last_synced": "2026-11-10T06:05:00.000000",
   "athlete": {
     "name": "Greg Putt",
     "age": 45,
@@ -14,16 +14,16 @@
   },
   "garmin": {
     "device": "f\u0113nix 8 - 51mm AMOLED",
-    "training_readiness": 71,
-    "readiness_level": "MODERATE",
-    "readiness_feedback": "GOOD_SLEEP_HISTORY",
-    "sleep_score": 69,
+    "training_readiness": 88,
+    "readiness_level": "HIGH",
+    "readiness_feedback": "WELL_RECOVERED",
+    "sleep_score": 88,
     "hrv_status": "balanced",
-    "hrv_weekly_avg": 48,
-    "body_battery": 36,
+    "hrv_weekly_avg": 49,
+    "body_battery": 98,
     "resting_hr": 48,
-    "active_calories": 624,
-    "steps": 9191,
+    "active_calories": 0,
+    "steps": 117,
     "recent_activities": [
       {
         "id": 25020969123,
@@ -236,57 +236,18 @@
       }
     ],
     "mnd_logged": {
-      "calories": 2392,
-      "protein_g": 233,
-      "carbs_g": 231,
-      "fat_g": 67,
-      "fiber_g": 33,
-      "sodium_mg": 1911,
+      "calories": 0,
+      "protein_g": 0,
+      "carbs_g": 0,
+      "fat_g": 0,
+      "fiber_g": 0,
+      "sodium_mg": 0,
       "water_l": 0.0,
-      "last_pulled": "2026-11-09T20:34:08.721814",
+      "last_pulled": "2026-11-10T05:52:28.941162",
       "source": "live_mynetdiary_cloud"
     },
-    "sleep_duration": "7h 21m",
-    "today_activities": [
-      {
-        "id": 25020969123,
-        "name": "Walking",
-        "sub_title": "Runnymede Walking",
-        "date": "2026-11-09 15:27:38",
-        "duration_min": 42.7,
-        "calories": 205,
-        "avg_hr": 75,
-        "max_hr": 100,
-        "aerobic_te": 0.30000001192092896,
-        "anaerobic_te": 0.0,
-        "benefits": {
-          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
-          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
-          "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
-          "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
-          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
-        }
-      },
-      {
-        "id": 25016923422,
-        "name": "Indoor_cardio",
-        "sub_title": "Cardio",
-        "date": "2026-11-09 08:18:44",
-        "duration_min": 34.4,
-        "calories": 419,
-        "avg_hr": 126,
-        "max_hr": 151,
-        "aerobic_te": 2.4000000953674316,
-        "anaerobic_te": 2.0999999046325684,
-        "benefits": {
-          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
-          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
-          "cardio": "Average HR 126 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.4 + Anaerobic TE 2.1 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
-          "metabolic": "419 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
-          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
-        }
-      }
-    ]
+    "sleep_duration": "7h 43m",
+    "today_activities": []
   },
   "renpho": {
     "source": "live_renpho_cloud",
@@ -307,13 +268,13 @@
     "bmr": 2149,
     "pt_neat": 292,
     "tdee": 3091,
-    "calorie_target": 2716,
+    "calorie_target": 2092,
     "deficit": 350,
     "protein_target_g": 200,
     "carbs_target_g": 251,
     "fat_target_g": 80,
-    "calories_remaining": 324,
-    "protein_remaining": 0,
+    "calories_remaining": 2092,
+    "protein_remaining": 200,
     "remaining_calories": 845,
     "remaining_protein_g": 0,
     "protein_achieved_pct": 111.5
@@ -381,34 +342,12 @@
   "mnd_meals": {
     "breakfast": {
       "name": "Breakfast",
-      "time": "6:14",
-      "calories": 824,
-      "protein": 49,
-      "carbs": 115,
-      "fat": 23,
-      "items": [
-        {
-          "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
-          "cals": 120,
-          "p": 5,
-          "c": 4,
-          "f": 10
-        },
-        {
-          "name": "Old Fashioned Jumbo Oats",
-          "cals": 563,
-          "p": 16,
-          "c": 104,
-          "f": 12
-        },
-        {
-          "name": "Snickers Impact Whey Isolate",
-          "cals": 141,
-          "p": 28,
-          "c": 7,
-          "f": 1
-        }
-      ]
+      "time": "07:30",
+      "calories": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "items": []
     },
     "lunch": {
       "name": "Lunch",
@@ -421,48 +360,12 @@
     },
     "dinner": {
       "name": "Dinner",
-      "time": "15:59",
-      "calories": 1568,
-      "protein": 184,
-      "carbs": 116,
-      "fat": 44,
-      "items": [
-        {
-          "name": "British Chicken Diced Breast",
-          "cals": 263,
-          "p": 54,
-          "c": 0,
-          "f": 5
-        },
-        {
-          "name": "Egg Noodles Soft & Tender",
-          "cals": 368,
-          "p": 12,
-          "c": 76,
-          "f": 4
-        },
-        {
-          "name": "Beansprouts Tender & Crunchy",
-          "cals": 141,
-          "p": 8,
-          "c": 12,
-          "f": 8
-        },
-        {
-          "name": "Aberdeen Angus Steak Mince",
-          "cals": 660,
-          "p": 110,
-          "c": 0,
-          "f": 24
-        },
-        {
-          "name": "Sweet Chilli Stir Fry Sauce Medium",
-          "cals": 136,
-          "p": 0,
-          "c": 28,
-          "f": 3
-        }
-      ]
+      "time": "Pending",
+      "calories": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "items": []
     },
     "snacks": {
       "name": "Snacks & Hydration",
@@ -492,5 +395,5 @@
     "ankles": false,
     "notes": ""
   },
-  "date": "2026-11-09"
+  "date": "2026-11-10"
 }
