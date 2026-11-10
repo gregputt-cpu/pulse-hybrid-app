@@ -2493,9 +2493,9 @@
             </div>
             <div style="text-align:right;">
               <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">Calories Remaining</div>
-              <div style="font-size:28px; font-weight:800; color:var(--primary); line-height:1.15; margin-top:2px;" id="fuelRemainingNum">0 <span style="font-size:13px; font-weight:600; color:#ff9f0a;">kcal</span></div>
+              <div style="font-size:28px; font-weight:800; color:var(--primary); line-height:1.15; margin-top:2px;" id="fuelRemainingNum">154 <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span></div>
               <div style="margin-top:3px;">
-                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">✓ Protein Anchor Met (298g)</span>
+                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">✓ Protein Anchor Met (275g • +75g)</span>
               </div>
             </div>
           </div>
@@ -2503,11 +2503,11 @@
           <!-- High-Precision Slim Progress Bar -->
           <div style="margin-top:14px;">
             <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
-              <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,701 kcal</strong></span>
-              <span id="intakeProgressPercent" style="color:#ff9f0a; font-weight:700;">100% (Target Reached • At Maintenance)</span>
+              <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,283 kcal</strong></span>
+              <span id="intakeProgressPercent" style="color:var(--primary); font-weight:700;">94% (154 kcal Runway)</span>
             </div>
             <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;">
-              <div id="barIntakeConsumed" style="width:100%; background:#ff9f0a; height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
+              <div id="barIntakeConsumed" style="width:94%; background:var(--primary); height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
             </div>
           </div>
 
@@ -2541,12 +2541,12 @@
               </div>
               <div class="fuel-calc-row" style="font-size:12px;">
                 <span>Food Logged Today (MyNetDiary)</span>
-                <strong id="fuelCalcConsumed">-2,701 kcal</strong>
+                <strong id="fuelCalcConsumed">-2,283 kcal</strong>
               </div>
               <div class="fuel-calc-divider"></div>
               <div class="fuel-calc-row" style="font-size:12.5px; font-weight:700;">
                 <span style="color:var(--primary);">Remaining Energy Runway</span>
-                <strong id="fuelCalcRemaining" style="color:#ff9f0a;">= 0 kcal (At Maintenance)</strong>
+                <strong id="fuelCalcRemaining" style="color:var(--primary);">= 154 kcal</strong>
               </div>
             </div>
           </details>
@@ -2561,7 +2561,7 @@
             <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
               <div id="barProtein" style="width:100%; background:var(--primary); height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">298g (149%) • Anchor Met (+98g)</div>
+            <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">275g (138%) • Anchor Met (+75g)</div>
           </div>
 
           <!-- Carbs Card -->
@@ -2569,9 +2569,9 @@
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Energy Carbs</div>
             <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroCarbs">251g</div>
             <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barCarbs" style="width:84%; background:#fff; height:100%;"></div>
+              <div id="barCarbs" style="width:56%; background:#fff; height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">188g net (212g) • 39g Left</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">121g net (140g) • 111g Left</div>
           </div>
 
           <!-- Fats Card -->
@@ -2579,26 +2579,26 @@
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Healthy Fats</div>
             <div style="font-size:20px; font-weight:800; color:#fff; margin:3px 0;" id="macroFat">80g</div>
             <div style="height:4px; background:rgba(255,255,255,0.06); border-radius:999px; margin:4px 0; overflow:hidden;">
-              <div id="barFat" style="width:98%; background:var(--text-muted); height:100%;"></div>
+              <div id="barFat" style="width:91%; background:var(--text-muted); height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">78g • 2g Left</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">73g • 7g Left</div>
           </div>
         </div>
 
         <!-- Hidden compatibility elements so existing scripts never throw -->
         <div style="display:none;">
-          <span id="mndCalsVal">2701</span>
+          <span id="mndCalsVal">2283</span>
           <span id="mndCalsTarget">2437</span>
-          <span id="mndCalsRemainingBadge">0 left</span>
+          <span id="mndCalsRemainingBadge">154 left</span>
           <div id="mndBarCals"></div>
-          <span id="mndProteinVal">298</span>
-          <span id="mndProteinRemainingBadge">Anchor Met (+98g)</span>
+          <span id="mndProteinVal">275</span>
+          <span id="mndProteinRemainingBadge">Anchor Met (+75g)</span>
           <div id="mndBarProtein"></div>
-          <span id="mndCarbsVal">212</span>
-          <span id="mndCarbsRemainingBadge">39g left</span>
+          <span id="mndCarbsVal">140</span>
+          <span id="mndCarbsRemainingBadge">111g left</span>
           <div id="mndBarCarbs"></div>
-          <span id="mndFatVal">78</span>
-          <span id="mndFatRemainingBadge">2g left</span>
+          <span id="mndFatVal">73</span>
+          <span id="mndFatRemainingBadge">7g left</span>
           <div id="mndBarFat"></div>
           <span id="fuelGarminEqChip"></span>
           <span id="fuelBudgetNum">2437</span>
@@ -2611,7 +2611,7 @@
             <strong style="color:var(--primary); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">Daily Fuel Coach</strong>
           </div>
           <div id="mndCoachAdvice" style="font-size:12px; color:var(--text-secondary); line-height:1.45;">
-            <strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>2,701 kcal</strong> and <strong>298g protein</strong> today (crushing your 200g anchor by +98g). You've matched your active maintenance expenditure (~2,738 kcal), preserving all 81.1kg of lean muscle without gaining fat. Hydrate well tonight for tomorrow's strength lifting session!
+            <strong>✓ In Deficit & Protein Met!</strong> You've logged <strong>2,283 kcal</strong> and <strong>275g protein</strong> today (crushing your 200g anchor by +75g). You have <strong>154 kcal of runway remaining</strong> within your 350 kcal deficit target. Perfect execution for dropping to 15.0% body fat while protecting all 81.1kg of muscle!
           </div>
         </div>
 
@@ -6868,22 +6868,39 @@ function generateWorkoutFromGearAndGoal() {
 
     function applyMndSyncData(raw) {
       if (!raw) return;
-      const data = raw.totals ? raw : (raw.data || raw.sync_data || raw);
+      const data = raw.totals ? raw : (raw.mnd || raw.data || raw.sync_data || raw);
 
-      if (data.totals) {
+      let totals = data.totals;
+      if (!totals && raw.state) {
+        const ml = raw.state.mnd_logged || (raw.state.garmin && raw.state.garmin.mnd_logged);
+        if (ml) {
+          totals = {
+            calories: ml.calories,
+            protein: ml.protein_g,
+            carbs: ml.carbs_g,
+            fat: ml.fat_g,
+            fiber: ml.fiber_g,
+            sodium: ml.sodium_mg,
+            water: ml.water_l
+          };
+        }
+      }
+
+      if (totals) {
         myNetDiaryData.totals = {
-          calories: parseInt(data.totals.calories) || 0,
-          protein: parseInt(data.totals.protein) || 0,
-          carbs: parseInt(data.totals.carbs) || 0,
-          fat: parseInt(data.totals.fat) || 0,
-          fiber: parseInt(data.totals.fiber) || 0,
-          sodium: parseInt(data.totals.sodium) || 0,
-          water: parseFloat(data.totals.water) || 0.0
+          calories: parseInt(totals.calories) || 0,
+          protein: parseInt(totals.protein !== undefined ? totals.protein : totals.protein_g) || 0,
+          carbs: parseInt(totals.carbs !== undefined ? totals.carbs : totals.carbs_g) || 0,
+          fat: parseInt(totals.fat !== undefined ? totals.fat : totals.fat_g) || 0,
+          fiber: parseInt(totals.fiber !== undefined ? totals.fiber : totals.fiber_g) || 0,
+          sodium: parseInt(totals.sodium !== undefined ? totals.sodium : totals.sodium_mg) || 0,
+          water: parseFloat(totals.water !== undefined ? totals.water : totals.water_l) || 0.0
         };
       }
 
-      if (data.meals && typeof data.meals === 'object') {
-        myNetDiaryData.meals = data.meals;
+      const meals = data.meals || (raw.state && raw.state.mnd_meals);
+      if (meals && typeof meals === 'object') {
+        myNetDiaryData.meals = meals;
       }
 
       saveMndToLocalStorage();
@@ -7562,7 +7579,12 @@ function generateWorkoutFromGearAndGoal() {
           }
 
           // 1.1 MyNetDiary Food Ingestion from Live State
-          const ml = state.mnd_logged || (g && g.mnd_logged);
+          let ml = state.mnd_logged;
+          if (g && g.mnd_logged) {
+            if (!ml || (g.mnd_logged.last_pulled && (!ml.last_pulled || new Date(g.mnd_logged.last_pulled) >= new Date(ml.last_pulled)))) {
+              ml = g.mnd_logged;
+            }
+          }
           if (ml) {
             myNetDiaryData.totals.calories = ml.calories || 0;
             myNetDiaryData.totals.protein = ml.protein_g || 0;

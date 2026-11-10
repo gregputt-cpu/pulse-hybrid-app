@@ -28,6 +28,12 @@ for (const file of assets) {
     for (const d of [staticDir, distDir, publicDir]) {
       fs.copyFileSync(src, path.join(d, file));
     }
+    if (file === 'live_state.json') {
+      const backendDir = path.join(rootDir, 'backend');
+      if (fs.existsSync(backendDir)) {
+        fs.copyFileSync(src, path.join(backendDir, file));
+      }
+    }
   }
 }
 

@@ -255,14 +255,14 @@
       }
     ],
     "mnd_logged": {
-      "calories": 2701,
-      "protein_g": 298,
-      "carbs_g": 212,
-      "fat_g": 78,
-      "fiber_g": 24,
-      "sodium_mg": 2404,
+      "calories": 2283,
+      "protein_g": 275,
+      "carbs_g": 140,
+      "fat_g": 73,
+      "fiber_g": 19,
+      "sodium_mg": 2020,
       "water_l": 0.0,
-      "last_pulled": "2026-11-10T14:00:25.576842",
+      "last_pulled": "2026-11-10T14:30:06.614342",
       "source": "live_mynetdiary_cloud"
     },
     "sleep_duration": "7h 43m",
@@ -304,7 +304,7 @@
     "body_age": 46,
     "target_weight_at_15pct": 95.46,
     "fat_to_lose_kg": 2.54,
-    "last_synced": "2026-11-10 14:00:25",
+    "last_synced": "2026-11-10 14:30:06",
     "raw_id": 6114140706739814272
   },
   "nutrition": {
@@ -316,7 +316,7 @@
     "protein_target_g": 200,
     "carbs_target_g": 251,
     "fat_target_g": 80,
-    "calories_remaining": -264,
+    "calories_remaining": 154,
     "protein_remaining": 0,
     "remaining_calories": 845,
     "remaining_protein_g": 0,
@@ -426,10 +426,10 @@
     "dinner": {
       "name": "Dinner",
       "time": "9:46",
-      "calories": 1743,
-      "protein": 230,
-      "carbs": 93,
-      "fat": 52,
+      "calories": 1325,
+      "protein": 207,
+      "carbs": 21,
+      "fat": 47,
       "items": [
         {
           "name": "5% Fat Lean British Chicken Mince",
@@ -437,13 +437,6 @@
           "p": 98,
           "c": 0,
           "f": 21
-        },
-        {
-          "name": "Ready Set Cook! Protein Noodles",
-          "cals": 418,
-          "p": 23,
-          "c": 72,
-          "f": 5
         },
         {
           "name": "Beansprouts",
@@ -472,14 +465,14 @@
     }
   },
   "mnd_logged": {
-    "calories": 2701,
-    "protein_g": 298,
-    "carbs_g": 212,
-    "fat_g": 78,
-    "fiber_g": 24,
-    "sodium_mg": 2404,
+    "calories": 2283,
+    "protein_g": 275,
+    "carbs_g": 140,
+    "fat_g": 73,
+    "fiber_g": 19,
+    "sodium_mg": 2020,
     "water_l": 0.0,
-    "last_pulled": "2026-11-10T14:00:25.576842",
+    "last_pulled": "2026-11-10T14:30:06.614342",
     "source": "live_mynetdiary_cloud"
   },
   "injuries": {

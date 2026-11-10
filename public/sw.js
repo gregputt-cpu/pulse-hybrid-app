@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v14-mnd-live-sync';
+const CACHE_NAME = 'pulse-cache-v15-mnd-updated-sync';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
