@@ -5711,6 +5711,17 @@ function generateWorkoutFromGearAndGoal() {
       return { isToday, displayDate };
     }
 
+    function getLiveProteinTelemetry() {
+      const target = (typeof athleteProteinAnchor !== 'undefined' && athleteProteinAnchor) ? athleteProteinAnchor : 200;
+      let logged = 0;
+      if (typeof myNetDiaryData !== 'undefined' && myNetDiaryData && myNetDiaryData.totals && typeof myNetDiaryData.totals.protein === 'number') {
+        logged = myNetDiaryData.totals.protein;
+      }
+      const achieved = logged >= target;
+      const remaining = Math.max(0, target - logged);
+      return { target, logged, achieved, remaining };
+    }
+
     function getEgmWorkoutBreakdown(act, isToday) {
       const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
       const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('weight') || text.includes('gym') || text.includes('option_a') || text.includes('option a') || text.includes('hypertrophy') || text.includes('rdl') || text.includes('press');
@@ -5775,13 +5786,18 @@ function generateWorkoutFromGearAndGoal() {
       }
 
       let recoveryProtocol = [];
+      const protStatus = getLiveProteinTelemetry();
+      const protStr = protStatus.achieved
+        ? `${protStatus.logged}g already logged ✓ (Target surpassed)`
+        : `${protStatus.logged}g logged / ${protStatus.target}g target • ${protStatus.remaining}g remaining`;
+
       if (isStrength) {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 24–48 hours before another heavy resistance training session on the same muscle groups.`);
-        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your 200g daily protein target (223g already logged ✓) and consume 3–4g sodium/electrolytes with 2.5L+ hydration.`);
+        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and consume 3–4g sodium/electrolytes with 2.5L+ hydration.`);
         recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Tomorrow: Easy Zone 1 / Zone 2 Recovery Walk (0h CNS Debt) or light active mobility.`);
       } else if (isJump) {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 24–48 hours before heavy axial barbell squats or high-impact jumping to allow collagen remodeling in patellar tendons.`);
-        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Replenish with 500–750ml electrolyte fluid (sodium/potassium) and hit your 200g protein anchor (223g already logged today ✓).`);
+        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Replenish with 500–750ml electrolyte fluid (sodium/potassium) and hit your ${protStatus.target}g protein anchor (${protStr}).`);
         recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Upper body push/pull (bench press, dips, rows) or posterior chain hinges (RDLs) where knees remain completely offloaded.`);
       } else if (isWalk) {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 0 hours — walking actively flushes cellular waste and accelerates recovery for subsequent lifting.`);
@@ -5789,7 +5805,7 @@ function generateWorkoutFromGearAndGoal() {
         recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Full clearance for heavy barbell strength or high-intensity conditioning.`);
       } else {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 12–18 hours before another hard cardiovascular running session. Upper body push and posterior chain hinges are 100% clear immediately.`);
-        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hydrate with 500ml water and ensure 30–40g post-workout protein to preserve that 81.14 kg lean muscle anchor.`);
+        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hydrate with 500ml water and ensure 30–40g post-workout protein to preserve that 81.14 kg lean muscle anchor (${protStr}).`);
         recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Heavy Barbell Strength (Option A) to stimulate muscle retention while taking impact off lower legs.`);
       }
 
@@ -6473,6 +6489,11 @@ function generateWorkoutFromGearAndGoal() {
           hdrText.style.color = "#10b981";
         }
 
+        const protStatus = getLiveProteinTelemetry();
+        const protTodayDesc = protStatus.achieved
+          ? `Elevate muscle protein synthesis (MPS) across the 24h recovery window. Logged: <strong>${protStatus.logged}g ✓</strong> (Surpassed daily target).`
+          : `Elevate muscle protein synthesis (MPS) across the 24h recovery window. Logged: <strong>${protStatus.logged}g</strong> / ${protStatus.target}g target (${protStatus.remaining}g remaining).`;
+
         slot.innerHTML = `
           <!-- POST-WORKOUT RECOVERY HERO CARD (3D SPECULAR GLASS) -->
           <div class="card card-highlight" style="padding:16px; border:1px solid rgba(16,185,129,0.35); border-top:1px solid rgba(255,255,255,0.28); box-shadow:0 12px 32px -4px rgba(0,0,0,0.7), 0 0 24px -2px rgba(16,185,129,0.15), inset 0 1px 1px 0 rgba(255,255,255,0.15);">
@@ -6549,9 +6570,9 @@ function generateWorkoutFromGearAndGoal() {
 
                 <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
                   <span style="color:#fff;">Nutrient Action Required</span>
-                  <span style="color:var(--primary); font-weight:700;">200g Daily Protein Target</span>
+                  <span style="color:${protStatus.achieved ? '#10b981' : 'var(--primary)'}; font-weight:700;">${protStatus.target}g Daily Protein Target</span>
                 </div>
-                <div>Elevate muscle protein synthesis (MPS) across the 24h recovery window. Logged: 223g ✓ (Surpassed daily target).</div>
+                <div>${protTodayDesc}</div>
               </div>
             </details>
           </div>
@@ -8881,6 +8902,8 @@ function generateWorkoutFromGearAndGoal() {
             }
             saveMndToLocalStorage();
             renderMyNetDiaryEngine();
+            renderTodayTrainingRecommendations();
+            renderHistoryList();
           }
         }
 

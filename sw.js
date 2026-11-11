@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v22-recovery-charts';
+const CACHE_NAME = 'pulse-cache-v23-dynamic-protein-telemetry';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
