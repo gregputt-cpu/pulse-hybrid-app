@@ -3016,64 +3016,89 @@
           <div class="body-metrics-grid">
             <div style="background:var(--surface-elevated); padding:8px 10px; border-radius:9px; border:1px solid var(--border); text-align:center;">
               <div style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Current Scale (Renpho)</div>
-              <div style="font-size:22px; font-weight:900; color:#fff; margin-top:2px;" id="bodyScaleWeight">98.90 <small style="font-size:13px; font-weight:400;">kg</small></div>
-              <div style="font-size:12px; color:var(--lime); font-weight:800;" id="bodyScaleBf">16.7% Body Fat (-0.95kg drop)</div>
+              <div style="font-size:24px; font-weight:700; color:#fff; margin-top:2px; letter-spacing:-0.03em;" id="bodyScaleWeight">98.0 <small style="font-size:13px; font-weight:500; color:var(--text-muted);">kg</small></div>
+              <div style="font-size:12px; color:var(--cyan); font-weight:700;" id="bodyScaleBf">17.2% Body Fat</div>
             </div>
 
             <div style="background:var(--surface-elevated); padding:8px 10px; border-radius:9px; border:1px solid var(--border); text-align:center;">
               <div style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Target Recomposition</div>
-              <div style="font-size:22px; font-weight:900; color:var(--cyan); margin-top:2px;" id="bodyTargetWeightNum">96.92 <small style="font-size:13px; font-weight:400;">kg</small></div>
-              <div style="font-size:12px; color:var(--cyan); font-weight:800;" id="bodyTargetBfNum">15.0% Body Fat</div>
+              <div style="font-size:24px; font-weight:700; color:var(--primary); margin-top:2px; letter-spacing:-0.03em; text-shadow:0 0 16px rgba(0,240,255,0.4);" id="bodyTargetWeightNum">95.46 <small style="font-size:13px; font-weight:500; color:var(--primary);">kg</small></div>
+              <div style="font-size:12px; color:var(--primary); font-weight:700;" id="bodyTargetBfNum">15.0% Body Fat</div>
             </div>
           </div>
 
-          <div style="margin-top:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
-              <span style="color:var(--text-muted);">Pure Fat To Burn: <strong style="color:var(--lime);" id="bodyFatToBurnNum">1.98 kg (4.36 lbs)</strong></span>
-              <span style="color:var(--lime); font-weight:800;" id="bodyLeanMassProtected">Lean Mass: 82.38 kg Protected</span>
+          <div style="margin-top:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
+              <span style="color:var(--text-secondary);">Fat To Burn: <strong style="color:#fff;" id="bodyFatToBurnNum">2.54 kg (5.6 lbs)</strong></span>
+              <span style="color:var(--primary); font-weight:700;" id="bodyLeanMassProtected">Lean Mass: 81.14 kg Protected</span>
             </div>
-            <div style="background:var(--surface-elevated); height:8px; border-radius:999px; overflow:hidden;">
-              <div id="bodyRecompProgressBar" style="width:58%; height:100%; background:linear-gradient(90deg, var(--cyan), var(--lime)); border-radius:999px;"></div>
+            <div style="background:rgba(255,255,255,0.06); height:6px; border-radius:999px; overflow:hidden;">
+              <div id="bodyRecompProgressBar" class="progress-bar-telemetry" style="width:68%; height:100%; border-radius:999px; background:linear-gradient(90deg, #00F0FF 0%, #3B82F6 60%, #A855F7 100%); box-shadow:0 0 10px rgba(0,240,255,0.5);"></div>
             </div>
           </div>
         </div>
 
-        <!-- ==================== SECTION: GROUNDING POPULATION NORMS (MEN 40-49) ==================== -->
-        <div class="card" style="padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div>
-              <strong style="color:#fff; font-size:14px; font-weight:900;">📊 Athlete vs. General Population Norms</strong>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:1px;">Biometric reality check calibrated for men aged 40–49</div>
+        <!-- ==================== SECTION: COACH GROUNDING REALITY CHECK (EGM ACCORDION) ==================== -->
+        <details class="fuel-accordion" style="background:linear-gradient(135deg, rgba(0,240,255,0.06), rgba(15,23,42,0.85)); border:1px solid rgba(0,240,255,0.25); border-radius:14px; overflow:hidden;">
+          <summary style="padding:10px 13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:16px;">🧠</span>
+              <div>
+                <strong style="color:var(--primary); font-size:12.5px; font-weight:800; letter-spacing:0.02em;">Coach Reality Briefing</strong>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">81.1kg Pure Lean Muscle</span>
+              </div>
             </div>
-            <span style="font-size:11px; color:var(--primary); background:var(--primary-dim); border:1px solid rgba(0,229,255,0.35); padding:2px 7px; border-radius:4px; font-weight:900;">AGE 45 BENCHMARKS</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:10.5px; color:var(--lime); background:rgba(34,197,94,0.12); padding:2px 7px; border-radius:4px; font-weight:700;">Top 15% Athletic</span>
+              <span class="accordion-chevron">▼</span>
+            </div>
+          </summary>
+          <div style="padding:10px 14px 13px; font-size:12px; color:#cbd5e1; line-height:1.45; border-top:1px solid rgba(255,255,255,0.06);">
+            At <strong>190.5 cm (6'3") and 98.0 kg</strong>, standard medical BMI tables lazily categorize you as "overweight," completely failing to recognize that <strong>81.14 kg is pure fat-free lean muscle mass</strong>. You have the athletic frame of a high-level decathlete or rugby back. You are already in the top 15% for body composition and top 1% for cardiovascular stroke volume (48 bpm RHR). Your target of shedding <strong>2.54 kg fat</strong> is not a drastic cut — it is precision tuning to reveal your muscular definition while protecting your joints.
           </div>
+        </details>
 
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <!-- GAUGE 1: BODY FAT (16.7% -> TOP 12%) -->
+        <!-- ==================== SECTION: POPULATION NORMS (EGM ACCORDION) ==================== -->
+        <details class="fuel-accordion" style="background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
+          <summary style="padding:10px 13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:16px;">📊</span>
+              <div>
+                <strong style="color:#fff; font-size:12.5px; font-weight:800; letter-spacing:0.02em;">Athlete vs. Population Norms</strong>
+                <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">Men Aged 40–49</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:10.5px; color:var(--primary); background:rgba(0,240,255,0.12); padding:2px 7px; border-radius:4px; font-weight:700;">Age 45 Benchmarks</span>
+              <span class="accordion-chevron">▼</span>
+            </div>
+          </summary>
+          <div style="padding:10px 12px 12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:8px;">
+            <!-- GAUGE 1: BODY FAT (17.2% -> TOP 12%) -->
             <div class="norm-gauge-row">
               <div class="norm-gauge-header">
-                <span style="font-weight:800; color:#fff;">Body Fat Percentage: <strong style="color:var(--lime);" id="normBfVal">16.7%</strong></span>
-                <span style="color:var(--lime); font-weight:900; font-size:11.5px; background:var(--lime-glow); padding:1px 6px; border-radius:4px;" id="normBfBadge">TOP 12% OF 45yo MEN</span>
+                <span style="font-weight:800; color:#fff;">Body Fat Percentage: <strong style="color:var(--lime);" id="normBfVal">17.2%</strong></span>
+                <span style="color:var(--lime); font-weight:900; font-size:11.5px; background:var(--lime-glow); padding:1px 6px; border-radius:4px;" id="normBfBadge">TOP 15% OF 45yo MEN</span>
               </div>
               <div class="norm-bar-track">
-                <div class="norm-bar-fill" id="normBfBar" style="width:88%; background:linear-gradient(90deg, var(--cyan), var(--lime));"></div>
+                <div class="norm-bar-fill" id="normBfBar" style="width:85%; background:linear-gradient(90deg, var(--cyan), var(--lime));"></div>
               </div>
               <div class="norm-note" id="normBfNote">
-                Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Your 16.7% (218 lb weigh-in today) places you firmly in the fit/athletic category. You are only <strong>1.98 kg</strong> away from 15.0%!
+                Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Your 17.2% places you firmly in the fit/athletic tier. You are only <strong>2.54 kg</strong> away from your 15.0% milestone!
               </div>
             </div>
 
-            <!-- GAUGE 2: LEAN BODY MASS (82.38 kg -> TOP 3%) -->
+            <!-- GAUGE 2: LEAN BODY MASS (81.14 kg -> TOP 3%) -->
             <div class="norm-gauge-row">
               <div class="norm-gauge-header">
-                <span style="font-weight:800; color:#fff;">Lean Body Mass: <strong style="color:var(--cyan);">82.38 kg (181.6 lbs)</strong></span>
+                <span style="font-weight:800; color:#fff;">Lean Body Mass: <strong style="color:var(--cyan);">81.14 kg (178.9 lbs)</strong></span>
                 <span style="color:var(--cyan); font-weight:900; font-size:11.5px; background:var(--cyan-glow); padding:1px 6px; border-radius:4px;">TOP 3% ELITE MUSCLE</span>
               </div>
               <div class="norm-bar-track">
                 <div class="norm-bar-fill" style="width:97%; background:var(--cyan);"></div>
               </div>
               <div class="norm-note">
-                FFMI of <strong>22.7 kg/m²</strong>. The median 45yo man has 64 kg lean mass. You carry <strong>+18.4 kg more functional lean tissue</strong> than average. Your 99.85 kg weight is dense muscle.
+                FFMI of <strong>22.4 kg/m²</strong>. The median 45yo man has 64 kg lean mass. You carry <strong>+17.1 kg more functional lean tissue</strong> than average.
               </div>
             </div>
 
@@ -3087,7 +3112,7 @@
                 <div class="norm-bar-fill" style="width:99%; background:linear-gradient(90deg, var(--cyan), #3b82f6);"></div>
               </div>
               <div class="norm-note">
-                Population median is <strong>70 bpm</strong>. 48 bpm (Garmin fēnix 8 measured) indicates an enlarged athletic ventricular stroke volume and powerful parasympathetic recovery tone.
+                Population median is <strong>70 bpm</strong>. 48 bpm (Garmin fēnix 8 measured) indicates an enlarged athletic ventricular stroke volume and superior parasympathetic tone.
               </div>
             </div>
 
@@ -3101,22 +3126,11 @@
                 <div class="norm-bar-fill" style="width:65%; background:var(--amber);"></div>
               </div>
               <div class="norm-note">
-                Acceptable upper range. Dropping 2.93 kg fat to reach your 15% target will push visceral fat safely down to <strong>Rating 7–8</strong>, virtually eliminating cardiovascular arterial stiffness risk.
+                Acceptable upper range. Shedding 2.54 kg fat to reach your 15% target will push visceral fat safely down to <strong>Rating 7–8</strong>, virtually eliminating arterial stiffness risk.
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- ==================== SECTION: COACH GROUNDING REALITY CHECK ==================== -->
-        <div class="card" style="padding:10px 12px; background:linear-gradient(135deg, rgba(0,229,255,0.08), rgba(12,16,23,0.95)); border:1px solid rgba(0,229,255,0.3); box-shadow:0 0 15px rgba(0,229,255,0.08);">
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">
-            <span style="font-size:18px;">🧠</span>
-            <strong style="color:var(--primary); font-size:13px; font-weight:900;">Coach Grounding & Reality Briefing</strong>
-          </div>
-          <div style="font-size:12px; color:#cbd5e1; line-height:1.45;">
-            At <strong>190.5 cm (6'3") and 99.85 kg</strong>, standard medical BMI tables would lazily categorize you as "overweight," completely missing that <strong>82.38 kg is pure fat-free lean muscle mass</strong>. You have the athletic structure of a high-level decathlete or rugby back. You are already in the top 15% for body composition and top 1% for cardiovascular stroke volume. Your goal of shedding <strong>2.93 kg fat</strong> is not about drastic transformation — it is precision tuning to reveal your muscle definition and drop visceral fat without ever touching extreme deficits or risking joint breakdown.
-          </div>
-        </div>
+        </details>
 
         <!-- SCALE TRAJECTORY & 7-DAY EMA CHART -->
         <div class="card" style="padding:10px 12px;">
@@ -3130,7 +3144,7 @@
               <line x1="10" y1="15" x2="350" y2="15" stroke="rgba(255,255,255,0.05)" />
               <line x1="10" y1="45" x2="350" y2="45" stroke="rgba(255,255,255,0.05)" />
               <line x1="10" y1="72" x2="350" y2="72" stroke="rgba(56, 189, 248, 0.4)" stroke-dasharray="3" />
-              <text x="350" y="60" fill="var(--cyan)" font-size="11" font-weight="800" text-anchor="end" id="svgGoalText">GOAL: 96.92 kg (15% BF)</text>
+              <text x="350" y="60" fill="var(--cyan)" font-size="11" font-weight="800" text-anchor="end" id="svgGoalText">GOAL: 95.46 kg (15.0% BF)</text>
               
               <path d="M 10,24 C 80,28 150,42 230,55 C 280,63 320,70 350,72 L 350,85 L 10,85 Z" fill="rgba(0,229,255,0.12)" />
               <path d="M 10,24 C 80,28 150,42 230,55 C 280,63 320,70 350,72" fill="none" stroke="var(--lime)" stroke-width="2.5" />
@@ -3143,22 +3157,22 @@
           </div>
         </div>
 
-        <!-- 3 BIOMETRIC TILES -->
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
-          <div class="card" style="padding:8px 6px; text-align:center;">
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Skeletal Muscle</div>
-            <div style="font-size:16px; font-weight:900; color:#fff; margin-top:2px;">53.2 kg</div>
-            <div style="font-size:10.5px; color:var(--lime); font-weight:700;">Elite Athletic Base</div>
+        <!-- 3 BIOMETRIC TILES (SPLIT GLOWING GLASS CARDS) -->
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+          <div class="card glass-metric-col-cyan" style="padding:10px 8px; text-align:center;">
+            <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Muscle</div>
+            <div style="font-size:18px; font-weight:700; color:#fff; margin-top:2px; letter-spacing:-0.03em;">53.4 kg</div>
+            <div style="font-size:10px; color:var(--primary); font-weight:700; margin-top:2px;">Elite Base</div>
           </div>
-          <div class="card" style="padding:8px 6px; text-align:center;">
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Visceral Fat</div>
-            <div style="font-size:16px; font-weight:900; color:var(--amber); margin-top:2px;">Rating 10</div>
-            <div style="font-size:10.5px; color:var(--text-muted);">Normal (1–12)</div>
+          <div class="card glass-metric-col-indigo" style="padding:10px 8px; text-align:center;">
+            <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Visceral</div>
+            <div style="font-size:18px; font-weight:700; color:var(--amber); margin-top:2px; letter-spacing:-0.03em;">Rating 10</div>
+            <div style="font-size:10px; color:var(--text-secondary); margin-top:2px;">Normal (1–12)</div>
           </div>
-          <div class="card" style="padding:8px 6px; text-align:center;">
-            <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Body Water</div>
-            <div style="font-size:16px; font-weight:900; color:var(--cyan); margin-top:2px;">59.6%</div>
-            <div style="font-size:10.5px; color:var(--cyan); font-weight:700;">Optimal Hydration</div>
+          <div class="card glass-metric-col-coral" style="padding:10px 8px; text-align:center;">
+            <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Water</div>
+            <div style="font-size:18px; font-weight:700; color:#38BDF8; margin-top:2px; letter-spacing:-0.03em;">59.8%</div>
+            <div style="font-size:10px; color:#38BDF8; font-weight:700; margin-top:2px;">Optimal</div>
           </div>
         </div>
 
