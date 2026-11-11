@@ -187,13 +187,13 @@
       border-left: 1px solid var(--border);
       border-right: 1px solid var(--border);
       padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* SLEEK APPLE-STYLE HEADER */
     .app-header {
       height: 52px;
       min-height: 52px;
+      flex-shrink: 0;
       background: rgba(9, 10, 15, 0.95);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -551,8 +551,8 @@
 
     /* MAIN VIEWPORT */
     .app-main {
-      flex: 1;
-      height: calc(100% - 46px - 56px);
+      flex: 1 1 0%;
+      min-height: 0;
       overflow: hidden;
       position: relative;
     }
@@ -1692,14 +1692,18 @@
       gap: 5px;
     }
 
-    /* FIXED BOTTOM NAVIGATION (56px) */
+    /* FIXED BOTTOM NAVIGATION */
     .bottom-nav {
-      height: 60px; min-height: 60px;
+      height: 60px;
+      min-height: 60px;
+      flex-shrink: 0;
       background: #090c13;
       border-top: 1px solid var(--border);
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      z-index: 50;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: content-box;
     }
     .nav-btn {
       background: none;
@@ -2060,7 +2064,7 @@
     <div class="app-main">
 
       <!-- ==================== TAB 1: TODAY (LUXURY ATHLETE DASHBOARD) ==================== -->
-      <main id="tab-today" class="tab-panel active" style="padding: 14px 16px 24px; gap: 14px; overflow-y: auto;">
+      <main id="tab-today" class="tab-panel active" style="padding: 14px 16px 85px; gap: 14px; overflow-y: auto;">
         
         <!-- PWA INSTALL PROMPT BANNER (IF APPLICABLE) -->
         <div id="pwaInstallBanner" style="display:none; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 14px; align-items:center; justify-content:space-between;">

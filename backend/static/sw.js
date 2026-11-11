@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v19-auto-refresh';
+const CACHE_NAME = 'pulse-cache-v20-fixed-bottom-nav';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
