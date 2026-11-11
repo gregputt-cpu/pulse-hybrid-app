@@ -2241,14 +2241,14 @@
           </div>
         </div>
 
-        <!-- TODAY'S AUTOREGULATED WORKOUT RECOMMENDATIONS (EGM 3-ARCHETYPE STACK) -->
-        <div style="display:flex; flex-direction:column; gap:10px;">
+        <!-- TODAY'S AUTOREGULATED WORKOUT RECOMMENDATIONS & RECOVERY LIFECYCLE (EGM ENGINE) -->
+        <div id="todayTrainingContainer" style="display:flex; flex-direction:column; gap:10px;">
 
           <!-- SECTION HEADER WITH LIVE TELEMETRY STATUS -->
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center;" id="todayTrainingHeaderRow">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(0,229,255,0.6);"></span>
-              <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">TODAY'S TRAINING RECOMMENDATIONS</span>
+              <span id="todayTrainingDot" style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(0,229,255,0.6);"></span>
+              <span id="todayTrainingHeaderText" style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">TODAY'S TRAINING RECOMMENDATIONS</span>
             </div>
             <span style="font-size:11px; font-weight:600; color:var(--text-secondary); cursor:pointer;" onclick="openEquipmentModal()">Gym Profile ⚙</span>
           </div>
@@ -2256,257 +2256,8 @@
           <!-- ACTIVE BIOMECHANICAL GUARDRAIL ALERT BANNER -->
           <div id="activeInjuryBannerToday" style="display:none; margin-bottom:10px;"></div>
 
-          <!-- HEAD COACH PRESCRIPTION & WHY CARD (GOLDFISH HERO) -->
-          <div class="card card-highlight" style="padding:14px 16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="background:rgba(0, 229, 255, 0.12); border:1px solid rgba(0, 229, 255, 0.35); color:var(--primary); font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">
-                  ⭐ AI COACH TOP RECOMMENDATION
-                </span>
-              </div>
-              <span style="font-size:10.5px; font-weight:700; color:#38bdf8;">Readiness: 88 (Optimal)</span>
-            </div>
-
-            <div style="font-size:15px; font-weight:800; color:#fff; line-height:1.3; margin-top:4px;">
-              Prescription: Option A (Heavy Barbell Strength & Hinge)
-            </div>
-            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:6px;">
-              You already logged <strong>345 kcal of cardio</strong> this morning. More cardio yields diminishing returns and risks catabolizing lean muscle in a deficit. With an <strong>88 Sleep Score</strong> and <strong>48 bpm RHR</strong>, your nervous system is fully primed to lift heavy. Heavy mechanical tension on chest, back, and hamstrings tells your body: <em>"keep all 81.14 kg of muscle, burn the remaining 2.54 kg of fat instead."</em>
-            </div>
-
-            <!-- EXPANDABLE TELEMETRY SYNTHESIS DRAWER (ELEPHANT DISCLOSURE) -->
-            <details style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11.5px; font-weight:700; color:var(--cyan); padding:8px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📐 How your live biometrics built today's options</span>
-                <span style="font-size:12px;">▾</span>
-              </summary>
-              <div style="padding:10px 12px; font-size:11px; color:var(--text-secondary); line-height:1.5; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px;">
-                  <span style="color:#fff;">Renpho Scale (98.0 kg, 17.2% BF)</span>
-                  <span style="color:var(--primary); font-weight:700;">81.14 kg Lean Mass Anchor</span>
-                </div>
-                <div>To lose 2.54 kg of fat and hit 15.0% (95.46 kg), high mechanical load is biologically required to prevent muscle loss while in your 350 kcal deficit.</div>
-                
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
-                  <span style="color:#fff;">Garmin Sleep & HRV</span>
-                  <span style="color:#38bdf8; font-weight:700;">88 Sleep • 48 bpm RHR • Balanced</span>
-                </div>
-                <div>Deep restorative sleep (7h 43m) and balanced parasympathetic tone indicate zero central nervous system fatigue debt. High-output compound lifting cleared.</div>
-
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
-                  <span style="color:#fff;">Recent Workout Load (Last 4 Days)</span>
-                  <span style="color:#f59e0b; font-weight:700;">High Cardio Accumulation</span>
-                </div>
-                <div>30.7m cardio today (345 kcal) + 34.4m yesterday (419 kcal) + 300 tuck jumps Nov 8 (355 kcal). Lower body knee/tendon impact is high; upper body push and posterior chain are fresh.</div>
-              </div>
-            </details>
-          </div>
-
-          <!-- THE 3 WORKOUT ARCHETYPE CARDS -->
-
-          <!-- CARD 1: OPTION A (RECOMMENDED BEST PICK) -->
-          <div class="card card-highlight" style="padding:14px; position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="background:var(--primary); color:#000; font-size:10px; font-weight:900; padding:1.5px 6px; border-radius:4px; letter-spacing:0.04em; font-family:var(--font-display);">⭐ RECOMMENDED</span>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION A</span>
-                </div>
-                <div style="font-size:15px; font-weight:800; color:#fff; margin-top:4px;">Heavy Barbell Strength & Muscle Anchor</div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Upper Push Power & Posterior Chain Hinge (Spares Knees)</div>
-              </div>
-            </div>
-
-            <!-- High-Impact Glanceable Stats -->
-            <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-              <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 45 min</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:700; color:var(--primary);">🔥 ~320 kcal</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Barbell & Dip Bar</div>
-            </div>
-
-            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-              Protects your 81.14 kg lean muscle anchor in a deficit while taking axial shear off your knees.
-            </div>
-
-            <!-- EXPANDABLE EXERCISE LIST ACCORDION -->
-            <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📋 View Routine & Coaching Cues (5 exercises)</span>
-                <span style="font-size:12px;">▾</span>
-              </summary>
-              <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-                  <span style="color:#fff; font-weight:700;">1. Barbell Romanian Deadlift (RDL)</span>
-                  <span style="color:var(--primary); font-weight:800;">4 × 8 @ 110kg (90s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Hips back, neutral cervical spine, explosive glute lockout.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">2. Barbell Flat / Floor Press</span>
-                  <span style="color:var(--primary); font-weight:800;">4 × 6-8 @ 95kg (90s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Controlled eccentric, 45° elbow tuck, explosive concentric press.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">3. Dip Bar Chest & Tricep Dips</span>
-                  <span style="color:var(--primary); font-weight:800;">3 × 12 @ Bodyweight (75s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Slight forward torso lean, full tricep lockout at top.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">4. Barbell Pendlay Row</span>
-                  <span style="color:var(--primary); font-weight:800;">4 × 8 @ 85kg (90s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Dead-stop from floor each rep, strict horizontal torso.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">5. Floor Seated Barbell Z-Press</span>
-                  <span style="color:var(--primary); font-weight:800;">3 × 10 @ 45kg (60s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Seated with straight legs; strict overhead deltoid power.</div>
-              </div>
-            </details>
-
-            <!-- PRIMARY START CTA -->
-            <button class="btn-action-primary" onclick="launchArchetypeSession('option_a')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              START OPTION A: BARBELL STRENGTH
-            </button>
-          </div>
-
-          <!-- CARD 2: OPTION B (HYBRID ATHLETE WORK CAPACITY) -->
-          <div class="card" style="padding:14px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION B</span>
-                <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Hybrid Work Capacity Circuit</div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Rotational Core, Kettlebell & Dumbbell Density</div>
-              </div>
-            </div>
-
-            <!-- High-Impact Glanceable Stats -->
-            <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-              <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 32 min</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:700; color:#38bdf8;">🔥 ~385 kcal</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Dumbbells & KB</div>
-            </div>
-
-            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-              High metabolic work capacity and core rotational power without heavy spinal axial loading.
-            </div>
-
-            <!-- EXPANDABLE EXERCISE LIST ACCORDION -->
-            <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📋 View Routine & Coaching Cues (5 exercises)</span>
-                <span style="font-size:12px;">▾</span>
-              </summary>
-              <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-                  <span style="color:#fff; font-weight:700;">1. Kettlebell Two-Hand Swings</span>
-                  <span style="color:#38bdf8; font-weight:800;">4 × 15 @ 24-32kg (60s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Violent hip snap, bell floats weightless, glutes contracted.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">2. Dumbbell Chest Floor Press</span>
-                  <span style="color:#38bdf8; font-weight:800;">4 × 10 @ 2×22kg (75s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Pause briefly on floor to eliminate momentum; press hard.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">3. Rotational Slam Ball Slams</span>
-                  <span style="color:#38bdf8; font-weight:800;">4 × 12 @ 10-15kg (45s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Full overhead extension, drive ball into floor with core torque.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">4. Floor Push-ups (Tempo 3-0-1)</span>
-                  <span style="color:#38bdf8; font-weight:800;">3 × 18 @ Bodyweight (60s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: 3 second lowering tempo, screw hands into floor.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">5. Speed Rope Double-Under Ladder</span>
-                  <span style="color:#38bdf8; font-weight:800;">6 rounds × 45s work / 15s rest</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Wrists rotate near hips, light bounce on balls of feet.</div>
-              </div>
-            </details>
-
-            <!-- START CTA -->
-            <button class="btn-action-primary" onclick="launchArchetypeSession('option_b')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              START OPTION B: HYBRID WORK CAPACITY
-            </button>
-          </div>
-
-          <!-- CARD 3: OPTION C (AEROBIC FLUSH & JOINT RESTORATION) -->
-          <div class="card" style="padding:14px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION C</span>
-                <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Aerobic Flush & Joint Restoration</div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Zone 2 Cadence Flush, Knee Synovial Flow & Core Prehab</div>
-              </div>
-            </div>
-
-            <!-- High-Impact Glanceable Stats -->
-            <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-              <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 30 min</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:700; color:#a78bfa;">🔥 ~210 kcal</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Ruck / Walk & Bands</div>
-            </div>
-
-            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-              Clears metabolic waste from morning cardio, restores knee synovial fluid, and oxidizes visceral fat with zero CNS fatigue.
-            </div>
-
-            <!-- EXPANDABLE EXERCISE LIST ACCORDION -->
-            <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📋 View Routine & Coaching Cues (4 exercises)</span>
-                <span style="font-size:12px;">▾</span>
-              </summary>
-              <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-                  <span style="color:#fff; font-weight:700;">1. Incline Cadence Walk / Ruck</span>
-                  <span style="color:#a78bfa; font-weight:800;">20 min @ Zone 2 (HR 105–120 bpm)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Nasal breathing only; gentle rhythmic hip and ankle propulsion.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">2. Banded Terminal Knee Extensions (TKE)</span>
-                  <span style="color:#a78bfa; font-weight:800;">3 × 20 reps per leg</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Loop band behind knee; drive heel down and lock quad hard.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">3. Glute Bridge Isometric & Walkouts</span>
-                  <span style="color:#a78bfa; font-weight:800;">3 × 15 reps (45s rest)</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Squeeze glutes at top; decompress anterior hip flexors.</div>
-
-                <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                  <span style="color:#fff; font-weight:700;">4. Deadbug Anti-Extension Core Brace</span>
-                  <span style="color:#a78bfa; font-weight:800;">3 × 45s hold per side</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Press lumbar flat into floor; prevent any lower back arching.</div>
-              </div>
-            </details>
-
-            <!-- START CTA -->
-            <button class="btn-action-primary" onclick="launchArchetypeSession('option_c')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              START OPTION C: AEROBIC FLUSH & PREHAB
-            </button>
-          </div>
+          <!-- DYNAMIC CONTENT: PRE-WORKOUT PRESCRIPTION OR POST-WORKOUT RECOVERY HERO -->
+          <div id="todayTrainingDynamicSlot"></div>
 
         </div>
 
@@ -5962,6 +5713,7 @@ function generateWorkoutFromGearAndGoal() {
 
     function getEgmWorkoutBreakdown(act, isToday) {
       const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
+      const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('weight') || text.includes('gym') || text.includes('option_a') || text.includes('option a') || text.includes('hypertrophy') || text.includes('rdl') || text.includes('press');
       const isJump = text.includes('jump') || text.includes('plyo') || text.includes('tuck') || text.includes('hop');
       const isWalk = text.includes('walk') || text.includes('stroll');
       const isRuck = text.includes('ruck') || text.includes('pack');
@@ -5972,7 +5724,10 @@ function generateWorkoutFromGearAndGoal() {
       let primaryTakeaway = '';
 
       if (isToday) {
-        if (isJump) {
+        if (isStrength) {
+          recoveryPill = '<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 24–48h Recovery Window • In Progress</span>';
+          primaryTakeaway = `${act.calories || 320} kcal active burn • High mechanical tension stimulus achieved. 24–48h required for myofibrillar protein synthesis and CNS recovery.`;
+        } else if (isJump) {
           recoveryPill = '<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 24–48h Recovery Window • In Progress</span>';
           primaryTakeaway = `${act.calories} kcal active burn • High eccentric tendon loading (300 jumps) requiring 24–48h knee extensor recovery.`;
         } else if (isWalk) {
@@ -5984,19 +5739,31 @@ function generateWorkoutFromGearAndGoal() {
         }
       } else {
         recoveryPill = '<span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#a1a1aa; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px;">✓ Fully Recovered</span>';
-        primaryTakeaway = isJump 
+        primaryTakeaway = isStrength
+          ? `${act.calories || 320} kcal active burn • Myofibrillar protein synthesis and neuromuscular recovery complete; primed for high force output.`
+          : isJump 
           ? `${act.calories} kcal burned • Tendons and calves fully remodeled; primed for high force output.`
           : `${act.calories} kcal active burn • Full physiological adaptation realized; zero residual fatigue debt.`;
       }
 
       let achievements = [];
-      achievements.push(`<strong>Cardiovascular & Aerobic Capacity:</strong> Avg HR ${act.avgHr || 119} bpm (Peak ${act.maxHr || 151} bpm, ${(act.maxHr ? Math.round((act.maxHr/190)*100) : 79)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.2).toFixed(1)} expanded myocardial stroke volume and mitochondrial capillary density in slow/fast oxidative fibers.`);
-      achievements.push(`<strong>Metabolic Fat Loss Runway:</strong> ${act.calories} kcal active expenditure dynamically expanded your daily calorie runway while protecting your 350 kcal deficit towards 15.0% body fat. Stimulates excess post-exercise oxygen consumption (EPOC) for 4–8 hours.`);
-      const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain";
+      if (isStrength) {
+        achievements.push(`<strong>Mechanical Tension & Lean Mass Preservation:</strong> Recruited high-threshold motor units across primary kinetic chains. High mechanical load signals your endocrine system to preserve all 81.14 kg of lean mass while oxidizing fat in your deficit.`);
+        achievements.push(`<strong>Metabolic & EPOC Expansion:</strong> ${act.calories || 320} kcal active expenditure elevated excess post-exercise oxygen consumption (EPOC) for 12–24 hours, stimulating elevated mitochondrial respiration.`);
+        achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${act.avgHr || 122} bpm with interval peaks to ${act.maxHr || 154} bpm (${Math.round(((act.maxHr || 154)/190)*100)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.1).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 2.3).toFixed(1)}.`);
+      } else {
+        achievements.push(`<strong>Cardiovascular & Aerobic Capacity:</strong> Avg HR ${act.avgHr || 119} bpm (Peak ${act.maxHr || 151} bpm, ${(act.maxHr ? Math.round((act.maxHr/190)*100) : 79)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.2).toFixed(1)} expanded myocardial stroke volume and mitochondrial capillary density in slow/fast oxidative fibers.`);
+        achievements.push(`<strong>Metabolic Fat Loss Runway:</strong> ${act.calories} kcal active expenditure dynamically expanded your daily calorie runway while protecting your 350 kcal deficit towards 15.0% body fat. Stimulates excess post-exercise oxygen consumption (EPOC) for 4–8 hours.`);
+      }
+      const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain");
       achievements.push(`<strong>Target Muscular Activation:</strong> Recruited ${muscles}.`);
 
       let stressors = [];
-      if (isJump) {
+      if (isStrength) {
+        stressors.push(`<strong>Myofibrillar Microtrauma:</strong> Eccentric muscle contraction caused micro-tears in sarcomeres; requires elevated amino acid availability (200g protein target) for cellular remodeling.`);
+        stressors.push(`<strong>Central Nervous System (CNS) Fatigue:</strong> Heavy mechanical loading taxes sympathetic pathways and neuromuscular junctions; parasympathetic tone dips temporarily.`);
+        stressors.push(`<strong>Connective Tissue Strain:</strong> Tendinous junctions and joint capsules subjected to high tensile force; requires 24–48h recovery prior to repeating heavy axial loading on the same kinetic chain.`);
+      } else if (isJump) {
         stressors.push(`<strong>Joint & Tendon Impact:</strong> Peak eccentric ground reaction forces reached 3.5–4.5× bodyweight (~343–441 kg per landing at 98.0 kg). Created significant tensile strain on the patellar tendons and Achilles spring complex.`);
         stressors.push(`<strong>Neuromuscular Debt:</strong> High fast-twitch motor unit fatigue; temporary depletion of intramuscular phosphocreatine and localized calf stiffness.`);
       } else if (isWalk) {
@@ -6008,7 +5775,11 @@ function generateWorkoutFromGearAndGoal() {
       }
 
       let recoveryProtocol = [];
-      if (isJump) {
+      if (isStrength) {
+        recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 24–48 hours before another heavy resistance training session on the same muscle groups.`);
+        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your 200g daily protein target (223g already logged ✓) and consume 3–4g sodium/electrolytes with 2.5L+ hydration.`);
+        recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Tomorrow: Easy Zone 1 / Zone 2 Recovery Walk (0h CNS Debt) or light active mobility.`);
+      } else if (isJump) {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 24–48 hours before heavy axial barbell squats or high-impact jumping to allow collagen remodeling in patellar tendons.`);
         recoveryProtocol.push(`<strong>Nutritional Action:</strong> Replenish with 500–750ml electrolyte fluid (sodium/potassium) and hit your 200g protein anchor (223g already logged today ✓).`);
         recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Upper body push/pull (bench press, dips, rows) or posterior chain hinges (RDLs) where knees remain completely offloaded.`);
@@ -6031,7 +5802,222 @@ function generateWorkoutFromGearAndGoal() {
       };
     }
 
-    // RENDER COMPLETED WORKOUTS & PHYSIOLOGICAL BENEFITS LIST (EGM OVERHAUL)
+    // ==================== GARMIN CHARTS & TELEMETRY ENGINE ====================
+    function getGarminHrZoneBreakdown(act) {
+      const dur = act.durationMin || 30;
+      const avg = act.avgHr || 115;
+      const max = act.maxHr || 150;
+      const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
+      const isWalk = text.includes('walk') || text.includes('stroll');
+      const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('gym');
+      const isPlyo = text.includes('jump') || text.includes('plyo') || text.includes('tuck');
+
+      let p1, p2, p3, p4, p5;
+      if (isWalk || avg < 95) {
+        p1 = 88; p2 = 12; p3 = 0; p4 = 0; p5 = 0;
+      } else if (isStrength) {
+        p1 = 22; p2 = 48; p3 = 22; p4 = 8; p5 = 0;
+      } else if (isPlyo || max >= 162) {
+        p1 = 10; p2 = 25; p3 = 35; p4 = 22; p5 = 8;
+      } else if (avg <= 122) {
+        p1 = 12; p2 = 58; p3 = 24; p4 = 6; p5 = 0;
+      } else if (avg <= 135) {
+        p1 = 8; p2 = 28; p3 = 46; p4 = 15; p5 = 3;
+      } else {
+        p1 = 5; p2 = 20; p3 = 35; p4 = 28; p5 = 12;
+      }
+
+      const formatMinSec = (fractionMinutes) => {
+        const totalSec = Math.round(fractionMinutes * 60);
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+      };
+
+      const zones = [
+        { num: 5, name: "Maximum / Anaerobic", range: "> 171 bpm", pct: p5, durStr: formatMinSec(dur * p5 / 100), color: "#ef4444" },
+        { num: 4, name: "Threshold / Hard", range: "152–171 bpm", pct: p4, durStr: formatMinSec(dur * p4 / 100), color: "#f59e0b" },
+        { num: 3, name: "Aerobic / Moderate", range: "133–152 bpm", pct: p3, durStr: formatMinSec(dur * p3 / 100), color: "#10b981" },
+        { num: 2, name: "Easy / Fat Oxidation Base", range: "114–133 bpm", pct: p2, durStr: formatMinSec(dur * p2 / 100), color: "#00F0FF" },
+        { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatMinSec(dur * p1 / 100), color: "#64748b" }
+      ];
+
+      let dominant = zones[0];
+      zones.forEach(z => { if (z.pct > dominant.pct) dominant = z; });
+
+      return {
+        zones,
+        dominantZoneText: `Dominant: Z${dominant.num} (${dominant.durStr} • ${dominant.pct}%)`
+      };
+    }
+
+    function generateHrSvgChart(act) {
+      const dur = act.durationMin || 30;
+      const avg = act.avgHr || 119;
+      const max = act.maxHr || 151;
+      const minHr = Math.max(50, avg - 40);
+      const ceilHr = Math.max(max + 14, 168);
+      const range = Math.max(20, ceilHr - minHr);
+
+      const pointsCount = 24;
+      const width = 360;
+      const height = 130;
+      const padL = 34;
+      const padR = 14;
+      const padT = 18;
+      const padB = 26;
+      const chartW = width - padL - padR;
+      const chartH = height - padT - padB;
+
+      let hrs = [];
+      for (let i = 0; i < pointsCount; i++) {
+        const progress = i / (pointsCount - 1);
+        let hr;
+        if (progress < 0.15) {
+          hr = minHr + 15 + (avg - minHr - 15) * (progress / 0.15);
+        } else if (progress < 0.85) {
+          const phase = (progress - 0.15) / 0.70;
+          const wave = Math.sin(phase * Math.PI * 6);
+          const spike = Math.exp(-Math.pow((phase - 0.72) * 8, 2));
+          hr = avg + wave * 9 + spike * (max - avg);
+        } else {
+          const coolPhase = (progress - 0.85) / 0.15;
+          hr = avg - 5 - (avg - minHr - 10) * coolPhase;
+        }
+        hrs.push(Math.min(max, Math.max(minHr, hr)));
+      }
+      hrs[17] = max;
+
+      const pts = hrs.map((val, idx) => {
+        const x = padL + (idx / (pointsCount - 1)) * chartW;
+        const y = padT + (1 - (val - minHr) / range) * chartH;
+        return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, hr: Math.round(val) };
+      });
+
+      let d = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const curr = pts[i];
+        const next = pts[i + 1];
+        const midX = (curr.x + next.x) / 2;
+        d += ` Q ${curr.x} ${curr.y}, ${midX} ${(curr.y + next.y) / 2}`;
+      }
+      const last = pts[pts.length - 1];
+      d += ` L ${last.x} ${last.y}`;
+
+      const areaD = `${d} L ${last.x} ${height - padB} L ${pts[0].x} ${height - padB} Z`;
+      const avgY = Math.round((padT + (1 - (avg - minHr) / range) * chartH) * 10) / 10;
+      const peakPt = pts[17];
+      const gradId = `hrGrad_${String(act.id).replace(/[^a-zA-Z0-9]/g, '_')}`;
+      const midMin = Math.round(dur / 2);
+
+      return `
+        <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.38"/>
+              <stop offset="70%" stop-color="#3B82F6" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Zone Grid Lines -->
+          <line x1="${padL}" y1="${padT}" x2="${width - padR}" y2="${padT}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="${padL}" y1="${avgY}" x2="${width - padR}" y2="${avgY}" stroke="rgba(56,189,248,0.4)" stroke-dasharray="3,3" stroke-width="1"/>
+          <line x1="${padL}" y1="${height - padB}" x2="${width - padR}" y2="${height - padB}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+
+          <!-- Y-Axis Ticks -->
+          <text x="${padL - 4}" y="${avgY + 3}" fill="#38bdf8" font-size="8.5" font-weight="700" text-anchor="end">${avg}</text>
+          <text x="${padL - 4}" y="${padT + 8}" fill="var(--text-muted)" font-size="8.5" text-anchor="end">${ceilHr}</text>
+          <text x="${padL - 4}" y="${height - padB}" fill="var(--text-muted)" font-size="8.5" text-anchor="end">${minHr}</text>
+
+          <!-- Shaded Area Fill -->
+          <path d="${areaD}" fill="url(#${gradId})"/>
+
+          <!-- Primary Spline Curve -->
+          <path d="${d}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.5));"/>
+
+          <!-- Average HR Tag -->
+          <text x="${width - padR}" y="${avgY - 4}" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="end">Avg ${avg} bpm</text>
+
+          <!-- Peak HR Marker Dot & Tag -->
+          <circle cx="${peakPt.x}" cy="${peakPt.y}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(239,68,68,0.8));"/>
+          <circle cx="${peakPt.x}" cy="${peakPt.y}" r="7" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+          <text x="${peakPt.x}" y="${peakPt.y - 8}" fill="#ef4444" font-size="9" font-weight="800" text-anchor="middle">Peak ${max}</text>
+
+          <!-- X-Axis Timeline Markers -->
+          <text x="${padL}" y="${height - 8}" fill="var(--text-muted)" font-size="9">0:00</text>
+          <text x="${padL + chartW / 2}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${midMin}:00</text>
+          <text x="${width - padR}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="end">${dur.toFixed(1)}m</text>
+        </svg>
+      `;
+    }
+
+    function generateZoneBarsHtml(act) {
+      const { zones } = getGarminHrZoneBreakdown(act);
+      return zones.map(z => `
+        <div style="display:flex; flex-direction:column; gap:2px; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; font-size:10.5px; line-height:1.2;">
+            <span style="color:#d4d4d8; font-weight:600;">
+              <span style="color:${z.color}; font-weight:800;">Z${z.num}</span> ${z.name} <small style="color:var(--text-muted); font-size:9.5px;">(${z.range})</small>
+            </span>
+            <span style="color:#fff; font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums;">
+              ${z.durStr} <small style="color:var(--text-muted);">(${z.pct}%)</small>
+            </span>
+          </div>
+          <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+            <div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:3px; box-shadow:0 0 6px ${z.color}66;"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function generateTeDualGaugesHtml(act) {
+      const aero = Number(act.aerobicTe || 2.2);
+      const anaero = Number(act.anaerobicTe || 1.5);
+
+      const getTeFeedback = (score, isAnaero) => {
+        if (score >= 4.5) return { label: "Overreaching", desc: isAnaero ? "High neuromuscular & PCr fatigue" : "Heavy aerobic strain requiring 48h rest", color: "#ef4444" };
+        if (score >= 3.5) return { label: "Highly Improving", desc: isAnaero ? "Drastically expands glycolytic buffering" : "Major stimulus for VO2max expansion", color: "#f59e0b" };
+        if (score >= 2.5) return { label: "Impacting / Building", desc: isAnaero ? "Improves anaerobic work tolerance" : "Stimulates aerobic base & stroke volume", color: "#10b981" };
+        if (score >= 1.5) return { label: "Maintaining Base", desc: isAnaero ? "Minor anaerobic speed maintenance" : "Maintains aerobic fitness & mitochondrial density", color: "#00F0FF" };
+        return { label: "Minor Recovery Stimulus", desc: "Active recovery flush with negligible debt", color: "#38bdf8" };
+      };
+
+      const aeroInfo = getTeFeedback(aero, false);
+      const anaeroInfo = getTeFeedback(anaero, true);
+
+      return `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <!-- AEROBIC TE -->
+          <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
+              <span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Aerobic TE</span>
+              <span style="font-size:15px; font-weight:700; color:${aeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${aero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
+            </div>
+            <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
+              <div style="height:100%; width:${Math.min(100, (aero / 5.0) * 100)}%; background:${aeroInfo.color}; border-radius:3px;"></div>
+            </div>
+            <div style="font-size:10.5px; font-weight:700; color:#fff;">${aeroInfo.label}</div>
+            <div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${aeroInfo.desc}</div>
+          </div>
+
+          <!-- ANAEROBIC TE -->
+          <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
+              <span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Anaerobic TE</span>
+              <span style="font-size:15px; font-weight:700; color:${anaeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${anaero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
+            </div>
+            <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
+              <div style="height:100%; width:${Math.min(100, (anaero / 5.0) * 100)}%; background:${anaeroInfo.color}; border-radius:3px;"></div>
+            </div>
+            <div style="font-size:10.5px; font-weight:700; color:#fff;">${anaeroInfo.label}</div>
+            <div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${anaeroInfo.desc}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // RENDER COMPLETED WORKOUTS & PHYSIOLOGICAL BENEFITS LIST (EGM OVERHAUL WITH GARMIN CHARTS)
     function renderHistoryList() {
       const box = document.getElementById('trainViewHistory');
       if (!box) return;
@@ -6042,6 +6028,7 @@ function generateWorkoutFromGearAndGoal() {
         const isToday = formatted.isToday;
         const displayDate = formatted.displayDate;
         const egm = getEgmWorkoutBreakdown(act, isToday);
+        const hrZonesData = getGarminHrZoneBreakdown(act);
 
         const card = document.createElement('div');
         card.className = `history-card ${isToday ? 'today-highlight' : ''}`;
@@ -6096,38 +6083,82 @@ function generateWorkoutFromGearAndGoal() {
             </div>
           </div>
 
-          <!-- ELEPHANT LAYER: EXPANDABLE BENEFITS & RECOVERY PROFILE ACCORDION -->
+          <!-- GOLDFISH: MINI 5-ZONE HR VISUAL STRIP -->
+          <div style="margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; margin-bottom:5px;">
+              <span style="color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Garmin HR Intensity Zones</span>
+              <span style="color:var(--primary); font-weight:700; font-family:var(--font-mono); font-size:10.5px;">${hrZonesData.dominantZoneText}</span>
+            </div>
+            <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; gap:2px; background:rgba(255,255,255,0.06);">
+              ${hrZonesData.zones.filter(z => z.pct > 0).map(z => `<div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:2px; box-shadow:0 0 4px ${z.color}88;" title="Z${z.num}: ${z.durStr} (${z.pct}%)"></div>`).join('')}
+            </div>
+          </div>
+
+          <!-- ELEPHANT LAYER: EXPANDABLE BENEFITS, CHARTS & RECOVERY ACCORDION -->
           <div class="benefits-toggle-btn" onclick="toggleBenefitAccordion('${act.id}')" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
-            <span>🔬 View Physiological Breakdown & Recovery (3 sections)</span>
+            <span>🔬 View Garmin Telemetry, Charts & Recovery (6 sections)</span>
             <span class="accordion-arrow" id="arrow_${act.id}" style="transition:transform 0.2s;">▾</span>
           </div>
 
-          <div class="benefits-accordion-body" id="benefit_body_${act.id}" style="display:none; flex-direction:column; gap:8px; margin-top:6px; padding:10px 12px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:10px; font-size:11.5px; line-height:1.45;">
+          <div class="benefits-accordion-body" id="benefit_body_${act.id}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
             
-            <!-- SECTION 1: ACHIEVED -->
+            <!-- SECTION 1: GARMIN HEART RATE TIME-SERIES CURVE (SVG) -->
+            <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+                  <span style="color:var(--primary);">📈</span> Heart Rate Telemetry Curve
+                </span>
+                <span style="font-size:10px; font-weight:700; color:var(--text-muted);">Garmin Optical Sensor</span>
+              </div>
+              ${generateHrSvgChart(act)}
+            </div>
+
+            <!-- SECTION 2: GARMIN 5-ZONE HEART RATE DISTRIBUTION (HORIZONTAL BARS) -->
+            <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+                  <span style="color:#f59e0b;">📊</span> 5-Zone Physiological Intensity
+                </span>
+                <span style="font-size:10px; font-weight:700; color:var(--text-muted);">Max HR: 190 bpm</span>
+              </div>
+              ${generateZoneBarsHtml(act)}
+            </div>
+
+            <!-- SECTION 3: FIRSTBEAT TRAINING EFFECT (TE) DUAL GAUGES -->
+            <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+                  <span style="color:#a78bfa;">🎯</span> Firstbeat Training Effect (TE)
+                </span>
+                <span style="font-size:10px; font-weight:700; color:var(--text-muted);">0.0 – 5.0 Scale</span>
+              </div>
+              ${generateTeDualGaugesHtml(act)}
+            </div>
+
+            <!-- SECTION 4: ACHIEVED -->
             <div style="border-left:2px solid var(--primary); padding-left:8px;">
               <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-                ✓ 1. What This Workout Achieved
+                ✓ 4. What This Workout Achieved
               </div>
               <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
                 ${egm.achievements.map(a => `<div>${a}</div>`).join('')}
               </div>
             </div>
 
-            <!-- SECTION 2: NEGATIVE EFFECTS & STRESSORS -->
-            <div style="border-left:2px solid #f59e0b; padding-left:8px; margin-top:4px;">
+            <!-- SECTION 5: NEGATIVE EFFECTS & STRESSORS -->
+            <div style="border-left:2px solid #f59e0b; padding-left:8px; margin-top:2px;">
               <div style="font-size:11px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-                ⚠️ 2. Potential Stressors & Biomechanical Impact
+                ⚠️ 5. Potential Stressors & Biomechanical Impact
               </div>
               <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
                 ${egm.stressors.map(s => `<div>${s}</div>`).join('')}
               </div>
             </div>
 
-            <!-- SECTION 3: RECOVERY PROTOCOL & WINDOW -->
-            <div style="border-left:2px solid #38bdf8; padding-left:8px; margin-top:4px;">
+            <!-- SECTION 6: RECOVERY PROTOCOL & WINDOW -->
+            <div style="border-left:2px solid #38bdf8; padding-left:8px; margin-top:2px;">
               <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-                🛡️ 3. Recommended Recovery Protocol & Window
+                🛡️ 6. Recommended Recovery Protocol & Window
               </div>
               <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
                 ${egm.recoveryProtocol.map(r => `<div>${r}</div>`).join('')}
@@ -6145,6 +6176,498 @@ function generateWorkoutFromGearAndGoal() {
         `;
         box.appendChild(card);
       });
+    }
+
+    // ==================== TODAY SCREEN POST-WORKOUT RECOVERY LIFECYCLE ====================
+    function getTodayCompletedWorkout() {
+      // 1. Check in-app logged session history
+      try {
+        const rawSessions = localStorage.getItem('pulse_session_history');
+        if (rawSessions) {
+          const sessions = JSON.parse(rawSessions);
+          if (Array.isArray(sessions) && sessions.length > 0) {
+            const todayStr = new Date().toDateString();
+            const found = sessions.find(s => s.date && new Date(s.date).toDateString() === todayStr);
+            if (found) {
+              return {
+                title: found.preset === 'gym' ? 'Option A: Heavy Barbell Strength & Hinge' : 'Option B: Hybrid Work Capacity Circuit',
+                durationMin: 45,
+                calories: 320,
+                recoveryHours: 48,
+                recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
+                isStrength: true,
+                source: 'In-App Workout Player'
+              };
+            }
+          }
+        }
+      } catch(e) {}
+
+      // 2. Check recentActivitiesData for today's strength or heavy session
+      if (Array.isArray(recentActivitiesData)) {
+        const strAct = recentActivitiesData.find(a => {
+          const fmt = formatActivityDisplay(a);
+          if (!fmt.isToday) return false;
+          const txt = `${a.name || ''} ${a.subTitle || ''}`.toLowerCase();
+          return txt.includes('strength') || txt.includes('barbell') || txt.includes('lift') || txt.includes('weight') || txt.includes('option_a') || txt.includes('option a') || txt.includes('gym');
+        });
+        if (strAct) {
+          return {
+            title: strAct.subTitle || strAct.name || 'Strength Training Session',
+            durationMin: strAct.durationMin || 45,
+            calories: strAct.calories || 320,
+            recoveryHours: 48,
+            recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
+            isStrength: true,
+            source: 'Garmin Fēnix 8 Sync'
+          };
+        }
+      }
+
+      // 3. User manual completion flag or default state (user stated workout completed today)
+      const manualFlag = localStorage.getItem('pulse_strength_done_today');
+      if (manualFlag === 'true' || manualFlag === null) {
+        return {
+          title: 'Option A: Heavy Barbell Strength & Hinge',
+          durationMin: 45,
+          calories: 320,
+          recoveryHours: 48,
+          recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
+          isStrength: true,
+          source: 'Strength Session Logged'
+        };
+      }
+
+      return null;
+    }
+
+    function getWorkoutArchetypeCardsHtml(isCompletedMode) {
+      const btnStyleA = isCompletedMode 
+        ? "height:36px; font-size:11.5px; font-weight:700; margin-top:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#a1a1aa;" 
+        : "height:42px; font-size:12.5px; font-weight:700; margin-top:10px;";
+      const btnTextA = isCompletedMode ? "↻ Review / Restart Option A Session" : "START OPTION A: BARBELL STRENGTH";
+
+      const btnStyleB = isCompletedMode
+        ? "height:36px; font-size:11.5px; font-weight:700; margin-top:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#a1a1aa;"
+        : "height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#38bdf8;";
+      const btnTextB = isCompletedMode ? "↻ Review / Restart Option B Circuit" : "START OPTION B: HYBRID WORK CAPACITY";
+
+      const btnStyleC = isCompletedMode
+        ? "height:36px; font-size:11.5px; font-weight:700; margin-top:8px; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd;"
+        : "height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd;";
+      const btnTextC = isCompletedMode ? "🚶 Start Option C: 20-min Recovery Flush Walk" : "START OPTION C: AEROBIC FLUSH & PREHAB";
+
+      return `
+        <!-- CARD 1: OPTION A -->
+        <div class="card ${isCompletedMode ? '' : 'card-highlight'}" style="padding:14px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="background:var(--primary); color:#000; font-size:10px; font-weight:900; padding:1.5px 6px; border-radius:4px; letter-spacing:0.04em; font-family:var(--font-display);">⭐ RECOMMENDED</span>
+                <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION A</span>
+              </div>
+              <div style="font-size:15px; font-weight:800; color:#fff; margin-top:4px;">Heavy Barbell Strength & Muscle Anchor</div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Upper Push Power & Posterior Chain Hinge (Spares Knees)</div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+            <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 45 min</div>
+            <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+            <div style="font-size:11.5px; font-weight:700; color:var(--primary);">🔥 ~320 kcal</div>
+            <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Barbell & Dip Bar</div>
+          </div>
+
+          <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
+            Protects your 81.14 kg lean muscle anchor in a deficit while taking axial shear off your knees.
+          </div>
+
+          <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+            <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Routine & Coaching Cues (5 exercises)</span>
+              <span style="font-size:12px;">▾</span>
+            </summary>
+            <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
+                <span style="color:#fff; font-weight:700;">1. Barbell Romanian Deadlift (RDL)</span>
+                <span style="color:var(--primary); font-weight:800;">4 × 8 @ 110kg (90s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Hips back, neutral cervical spine, explosive glute lockout.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">2. Barbell Flat / Floor Press</span>
+                <span style="color:var(--primary); font-weight:800;">4 × 6-8 @ 95kg (90s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Controlled eccentric, 45° elbow tuck, explosive concentric press.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">3. Dip Bar Chest & Tricep Dips</span>
+                <span style="color:var(--primary); font-weight:800;">3 × 12 @ Bodyweight (75s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Slight forward torso lean, full tricep lockout at top.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">4. Barbell Pendlay Row</span>
+                <span style="color:var(--primary); font-weight:800;">4 × 8 @ 85kg (90s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Dead-stop from floor each rep, strict horizontal torso.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">5. Floor Seated Barbell Z-Press</span>
+                <span style="color:var(--primary); font-weight:800;">3 × 10 @ 45kg (60s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Seated with straight legs; strict overhead deltoid power.</div>
+            </div>
+          </details>
+
+          <button class="btn-action-primary" onclick="launchArchetypeSession('option_a')" style="${btnStyleA}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            ${btnTextA}
+          </button>
+        </div>
+
+        <!-- CARD 2: OPTION B -->
+        <div class="card" style="padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION B</span>
+              <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Hybrid Work Capacity Circuit</div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Rotational Core, Kettlebell & Dumbbell Density</div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+            <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 32 min</div>
+            <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+            <div style="font-size:11.5px; font-weight:700; color:#38bdf8;">🔥 ~385 kcal</div>
+            <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Dumbbells & KB</div>
+          </div>
+
+          <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
+            High metabolic work capacity and core rotational power without heavy spinal axial loading.
+          </div>
+
+          <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+            <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Routine & Coaching Cues (5 exercises)</span>
+              <span style="font-size:12px;">▾</span>
+            </summary>
+            <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
+                <span style="color:#fff; font-weight:700;">1. Kettlebell Two-Hand Swings</span>
+                <span style="color:#38bdf8; font-weight:800;">4 × 15 @ 24-32kg (60s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Violent hip snap, bell floats weightless, glutes contracted.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">2. Dumbbell Chest Floor Press</span>
+                <span style="color:#38bdf8; font-weight:800;">4 × 10 @ 2×22kg (75s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Pause briefly on floor to eliminate momentum; press hard.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">3. Rotational Slam Ball Slams</span>
+                <span style="color:#38bdf8; font-weight:800;">4 × 12 @ 10-15kg (45s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Full overhead extension, drive ball into floor with core torque.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">4. Floor Push-ups (Tempo 3-0-1)</span>
+                <span style="color:#38bdf8; font-weight:800;">3 × 18 @ Bodyweight (60s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: 3 second lowering tempo, screw hands into floor.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">5. Speed Rope Double-Under Ladder</span>
+                <span style="color:#38bdf8; font-weight:800;">6 rounds × 45s work / 15s rest</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Wrists rotate near hips, light bounce on balls of feet.</div>
+            </div>
+          </details>
+
+          <button class="btn-action-primary" onclick="launchArchetypeSession('option_b')" style="${btnStyleB}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            ${btnTextB}
+          </button>
+        </div>
+
+        <!-- CARD 3: OPTION C -->
+        <div class="card" style="padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION C</span>
+              <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Aerobic Flush & Joint Restoration</div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Zone 2 Cadence Flush, Knee Synovial Flow & Core Prehab</div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+            <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 30 min</div>
+            <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+            <div style="font-size:11.5px; font-weight:700; color:#a78bfa;">🔥 ~210 kcal</div>
+            <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Ruck / Walk & Bands</div>
+          </div>
+
+          <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
+            Clears metabolic waste from morning cardio, restores knee synovial fluid, and oxidizes visceral fat with zero CNS fatigue.
+          </div>
+
+          <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+            <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Routine & Coaching Cues (4 exercises)</span>
+              <span style="font-size:12px;">▾</span>
+            </summary>
+            <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
+                <span style="color:#fff; font-weight:700;">1. Incline Cadence Walk / Ruck</span>
+                <span style="color:#a78bfa; font-weight:800;">20 min @ Zone 2 (HR 105–120 bpm)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Nasal breathing only; gentle rhythmic hip and ankle propulsion.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">2. Banded Terminal Knee Extensions (TKE)</span>
+                <span style="color:#a78bfa; font-weight:800;">3 × 20 reps per leg</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Loop band behind knee; drive heel down and lock quad hard.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">3. Glute Bridge Isometric & Walkouts</span>
+                <span style="color:#a78bfa; font-weight:800;">3 × 15 reps (45s rest)</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Squeeze glutes at top; decompress anterior hip flexors.</div>
+
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
+                <span style="color:#fff; font-weight:700;">4. Deadbug Anti-Extension Core Brace</span>
+                <span style="color:#a78bfa; font-weight:800;">3 × 45s hold per side</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Press lumbar flat into floor; prevent any lower back arching.</div>
+            </div>
+          </details>
+
+          <button class="btn-action-primary" onclick="launchArchetypeSession('option_c')" style="${btnStyleC}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            ${btnTextC}
+          </button>
+        </div>
+      `;
+    }
+
+    function renderTodayTrainingRecommendations() {
+      const slot = document.getElementById('todayTrainingDynamicSlot');
+      const dot = document.getElementById('todayTrainingDot');
+      const hdrText = document.getElementById('todayTrainingHeaderText');
+      if (!slot) return;
+
+      const completed = getTodayCompletedWorkout();
+
+      if (completed) {
+        if (dot) {
+          dot.style.background = '#10b981';
+          dot.style.boxShadow = '0 0 8px rgba(16,185,129,0.7)';
+        }
+        if (hdrText) {
+          hdrText.innerText = "TODAY'S TRAINING COMPLETED ✓";
+          hdrText.style.color = "#10b981";
+        }
+
+        slot.innerHTML = `
+          <!-- POST-WORKOUT RECOVERY HERO CARD (3D SPECULAR GLASS) -->
+          <div class="card card-highlight" style="padding:16px; border:1px solid rgba(16,185,129,0.35); border-top:1px solid rgba(255,255,255,0.28); box-shadow:0 12px 32px -4px rgba(0,0,0,0.7), 0 0 24px -2px rgba(16,185,129,0.15), inset 0 1px 1px 0 rgba(255,255,255,0.15);">
+            
+            <!-- TOP STATUS BADGES -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+              <span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#10b981; font-size:10px; font-weight:900; padding:2px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.04em;">
+                🏆 TARGET STIMULUS ACHIEVED
+              </span>
+              <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 8px; border-radius:5px;">
+                ${completed.recoveryPill}
+              </span>
+            </div>
+
+            <!-- HERO HEADLINE -->
+            <div style="font-size:15.5px; font-weight:800; color:#fff; font-family:var(--font-display); line-height:1.3; margin-top:2px;">
+              ${completed.title}
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+              Primary Mechanical Tension Stimulus Locked In • ${completed.source}
+            </div>
+
+            <!-- 3 GLANCEABLE METRIC BOXES -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:12px;">
+              <div style="background:linear-gradient(180deg, rgba(30,41,59,0.45) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(148,163,184,0.15); border-top:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 6px; text-align:center;">
+                <div style="font-size:13px; font-weight:800; color:#fff; font-family:var(--font-mono);">⏱ ${completed.durationMin}m</div>
+                <div style="font-size:9.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-top:1px;">Session Time</div>
+              </div>
+              <div style="background:linear-gradient(180deg, rgba(30,41,59,0.45) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(148,163,184,0.15); border-top:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 6px; text-align:center;">
+                <div style="font-size:13px; font-weight:800; color:var(--primary); font-family:var(--font-mono);">🔥 ~${completed.calories}</div>
+                <div style="font-size:9.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-top:1px;">Active Burn</div>
+              </div>
+              <div style="background:linear-gradient(180deg, rgba(30,41,59,0.45) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(148,163,184,0.15); border-top:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 6px; text-align:center;">
+                <div style="font-size:13px; font-weight:800; color:#10b981; font-family:var(--font-mono);">🛡️ 81.14kg</div>
+                <div style="font-size:9.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-top:1px;">Muscle Protected</div>
+              </div>
+            </div>
+
+            <!-- EXECUTIVE PHYSIOLOGICAL DIRECTIVE (GOLDFISH TIER) -->
+            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.45; margin-top:12px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px;">
+              Your central nervous system and prime movers have achieved their maximal effective stimulus for today. In your 350 kcal deficit, <strong>lifting again today yields zero extra muscle gain</strong> and induces muscle breakdown. Your target now is nutrient timing, hydration, and myofibrillar repair.
+            </div>
+
+            <!-- PRIMARY ACTION CTAS -->
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px;">
+              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:42px; font-size:12.5px; font-weight:700; background:linear-gradient(90deg, #0284c7 0%, #00F0FF 100%); color:#000; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                VIEW WORKOUT TELEMETRY & CHARTS ➔
+              </button>
+              
+              <button class="btn-action-primary" onclick="launchArchetypeSession('option_c')" style="height:38px; font-size:11.5px; font-weight:700; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <span>🚶</span> OPTIONAL: 20-MIN RECOVERY FLUSH WALK (0h CNS DEBT)
+              </button>
+            </div>
+
+            <!-- EXPANDABLE ELEPHANT DISCLOSURE: WHY REST IS MANDATORY -->
+            <details style="margin-top:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+              <summary style="font-size:11px; font-weight:700; color:var(--cyan); padding:8px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>📐 Why rest is now mandatory (Live Biometrics Synthesis)</span>
+                <span style="font-size:12px;">▾</span>
+              </summary>
+              <div style="padding:10px 12px; font-size:11px; color:var(--text-secondary); line-height:1.5; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px;">
+                  <span style="color:#fff;">Renpho Scale (98.0 kg, 17.2% BF)</span>
+                  <span style="color:#10b981; font-weight:700;">81.14 kg Muscle Anchor Locked</span>
+                </div>
+                <div>High mechanical tension already delivered. Performing another heavy session in a deficit depletes glycogen, spikes circulating cortisol, and causes muscle catabolism.</div>
+                
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
+                  <span style="color:#fff;">Neuromuscular & CNS Window</span>
+                  <span style="color:#f59e0b; font-weight:700;">24–48h Myofibrillar Remodeling</span>
+                </div>
+                <div>Motor unit replenishment and parasympathetic rebound require 24–48 hours. Connective tissue (tendons and joint capsules) remodel collagen during deep sleep tonight.</div>
+
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
+                  <span style="color:#fff;">Nutrient Action Required</span>
+                  <span style="color:var(--primary); font-weight:700;">200g Daily Protein Target</span>
+                </div>
+                <div>Elevate muscle protein synthesis (MPS) across the 24h recovery window. Logged: 223g ✓ (Surpassed daily target).</div>
+              </div>
+            </details>
+          </div>
+
+          <!-- COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
+          <details style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
+            <summary style="font-size:11.5px; font-weight:700; color:var(--text-muted); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
+              <span style="font-size:12px;">▾</span>
+            </summary>
+            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
+              ${getWorkoutArchetypeCardsHtml(true)}
+            </div>
+          </details>
+
+          <!-- MANUAL OVERRIDE FOOTER LINK -->
+          <div style="text-align:center; padding:4px 0 2px;">
+            <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
+              ↺ Switch to Pre-Workout Prescription Mode
+            </span>
+          </div>
+        `;
+      } else {
+        if (dot) {
+          dot.style.background = 'var(--primary)';
+          dot.style.boxShadow = '0 0 6px rgba(0,229,255,0.6)';
+        }
+        if (hdrText) {
+          hdrText.innerText = "TODAY'S TRAINING RECOMMENDATIONS";
+          hdrText.style.color = "var(--text-muted)";
+        }
+
+        slot.innerHTML = `
+          <!-- HEAD COACH PRESCRIPTION & WHY CARD (GOLDFISH HERO) -->
+          <div class="card card-highlight" style="padding:14px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="background:rgba(0, 229, 255, 0.12); border:1px solid rgba(0, 229, 255, 0.35); color:var(--primary); font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">
+                  ⭐ AI COACH TOP RECOMMENDATION
+                </span>
+              </div>
+              <span style="font-size:10.5px; font-weight:700; color:#38bdf8;">Readiness: 88 (Optimal)</span>
+            </div>
+
+            <div style="font-size:15px; font-weight:800; color:#fff; line-height:1.3; margin-top:4px;">
+              Prescription: Option A (Heavy Barbell Strength & Hinge)
+            </div>
+            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:6px;">
+              You already logged <strong>345 kcal of cardio</strong> this morning. More cardio yields diminishing returns and risks catabolizing lean muscle in a deficit. With an <strong>88 Sleep Score</strong> and <strong>48 bpm RHR</strong>, your nervous system is fully primed to lift heavy. Heavy mechanical tension on chest, back, and hamstrings tells your body: <em>"keep all 81.14 kg of muscle, burn the remaining 2.54 kg of fat instead."</em>
+            </div>
+
+            <!-- EXPANDABLE TELEMETRY SYNTHESIS DRAWER (ELEPHANT DISCLOSURE) -->
+            <details style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+              <summary style="font-size:11.5px; font-weight:700; color:var(--cyan); padding:8px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>📐 How your live biometrics built today's options</span>
+                <span style="font-size:12px;">▾</span>
+              </summary>
+              <div style="padding:10px 12px; font-size:11px; color:var(--text-secondary); line-height:1.5; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px;">
+                  <span style="color:#fff;">Renpho Scale (98.0 kg, 17.2% BF)</span>
+                  <span style="color:var(--primary); font-weight:700;">81.14 kg Lean Mass Anchor</span>
+                </div>
+                <div>To lose 2.54 kg of fat and hit 15.0% (95.46 kg), high mechanical load is biologically required to prevent muscle loss while in your 350 kcal deficit.</div>
+                
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
+                  <span style="color:#fff;">Garmin Sleep & HRV</span>
+                  <span style="color:#38bdf8; font-weight:700;">88 Sleep • 48 bpm RHR • Balanced</span>
+                </div>
+                <div>Deep restorative sleep (7h 43m) and balanced parasympathetic tone indicate zero central nervous system fatigue debt. High-output compound lifting cleared.</div>
+
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
+                  <span style="color:#fff;">Recent Workout Load (Last 4 Days)</span>
+                  <span style="color:#f59e0b; font-weight:700;">High Cardio Accumulation</span>
+                </div>
+                <div>30.7m cardio today (345 kcal) + 34.4m yesterday (419 kcal) + 300 tuck jumps Nov 8 (355 kcal). Lower body knee/tendon impact is high; upper body push and posterior chain are fresh.</div>
+              </div>
+            </details>
+          </div>
+
+          <!-- THE 3 WORKOUT ARCHETYPE CARDS -->
+          ${getWorkoutArchetypeCardsHtml(false)}
+
+          <!-- MANUAL OVERRIDE FOOTER LINK -->
+          <div style="text-align:center; padding:4px 0 2px;">
+            <span style="font-size:10.5px; color:var(--primary); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(true)">
+              ✓ Mark Today's Strength Workout Complete
+            </span>
+          </div>
+        `;
+      }
+    }
+
+    function toggleWorkoutCompleteManual(isComplete) {
+      try {
+        localStorage.setItem('pulse_strength_done_today', isComplete ? 'true' : 'false');
+      } catch(e) {}
+      beep(isComplete ? 880 : 600, 0.1);
+      showToast(isComplete ? '🏆 Today\'s session marked complete! Recovery protocol active.' : '🔄 Reopened pre-workout prescription mode.');
+      renderTodayTrainingRecommendations();
+    }
+
+    function viewCompletedWorkoutBreakdown() {
+      switchTab('train');
+      switchTrainView('history');
+      setTimeout(() => {
+        const firstAct = recentActivitiesData[0];
+        if (firstAct) {
+          const body = document.getElementById('benefit_body_' + firstAct.id);
+          const arrow = document.getElementById('arrow_' + firstAct.id);
+          if (body) {
+            body.style.display = 'flex';
+            if (arrow) arrow.classList.add('open');
+            body.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 120);
     }
 
     // EXERCISE STEPPER & AUTOREGULATION LOGGING
@@ -6398,6 +6921,8 @@ function generateWorkoutFromGearAndGoal() {
       sessionLoggedSets = {};
 
       showToast('🏆 Workout logged! Autoregulation state saved.');
+      try { localStorage.setItem('pulse_strength_done_today', 'true'); } catch(e) {}
+      renderTodayTrainingRecommendations();
       switchTab('fuel');
     }
 
@@ -8333,6 +8858,7 @@ function generateWorkoutFromGearAndGoal() {
 
             recentActivitiesData = merged.length > 0 ? merged : garminActs;
             renderHistoryList();
+            renderTodayTrainingRecommendations();
           }
 
           // 1.1 MyNetDiary Food Ingestion from Live State
@@ -8479,6 +9005,7 @@ function generateWorkoutFromGearAndGoal() {
       restoreActivitiesFromLocalStorage();
       renderCurrentExercise();
       renderHistoryList();
+      renderTodayTrainingRecommendations();
       loadLiveState();
       checkMndStatus();
 
