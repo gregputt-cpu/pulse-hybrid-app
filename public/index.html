@@ -8496,10 +8496,32 @@ function generateWorkoutFromGearAndGoal() {
       }
 
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-        navigator.serviceWorker.register('/sw.js').then(() => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
           console.log('✓ PULSE PWA Service Worker active');
+          if (reg) {
+            reg.update();
+            reg.onupdatefound = () => {
+              const installing = reg.installing;
+              if (installing) {
+                installing.onstatechange = () => {
+                  if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('New update available, auto-reloading...');
+                    window.location.reload();
+                  }
+                };
+              }
+            };
+          }
         }).catch(e => {
           console.log('PWA Service Worker notice:', e.message);
+        });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
 

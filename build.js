@@ -7,7 +7,9 @@ const staticDir = path.join(outputDir, 'static');
 const distDir = path.join(rootDir, 'dist');
 const publicDir = path.join(rootDir, 'public');
 
-for (const d of [staticDir, distDir, publicDir]) {
+const backendStaticDir = path.join(rootDir, 'backend', 'static');
+
+for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
   fs.mkdirSync(d, { recursive: true });
 }
 
@@ -25,7 +27,7 @@ const assets = [
 for (const file of assets) {
   const src = path.join(rootDir, file);
   if (fs.existsSync(src)) {
-    for (const d of [staticDir, distDir, publicDir]) {
+    for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
       fs.copyFileSync(src, path.join(d, file));
     }
     if (file === 'live_state.json') {

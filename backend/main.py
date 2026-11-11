@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -65,14 +66,33 @@ class SetLogPayload(BaseModel):
 class DatePayload(BaseModel):
     date: Optional[str] = None
 
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+
 @app.get("/")
 def root():
+    static_index = os.path.join(static_dir, "index.html")
+    if os.path.exists(static_index):
+        return FileResponse(static_index)
     return {
         "service": "PULSE • Hybrid Athlete OS Cloud Engine",
         "status": "online",
         "docs": "/docs",
         "version": "1.0.0"
     }
+
+@app.get("/sw.js")
+def get_sw():
+    sw_file = os.path.join(static_dir, "sw.js")
+    if os.path.exists(sw_file):
+        return FileResponse(sw_file, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="sw.js not found")
+
+@app.get("/manifest.json")
+def get_manifest():
+    mf_file = os.path.join(static_dir, "manifest.json")
+    if os.path.exists(mf_file):
+        return FileResponse(mf_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404, detail="manifest.json not found")
 
 @app.get("/api/health")
 def health():
