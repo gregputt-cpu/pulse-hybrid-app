@@ -4,13 +4,13 @@
     "name": "Greg Putt",
     "age": 45,
     "height_cm": 190.0,
-    "weight_kg": 98.0,
+    "weight_kg": 98.25,
     "body_fat_pct": 17.2,
     "target_body_fat_pct": 15.0,
-    "lean_mass_kg": 81.14,
+    "lean_mass_kg": 81.35,
     "muscle_mass_kg": 53.4,
     "fat_to_lose_kg": 2.54,
-    "target_weight_kg": 95.46
+    "target_weight_kg": 95.71
   },
   "garmin": {
     "device": "f\u0113nix 8 - 51mm AMOLED",
@@ -289,23 +289,23 @@
     ]
   },
   "renpho": {
-    "source": "live_renpho_cloud",
-    "weight_kg": 98.0,
+    "source": "renpho_direct_cloud",
+    "weight_kg": 98.25,
     "body_fat_pct": 17.2,
     "water_pct": 59.8,
     "muscle_mass_kg": 53.4,
-    "bone_mass_kg": 4.01,
+    "bone_mass_kg": 4.03,
     "visceral_fat": 10.0,
     "subcutaneous_fat_pct": 14.5,
-    "bmi": 27.1,
+    "bmi": 27.2,
     "protein_pct": 18.9,
-    "lean_mass_kg": 81.14,
-    "bmr": 2101,
+    "lean_mass_kg": 81.35,
+    "bmr": 2109,
     "body_age": 46,
-    "target_weight_at_15pct": 95.46,
+    "target_weight_at_15pct": 95.71,
     "fat_to_lose_kg": 2.54,
-    "last_synced": "2026-11-10 14:30:06",
-    "raw_id": 6114140706739814272
+    "last_synced": "2026-11-11 13:46:51",
+    "raw_id": 6114871279311093632
   },
   "nutrition": {
     "bmr": 2149,

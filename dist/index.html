@@ -2213,30 +2213,30 @@
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Muscle</div>
-              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;">53.4kg</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoMuscleVal">53.4kg</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Lean Mass</div>
-              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;">81.1kg</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoLbmVal">81.1kg</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Water</div>
-              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;">59.8%</div>
+              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;" id="renphoWaterVal">59.8%</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Visceral</div>
-              <div style="font-size:13px; font-weight:800; color:var(--primary); margin-top:2px;">10.0</div>
+              <div style="font-size:13px; font-weight:800; color:var(--primary); margin-top:2px;" id="renphoVisceralVal">10.0</div>
             </div>
           </div>
 
           <!-- Recomposition Progress Bar with Multi-stop Gradient & Glow -->
           <div style="margin-top:12px;">
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-bottom:5px;">
-              <span>17.2% Scale Measured</span>
-              <span style="color:var(--primary); font-weight:700;">2.54 kg to 15.0% Goal (95.46kg)</span>
+              <span id="renphoMeasuredBfLabel">17.2% Scale Measured</span>
+              <span style="color:var(--primary); font-weight:700;" id="renphoGoalRunwayLabel">2.54 kg to 15.0% Goal (95.46kg)</span>
             </div>
             <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
-              <div class="progress-bar-telemetry" style="width:78%; height:100%; border-radius:3px;"></div>
+              <div class="progress-bar-telemetry" id="renphoProgressBar" style="width:78%; height:100%; border-radius:3px;"></div>
             </div>
           </div>
         </div>
@@ -8907,26 +8907,6 @@ function generateWorkoutFromGearAndGoal() {
           }
         }
 
-        // Load manual local storage weight override if set
-        const savedWt = localStorage.getItem('pulse_athlete_weight');
-        const savedBf = localStorage.getItem('pulse_athlete_bf');
-        if (savedWt) {
-          const pWt = parseFloat(savedWt);
-          const pBf = parseFloat(savedBf) || 16.7;
-          const lbm = 82.38;
-          const fatToBurn = parseFloat(Math.max(0, pWt - (lbm / 0.85)).toFixed(2));
-          const vs = document.getElementById('vitalScale');
-          if (vs) vs.innerHTML = `${pWt.toFixed(2)} <small style="font-size:10px;color:var(--text-muted);font-weight:400;">kg</small>`;
-          const vss = document.getElementById('vitalScaleSub');
-          if (vss) vss.innerText = `${pBf}% BF (-${fatToBurn}kg)`;
-          const bsw = document.getElementById('bodyScaleWeight');
-          if (bsw) bsw.innerHTML = `${pWt.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
-          const bsbf = document.getElementById('bodyScaleBf');
-          if (bsbf) bsbf.innerText = `${pBf}% Body Fat (Logged Today)`;
-          const bfb = document.getElementById('bodyFatToBurnNum');
-          if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
-        }
-
         // 2. Renpho Scale Binding
         if (state.injuries) {
           athleteInjuries = { ...athleteInjuries, ...state.injuries };
@@ -8943,18 +8923,66 @@ function generateWorkoutFromGearAndGoal() {
           }
           if (r.body_fat_pct) {
             const el1 = document.getElementById('vitalScaleSub');
-            if (el1) el1.innerText = `${r.body_fat_pct}`;
+            if (el1) el1.innerText = `${r.body_fat_pct.toFixed(1)}`;
             const el2 = document.getElementById('bodyScaleBf');
-            if (el2) el2.innerText = `${r.body_fat_pct}% Body Fat (Synced Today)`;
+            if (el2) el2.innerText = `${r.body_fat_pct.toFixed(1)}% Body Fat (Synced Today)`;
             const el3 = document.getElementById('normBfVal');
-            if (el3) el3.innerText = `${r.body_fat_pct}%`;
+            if (el3) el3.innerText = `${r.body_fat_pct.toFixed(1)}%`;
             const el4 = document.getElementById('normBfBadge');
             if (el4) el4.innerText = `TOP ${r.body_fat_pct <= 16.7 ? '12%' : '15%'} OF 45yo MEN`;
+            const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
+            if (elMeasuredLabel) elMeasuredLabel.innerText = `${r.body_fat_pct.toFixed(1)}% Scale Measured`;
           }
           if (r.fat_to_lose_kg) {
             const el1 = document.getElementById('bodyFatToBurnNum');
             if (el1) el1.innerText = `${r.fat_to_lose_kg} kg (${(r.fat_to_lose_kg * 2.20462).toFixed(1)} lbs)`;
+            const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
+            const targetWeightAtGoal = (r.target_weight_at_15pct || 95.71).toFixed(2);
+            if (elGoalLabel) elGoalLabel.innerText = `${r.fat_to_lose_kg} kg to 15.0% Goal (${targetWeightAtGoal}kg)`;
           }
+          if (r.muscle_mass_kg) {
+            const elMuscle = document.getElementById('renphoMuscleVal');
+            if (elMuscle) elMuscle.innerText = `${r.muscle_mass_kg.toFixed(1)}kg`;
+          }
+          if (r.lean_mass_kg) {
+            const elLbm = document.getElementById('renphoLbmVal');
+            if (elLbm) elLbm.innerText = `${r.lean_mass_kg.toFixed(1)}kg`;
+          }
+          if (r.water_pct) {
+            const elWater = document.getElementById('renphoWaterVal');
+            if (elWater) elWater.innerText = `${r.water_pct.toFixed(1)}%`;
+          }
+          if (r.visceral_fat !== undefined) {
+            const elVisceral = document.getElementById('renphoVisceralVal');
+            if (elVisceral) elVisceral.innerText = `${Number(r.visceral_fat).toFixed(1)}`;
+          }
+          if (r.last_synced) {
+            const syncEl = document.getElementById('renphoSyncTime');
+            try {
+              const timePart = r.last_synced.includes('T') ? r.last_synced.split('T')[1].slice(0, 5) : r.last_synced.split(' ')[1].slice(0, 5);
+              if (syncEl) syncEl.innerText = `Live Ingested • ${timePart}`;
+            } catch(e) {}
+          }
+        }
+
+        // Load manual local storage weight override only if no direct renpho sync exists
+        const savedWt = localStorage.getItem('pulse_athlete_weight');
+        const savedBf = localStorage.getItem('pulse_athlete_bf');
+        if (savedWt && !state.renpho) {
+          const pWt = parseFloat(savedWt);
+          const pBf = parseFloat(savedBf) || 16.7;
+          const lbm = 81.35;
+          const fatToBurn = parseFloat(Math.max(0, pWt - (lbm / 0.85)).toFixed(2));
+          const vs = document.getElementById('vitalScale');
+          if (vs) vs.innerHTML = `${pWt.toFixed(1)}`;
+          const vss = document.getElementById('vitalScaleSub');
+          if (vss) vss.innerText = `${pBf.toFixed(1)}`;
+          const bsw = document.getElementById('bodyScaleWeight');
+          if (bsw) bsw.innerHTML = `${pWt.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+          const bsbf = document.getElementById('bodyScaleBf');
+          if (bsbf) bsbf.innerText = `${pBf}% Body Fat (Logged Today)`;
+          const bfb = document.getElementById('bodyFatToBurnNum');
+          if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
         }
 
         // 3. Nutrition Targets

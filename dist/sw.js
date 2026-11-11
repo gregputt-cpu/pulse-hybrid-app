@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v23-dynamic-protein-telemetry';
+const CACHE_NAME = 'pulse-cache-v24-live-renpho-sync';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
