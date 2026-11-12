@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v24-live-renpho-sync';
+const CACHE_NAME = 'pulse-cache-v26-egm-protocol-alignment';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

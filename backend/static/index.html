@@ -2100,10 +2100,10 @@
               <!-- Subtle tick marks indicator / glow -->
               <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2, 6" />
               <!-- Progress Arc (88% = circumference 427.26, offset = 51.27) -->
-              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="51.27" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
+              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="29.9" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
             </svg>
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">88</div>
+              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">93</div>
               <div style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Optimal Readiness</div>
             </div>
           </div>
@@ -2124,10 +2124,10 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="18.8" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
+                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="9.4" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">88</span>
+                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">94</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Sleep</div>
@@ -2171,7 +2171,7 @@
                 <circle cx="30" cy="30" r="25" fill="none" stroke="url(#rhrGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="45" style="filter:drop-shadow(0 0 4px rgba(249,115,22,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalRhrVal" style="font-size:17px; font-weight:700; color:#fff;">48</span>
+                <span id="vitalRhrVal" style="font-size:17px; font-weight:700; color:#fff;">46</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Resting HR</div>
@@ -2268,8 +2268,8 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(0,229,255,0.4));"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
             </div>
             <div>
-              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;" id="garminBannerTitle">GARMIN FĒNIX 8 SYNCED • TUE 10 NOV</div>
-              <div style="font-size:12px; font-weight:700; color:#fff; margin-top:1px;" id="garminBannerSub">1 Workout Ingested (345 kcal) • Cardio (30.7 min)</div>
+              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;" id="garminBannerTitle">GARMIN FĒNIX 8 SYNCED • LIVE CLOUD</div>
+              <div style="font-size:12px; font-weight:700; color:#fff; margin-top:1px;" id="garminBannerSub">Sleep 94 (Optimal) • Readiness 93 • RHR 46 bpm • 0 Workouts Today</div>
             </div>
           </div>
           <div style="font-size:11.5px; font-weight:700; color:var(--primary);">
@@ -6194,67 +6194,313 @@ function generateWorkoutFromGearAndGoal() {
       });
     }
 
-    // ==================== TODAY SCREEN POST-WORKOUT RECOVERY LIFECYCLE ====================
+    // ==================== TODAY SCREEN POST-WORKOUT RECOVERY & NEXT-DAY ENGINE ====================
     function getTodayCompletedWorkout() {
-      // 1. Check in-app logged session history
+      const now = new Date();
+      const todayIsoDate = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      const todayStr = now.toDateString();
+
+      // 1. Check in-app logged session history strictly for TODAY
       try {
         const rawSessions = localStorage.getItem('pulse_session_history');
         if (rawSessions) {
           const sessions = JSON.parse(rawSessions);
           if (Array.isArray(sessions) && sessions.length > 0) {
-            const todayStr = new Date().toDateString();
-            const found = sessions.find(s => s.date && new Date(s.date).toDateString() === todayStr);
+            const found = sessions.find(s => {
+              if (!s.date) return false;
+              const d = new Date(s.date);
+              return !isNaN(d.getTime()) && d.toDateString() === todayStr;
+            });
             if (found) {
               return {
-                title: found.preset === 'gym' ? 'Option A: Heavy Barbell Strength & Hinge' : 'Option B: Hybrid Work Capacity Circuit',
-                durationMin: 45,
-                calories: 320,
+                title: found.preset === 'gym' ? 'Option A: Heavy Barbell Strength & Hinge' : (found.preset === 'combat' ? 'Option B: Hybrid Work Capacity Circuit' : 'Option C: Active Recovery & Zone 2 Flush'),
+                durationMin: found.durationMin || 45,
+                calories: found.calories || 320,
                 recoveryHours: 48,
                 recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
                 isStrength: true,
-                source: 'In-App Workout Player'
+                source: 'In-App Workout Player',
+                completedAt: found.date
               };
             }
           }
         }
       } catch(e) {}
 
-      // 2. Check recentActivitiesData for today's strength or heavy session
+      // 2. Check recentActivitiesData for any workout completed TODAY (Garmin fēnix 8)
       if (Array.isArray(recentActivitiesData)) {
-        const strAct = recentActivitiesData.find(a => {
+        const todayAct = recentActivitiesData.find(a => {
           const fmt = formatActivityDisplay(a);
-          if (!fmt.isToday) return false;
-          const txt = `${a.name || ''} ${a.subTitle || ''}`.toLowerCase();
-          return txt.includes('strength') || txt.includes('barbell') || txt.includes('lift') || txt.includes('weight') || txt.includes('option_a') || txt.includes('option a') || txt.includes('gym');
+          return fmt.isToday;
         });
-        if (strAct) {
+        if (todayAct) {
+          const isStr = `${todayAct.name || ''} ${todayAct.subTitle || ''}`.toLowerCase().includes('strength');
           return {
-            title: strAct.subTitle || strAct.name || 'Strength Training Session',
-            durationMin: strAct.durationMin || 45,
-            calories: strAct.calories || 320,
-            recoveryHours: 48,
-            recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
-            isStrength: true,
-            source: 'Garmin Fēnix 8 Sync'
+            title: todayAct.subTitle || todayAct.name || 'Completed Workout Session',
+            durationMin: todayAct.durationMin || Math.round(todayAct.duration_min || 30),
+            calories: todayAct.calories || 250,
+            recoveryHours: isStr ? 48 : 24,
+            recoveryPill: isStr ? '⏳ 24–48h Recovery Window • In Progress' : '⚡ Aerobic Recovery • In Progress',
+            isStrength: isStr,
+            source: 'Garmin fēnix 8 Sync',
+            completedAt: todayAct.rawDate || todayAct.date
           };
         }
       }
 
-      // 3. User manual completion flag or default state (user stated workout completed today)
-      const manualFlag = localStorage.getItem('pulse_strength_done_today');
-      if (manualFlag === 'true' || manualFlag === null) {
-        return {
-          title: 'Option A: Heavy Barbell Strength & Hinge',
-          durationMin: 45,
-          calories: 320,
-          recoveryHours: 48,
-          recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
-          isStrength: true,
-          source: 'Strength Session Logged'
-        };
-      }
+      // 3. User manual completion flag (strictly scoped to today\'s date)
+      try {
+        const manualFlag = localStorage.getItem('pulse_strength_done_today');
+        const manualDate = localStorage.getItem('pulse_workout_completed_date');
+        if (manualFlag === 'true' && manualDate === todayIsoDate) {
+          return {
+            title: 'Option A: Heavy Barbell Strength & Hinge',
+            durationMin: 45,
+            calories: 320,
+            recoveryHours: 48,
+            recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
+            isStrength: true,
+            source: 'Manually Logged Today',
+            completedAt: todayIsoDate
+          };
+        }
+      } catch(e) {}
 
       return null;
+    }
+
+    // ==================== NEXT-DAY AUTOREGULATION & PREVIEW ENGINE ====================
+    function generateTomorrowRecommendation(completedToday) {
+      const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
+      
+      let sleepScore = 94;
+      let readiness = 93;
+      let restingHr = 46;
+      let hrvStatus = "Balanced (Optimal Parasympathetic Rebound)";
+      let scaleWeight = 98.2;
+      let bodyFatPct = 17.2;
+      let leanMass = 81.35;
+      let fatToLose = 2.49;
+      let targetWeight = 95.71;
+
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
+        const g = window.BAKED_LIVE_STATE.garmin;
+        if (g.sleep_score !== undefined) sleepScore = g.sleep_score;
+        if (g.training_readiness !== undefined) readiness = g.training_readiness;
+        if (g.resting_hr !== undefined) restingHr = g.resting_hr;
+        if (g.readiness_feedback) hrvStatus = g.readiness_feedback;
+      }
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.renpho) {
+        const r = window.BAKED_LIVE_STATE.renpho;
+        if (r.weight_kg) scaleWeight = r.weight_kg;
+        if (r.body_fat_pct) bodyFatPct = r.body_fat_pct;
+        if (r.lean_mass_kg) leanMass = r.lean_mass_kg;
+        if (r.fat_to_lose_kg) fatToLose = r.fat_to_lose_kg;
+        if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
+      }
+
+      const todayTitle = (completedToday && completedToday.title) ? completedToday.title.toLowerCase() : '';
+      const isLowerHeavy = todayTitle.includes('squat') || todayTitle.includes('hinge') || todayTitle.includes('option a') || todayTitle.includes('barbell') || todayTitle.includes('strength');
+
+      let latestAvgHr = 98;
+      if (acts.length > 0 && acts[0].avgHr) latestAvgHr = acts[0].avgHr;
+
+      if (isLowerHeavy) {
+        return {
+          presetKey: 'option_b',
+          title: 'Option B: Hybrid Work Capacity & Upper Core Circuit',
+          subtitle: 'Rotational Torso, Kettlebell Dynamics & Dumbbell Floor Density',
+          durationMin: 32,
+          calories: 385,
+          fatigueImpact: 'Low CNS Debt (0h)',
+          equipment: 'Kettlebells (24–32kg), Dumbbells & Speed Rope',
+          badge: 'AUTOREGULATION TARGET',
+          summary: 'Rotates mechanical stress away from posterior chain prime movers into dynamic core torque and Zone 2–3 intervals, sustaining your 350 kcal daily deficit without joint strain.',
+          reasoning: [
+            {
+              title: 'Musculoskeletal & Biomechanical Shield',
+              desc: `Today delivered peak mechanical tension to your posterior chain (glutes, hamstrings, lumbar erectors). These motor units require <strong>24–48 hours for myofibrillar remodeling</strong>. Option B rotates load to rotational core, upper body pushing, and kettlebell dynamics, allowing lower prime movers to repair while keeping daily metabolic burn high.`
+            },
+            {
+              title: 'Heart Rate & Cardiovascular Conditioning',
+              desc: `Your recent workout telemetry logged controlled average HR (${latestAvgHr} bpm). Tomorrow's interval circuit will tap Zone 2–3 conditioning (target 125–138 bpm), driving mitochondrial capillary expansion and lactate buffering without inducing central nervous system exhaustion.`
+            },
+            {
+              title: 'Wearable Sleep & Autonomic Recovery',
+              desc: `Garmin Sleep Score of <strong>${sleepScore}</strong> and resting HR of <strong>${restingHr} bpm</strong> (${readiness} Readiness) reflect superior parasympathetic rebound. Your autonomic nervous system is fully cleared to handle dynamic work capacity tomorrow.`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `At <strong>${scaleWeight} kg</strong> and <strong>${bodyFatPct}% body fat</strong>, you are just <strong>${fatToLose} kg</strong> away from 15.0% (${targetWeight} kg target). The ~385 kcal active burn from Option B maintains your 350 kcal daily fat-loss deficit while anchoring all ${leanMass} kg of lean mass.`
+            }
+          ],
+          blueprint: [
+            { name: 'Kettlebell Two-Hand Swings', prescription: '4 × 15 @ 24–32kg (60s rest)', cue: 'Violent hip snap, bell floats weightless, glutes contracted.' },
+            { name: 'Dumbbell Chest Floor Press', prescription: '4 × 10 @ 2×22kg (75s rest)', cue: 'Pause briefly on floor to eliminate momentum; explosive concentric press.' },
+            { name: 'Rotational Slam Ball Slams', prescription: '4 × 12 @ 10–15kg (45s rest)', cue: 'Full overhead extension, drive ball into floor with core torque.' },
+            { name: 'Floor Push-ups (Tempo 3-0-1)', prescription: '3 × 18 @ Bodyweight (60s rest)', cue: '3-second lowering tempo, screw hands into floor.' },
+            { name: 'Speed Rope Double-Under Ladder', prescription: '6 rounds × 45s work / 15s rest', cue: 'Wrists rotate near hips, light bounce on balls of feet.' }
+          ],
+          alternative: {
+            presetKey: 'option_c',
+            title: 'Option C: Incline Cadence Flush & Prehab',
+            desc: 'If morning readiness or sleep drops below 75, pivot to Zone 2 walking & knee prehab (0h CNS debt).'
+          }
+        };
+      } else {
+        return {
+          presetKey: 'option_a',
+          title: 'Option A: Heavy Barbell Strength & Muscle Anchor',
+          subtitle: 'Upper Push Power & Posterior Chain Mechanical Tension',
+          durationMin: 45,
+          calories: 320,
+          fatigueImpact: 'Controlled CNS (Spares Knees)',
+          equipment: 'Barbell, Weight Plates & Dip Station',
+          badge: 'AUTOREGULATION TARGET',
+          summary: 'Delivers high mechanical tension to chest and posterior chain with 90s rest intervals, anchoring all 81.4 kg of lean mass while protecting nervous system reserves.',
+          reasoning: [
+            {
+              title: 'High Mechanical Tension Required',
+              desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow must deliver high mechanical load to chest, lats, and posterior chain without taxing cardiovascular fatigue reserves.`
+            },
+            {
+              title: 'Heart Rate & Cardiac EPOC',
+              desc: `Recent work capacity sessions spiked cardiovascular output. Tomorrow's compound strength format utilizes 90-second rest intervals, keeping heart rate lower (~95–110 bpm) while taxing muscular motor units directly.`
+            },
+            {
+              title: 'Sleep & CNS Priming',
+              desc: `With a <strong>${sleepScore} Sleep Score</strong> and <strong>${restingHr} bpm RHR</strong>, your central nervous system has replenished motor unit firing potential. Heavy compound lifting is cleared.`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `Anchors all ${leanMass} kg of lean mass while driving the final ${fatToLose} kg fat loss toward 15.0%.`
+            }
+          ],
+          blueprint: [
+            { name: 'Barbell Romanian Deadlift (RDL)', prescription: '4 × 8 @ 110kg (90s rest)', cue: 'Hips back, neutral spine, explosive glute lockout.' },
+            { name: 'Barbell Flat / Floor Press', prescription: '4 × 6-8 @ 95kg (90s rest)', cue: 'Controlled eccentric, 45° elbow tuck, explosive press.' },
+            { name: 'Dip Bar Chest & Tricep Dips', prescription: '3 × 12 @ Bodyweight (75s rest)', cue: 'Slight forward torso lean, full tricep lockout.' },
+            { name: 'Barbell Pendlay Row', prescription: '4 × 8 @ 85kg (90s rest)', cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
+            { name: 'Floor Seated Barbell Z-Press', prescription: '3 × 10 @ 45kg (60s rest)', cue: 'Seated with straight legs; strict overhead deltoid power.' }
+          ],
+          alternative: {
+            presetKey: 'option_c',
+            title: 'Option C: Active Recovery & Synovial Restoration',
+            desc: 'Light 25-min outdoor recovery walk + banded joint restoration if joints require deload.'
+          }
+        };
+      }
+    }
+
+    function renderTomorrowPreviewCard(completedToday) {
+      const rec = generateTomorrowRecommendation(completedToday);
+      return `
+        <!-- ELEPHANT-GOLDFISH PROTOCOL: TOMORROW'S AUTOREGULATION PREVIEW -->
+        <div class="card" style="padding:16px; margin-top:10px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:14px; position:relative;">
+          
+          <!-- GOLDFISH TIER: TOP BADGE & CLASSIFICATION -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                ${rec.badge}
+              </span>
+              <span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
+                Tomorrow's Focus
+              </span>
+            </div>
+            <span style="font-size:10.5px; font-weight:700; color:var(--text-secondary);">
+              Next Day Autoregulation
+            </span>
+          </div>
+
+          <!-- GOLDFISH TIER: WORKOUT TITLE & SUBTITLE -->
+          <div style="font-size:16px; font-weight:800; color:#fff; font-family:var(--font-sans); line-height:1.3; margin-top:2px;">
+            ${rec.title}
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
+            ${rec.subtitle} • ${rec.equipment}
+          </div>
+
+          <!-- GOLDFISH TIER: GLANCEABLE METRIC STRIP (3-SECOND RULE) -->
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:10px;">
+            <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
+              <div style="font-size:13px; font-weight:800; color:#fff;">${rec.durationMin}m</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Proposed Time</div>
+            </div>
+            <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
+              <div style="font-size:13px; font-weight:800; color:var(--primary, #30d158);">~${rec.calories}</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Target Burn</div>
+            </div>
+            <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
+              <div style="font-size:13px; font-weight:800; color:#10b981;">${rec.fatigueImpact}</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Fatigue Impact</div>
+            </div>
+          </div>
+
+          <!-- GOLDFISH TIER: HUMAN-LANGUAGE SYNTHESIS -->
+          <div style="margin-top:10px; padding:10px 12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px; font-size:11.5px; color:#d4d4d8; line-height:1.45;">
+            ${rec.summary}
+          </div>
+
+          <!-- ELEPHANT TIER: EXPANDABLE PHYSIOLOGICAL RATIONALE & WEARABLE BIOMETRICS ACCORDION -->
+          <details style="margin-top:8px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:9px; overflow:hidden;">
+            <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:9px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>🔬 View Physiological Rationale & Wearable Biometrics (4 Factors)</span>
+              <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.05); font-size:11px; line-height:1.45;">
+              ${rec.reasoning.map((r, i) => `
+                <div style="border-left:2px solid ${i === 0 ? 'var(--primary, #30d158)' : (i === 1 ? '#38bdf8' : (i === 2 ? '#a78bfa' : '#f59e0b'))}; padding-left:8px;">
+                  <div style="font-weight:700; color:#fff; text-transform:uppercase; font-size:10.5px; letter-spacing:0.03em;">
+                    ${i+1}. ${r.title}
+                  </div>
+                  <div style="color:#a1a1aa; margin-top:2px;">
+                    ${r.desc}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </details>
+
+          <!-- ELEPHANT TIER: EXPANDABLE MOVEMENT BLUEPRINT ACCORDION -->
+          <details style="margin-top:6px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:9px; overflow:hidden;">
+            <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:9px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Prescribed Movement Blueprint (${rec.blueprint.length} Drills)</span>
+              <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:7px; border-top:1px solid rgba(255,255,255,0.05);">
+              ${rec.blueprint.map((b, i) => `
+                <div style="border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:5px;">
+                  <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
+                    <span style="color:#fff; font-weight:700;">${i+1}. ${b.name}</span>
+                    <span style="color:var(--primary, #30d158); font-weight:800;">${b.prescription}</span>
+                  </div>
+                  <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">Cue: ${b.cue}</div>
+                </div>
+              `).join('')}
+            </div>
+          </details>
+
+          <!-- GOLDFISH TIER: PRIMARY ACTION & CONTINGENCY -->
+          <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
+            <button class="btn-action-primary" onclick="setTomorrowTargetPlan('${rec.presetKey}')" style="height:40px; font-size:12px; font-weight:800; background:var(--primary, #30d158); color:#000; border-radius:8px; border:none; display:flex; align-items:center; justify-content:center; gap:6px; letter-spacing:0.03em;">
+              LOCK AS TOMORROW'S FOCUS ➔
+            </button>
+            <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:2px;">
+              Contingency: <em>${rec.alternative.title}</em> (${rec.alternative.desc})
+            </div>
+          </div>
+
+        </div>
+      `;
+    }
+
+    function setTomorrowTargetPlan(presetKey) {
+      try {
+        localStorage.setItem('pulse_tomorrow_plan', presetKey);
+      } catch(e) {}
+      beep(880, 0.15);
+      showToast("Locked " + (presetKey === "option_b" ? "Option B (Work Capacity)" : "Option A (Strength)") + " as tomorrow focus.");
     }
 
     function getWorkoutArchetypeCardsHtml(isCompletedMode) {
@@ -6271,15 +6517,15 @@ function generateWorkoutFromGearAndGoal() {
       const btnStyleC = isCompletedMode
         ? "height:36px; font-size:11.5px; font-weight:700; margin-top:8px; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd;"
         : "height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd;";
-      const btnTextC = isCompletedMode ? "🚶 Start Option C: 20-min Recovery Flush Walk" : "START OPTION C: AEROBIC FLUSH & PREHAB";
+      const btnTextC = isCompletedMode ? "Start Option C: 20-min Recovery Flush Walk" : "START OPTION C: AEROBIC FLUSH & PREHAB";
 
       return `
         <!-- CARD 1: OPTION A -->
-        <div class="card ${isCompletedMode ? '' : 'card-highlight'}" style="padding:14px; position:relative;">
+        <div class="card ${isCompletedMode ? '' : 'card-highlight'}" style="padding:14px; position:relative; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08);">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
               <div style="display:flex; align-items:center; gap:6px;">
-                <span style="background:var(--primary); color:#000; font-size:10px; font-weight:900; padding:1.5px 6px; border-radius:4px; letter-spacing:0.04em; font-family:var(--font-display);">⭐ RECOMMENDED</span>
+                <span style="background:var(--primary); color:#000; font-size:10px; font-weight:900; padding:1.5px 6px; border-radius:4px; letter-spacing:0.04em;">RECOMMENDED</span>
                 <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION A</span>
               </div>
               <div style="font-size:15px; font-weight:800; color:#fff; margin-top:4px;">Heavy Barbell Strength & Muscle Anchor</div>
@@ -6288,20 +6534,21 @@ function generateWorkoutFromGearAndGoal() {
           </div>
 
           <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-            <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 45 min</div>
+            <div style="font-size:11.5px; font-weight:700; color:#fff;">45 min</div>
             <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-            <div style="font-size:11.5px; font-weight:700; color:var(--primary);">🔥 ~320 kcal</div>
+            <div style="font-size:11.5px; font-weight:700; color:var(--primary);">~320 kcal</div>
             <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Barbell & Dip Bar</div>
+            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Barbell & Bench</div>
           </div>
 
           <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-            Protects your 81.14 kg lean muscle anchor in a deficit while taking axial shear off your knees.
+            Maximizes mechanical tension to anchor lean mass in a deficit without knee torque.
           </div>
 
+          <!-- ELEPHANT ACCORDION -->
           <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-            <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>📋 View Routine & Coaching Cues (5 exercises)</span>
+            <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>View Routine & Coaching Cues (5 exercises)</span>
               <span style="font-size:12px;">▾</span>
             </summary>
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -6344,7 +6591,7 @@ function generateWorkoutFromGearAndGoal() {
         </div>
 
         <!-- CARD 2: OPTION B -->
-        <div class="card" style="padding:14px;">
+        <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08);">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
               <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION B</span>
@@ -6354,9 +6601,9 @@ function generateWorkoutFromGearAndGoal() {
           </div>
 
           <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-            <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 32 min</div>
+            <div style="font-size:11.5px; font-weight:700; color:#fff;">32 min</div>
             <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-            <div style="font-size:11.5px; font-weight:700; color:#38bdf8;">🔥 ~385 kcal</div>
+            <div style="font-size:11.5px; font-weight:700; color:#38bdf8;">~385 kcal</div>
             <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
             <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Dumbbells & KB</div>
           </div>
@@ -6365,9 +6612,10 @@ function generateWorkoutFromGearAndGoal() {
             High metabolic work capacity and core rotational power without heavy spinal axial loading.
           </div>
 
+          <!-- ELEPHANT ACCORDION -->
           <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
             <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>📋 View Routine & Coaching Cues (5 exercises)</span>
+              <span>View Routine & Coaching Cues (5 exercises)</span>
               <span style="font-size:12px;">▾</span>
             </summary>
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -6393,7 +6641,7 @@ function generateWorkoutFromGearAndGoal() {
                 <span style="color:#fff; font-weight:700;">4. Floor Push-ups (Tempo 3-0-1)</span>
                 <span style="color:#38bdf8; font-weight:800;">3 × 18 @ Bodyweight (60s rest)</span>
               </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: 3 second lowering tempo, screw hands into floor.</div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: 3-second lowering tempo, screw hands into floor.</div>
 
               <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
                 <span style="color:#fff; font-weight:700;">5. Speed Rope Double-Under Ladder</span>
@@ -6410,30 +6658,31 @@ function generateWorkoutFromGearAndGoal() {
         </div>
 
         <!-- CARD 3: OPTION C -->
-        <div class="card" style="padding:14px;">
+        <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08);">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
               <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">OPTION C</span>
-              <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Aerobic Flush & Joint Restoration</div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Zone 2 Cadence Flush, Knee Synovial Flow & Core Prehab</div>
+              <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">Aerobic Engine Flush & Joint Prehab</div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Zone 2 Incline Walk & Knee-Friendly Restoration</div>
             </div>
           </div>
 
           <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-            <div style="font-size:11.5px; font-weight:700; color:#fff;">⏱ 30 min</div>
+            <div style="font-size:11.5px; font-weight:700; color:#fff;">20 min</div>
             <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-            <div style="font-size:11.5px; font-weight:700; color:#a78bfa;">🔥 ~210 kcal</div>
+            <div style="font-size:11.5px; font-weight:700; color:#a78bfa;">~140 kcal</div>
             <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Ruck / Walk & Bands</div>
+            <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">Bands & Treadmill</div>
           </div>
 
           <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-            Clears metabolic waste from morning cardio, restores knee synovial fluid, and oxidizes visceral fat with zero CNS fatigue.
+            Zero spinal compression. Stimulates lymphatic clearance and synovial fluid lubrication.
           </div>
 
+          <!-- ELEPHANT ACCORDION -->
           <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
             <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>📋 View Routine & Coaching Cues (4 exercises)</span>
+              <span>View Routine & Coaching Cues (4 exercises)</span>
               <span style="font-size:12px;">▾</span>
             </summary>
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -6481,107 +6730,55 @@ function generateWorkoutFromGearAndGoal() {
 
       if (completed) {
         if (dot) {
-          dot.style.background = '#10b981';
-          dot.style.boxShadow = '0 0 8px rgba(16,185,129,0.7)';
+          dot.style.background = 'var(--primary, #30d158)';
+          dot.style.boxShadow = 'none';
         }
         if (hdrText) {
-          hdrText.innerText = "TODAY'S TRAINING COMPLETED ✓";
-          hdrText.style.color = "#10b981";
+          hdrText.innerText = "TODAY'S TRAINING COMPLETED";
+          hdrText.style.color = "var(--primary, #30d158)";
         }
 
-        const protStatus = getLiveProteinTelemetry();
-        const protTodayDesc = protStatus.achieved
-          ? `Elevate muscle protein synthesis (MPS) across the 24h recovery window. Logged: <strong>${protStatus.logged}g ✓</strong> (Surpassed daily target).`
-          : `Elevate muscle protein synthesis (MPS) across the 24h recovery window. Logged: <strong>${protStatus.logged}g</strong> / ${protStatus.target}g target (${protStatus.remaining}g remaining).`;
-
         slot.innerHTML = `
-          <!-- POST-WORKOUT RECOVERY HERO CARD (3D SPECULAR GLASS) -->
-          <div class="card card-highlight" style="padding:16px; border:1px solid rgba(16,185,129,0.35); border-top:1px solid rgba(255,255,255,0.28); box-shadow:0 12px 32px -4px rgba(0,0,0,0.7), 0 0 24px -2px rgba(16,185,129,0.15), inset 0 1px 1px 0 rgba(255,255,255,0.15);">
-            
-            <!-- TOP STATUS BADGES -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-              <span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#10b981; font-size:10px; font-weight:900; padding:2px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.04em;">
-                🏆 TARGET STIMULUS ACHIEVED
-              </span>
-              <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 8px; border-radius:5px;">
-                ${completed.recoveryPill}
-              </span>
+          <!-- ELEPHANT-GOLDFISH PROTOCOL: COMPACT TODAY'S SESSION COMPLETION HERO -->
+          <div class="card" style="padding:14px 16px; border:1px solid rgba(48,209,88,0.25); background:var(--surface-card, #14161e); border-radius:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                  ✓ TODAY'S WORKOUT COMPLETED
+                </span>
+                <span style="font-size:11px; color:var(--text-muted);">${completed.source || 'Session Logged'}</span>
+              </div>
+              <span style="font-size:10.5px; font-weight:700; color:var(--primary, #30d158);">Stimulus Achieved</span>
             </div>
-
-            <!-- HERO HEADLINE -->
-            <div style="font-size:15.5px; font-weight:800; color:#fff; font-family:var(--font-display); line-height:1.3; margin-top:2px;">
+            <div style="font-size:15px; font-weight:800; color:#fff; font-family:var(--font-sans); margin-top:6px;">
               ${completed.title}
             </div>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-              Primary Mechanical Tension Stimulus Locked In • ${completed.source}
+            <div style="display:flex; gap:12px; align-items:center; margin-top:6px; font-size:11.5px; color:var(--text-secondary); flex-wrap:wrap;">
+              <span>${completed.durationMin} min duration</span>
+              <span style="color:var(--text-dim);">•</span>
+              <span style="color:var(--primary, #30d158); font-weight:700;">${completed.calories} kcal burned</span>
+              <span style="color:var(--text-dim);">•</span>
+              <span style="color:#f59e0b; font-weight:600;">${completed.recoveryPill || '24–48h Recovery Window'}</span>
             </div>
-
-            <!-- 3 GLANCEABLE METRIC BOXES -->
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:12px;">
-              <div style="background:linear-gradient(180deg, rgba(30,41,59,0.45) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(148,163,184,0.15); border-top:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 6px; text-align:center;">
-                <div style="font-size:13px; font-weight:800; color:#fff; font-family:var(--font-mono);">⏱ ${completed.durationMin}m</div>
-                <div style="font-size:9.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-top:1px;">Session Time</div>
-              </div>
-              <div style="background:linear-gradient(180deg, rgba(30,41,59,0.45) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(148,163,184,0.15); border-top:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 6px; text-align:center;">
-                <div style="font-size:13px; font-weight:800; color:var(--primary); font-family:var(--font-mono);">🔥 ~${completed.calories}</div>
-                <div style="font-size:9.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-top:1px;">Active Burn</div>
-              </div>
-              <div style="background:linear-gradient(180deg, rgba(30,41,59,0.45) 0%, rgba(15,23,42,0.75) 100%); border:1px solid rgba(148,163,184,0.15); border-top:1px solid rgba(255,255,255,0.14); border-radius:10px; padding:8px 6px; text-align:center;">
-                <div style="font-size:13px; font-weight:800; color:#10b981; font-family:var(--font-mono);">🛡️ 81.14kg</div>
-                <div style="font-size:9.5px; font-weight:600; color:var(--text-muted); text-transform:uppercase; margin-top:1px;">Muscle Protected</div>
-              </div>
-            </div>
-
-            <!-- EXECUTIVE PHYSIOLOGICAL DIRECTIVE (GOLDFISH TIER) -->
-            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.45; margin-top:12px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px;">
-              Your central nervous system and prime movers have achieved their maximal effective stimulus for today. In your 350 kcal deficit, <strong>lifting again today yields zero extra muscle gain</strong> and induces muscle breakdown. Your target now is nutrient timing, hydration, and myofibrillar repair.
-            </div>
-
-            <!-- PRIMARY ACTION CTAS -->
-            <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px;">
-              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:42px; font-size:12.5px; font-weight:700; background:linear-gradient(90deg, #0284c7 0%, #00F0FF 100%); color:#000; display:flex; align-items:center; justify-content:center; gap:6px;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                VIEW WORKOUT TELEMETRY & CHARTS ➔
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:34px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; display:flex; align-items:center; justify-content:center; gap:5px; flex:1;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                View Full Physiological Benefits & Telemetry ➔
               </button>
-              
-              <button class="btn-action-primary" onclick="launchArchetypeSession('option_c')" style="height:38px; font-size:11.5px; font-weight:700; background:#1e1b4b; border:1px solid rgba(167,139,250,0.4); color:#c4b5fd; display:flex; align-items:center; justify-content:center; gap:6px;">
-                <span>🚶</span> OPTIONAL: 20-MIN RECOVERY FLUSH WALK (0h CNS DEBT)
+              <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(false)" style="height:34px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:5px;">
+                ↺ Reopen Today
               </button>
             </div>
-
-            <!-- EXPANDABLE ELEPHANT DISCLOSURE: WHY REST IS MANDATORY -->
-            <details style="margin-top:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:var(--cyan); padding:8px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📐 Why rest is now mandatory (Live Biometrics Synthesis)</span>
-                <span style="font-size:12px;">▾</span>
-              </summary>
-              <div style="padding:10px 12px; font-size:11px; color:var(--text-secondary); line-height:1.5; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px;">
-                  <span style="color:#fff;">Renpho Scale (98.0 kg, 17.2% BF)</span>
-                  <span style="color:#10b981; font-weight:700;">81.14 kg Muscle Anchor Locked</span>
-                </div>
-                <div>High mechanical tension already delivered. Performing another heavy session in a deficit depletes glycogen, spikes circulating cortisol, and causes muscle catabolism.</div>
-                
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
-                  <span style="color:#fff;">Neuromuscular & CNS Window</span>
-                  <span style="color:#f59e0b; font-weight:700;">24–48h Myofibrillar Remodeling</span>
-                </div>
-                <div>Motor unit replenishment and parasympathetic rebound require 24–48 hours. Connective tissue (tendons and joint capsules) remodel collagen during deep sleep tonight.</div>
-
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
-                  <span style="color:#fff;">Nutrient Action Required</span>
-                  <span style="color:${protStatus.achieved ? '#10b981' : 'var(--primary)'}; font-weight:700;">${protStatus.target}g Daily Protein Target</span>
-                </div>
-                <div>${protTodayDesc}</div>
-              </div>
-            </details>
           </div>
 
-          <!-- COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
-          <details style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
-            <summary style="font-size:11.5px; font-weight:700; color:var(--text-muted); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+          <!-- PROMINENT NEXT-DAY PREVIEW & INTELLIGENT RECOMMENDATION (ELEPHANT-GOLDFISH PROTOCOL) -->
+          ${renderTomorrowPreviewCard(completed)}
+
+          <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
+          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
+            <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
               <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
-              <span style="font-size:12px;">▾</span>
+              <span style="font-size:11px; color:var(--text-muted);">▾</span>
             </summary>
             <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
               ${getWorkoutArchetypeCardsHtml(true)}
@@ -6598,83 +6795,98 @@ function generateWorkoutFromGearAndGoal() {
       } else {
         if (dot) {
           dot.style.background = 'var(--primary)';
-          dot.style.boxShadow = '0 0 6px rgba(0,229,255,0.6)';
+          dot.style.boxShadow = 'none';
         }
         if (hdrText) {
           hdrText.innerText = "TODAY'S TRAINING RECOMMENDATIONS";
           hdrText.style.color = "var(--text-muted)";
         }
 
+        let sleepScore = 94;
+        let readiness = 93;
+        let restingHr = 46;
+        let scaleWeight = 98.2;
+        let bodyFatPct = 17.2;
+        let leanMass = 81.35;
+        let fatToLose = 2.49;
+        let targetWeight = 95.71;
+
+        if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
+          const g = window.BAKED_LIVE_STATE.garmin;
+          if (g.sleep_score !== undefined) sleepScore = g.sleep_score;
+          if (g.training_readiness !== undefined) readiness = g.training_readiness;
+          if (g.resting_hr !== undefined) restingHr = g.resting_hr;
+        }
+        if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.renpho) {
+          const r = window.BAKED_LIVE_STATE.renpho;
+          if (r.weight_kg) scaleWeight = r.weight_kg;
+          if (r.body_fat_pct) bodyFatPct = r.body_fat_pct;
+          if (r.lean_mass_kg) leanMass = r.lean_mass_kg;
+          if (r.fat_to_lose_kg) fatToLose = r.fat_to_lose_kg;
+          if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
+        }
+
         slot.innerHTML = `
-          <!-- HEAD COACH PRESCRIPTION & WHY CARD (GOLDFISH HERO) -->
-          <div class="card card-highlight" style="padding:14px 16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="background:rgba(0, 229, 255, 0.12); border:1px solid rgba(0, 229, 255, 0.35); color:var(--primary); font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">
-                  ⭐ AI COACH TOP RECOMMENDATION
-                </span>
-              </div>
-              <span style="font-size:10.5px; font-weight:700; color:#38bdf8;">Readiness: 88 (Optimal)</span>
+          <!-- ELEPHANT-GOLDFISH HEAD COACH RECOMMENDATION & WEARABLE SYNTHESIS -->
+          <div class="card" style="padding:14px; margin-bottom:10px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+              <span style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:2px 7px; border-radius:4px; text-transform:uppercase;">
+                HEAD COACH SYNTHESIS
+              </span>
+              <span style="font-size:10.5px; color:var(--text-muted);">
+                Sleep ${sleepScore} • Readiness ${readiness} • RHR ${restingHr} bpm
+              </span>
             </div>
 
-            <div style="font-size:15px; font-weight:800; color:#fff; line-height:1.3; margin-top:4px;">
-              Prescription: Option A (Heavy Barbell Strength & Hinge)
+            <div style="font-size:13.5px; font-weight:800; color:#fff; margin-top:6px; font-family:var(--font-sans);">
+              Primary Prescription: Option A (Heavy Barbell Strength)
             </div>
-            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:6px;">
-              You already logged <strong>345 kcal of cardio</strong> this morning. More cardio yields diminishing returns and risks catabolizing lean muscle in a deficit. With an <strong>88 Sleep Score</strong> and <strong>48 bpm RHR</strong>, your nervous system is fully primed to lift heavy. Heavy mechanical tension on chest, back, and hamstrings tells your body: <em>"keep all 81.14 kg of muscle, burn the remaining 2.54 kg of fat instead."</em>
+            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.45; margin-top:4px;">
+              Optimal recovery registered (Sleep Score ${sleepScore}, Readiness ${readiness}). Cleared for maximal mechanical tension to chest and posterior chain while keeping running volume zero to protect patellofemoral cartilage.
             </div>
 
-            <!-- EXPANDABLE TELEMETRY SYNTHESIS DRAWER (ELEPHANT DISCLOSURE) -->
-            <details style="margin-top:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11.5px; font-weight:700; color:var(--cyan); padding:8px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📐 How your live biometrics built today's options</span>
-                <span style="font-size:12px;">▾</span>
+            <!-- ELEPHANT ACCORDION -->
+            <details style="margin-top:8px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
+              <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>🔬 View Wearable Rationale & Deficit Target</span>
+                <span style="font-size:11px; color:var(--text-muted);">▾</span>
               </summary>
-              <div style="padding:10px 12px; font-size:11px; color:var(--text-secondary); line-height:1.5; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px;">
-                  <span style="color:#fff;">Renpho Scale (98.0 kg, 17.2% BF)</span>
-                  <span style="color:var(--primary); font-weight:700;">81.14 kg Lean Mass Anchor</span>
-                </div>
-                <div>To lose 2.54 kg of fat and hit 15.0% (95.46 kg), high mechanical load is biologically required to prevent muscle loss while in your 350 kcal deficit.</div>
-                
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
-                  <span style="color:#fff;">Garmin Sleep & HRV</span>
-                  <span style="color:#38bdf8; font-weight:700;">88 Sleep • 48 bpm RHR • Balanced</span>
-                </div>
-                <div>Deep restorative sleep (7h 43m) and balanced parasympathetic tone indicate zero central nervous system fatigue debt. High-output compound lifting cleared.</div>
-
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:4px; margin-top:4px;">
-                  <span style="color:#fff;">Recent Workout Load (Last 4 Days)</span>
-                  <span style="color:#f59e0b; font-weight:700;">High Cardio Accumulation</span>
-                </div>
-                <div>30.7m cardio today (345 kcal) + 34.4m yesterday (419 kcal) + 300 tuck jumps Nov 8 (355 kcal). Lower body knee/tendon impact is high; upper body push and posterior chain are fresh.</div>
+              <div style="padding:8px 10px; font-size:11px; color:#a1a1aa; line-height:1.4; border-top:1px solid rgba(255,255,255,0.05);">
+                • <strong>Yesterday's Stimulus:</strong> 32.7 min strength + 38.5 min walking logged.<br>
+                • <strong>Current Composition:</strong> ${scaleWeight} kg (${bodyFatPct}% BF). Target: ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat remaining).<br>
+                • <strong>Hypertrophic Anchor:</strong> Protecting all ${leanMass} kg lean tissue under current 350 kcal deficit.
               </div>
             </details>
+
+            <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+              <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:11px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
+                ✓ Mark Today's Strength Workout Complete
+              </button>
+            </div>
           </div>
 
-          <!-- THE 3 WORKOUT ARCHETYPE CARDS -->
+          <!-- THREE DISCIPLINED ARCHETYPES (OPTIONS A, B, C) -->
           ${getWorkoutArchetypeCardsHtml(false)}
-
-          <!-- MANUAL OVERRIDE FOOTER LINK -->
-          <div style="text-align:center; padding:4px 0 2px;">
-            <span style="font-size:10.5px; color:var(--primary); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(true)">
-              ✓ Mark Today's Strength Workout Complete
-            </span>
-          </div>
         `;
       }
     }
 
     function toggleWorkoutCompleteManual(isComplete) {
+      const todayIsoDate = new Date().toISOString().split('T')[0];
       try {
-        localStorage.setItem('pulse_strength_done_today', isComplete ? 'true' : 'false');
+        if (isComplete) {
+          localStorage.setItem('pulse_strength_done_today', 'true');
+          localStorage.setItem('pulse_workout_completed_date', todayIsoDate);
+        } else {
+          localStorage.setItem('pulse_strength_done_today', 'false');
+          localStorage.removeItem('pulse_workout_completed_date');
+        }
       } catch(e) {}
       beep(isComplete ? 880 : 600, 0.1);
-      showToast(isComplete ? '🏆 Today\'s session marked complete! Recovery protocol active.' : '🔄 Reopened pre-workout prescription mode.');
+      showToast(isComplete ? "Today's session marked complete. Next-day recommendation generated." : 'Reopened pre-workout prescription mode.');
       renderTodayTrainingRecommendations();
     }
-
-    function viewCompletedWorkoutBreakdown() {
+function viewCompletedWorkoutBreakdown() {
       switchTab('train');
       switchTrainView('history');
       setTimeout(() => {
@@ -6942,7 +7154,12 @@ function generateWorkoutFromGearAndGoal() {
       sessionLoggedSets = {};
 
       showToast('🏆 Workout logged! Autoregulation state saved.');
-      try { localStorage.setItem('pulse_strength_done_today', 'true'); } catch(e) {}
+      try {
+        const _now = new Date();
+        const _iso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+        localStorage.setItem('pulse_strength_done_today', 'true');
+        localStorage.setItem('pulse_workout_completed_date', _iso);
+      } catch(e) {}
       renderTodayTrainingRecommendations();
       switchTab('fuel');
     }
@@ -8755,13 +8972,47 @@ function generateWorkoutFromGearAndGoal() {
       setTimeout(() => t.classList.remove('show'), 3200);
     }
 
+    // DYNAMIC SYNC DATE FORMATTER
+    function formatSyncDate(dateStr, lastSyncedStr) {
+      try {
+        let d = null;
+        if (dateStr && typeof dateStr === 'string' && dateStr.includes('-')) {
+          const p = dateStr.split('-');
+          if (p.length === 3) {
+            d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+          }
+        }
+        if (!d && lastSyncedStr) {
+          d = new Date(lastSyncedStr);
+        }
+        if (!d || isNaN(d.getTime())) {
+          d = new Date();
+        }
+        const today = new Date();
+        const isToday = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const isYesterday = d.getFullYear() === yesterday.getFullYear() && d.getMonth() === yesterday.getMonth() && d.getDate() === yesterday.getDate();
+
+        const weekday = d.toLocaleDateString('en-GB', { weekday: 'short' });
+        const day = d.getDate();
+        const month = d.toLocaleDateString('en-GB', { month: 'short' });
+
+        if (isToday) return `Today • ${weekday} ${day} ${month}`;
+        if (isYesterday) return `Yesterday • ${weekday} ${day} ${month}`;
+        return `${weekday} ${day} ${month}`;
+      } catch(e) {
+        return 'Live Synced';
+      }
+    }
+
     // DYNAMIC TELEMETRY SYNC PIPELINE (Reads Railway /api/live_state or live_state.json)
     async function loadLiveState() {
       try {
         let state = null;
         try {
           const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 2000);
+          const tid = setTimeout(() => ctrl.abort(), 4000);
           const res = await fetch('/api/live_state', { signal: ctrl.signal });
           clearTimeout(tid);
           if (res.ok) state = await res.json();
@@ -8800,6 +9051,12 @@ function generateWorkoutFromGearAndGoal() {
             if (el) el.innerText = g.sleep_score;
             const elSub = document.getElementById('vSleepSub');
             if (elSub && g.sleep_duration) elSub.innerText = g.sleep_duration;
+            const sleepRing = document.getElementById('vSleepRing');
+            if (sleepRing) {
+              const circ = 157;
+              const offset = circ * (1 - (g.sleep_score / 100));
+              sleepRing.style.strokeDashoffset = offset.toFixed(1);
+            }
           }
           if (g.resting_hr !== undefined) {
             const el = document.getElementById('vitalRhrVal') || document.getElementById('vitalRhr') || document.getElementById('vRhr');
@@ -8823,14 +9080,18 @@ function generateWorkoutFromGearAndGoal() {
           }
           const bTitle = document.getElementById('garminBannerTitle');
           const bSub = document.getElementById('garminBannerSub');
-          const syncDateStr = state.date === '2026-11-10' ? 'Tue 10 Nov' : 'Mon 9 Nov';
+          const syncDateStr = formatSyncDate(state.date, state.last_synced || (g && g.last_synced));
           if (bTitle) bTitle.innerText = `Garmin fēnix 8 Synced • ${syncDateStr}`;
           if (bSub) {
+            const sleepNum = (g.sleep_score !== undefined) ? g.sleep_score : 94;
+            const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
+            const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
+            const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
             const todayActsCount = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities.length : 0;
             if (todayActsCount > 0) {
-              bSub.innerText = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${g.active_calories} kcal)`;
+              bSub.innerText = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${g.active_calories || 0} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
             } else {
-              bSub.innerText = `Readiness ${g.training_readiness || 71} (Good Sleep) • RHR ${g.resting_hr || 48} bpm • 0 Workouts Today`;
+              bSub.innerText = `Sleep ${sleepNum} (${sleepRating}) • Readiness ${readinessNum} • RHR ${rhrNum} bpm • 0 Workouts Today`;
             }
           }
           if (Array.isArray(g.recent_activities) && g.recent_activities.length > 0) {
@@ -9018,6 +9279,7 @@ function generateWorkoutFromGearAndGoal() {
           renderMyNetDiaryEngine();
         }
 
+        renderTodayTrainingRecommendations();
         console.log("✓ Dynamic telemetry successfully synced from live_state.json");
       } catch(e) {
         console.log("Local static fallback active:", e.message);
