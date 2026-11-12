@@ -460,11 +460,16 @@
       border-radius: 12px;
       overflow: hidden;
       margin-top: 6px;
-      transition: all 0.2s ease;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+      flex-shrink: 0;
+      width: 100%;
+      box-sizing: border-box;
     }
     details.fuel-accordion[open] {
       border-color: rgba(255, 255, 255, 0.16);
       background: #141620;
+      height: auto !important;
+      max-height: none !important;
     }
     details.fuel-accordion > summary {
       padding: 10px 12px;
@@ -564,15 +569,22 @@
       display: none;
       flex-direction: column;
       justify-content: flex-start;
-      gap: 7px;
-      padding: 7px 12px;
+      gap: 9px;
+      padding: 8px 12px 140px 12px;
       animation: fadeIn 0.18s ease-out;
       overflow-y: auto;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
-      padding-bottom: 75px;
+      overscroll-behavior-y: contain;
+      box-sizing: border-box;
     }
     .tab-panel.active {
       display: flex;
+    }
+    .tab-panel > * {
+      flex-shrink: 0 !important;
+      width: 100%;
+      box-sizing: border-box;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: scale(0.99); }
@@ -2250,7 +2262,7 @@
               <span id="todayTrainingDot" style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(0,229,255,0.6);"></span>
               <span id="todayTrainingHeaderText" style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">TODAY'S TRAINING RECOMMENDATIONS</span>
             </div>
-            <span style="font-size:11px; font-weight:600; color:var(--text-secondary); cursor:pointer;" onclick="openEquipmentModal()">Gym Profile ⚙</span>
+            <span style="font-size:11px; font-weight:600; color:var(--text-secondary); cursor:pointer;" onclick="openEquipmentModal('today')">Change Gear ⚙</span>
           </div>
 
           <!-- ACTIVE BIOMECHANICAL GUARDRAIL ALERT BANNER -->
@@ -2293,13 +2305,23 @@
         </div>
 
         <!-- VIEW A: PRESCRIBED EXERCISE PLAYER -->
-        <div id="trainViewPrescribed" style="height:calc(100% - 34px); display:flex; flex-direction:column; justify-content:space-between;">
+        <div id="trainViewPrescribed" style="min-height:calc(100% - 34px); display:flex; flex-direction:column; justify-content:space-between;">
           
+          <!-- EQUIPMENT STATUS & GEAR CUSTOMIZER -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); padding:4px 8px; border-radius:7px; font-size:11px;">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="font-size:12px;">🏋️</span>
+              <span style="color:var(--text-muted);">Gear: <strong id="trainGearStatus" style="color:#fff;">Barbell &amp; Dip Station</strong></span>
+            </div>
+            <span style="color:var(--primary); cursor:pointer; font-weight:700; text-decoration:underline;" onclick="openEquipmentModal('train')">Change Gear ⚙</span>
+          </div>
+
           <!-- ARCHETYPE QUICK SWITCHER -->
-          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:6px;">
-            <button id="btnArchetype_option_a" onclick="loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10.5px; padding:6px 2px; text-align:center;">⭐ Option A: Barbell</button>
-            <button id="btnArchetype_option_b" onclick="loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10.5px; padding:6px 2px; text-align:center;">Option B: Hybrid KB</button>
-            <button id="btnArchetype_option_c" onclick="loadDailyArchetype('option_c')" class="btn-subview" style="font-size:10.5px; padding:6px 2px; text-align:center;">Option C: Flush</button>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:3px; margin-bottom:6px;">
+            <button id="btnArchetype_option_a" onclick="loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10px; padding:6px 1px; text-align:center;">Option A (BB)</button>
+            <button id="btnArchetype_option_kb" onclick="loadDailyArchetype('option_kb')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center; color:var(--primary); font-weight:700;">⭐ Option KB</button>
+            <button id="btnArchetype_option_b" onclick="loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option B (Work)</button>
+            <button id="btnArchetype_option_c" onclick="loadDailyArchetype('option_c')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option C (Flush)</button>
           </div>
 
           <div class="train-header-row" style="background:var(--surface-elevated); border:1px solid var(--border); padding:5px 8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
@@ -2895,7 +2917,7 @@
           </div>
 
           <div style="width:100%; height:80px;">
-            <svg style="width:100%; height:100%; overflow:visible;" viewBox="0 0 360 85">
+            <svg style="width:100%; height:100%; overflow:visible; pointer-events:none;" viewBox="0 0 360 85">
               <line x1="10" y1="15" x2="350" y2="15" stroke="rgba(255,255,255,0.05)" />
               <line x1="10" y1="45" x2="350" y2="45" stroke="rgba(255,255,255,0.05)" />
               <line x1="10" y1="72" x2="350" y2="72" stroke="rgba(56, 189, 248, 0.4)" stroke-dasharray="3" />
@@ -3012,11 +3034,24 @@
         </div>
 
         <div style="overflow-y:auto; padding:2px 0; flex:1;">
-          <div class="gear-preset-btns" style="margin-bottom:12px;">
-            <button class="btn-preset active" id="presetGym" onclick="applyPreset('gym')">Gym</button>
-            <button class="btn-preset" id="presetMobile" onclick="applyPreset('mobile')">Mobile</button>
-            <button class="btn-preset" id="presetCardio" onclick="applyPreset('cardio')">Cardio</button>
-            <button class="btn-preset" id="presetCustom" onclick="applyPreset('custom')">Custom</button>
+          <div class="gear-preset-btns" style="margin-bottom:8px; display:grid; grid-template-columns:repeat(5, 1fr); gap:3px;">
+            <button class="btn-preset active" id="presetGym" onclick="applyPreset('gym')" style="font-size:10.5px; padding:6px 1px; text-align:center;">Gym</button>
+            <button class="btn-preset" id="presetKb_heavy" onclick="applyPreset('kb_heavy')" style="font-size:10.5px; padding:6px 1px; text-align:center; color:var(--primary); font-weight:700;">Heavy KB</button>
+            <button class="btn-preset" id="presetMobile" onclick="applyPreset('mobile')" style="font-size:10.5px; padding:6px 1px; text-align:center;">Mobile</button>
+            <button class="btn-preset" id="presetCardio" onclick="applyPreset('cardio')" style="font-size:10.5px; padding:6px 1px; text-align:center;">Cardio</button>
+            <button class="btn-preset" id="presetCustom" onclick="applyPreset('custom')" style="font-size:10.5px; padding:6px 1px; text-align:center;">Custom</button>
+          </div>
+
+          <div style="margin-bottom:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Session Target Focus</span>
+              <span id="focusIndicatorBadge" style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:1px 6px; border-radius:4px;">HEAVY STRENGTH</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
+              <button class="btn-preset active" id="focusBtn_strength" onclick="setSessionFocus('strength')" style="font-size:11px; padding:5px 2px;">🏋️ Strength</button>
+              <button class="btn-preset" id="focusBtn_capacity" onclick="setSessionFocus('capacity')" style="font-size:11px; padding:5px 2px;">⚡ Work Capacity</button>
+              <button class="btn-preset" id="focusBtn_flush" onclick="setSessionFocus('flush')" style="font-size:11px; padding:5px 2px;">🧘 Recovery Flush</button>
+            </div>
           </div>
 
           <div class="gear-grid-2col" id="gearGrid">
@@ -3128,9 +3163,12 @@
           </div>
         </div>
 
-        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-          <button class="btn-action-primary" onclick="closeEquipmentModal()" style="margin:0; width:100%;">
-            Done • Update Workout Prescription
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px;">
+          <button class="btn-action-primary" onclick="applyCustomEquipmentAndGenerate()" style="margin:0; width:100%; height:44px; font-size:12.5px; font-weight:800; letter-spacing:0.03em;">
+            ⚡ GENERATE TAILORED WORKOUT NOW
+          </button>
+          <button class="btn-action-ghost" onclick="closeEquipmentModal()" style="margin:0; width:100%; height:32px; font-size:11.5px;">
+            Cancel / Close
           </button>
         </div>
       </div>
@@ -4491,6 +4529,13 @@
         gear: { barbell: true, bench: true, dipbar: true, db: true, kb: true, slamball: false, sandbag: false, ropes: false, speedrope: true, lowceiling: true },
         weights: { db: "2×22.5kg", kb: "24kg", slamball: "10kg", sandbag: "15kg" }
       },
+      kb_heavy: {
+        badge: "⭐ TIER 1 • HEAVY KETTLEBELL STRENGTH",
+        title: "Heavy Kettlebell Strength & Muscle Anchor",
+        summary: "Autoregulated for heavy single kettlebell (24–32kg). Maximal mechanical tension and core anti-rotation to anchor 81.14 kg lean muscle without barbell axial compression.",
+        gear: { barbell: false, bench: false, dipbar: false, db: false, kb: true, slamball: false, sandbag: false, ropes: false, speedrope: false, lowceiling: true },
+        weights: { kb: "24kg" }
+      },
       mobile: {
         badge: "TIER 1 • OUTDOOR POWER & UNCONVENTIONAL DENSITY",
         title: "Mobile Van Gym • High-Torque Power Circuit",
@@ -4574,6 +4619,69 @@
             rest: "60s",
             cue: "Seated with straight legs; strict overhead deltoid power.",
             rationale: "Eliminates leg drive, forcing pure deltoid and core anti-extension. Spares lower back."
+          }
+        ]
+      },
+      option_kb: {
+        key: "option_kb",
+        title: "Option KB: Heavy Kettlebell Strength & Tension",
+        badge: "⭐ HEAVY KB STRENGTH • AUTOREGULATED",
+        summary: "Autoregulated for heavy single kettlebell (24–32kg). Delivers peak mechanical tension to chest, lats, and posterior chain to preserve 81.14 kg lean muscle without barbell spinal compression.",
+        exercises: [
+          {
+            id: "kb_clean_and_strict_press",
+            name: "Heavy Kettlebell Single-Arm Clean & Strict Press",
+            family: "vertical_push",
+            targetWeight: "24-32kg",
+            targetReps: 6,
+            setsCount: 4,
+            rest: "75s",
+            cue: "Crush grip the bell, clean smoothly to rack, strict vertical drive without knee dip; brace abdominal wall.",
+            rationale: "Unilateral overhead mechanical tension and core anti-lateral flexion. Replaces barbell overhead pressing while protecting ceiling clearance and sparing lower back."
+          },
+          {
+            id: "kb_heavy_rdl",
+            name: "Heavy Kettlebell Romanian Deadlift (RDL)",
+            family: "hip_hinge",
+            targetWeight: "24-32kg",
+            targetReps: 10,
+            setsCount: 4,
+            rest: "75s",
+            cue: "Hips push back, neutral spine, explode through glutes and hamstrings to lockout.",
+            rationale: "Peak posterior chain tension without barbell axial spine loading. Direct transfer to hamstring remodeling and protecting 81.14 kg lean mass."
+          },
+          {
+            id: "kb_goblet_floor_press",
+            name: "Heavy Kettlebell Floor Press (Single-Arm / Goblet)",
+            family: "horizontal_push",
+            targetWeight: "24-32kg",
+            targetReps: 10,
+            setsCount: 4,
+            rest: "75s",
+            cue: "Elbow touches floor at 45°, deliberate pause to eliminate momentum, explosive chest and tricep drive.",
+            rationale: "Concentric upper-body pushing power. Develops pectorals and triceps directly transferable to push-up unbroken capacity."
+          },
+          {
+            id: "kb_gorilla_row",
+            name: "Heavy Kettlebell Gorilla Row (Alternating Dead-Stop)",
+            family: "pull",
+            targetWeight: "24-32kg",
+            targetReps: 8,
+            setsCount: 4,
+            rest: "75s",
+            cue: "Hinged flat back, drive elbow to hip, squeeze lat at apex without torso rotation.",
+            rationale: "Dead-stop row recruits lats, rhomboids, and rear delts to stabilize posture and balance pressing volume."
+          },
+          {
+            id: "kb_suitcase_carry",
+            name: "Heavy Kettlebell Suitcase Carry / March",
+            family: "core_carry",
+            targetWeight: "24-32kg",
+            targetReps: "45s",
+            setsCount: 3,
+            rest: "60s",
+            cue: "Stand tall, do not tilt shoulders, brace oblique core against asymmetric pull.",
+            rationale: "High-torque anti-lateral flexion and grip strength. Transfers directly to hybrid functional resilience."
           }
         ]
       },
@@ -4703,6 +4811,9 @@
       // Auto-swap contraindicated exercises based on athleteInjuries
       activeWorkoutPlan = arch.exercises.map(ex => {
         let modified = { ...ex };
+        if (currentArchetypeKey === 'option_kb' && gearConfig.kb && gearConfig.kb.weight) {
+          modified.targetWeight = gearConfig.kb.weight;
+        }
         if (athleteInjuries && athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) {
           modified = {
             id: "db_floor_press_neutral",
@@ -4763,13 +4874,21 @@
       const badgeEl = document.getElementById('wPlanBadge');
       if (badgeEl) badgeEl.innerText = arch.title.toUpperCase();
 
-      ['option_a', 'option_b', 'option_c'].forEach(k => {
+      ['option_a', 'option_kb', 'option_b', 'option_c'].forEach(k => {
         const btn = document.getElementById(`btnArchetype_${k}`);
         if (btn) {
           if (k === currentArchetypeKey) btn.classList.add('active');
           else btn.classList.remove('active');
         }
       });
+
+      const gearStatusEl = document.getElementById('trainGearStatus');
+      if (gearStatusEl) {
+        if (currentArchetypeKey === 'option_kb') gearStatusEl.innerText = `Heavy Kettlebell (${gearConfig.kb.weight || '24–32kg'})`;
+        else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
+        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Kettlebells, DB & Slam Ball";
+        else gearStatusEl.innerText = "Bodyweight & Incline Cadence";
+      }
 
       renderCurrentExercise();
     }
@@ -4782,6 +4901,7 @@
       beep(750, 0.08);
       const cueMap = {
         option_a: "Option A Barbell Strength loaded. Let's work!",
+        option_kb: "Option KB Heavy Kettlebell Strength loaded. Let's work!",
         option_b: "Option B Hybrid Work Capacity loaded. Let's get it!",
         option_c: "Option C Aerobic Flush and Prehab loaded."
       };
@@ -4953,6 +5073,84 @@
         rationale: "Controlled eccentric tempo builds chest density, core tension, and muscular endurance toward the 30-rep unbroken goal.",
         setsCount: 3,
         goals: ["pushups", "recomp", "work_capacity"]
+      },
+      {
+        id: "kb_clean_and_strict_press",
+        name: "Heavy Kettlebell Single-Arm Clean & Strict Press",
+        family: "vertical_push",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => 6,
+        rest: "75s",
+        cue: "Crush grip the bell, clean smoothly to rack, strict vertical drive without knee dip; brace abdominal wall.",
+        rationale: "Unilateral overhead mechanical tension and core anti-lateral flexion. Replaces barbell overhead pressing while protecting ceiling clearance and sparing lower back.",
+        setsCount: 4,
+        goals: ["recomp", "pushups", "work_capacity", "kb_strength"]
+      },
+      {
+        id: "kb_heavy_rdl",
+        name: "Heavy Kettlebell Romanian Deadlift (RDL)",
+        family: "hip_hinge",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "32kg",
+        getBaseReps: () => 10,
+        rest: "75s",
+        cue: "Hips push back, neutral spine, explode through glutes and hamstrings to lockout.",
+        rationale: "Peak posterior chain tension without barbell axial spine loading. Direct transfer to hamstring remodeling and protecting 81.14 kg lean mass.",
+        setsCount: 4,
+        goals: ["recomp", "rdl", "kb_strength"]
+      },
+      {
+        id: "kb_goblet_floor_press",
+        name: "Heavy Kettlebell Floor Press (Single-Arm / Goblet)",
+        family: "horizontal_push",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => 10,
+        rest: "75s",
+        cue: "Elbow touches floor at 45°, deliberate pause to eliminate momentum, explosive chest and tricep drive.",
+        rationale: "Concentric upper-body pushing power. Develops pectorals and triceps directly transferable to push-up unbroken capacity.",
+        setsCount: 4,
+        goals: ["pushups", "recomp", "kb_strength"]
+      },
+      {
+        id: "kb_gorilla_row",
+        name: "Heavy Kettlebell Gorilla Row (Alternating Dead-Stop)",
+        family: "pull",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => 8,
+        rest: "75s",
+        cue: "Hinged flat back, drive elbow to hip, squeeze lat at apex without torso rotation.",
+        rationale: "Dead-stop row recruits lats, rhomboids, and rear delts to stabilize posture and balance pressing volume.",
+        setsCount: 4,
+        goals: ["recomp", "rdl", "kb_strength"]
+      },
+      {
+        id: "kb_front_rack_squat",
+        name: "Heavy Kettlebell Front Rack Squat",
+        family: "squat",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => 10,
+        rest: "90s",
+        cue: "Bell held tight in rack, vertical torso, drive knees outward, push floor away through midfoot.",
+        rationale: "Anterior core brace and quadricep stimulus without knee shear or spinal compression.",
+        setsCount: 3,
+        goals: ["recomp", "kb_strength"]
+      },
+      {
+        id: "kb_suitcase_carry",
+        name: "Heavy Kettlebell Suitcase Carry / March",
+        family: "core_carry",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => "45s",
+        rest: "60s",
+        cue: "Stand tall, do not tilt shoulders, brace oblique wall against pull.",
+        rationale: "High-torque anti-lateral flexion and grip strength. Transfers directly to hybrid functional resilience.",
+        setsCount: 3,
+        goals: ["work_capacity", "recomp", "kb_strength"]
       }
     ];
 
@@ -4990,7 +5188,8 @@
     function applyPreset(presetKey) {
       currentPreset = presetKey;
       document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
-      const presetBtn = document.getElementById(`preset${presetKey.charAt(0).toUpperCase() + presetKey.slice(1)}`);
+      const formattedKey = presetKey === 'kb_heavy' ? 'Kb_heavy' : (presetKey.charAt(0).toUpperCase() + presetKey.slice(1));
+      const presetBtn = document.getElementById(`preset${formattedKey}`);
       if (presetBtn) presetBtn.classList.add('active');
 
       const profile = presetProfiles[presetKey];
@@ -5013,9 +5212,14 @@
         }
       }
 
+      if (presetKey === 'kb_heavy') {
+        try { localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy'); } catch(e) {}
+        loadDailyArchetype('option_kb');
+      }
+
       beep(780, 0.08);
       generateWorkoutFromGearAndGoal();
-      if (window.userInteracted) showToast(`Loaded ${presetKey.toUpperCase()} equipment profile`);
+      if (window.userInteracted) showToast(`Loaded ${presetKey === 'kb_heavy' ? 'HEAVY KETTLEBELL' : presetKey.toUpperCase()} equipment profile`);
     }
 
     
@@ -5094,9 +5298,12 @@
       beep(880, 0.15);
     }
 
-    function openEquipmentModal() {
+    function openEquipmentModal(caller) {
       const modal = document.getElementById('equipmentModal');
-      if (modal) modal.classList.add('open');
+      if (modal) {
+        modal.dataset.caller = caller || 'today';
+        modal.classList.add('open');
+      }
       beep(720, 0.05);
     }
 
@@ -5105,6 +5312,91 @@
       if (modal) modal.classList.remove('open');
       updateEquipmentTriggerSummary();
       beep(620, 0.04);
+    }
+
+    let currentSessionFocus = 'strength';
+    function setSessionFocus(focusKey) {
+      currentSessionFocus = focusKey;
+      ['strength', 'capacity', 'flush'].forEach(k => {
+        const btn = document.getElementById(`focusBtn_${k}`);
+        if (btn) {
+          if (k === focusKey) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+      const badge = document.getElementById('focusIndicatorBadge');
+      if (badge) {
+        const labels = {
+          strength: 'HEAVY STRENGTH',
+          capacity: 'WORK CAPACITY',
+          flush: 'RECOVERY FLUSH'
+        };
+        badge.innerText = labels[focusKey] || 'HEAVY STRENGTH';
+      }
+      beep(700, 0.04);
+    }
+
+    function applyCustomEquipmentAndGenerate() {
+      const modal = document.getElementById('equipmentModal');
+      if (modal) modal.classList.remove('open');
+
+      const isTomorrow = modal && modal.dataset.caller === 'tomorrow';
+      const focus = currentSessionFocus || 'strength';
+
+      const hasBarbell = gearConfig.barbell && gearConfig.barbell.active;
+      const hasKb = gearConfig.kb && gearConfig.kb.active;
+
+      if (!hasBarbell && hasKb && focus === 'strength') {
+        currentPreset = 'kb_heavy';
+        try { localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy'); } catch(e) {}
+        loadDailyArchetype('option_kb');
+        showToast(`✓ Generated Heavy Kettlebell Strength workout (${(gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})!`);
+      } else {
+        if (!hasBarbell && hasKb) {
+          try { localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy'); } catch(e) {}
+        } else if (hasBarbell) {
+          try { localStorage.setItem('pulse_tomorrow_gear', 'gym'); } catch(e) {}
+        }
+        currentPreset = 'custom';
+        generateWorkoutFromGearAndGoal();
+        showToast(`✓ Generated Custom ${focus.toUpperCase()} workout based on selected equipment!`);
+      }
+
+      // Autoregulate volume from live Garmin telemetry (same inputs as Options A/B/C)
+      let readiness = 93, sleepScore = 94;
+      try {
+        const g = window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin;
+        if (g && g.training_readiness !== undefined) readiness = g.training_readiness;
+        if (g && g.sleep_score !== undefined) sleepScore = g.sleep_score;
+      } catch(e) {}
+      if (readiness < 60 || sleepScore < 60) {
+        activeWorkoutPlan = activeWorkoutPlan.map(ex => ({
+          ...ex,
+          setsCount: Math.max(2, (ex.setsCount || 3) - 1),
+          rationale: `[Autoregulated: Readiness ${readiness} / Sleep ${sleepScore} → −1 set] ` + (ex.rationale || '')
+        }));
+      }
+
+      const gearStatusEl = document.getElementById('trainGearStatus');
+      if (gearStatusEl) {
+        const names = [];
+        if (hasBarbell) names.push('Barbell');
+        if (hasKb) names.push(`KB ${(gearConfig.kb && gearConfig.kb.weight) || ''}`.trim());
+        if (gearConfig.db && gearConfig.db.active) names.push(`DB ${gearConfig.db.weight}`);
+        if (gearConfig.slamball && gearConfig.slamball.active) names.push('Slam Ball');
+        if (gearConfig.sandbag && gearConfig.sandbag.active) names.push('Sandbag');
+        gearStatusEl.innerText = names.length ? names.join(', ') : 'Bodyweight';
+      }
+      currentExIdx = 0;
+      renderCurrentExercise();
+      if (!isTomorrow) {
+        switchTab('train');
+        switchTrainView('prescribed');
+      }
+
+      updateEquipmentTriggerSummary();
+      renderTodayTrainingRecommendations();
+      beep(880, 0.12);
     }
 
     function openQuickSettingsModal() {
@@ -5183,13 +5475,31 @@ function generateWorkoutFromGearAndGoal() {
         return true;
       });
 
-      filtered.sort((a, b) => {
-        const aMatches = a.goals.includes(currentGoalKey) ? 1 : 0;
-        const bMatches = b.goals.includes(currentGoalKey) ? 1 : 0;
-        return bMatches - aMatches;
-      });
+      const focusKey = (typeof currentSessionFocus !== 'undefined' && currentSessionFocus) || 'strength';
+      const scoreEx = (ex) => {
+        let s = ex.goals.includes(currentGoalKey) ? 1 : 0;
+        if (focusKey === 'strength') {
+          if (ex.goals.includes('kb_strength')) s += 3;
+          if (['hip_hinge','horizontal_push','vertical_push','pull','squat'].includes(ex.family) && ex.family !== 'cardio') s += 1;
+          if (ex.family === 'cardio') s -= 3;
+        } else if (focusKey === 'capacity') {
+          if (ex.goals.includes('work_capacity')) s += 3;
+          if (ex.family === 'cardio') s += 1;
+        } else if (focusKey === 'flush') {
+          if (ex.family === 'cardio' || ex.family === 'core_carry') s += 3;
+          if (ex.id === 'pushups_renegade') s += 1;
+        }
+        return s;
+      };
+      filtered.sort((a, b) => scoreEx(b) - scoreEx(a));
 
-      activeWorkoutPlan = filtered.slice(0, 5).map(ex => ({
+      // Family-balanced pick: one per movement family first, then fill
+      const picked = [];
+      const seenFam = new Set();
+      filtered.forEach(ex => { if (picked.length < 5 && !seenFam.has(ex.family)) { picked.push(ex); seenFam.add(ex.family); } });
+      filtered.forEach(ex => { if (picked.length < 5 && !picked.includes(ex)) picked.push(ex); });
+
+      activeWorkoutPlan = picked.map(ex => ({
         ...ex,
         targetWeight: ex.getBaseWeight(),
         targetReps: ex.getBaseReps()
@@ -6305,6 +6615,57 @@ function generateWorkoutFromGearAndGoal() {
       let latestAvgHr = 98;
       if (acts.length > 0 && acts[0].avgHr) latestAvgHr = acts[0].avgHr;
 
+      let tomorrowGear = null;
+      try { tomorrowGear = localStorage.getItem('pulse_tomorrow_gear'); } catch(e) {}
+      const kbW = (gearConfig && gearConfig.kb && gearConfig.kb.weight) || '24kg';
+
+      if (tomorrowGear === 'kb_heavy') {
+        const lowerFatigued = isLowerHeavy;
+        return {
+          presetKey: 'option_kb',
+          title: 'Option KB: Heavy Kettlebell Strength',
+          subtitle: lowerFatigued ? 'Upper-Biased Press, Row & Carry (Hinge Volume Reduced)' : 'Press, Hinge, Row & Carry — Full-Body Tension',
+          durationMin: 40,
+          calories: 340,
+          fatigueImpact: lowerFatigued ? 'Low Posterior Load' : 'Moderate CNS',
+          equipment: `Single Heavy Kettlebell (${kbW})`,
+          badge: 'CUSTOM GEAR • HEAVY KB',
+          summary: `No barbell needed. A single ${kbW} bell delivers enough mechanical tension for strength in the 6–10 rep range when each set is taken to 1–2 reps in reserve, using unilateral pressing/rowing to double the effective load per limb.`,
+          reasoning: [
+            {
+              title: 'Musculoskeletal Load Management',
+              desc: lowerFatigued
+                ? `Your last session loaded the posterior chain. Hamstrings and glutes need <strong>24–48h of remodeling</strong>, so KB RDL volume drops to 3 sets and the session biases toward strict press, floor press and gorilla rows.`
+                : `Posterior chain is recovered. Heavy KB RDLs (4 × 10) plus unilateral press and row cover every major movement pattern without barbell spinal compression.`
+            },
+            {
+              title: 'Heart Rate & Cardiovascular Load',
+              desc: `Recent sessions averaged <strong>${latestAvgHr} bpm</strong>. 75s rest periods keep this session in a strength zone (~105–125 bpm) rather than a conditioning zone, so it won't add aerobic fatigue.`
+            },
+            {
+              title: 'Sleep, HRV & Readiness',
+              desc: `Sleep <strong>${sleepScore}</strong>, Readiness <strong>${readiness}</strong>, RHR <strong>${restingHr} bpm</strong> (${hrvStatus}). ${readiness >= 70 ? 'Cleared for heavy sets at 1–2 RIR.' : 'Below 70 — drop one set per exercise and stop each set at 3 RIR.'}`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `At ${scaleWeight} kg / ${bodyFatPct}% BF with ${fatToLose} kg to reach 15% (${targetWeight} kg), heavy tension is the signal that keeps all ${leanMass} kg of lean mass while in a 350 kcal deficit.`
+            }
+          ],
+          blueprint: [
+            { name: 'KB Single-Arm Clean & Strict Press', prescription: `4 × 6/side @ ${kbW} (75s)`, cue: 'Clean to rack, strict press, no leg drive; brace and squeeze glutes.' },
+            { name: 'KB Romanian Deadlift', prescription: `${lowerFatigued ? 3 : 4} × 10 @ ${kbW} (75s)`, cue: 'Hips back, bell close to legs, 3s lowering, hard glute lockout.' },
+            { name: 'KB Single-Arm Floor Press', prescription: `4 × 10/side @ ${kbW} (75s)`, cue: 'Pause with elbow on floor, press straight up, wrist stacked.' },
+            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 8/side @ ${kbW} (75s)`, cue: 'Flat back, elbow to hip, 1s squeeze at top.' },
+            { name: 'KB Suitcase Carry / March', prescription: `3 × 45s/side @ ${kbW} (60s)`, cue: 'Tall posture, shoulders level, resist the lean.' }
+          ],
+          alternative: {
+            presetKey: 'option_c',
+            title: 'Option C: Incline Cadence Flush & Prehab',
+            desc: 'If readiness or sleep drops below 70, swap to Zone 2 walking + prehab.'
+          }
+        };
+      }
+
       if (isLowerHeavy) {
         return {
           presetKey: 'option_b',
@@ -6421,6 +6782,12 @@ function generateWorkoutFromGearAndGoal() {
             ${rec.subtitle} • ${rec.equipment}
           </div>
 
+          <!-- GOLDFISH TIER: EQUIPMENT SELECTOR BAR -->
+          <div onclick="openEquipmentModal('tomorrow')" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.25); border-radius:8px; cursor:pointer;">
+            <span style="font-size:11px; color:var(--text-secondary);">Equipment: <strong style="color:#fff;">${rec.equipment}</strong></span>
+            <span style="font-size:11px; font-weight:800; color:var(--primary); white-space:nowrap;">Change Gear ⚙</span>
+          </div>
+
           <!-- GOLDFISH TIER: GLANCEABLE METRIC STRIP (3-SECOND RULE) -->
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:10px;">
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
@@ -6500,7 +6867,8 @@ function generateWorkoutFromGearAndGoal() {
         localStorage.setItem('pulse_tomorrow_plan', presetKey);
       } catch(e) {}
       beep(880, 0.15);
-      showToast("Locked " + (presetKey === "option_b" ? "Option B (Work Capacity)" : "Option A (Strength)") + " as tomorrow focus.");
+      const lockLabels = { option_a: "Option A (Barbell Strength)", option_kb: "Option KB (Heavy Kettlebell)", option_b: "Option B (Work Capacity)", option_c: "Option C (Recovery Flush)" };
+      showToast("Locked " + (lockLabels[presetKey] || presetKey) + " as tomorrow focus.");
     }
 
     function getWorkoutArchetypeCardsHtml(isCompletedMode) {
@@ -6858,7 +7226,10 @@ function generateWorkoutFromGearAndGoal() {
               </div>
             </details>
 
-            <div style="margin-top:10px; display:flex; justify-content:flex-end;">
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+              <button class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:11px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700;">
+                ⚙ Tailor Equipment & Build Workout
+              </button>
               <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:11px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
                 ✓ Mark Today's Strength Workout Complete
               </button>
@@ -6917,7 +7288,8 @@ function viewCompletedWorkoutBreakdown() {
         squat: "Knee Dominant / Quad",
         pull: "Horizontal Pull (Back/Lats)",
         vertical_push: "Vertical Push (Delts/Core)",
-        cardio: "Metabolic / Agility"
+        cardio: "Metabolic / Agility",
+        core_carry: "Loaded Carry (Anti-Lateral Core)"
       };
       document.getElementById('movementFamilyTag').innerText = familyNames[ex.family] || "Functional";
       const wLabel = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;

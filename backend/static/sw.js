@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v26-egm-protocol-alignment';
+const CACHE_NAME = 'pulse-cache-v27-body-scroll-custom-gear';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
