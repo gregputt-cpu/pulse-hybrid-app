@@ -56,13 +56,21 @@ def init_db() -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_hydration_date ON hydration_logs(date_str)")
         conn.commit()
 
-# Ensure tables are created upon module import
-init_db()
+        # Auto-seed from renpho_seed.json if table is empty
+        cursor.execute("SELECT COUNT(*) FROM renpho_history")
+        count = cursor.fetchone()[0]
+        if count == 0:
+            seed_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renpho_seed.json")
+            if os.path.exists(seed_path):
+                try:
+                    with open(seed_path, "r", encoding="utf-8") as f:
+                        seed_items = json.load(f)
+                    if isinstance(seed_items, list) and seed_items:
+                        _insert_renpho_records(conn, seed_items)
+                except Exception as e:
+                    logger.warning(f"[DB] Failed loading renpho_seed.json: {e}")
 
-def upsert_renpho_measurements(items: List[Any]) -> int:
-    if not items:
-        return 0
-    init_db()
+def _insert_renpho_records(conn: sqlite3.Connection, items: List[Any]) -> int:
     records = []
     for item in items:
         if isinstance(item, dict):
@@ -74,17 +82,13 @@ def upsert_renpho_measurements(items: List[Any]) -> int:
                 ts = 0
             m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{datetime.now().timestamp()}")
 
-            date_str = item.get("date_str") or item.get("localCreatedAt")
-            if not date_str:
-                if ts:
-                    try:
-                        date_str = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-                    except Exception:
-                        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if ts:
+                try:
+                    date_str = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    date_str = str(item.get("date_str") or item.get("localCreatedAt") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             else:
-                date_str = str(date_str)
+                date_str = str(item.get("date_str") or item.get("localCreatedAt") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             w = item.get("weight_kg") if item.get("weight_kg") is not None else item.get("weight")
             bf = item.get("body_fat_pct") if item.get("body_fat_pct") is not None else item.get("bodyfat")
@@ -110,17 +114,13 @@ def upsert_renpho_measurements(items: List[Any]) -> int:
                 ts = 0
             m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{datetime.now().timestamp()}")
 
-            date_str = getattr(item, "localCreatedAt", None) or getattr(item, "date_str", None)
-            if not date_str:
-                if ts:
-                    try:
-                        date_str = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-                    except Exception:
-                        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if ts:
+                try:
+                    date_str = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             else:
-                date_str = str(date_str)
+                date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
             w = getattr(item, "weight_kg", None) if getattr(item, "weight_kg", None) is not None else getattr(item, "weight", None)
             bf = getattr(item, "body_fat_pct", None) if getattr(item, "body_fat_pct", None) is not None else getattr(item, "bodyfat", None)
@@ -150,11 +150,21 @@ def upsert_renpho_measurements(items: List[Any]) -> int:
             muscle_mass_kg = excluded.muscle_mass_kg,
             water_pct = excluded.water_pct
     """
-    with get_connection() as conn:
-        conn.executemany(query, records)
-        conn.commit()
+    conn.executemany(query, records)
+    conn.commit()
     logger.info(f"[DB] Upserted {len(records)} Renpho measurements to SQLite.")
     return len(records)
+
+# Ensure tables are created upon module import
+import json
+init_db()
+
+def upsert_renpho_measurements(items: List[Any]) -> int:
+    if not items:
+        return 0
+    init_db()
+    with get_connection() as conn:
+        return _insert_renpho_records(conn, items)
 
 def get_renpho_history(days: int = 90) -> List[Dict[str, Any]]:
     init_db()

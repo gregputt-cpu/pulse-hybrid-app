@@ -95,11 +95,11 @@
               <!-- Subtle tick marks indicator / glow -->
               <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2, 6" />
               <!-- Progress Arc (88% = circumference 427.26, offset = 51.27) -->
-              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="29.9" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
+              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="85.5" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
             </svg>
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">93</div>
-              <div style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Optimal Readiness</div>
+              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">80</div>
+              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">High Readiness</div>
             </div>
           </div>
         </div>
@@ -119,14 +119,14 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="9.4" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
+                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="28.3" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">94</span>
+                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">82</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Sleep</div>
-            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 43m</div>
+            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 20m</div>
           </div>
 
           <!-- BODY BATTERY GAUGE (Indigo Accent) -->
@@ -141,14 +141,14 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="3.1" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
+                <circle id="vitalBatteryRing" cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="44.0" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">98%</span>
+                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">72%</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Body Battery</div>
-            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Fully Charged</div>
+            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Charged</div>
           </div>
 
           <!-- RESTING HEART RATE GAUGE (Coral Accent) -->
@@ -182,14 +182,14 @@
               <span style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(0,229,255,0.6);"></span>
               <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">RENPHO SMART SCALE DIRECT</span>
             </div>
-            <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Live Ingested • 13:35</span>
+            <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Today • 06:02</span>
           </div>
 
           <!-- Dual Main Value Columns -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:baseline;">
             <div>
               <div style="display:flex; align-items:baseline; gap:3px;">
-                <span id="vitalScale" style="font-size:28px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">98.0</span>
+                <span id="vitalScale" style="font-size:28px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">97.7</span>
                 <span style="font-size:13px; font-weight:600; color:var(--text-muted);">kg</span>
               </div>
               <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE WEIGHT</div>
@@ -197,7 +197,7 @@
 
             <div style="text-align:right;">
               <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:2px;">
-                <span id="vitalScaleSub" style="font-size:28px; font-weight:700; color:var(--primary); line-height:1; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);">17.2</span>
+                <span id="vitalScaleSub" style="font-size:28px; font-weight:700; color:var(--primary); line-height:1; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);">17.1</span>
                 <span style="font-size:14px; font-weight:700; color:var(--primary); text-shadow:0 0 18px rgba(0,240,255,0.45);">%</span>
               </div>
               <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE BODY FAT</div>
@@ -208,15 +208,15 @@
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Muscle</div>
-              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoMuscleVal">53.4kg</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoMuscleVal">53.5kg</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Lean Mass</div>
-              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoLbmVal">81.1kg</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoLbmVal">81.0kg</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Water</div>
-              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;" id="renphoWaterVal">59.8%</div>
+              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;" id="renphoWaterVal">59.9%</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Visceral</div>
@@ -227,8 +227,8 @@
           <!-- Recomposition Progress Bar with Multi-stop Gradient & Glow -->
           <div style="margin-top:12px;">
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-bottom:5px;">
-              <span id="renphoMeasuredBfLabel">17.2% Scale Measured</span>
-              <span style="color:var(--primary); font-weight:700;" id="renphoGoalRunwayLabel">2.54 kg to 15.0% Goal (95.46kg)</span>
+              <span id="renphoMeasuredBfLabel">17.1% Scale Measured</span>
+              <span style="color:var(--primary); font-weight:700;" id="renphoGoalRunwayLabel">2.42 kg to 15.0% Goal (95.28kg)</span>
             </div>
             <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
               <div class="progress-bar-telemetry" id="renphoProgressBar" style="width:78%; height:100%; border-radius:3px;"></div>
@@ -237,7 +237,7 @@
         </div>
 
         <div class="card" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div class="macro-remaining-pill" id="todayMacroRemainingPill">P: 200g • C: 251g • F: 80g left</div>
+          <div class="macro-remaining-pill" id="todayMacroRemainingPill">2,715 kcal • P: 200g • C: 251g • F: 80g left</div>
           <button class="hydration-quick-btn" onclick="quickAddHydration(500)" title="Log +500ml Water">
             💧 +500ml (<span id="todayHydrationVal">0.0L</span>)
           </button>
@@ -271,11 +271,11 @@
             </div>
             <div>
               <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;" id="garminBannerTitle">GARMIN FĒNIX 8 SYNCED • LIVE CLOUD</div>
-              <div style="font-size:12px; font-weight:700; color:#fff; margin-top:1px;" id="garminBannerSub">Sleep 94 (Optimal) • Readiness 93 • RHR 46 bpm • 0 Workouts Today</div>
+              <div style="font-size:12px; font-weight:700; color:#fff; margin-top:1px;" id="garminBannerSub">1 Workout Today (623 kcal) • Sleep 82 • Readiness 80</div>
             </div>
           </div>
           <div style="font-size:11.5px; font-weight:700; color:var(--primary);">
-            History (345 kcal) ➔
+            History (<span id="garminBannerBurn">623 kcal</span>) ➔
           </div>
         </div>
 

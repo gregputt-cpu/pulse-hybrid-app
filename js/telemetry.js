@@ -1389,6 +1389,10 @@
               const offset = circ * (1 - (g.training_readiness / 100));
               ringEl.style.strokeDashoffset = offset.toFixed(1);
             }
+            const subEl = document.getElementById('todayDialSub');
+            if (subEl) {
+              subEl.innerText = g.training_readiness >= 85 ? 'Optimal Readiness' : (g.training_readiness >= 75 ? 'High Readiness' : (g.training_readiness >= 60 ? 'Moderate Readiness' : 'Recovery Focus'));
+            }
             const hdrEl = document.getElementById('hdrReadiness');
             if (hdrEl) hdrEl.innerText = `${g.training_readiness} READY`;
           }
@@ -1411,8 +1415,14 @@
           if (g.body_battery !== undefined) {
             const el = document.getElementById('vitalBattery');
             if (el) el.innerText = `${g.body_battery}%`;
+            const bbRing = document.getElementById('vitalBatteryRing');
+            if (bbRing) {
+              const circ = 157;
+              const offset = circ * (1 - (g.body_battery / 100));
+              bbRing.style.strokeDashoffset = offset.toFixed(1);
+            }
             const elSub = document.getElementById('vitalBbSub');
-            if (elSub) elSub.innerText = g.body_battery >= 80 ? 'Fully Charged' : 'Restored';
+            if (elSub) elSub.innerText = g.body_battery >= 85 ? 'Fully Charged' : (g.body_battery >= 65 ? 'Charged' : 'Restored');
           }
           if (g.active_calories !== undefined) {
             const el1 = document.getElementById('vitalBurn');
@@ -1524,7 +1534,7 @@
           const r = state.renpho;
           if (r.weight_kg) {
             const el1 = document.getElementById('vitalScale');
-            if (el1) el1.innerText = r.weight_kg.toFixed(1);
+            if (el1) el1.innerText = Number(r.weight_kg.toFixed(2)).toString().includes('.') ? Number(r.weight_kg.toFixed(2)).toString() : r.weight_kg.toFixed(1);
             const el2 = document.getElementById('bodyScaleWeight');
             if (el2) el2.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
           }
@@ -1566,8 +1576,11 @@
           if (r.last_synced) {
             const syncEl = document.getElementById('renphoSyncTime');
             try {
-              const timePart = r.last_synced.includes('T') ? r.last_synced.split('T')[1].slice(0, 5) : r.last_synced.split(' ')[1].slice(0, 5);
-              if (syncEl) syncEl.innerText = `Live Ingested • ${timePart}`;
+              const parts = r.last_synced.replace('T', ' ').split(' ');
+              const datePart = parts[0];
+              const timePart = (parts[1] || '').slice(0, 5);
+              const dateLabel = formatSyncDate(datePart, r.last_synced);
+              if (syncEl) syncEl.innerText = `${dateLabel} • ${timePart}`;
             } catch(e) {}
           }
         }

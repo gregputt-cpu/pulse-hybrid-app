@@ -131,12 +131,15 @@
     function renderMyNetDiaryEngine() {
       // 1. Resolve Dynamic Daily Calorie Target
       const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = 345;
+      let activeBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
+        ? Number(window.BAKED_LIVE_STATE.garmin.active_calories)
+        : 623;
       if (burnEl) {
         const parsedBurn = parseInt(burnEl.innerText);
-        if (!isNaN(parsedBurn) && parsedBurn > 0) activeBurn = parsedBurn;
+        if (!isNaN(parsedBurn) && parsedBurn >= 0) activeBurn = parsedBurn;
       }
-      const totalBudget = athleteDailyBudget > 2000 ? athleteDailyBudget : (2092 + activeBurn);
+      const totalBudget = 2092 + activeBurn;
+      athleteDailyBudget = totalBudget;
 
       // 2. Macro Targets (Greg Putt: 98.0kg, 17.2% BF -> 81.14kg lean mass)
       const pTarget = athleteProteinAnchor || 200; // 2.46g/kg lean mass
@@ -240,9 +243,9 @@
       const macroPill = document.getElementById('todayMacroRemainingPill');
       if (macroPill) {
         if (prot >= pTarget) {
-          macroPill.innerText = `✓ P Met • C: ${carbsLeft}g • F: ${fatsLeft}g`;
+          macroPill.innerText = `${calsLeft.toLocaleString()} kcal • ✓ P Met • C: ${carbsLeft}g • F: ${fatsLeft}g`;
         } else {
-          macroPill.innerText = `P: ${protLeft}g • C: ${carbsLeft}g • F: ${fatsLeft}g left`;
+          macroPill.innerText = `${calsLeft.toLocaleString()} kcal • P: ${protLeft}g • C: ${carbsLeft}g • F: ${fatsLeft}g left`;
         }
       }
 
@@ -260,12 +263,15 @@
 
     function updateRunwayUI() {
       const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = 345;
+      let activeBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
+        ? Number(window.BAKED_LIVE_STATE.garmin.active_calories)
+        : 623;
       if (burnEl) {
         const parsed = parseInt(burnEl.innerText);
-        if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
+        if (!isNaN(parsed) && parsed >= 0) activeBurn = parsed;
       }
-      const totalBudget = athleteDailyBudget > 2000 ? athleteDailyBudget : (2092 + activeBurn);
+      const totalBudget = 2092 + activeBurn;
+      athleteDailyBudget = totalBudget;
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
       const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
       const carbs = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.carbs) || 0;

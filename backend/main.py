@@ -33,12 +33,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-LIVE_STATE_PATH = os.environ.get("LIVE_STATE_PATH", "/home/antigravity/live_state.json")
-if not os.path.exists(LIVE_STATE_PATH):
-    if os.path.exists("live_state.json"):
-        LIVE_STATE_PATH = "live_state.json"
-    else:
-        LIVE_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "live_state.json")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, "live_state.json")
+if not os.path.exists(DEFAULT_STATE_PATH):
+    DEFAULT_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "live_state.json")
+LIVE_STATE_PATH = os.environ.get("LIVE_STATE_PATH", DEFAULT_STATE_PATH)
 
 garmin_service = GarminSyncService()
 mnd_service = MyNetDiarySyncService()
@@ -58,6 +57,10 @@ def save_live_state(state: Dict[str, Any]):
     try:
         with open(LIVE_STATE_PATH, "w", encoding="utf-8") as f:
             json.dump(state, f, indent=2)
+        backend_copy = os.path.join(os.path.dirname(os.path.abspath(__file__)), "live_state.json")
+        if backend_copy != LIVE_STATE_PATH:
+            with open(backend_copy, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
     except Exception as e:
         logger.error(f"Failed saving live state: {e}")
 
@@ -70,6 +73,11 @@ class SetLogPayload(BaseModel):
 
 class DatePayload(BaseModel):
     date: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+
+class MfaPayload(BaseModel):
+    mfa_code: str
 
 class HydrationPayload(BaseModel):
     amount_ml: int = 500
@@ -128,10 +136,20 @@ def update_live_state(state: Dict[str, Any]):
 @app.post("/api/garmin/sync")
 def sync_garmin(payload: Optional[DatePayload] = None):
     target_date = payload.date if payload else None
+    if payload and payload.email and payload.password:
+        login_res = garmin_service.login_with_credentials(payload.email, payload.password)
+        if login_res.get("needs_mfa"):
+            return login_res
+        if not login_res.get("success"):
+            return {"success": False, "error": login_res.get("error", "Authentication failed")}
+
     try:
-        updated = garmin_service.sync_today(target_date)
         try:
-            mnd_res = mnd_service.fetch_today_data(target_date)
+            garmin_service.sync_today(target_date)
+        except Exception as gex:
+            logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
+        try:
+            mnd_service.fetch_today_data(target_date)
         except Exception as ex:
             logger.warning(f"MND sync during Garmin pull: {ex}")
         try:
@@ -139,10 +157,22 @@ def sync_garmin(payload: Optional[DatePayload] = None):
         except Exception as rex:
             logger.warning(f"Renpho sync during Garmin pull: {rex}")
         updated = load_live_state()
-        return {"success": True, "state": updated}
+        return {"success": True, "state": updated, "live_state": updated}
     except Exception as e:
         logger.error(f"Garmin sync error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/garmin/submit_mfa")
+def submit_garmin_mfa(payload: MfaPayload):
+    res = garmin_service.submit_mfa(payload.mfa_code)
+    if not res.get("success"):
+        return res
+    try:
+        garmin_service.sync_today()
+    except Exception as e:
+        logger.warning(f"Garmin sync after MFA warning: {e}")
+    updated = load_live_state()
+    return {"success": True, "state": updated, "live_state": updated}
 
 @app.get("/api/mnd/status")
 def mnd_status():
@@ -199,7 +229,6 @@ def add_hydration(payload: HydrationPayload):
         date_str = payload.date if payload.date else datetime.now().strftime("%Y-%m-%d")
         total_ml = db.add_hydration(date_str, payload.amount_ml)
 
-        # Update live_state.json garmin.mnd_logged.water_l incremented by amount_ml / 1000.0
         state = load_live_state()
         garmin_state = state.setdefault("garmin", {})
         mnd_logged = garmin_state.setdefault("mnd_logged", {})
@@ -207,7 +236,6 @@ def add_hydration(payload: HydrationPayload):
         new_water_l = round(current_water_l + (payload.amount_ml / 1000.0), 2)
         mnd_logged["water_l"] = new_water_l
 
-        # Also keep state top-level mnd_logged in sync if present
         if "mnd_logged" in state and isinstance(state["mnd_logged"], dict):
             state["mnd_logged"]["water_l"] = new_water_l
 
@@ -232,7 +260,6 @@ def sync_set(payload: SetLogPayload):
     if payload.logged_reps is not None:
         sp["last_logged_reps"] = payload.logged_reps
 
-    # Compute e1rm when both weight and reps are present
     if payload.logged_weight is not None and payload.logged_reps is not None:
         e1rm = round(float(payload.logged_weight) * (1.0 + float(payload.logged_reps) / 30.0), 1)
         db.log_strength_set(payload.exercise_id, payload.logged_weight, payload.logged_reps, e1rm)
@@ -258,7 +285,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 def run_scheduled_sync():
     logger.info("[Scheduler] Starting scheduled sync with Garmin, MyNetDiary, and Renpho...")
     try:
-        garmin_service.sync_today()
+        try:
+            garmin_service.sync_today()
+        except Exception as gex:
+            logger.warning(f"[Scheduler] Direct Garmin OAuth notice: {gex}")
         mnd_service.fetch_today_data()
         renpho_service.sync_latest()
         logger.info("[Scheduler] Periodic sync completed successfully.")

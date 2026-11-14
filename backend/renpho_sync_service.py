@@ -8,12 +8,11 @@ import db
 logger = logging.getLogger("pulse-renpho-sync")
 
 CREDS_FILE = os.environ.get('RENPHO_CREDS_FILE', '/home/antigravity/.gemini/renpho_creds.json')
-LIVE_STATE_PATH = os.environ.get('LIVE_STATE_PATH', '/home/antigravity/live_state.json')
-if not os.path.exists(LIVE_STATE_PATH):
-    if os.path.exists('live_state.json'):
-        LIVE_STATE_PATH = 'live_state.json'
-    else:
-        LIVE_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, 'live_state.json')
+if not os.path.exists(DEFAULT_STATE_PATH):
+    DEFAULT_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
+LIVE_STATE_PATH = os.environ.get('LIVE_STATE_PATH', DEFAULT_STATE_PATH)
 
 class RenphoSyncService:
     def __init__(self, email="greg.putt@gmail.com", password="He11o12345"):
@@ -49,19 +48,23 @@ class RenphoSyncService:
             measurements.sort(key=lambda m: m.get('timeStamp', 0), reverse=True)
             latest = measurements[0]
 
-            weight_kg = round(float(latest.get('weight', 98.0)), 2)
-            body_fat = round(float(latest.get('bodyfat', 17.2)), 1)
-            water = round(float(latest.get('water', 59.8)), 1)
-            muscle = round(float(latest.get('muscle', 53.4)), 1)
-            bone = round(float(latest.get('bone', 4.01)), 2)
+            weight_kg = round(float(latest.get('weight', 97.7)), 2)
+            body_fat = round(float(latest.get('bodyfat', 17.1)), 1)
+            water = round(float(latest.get('water', 59.9)), 1)
+            muscle = round(float(latest.get('muscle', 53.5)), 1)
+            bone = round(float(latest.get('bone', 4.0)), 2)
             visfat = round(float(latest.get('visfat', 10.0)), 1)
-            subfat = round(float(latest.get('subfat', 14.5)), 1)
+            subfat = round(float(latest.get('subfat', 14.4)), 1)
             bmi = round(float(latest.get('bmi', 27.1)), 1)
             protein = round(float(latest.get('protein', 18.9)), 1)
-            lbm = round(float(latest.get('fatFreeWeight', 81.14)), 2)
-            bmr = int(latest.get('bmr', 2101))
+            lbm = round(float(latest.get('fatFreeWeight', 80.99)), 2)
+            bmr = int(latest.get('bmr', 2096))
             body_age = int(latest.get('bodyage', 46))
-            timestamp_str = latest.get('localCreatedAt', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            ts = latest.get('timeStamp')
+            if ts:
+                timestamp_str = datetime.utcfromtimestamp(int(ts)).strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                timestamp_str = latest.get('localCreatedAt', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
             # Target at 15.0% body fat based on genuine Renpho lean mass
             target_wt = round(lbm / (1.0 - 0.15), 2)

@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v28-egm-overhaul';
+const CACHE_NAME = 'pulse-cache-v29-live-telemetry-sync';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
