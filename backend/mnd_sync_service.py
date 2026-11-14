@@ -296,8 +296,10 @@ class MyNetDiarySyncService:
 
         state['mnd_meals'] = meals
 
-        # Update Renpho scale weight from weight_info if present
-        if weight_info and weight_info.get('currentWeight'):
+        # Update Renpho scale weight from weight_info if present and NOT already sourced from direct Renpho cloud
+        # MyNetDiary only has weight, not bioelectrical impedance body fat, so direct Renpho telemetry must never be overwritten.
+        is_direct_renpho = state.get('renpho', {}).get('source') == 'renpho_direct_cloud'
+        if weight_info and weight_info.get('currentWeight') and not is_direct_renpho:
             raw_w = weight_info.get('currentWeight')
             kg = None
             expl = weight_info.get('bmiExplanation', '')
@@ -316,23 +318,19 @@ class MyNetDiarySyncService:
                     kg = 98.90
 
             lbm = state.get('athlete', {}).get('lean_mass_kg', 82.38)
-            fat_kg = max(0, kg - lbm)
-            bf_pct = round((fat_kg / kg) * 100, 1)
             target_wt_15 = round(lbm / (1.0 - 0.15), 2)
             fat_to_lose = round(max(0, kg - target_wt_15), 2)
 
             renpho = state.setdefault('renpho', {})
             renpho['weight_kg'] = kg
-            renpho['body_fat_pct'] = bf_pct
             renpho['lean_mass_kg'] = lbm
             renpho['fat_to_lose_kg'] = fat_to_lose
             renpho['target_weight_at_15pct'] = target_wt_15
-            renpho['source'] = 'live_renpho_cloud'
+            renpho['source'] = 'live_mynetdiary_weight'
             renpho['last_synced'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
             athlete = state.setdefault('athlete', {})
             athlete['weight_kg'] = kg
-            athlete['body_fat_pct'] = bf_pct
             athlete['fat_to_lose_kg'] = fat_to_lose
 
         # Autoregulation & Runway expansion recalculation

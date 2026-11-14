@@ -33,7 +33,10 @@ app.add_middleware(
 
 LIVE_STATE_PATH = os.environ.get("LIVE_STATE_PATH", "/home/antigravity/live_state.json")
 if not os.path.exists(LIVE_STATE_PATH):
-    LIVE_STATE_PATH = "live_state.json"
+    if os.path.exists("live_state.json"):
+        LIVE_STATE_PATH = "live_state.json"
+    else:
+        LIVE_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "live_state.json")
 
 garmin_service = GarminSyncService()
 mnd_service = MyNetDiarySyncService()
@@ -119,10 +122,13 @@ def sync_garmin(payload: Optional[DatePayload] = None):
         updated = garmin_service.sync_today(target_date)
         try:
             mnd_res = mnd_service.fetch_today_data(target_date)
-            if mnd_res.get("success"):
-                updated = load_live_state()
         except Exception as ex:
             logger.warning(f"MND sync during Garmin pull: {ex}")
+        try:
+            renpho_service.sync_latest()
+        except Exception as rex:
+            logger.warning(f"Renpho sync during Garmin pull: {rex}")
+        updated = load_live_state()
         return {"success": True, "state": updated}
     except Exception as e:
         logger.error(f"Garmin sync error: {e}")
@@ -138,6 +144,10 @@ def sync_mnd(payload: Optional[DatePayload] = None):
     target_date = payload.date if payload else None
     try:
         res = mnd_service.fetch_today_data(target_date)
+        try:
+            renpho_service.sync_latest()
+        except Exception as rex:
+            logger.warning(f"Renpho sync during MND pull: {rex}")
         state = load_live_state()
         return {"success": True, "mnd": res, "state": state}
     except Exception as e:

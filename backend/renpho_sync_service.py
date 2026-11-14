@@ -9,7 +9,10 @@ logger = logging.getLogger("pulse-renpho-sync")
 CREDS_FILE = os.environ.get('RENPHO_CREDS_FILE', '/home/antigravity/.gemini/renpho_creds.json')
 LIVE_STATE_PATH = os.environ.get('LIVE_STATE_PATH', '/home/antigravity/live_state.json')
 if not os.path.exists(LIVE_STATE_PATH):
-    LIVE_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
+    if os.path.exists('live_state.json'):
+        LIVE_STATE_PATH = 'live_state.json'
+    else:
+        LIVE_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
 
 class RenphoSyncService:
     def __init__(self, email="greg.putt@gmail.com", password="He11o12345"):
@@ -17,16 +20,22 @@ class RenphoSyncService:
         self.password = os.environ.get('RENPHO_PASSWORD', password)
         self.client = None
 
-    def get_client(self):
-        if not self.client:
+    def get_client(self, force_refresh=True):
+        if force_refresh or not self.client:
             self.client = RenphoClient(self.email, self.password)
             self.client.login()
         return self.client
 
     def sync_latest(self):
         try:
-            client = self.get_client()
-            measurements = client.get_all_measurements()
+            client = self.get_client(force_refresh=True)
+            try:
+                measurements = client.get_all_measurements()
+            except Exception as e:
+                logger.warning(f"[RenphoSync] First attempt failed ({e}), retrying with fresh login...")
+                client = self.get_client(force_refresh=True)
+                measurements = client.get_all_measurements()
+
             if not measurements:
                 logger.warning("[RenphoSync] No measurements returned.")
                 return {"success": False, "error": "No measurements found"}
@@ -90,13 +99,26 @@ class RenphoSyncService:
             athlete['target_weight_kg'] = target_wt
             athlete['fat_to_lose_kg'] = fat_to_lose
 
+            # Write to resolved LIVE_STATE_PATH
             with open(LIVE_STATE_PATH, 'w', encoding='utf-8') as f:
                 json.dump(state, f, indent=2)
 
+            # Also ensure backend/live_state.json is written
+            backend_state_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
+            if backend_state_path != LIVE_STATE_PATH:
+                try:
+                    with open(backend_state_path, 'w', encoding='utf-8') as f:
+                        json.dump(state, f, indent=2)
+                except Exception as e:
+                    logger.error(f"[RenphoSync] Error writing backend live_state: {e}")
+
             root_state_path = '/home/antigravity/live_state.json'
-            if root_state_path != LIVE_STATE_PATH and os.path.exists('/home/antigravity'):
-                with open(root_state_path, 'w', encoding='utf-8') as f:
-                    json.dump(state, f, indent=2)
+            if root_state_path != LIVE_STATE_PATH and root_state_path != backend_state_path and os.path.exists('/home/antigravity'):
+                try:
+                    with open(root_state_path, 'w', encoding='utf-8') as f:
+                        json.dump(state, f, indent=2)
+                except Exception as e:
+                    logger.error(f"[RenphoSync] Error writing root live_state: {e}")
 
             logger.info(f"[RenphoSync] Successfully synced: {weight_kg}kg, {body_fat}% BF")
             return {
