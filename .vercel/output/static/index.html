@@ -333,8 +333,13 @@
             </div>
 
             <div class="ex-target-pill">
-              <span id="exTarget">Prescribed: 4 Sets × 8 Reps @ 110kg</span>
+              <span id="exTarget">Prescribed: 4 Sets × 8 Reps @ 70kg</span>
               <span style="color:var(--lime);font-weight:800;" id="exRestTarget">Rest: 90s</span>
+            </div>
+
+            <div style="display:flex; gap:8px; margin:8px 0;">
+              <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:5px;">⇄ Swap Exercise</button>
+              <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:5px;">✎ Edit Weight / Reps</button>
             </div>
 
             <div class="ex-cue" id="exCue">
@@ -1990,6 +1995,57 @@
           <div style="display:flex; gap:6px; margin-top:6px;">
             <button class="btn-action-ghost" style="flex:1; margin:0;" onclick="closeMndLogModal()">Cancel</button>
             <button class="btn-action-primary" style="flex:2; margin:0;" onclick="submitMndMealItem()">+ Add to Meal Stream</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SWAP EXERCISE MODAL -->
+    <div class="modal-overlay" id="swapExerciseModal" onclick="if(event.target === this) closeSwapModal()">
+      <div class="modal-card" style="max-width:380px; max-height:85vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:13px; color:#fff;" id="swapModalTitle">⇄ Swap Exercise</strong>
+            <div style="font-size:11px; color:var(--text-muted);">Choose a replacement or add mid-workout</div>
+          </div>
+          <span style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;" onclick="closeSwapModal()">✕</span>
+        </div>
+
+        <div style="margin-top:8px;">
+          <input id="swapSearchInput" type="text" placeholder="Search exercises (e.g. bench, press, row, rdl)..." oninput="renderSwapOptions()" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:12.5px; padding:6px 10px; border-radius:8px; outline:none; box-sizing:border-box;">
+        </div>
+
+        <div id="swapOptionsList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow-y:auto; margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- EDIT TARGET LOAD & REPS MODAL -->
+    <div class="modal-overlay" id="editLoadModal" onclick="if(event.target === this) closeEditLoadModal()">
+      <div class="modal-card" style="max-width:340px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:13px; color:#fff;"><span>✎ Edit Target Weight & Reps</span></strong>
+            <div style="font-size:11px; color:var(--text-muted);">Update prescribed load for active exercise</div>
+          </div>
+          <span style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;" onclick="closeEditLoadModal()">✕</span>
+        </div>
+
+        <div id="editLoadExName" style="font-size:13px; font-weight:700; color:#fff; margin-top:8px; margin-bottom:10px; padding:6px 8px; background:rgba(255,255,255,0.04); border-radius:6px; border-left:3px solid var(--primary);"></div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div>
+            <label style="font-size:11px; color:var(--cyan); display:block; margin-bottom:2px; font-weight:700;">Target Weight (kg or text, e.g. 70, Body, 24kg):</label>
+            <input type="text" id="editLoadWeightInput" placeholder="70" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+          </div>
+
+          <div>
+            <label style="font-size:11px; color:var(--lime); display:block; margin-bottom:2px; font-weight:700;">Target Reps per Set:</label>
+            <input type="number" id="editLoadRepsInput" placeholder="8" min="1" max="100" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+          </div>
+
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button type="button" class="btn-action-ghost" style="flex:1; margin:0;" onclick="closeEditLoadModal()">Cancel</button>
+            <button type="button" class="btn-action-primary" style="flex:2; margin:0;" onclick="saveEditLoadModal()">✓ Save Prescribed Load</button>
           </div>
         </div>
       </div>

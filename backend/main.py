@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
@@ -82,6 +82,18 @@ class MfaPayload(BaseModel):
 class HydrationPayload(BaseModel):
     amount_ml: int = 500
     date: Optional[str] = None
+
+class TelemetryOverridePayload(BaseModel):
+    sleep_score: Optional[int] = None
+    sleep_duration: Optional[str] = None
+    body_battery: Optional[int] = None
+    training_readiness: Optional[int] = None
+    date: Optional[str] = None
+
+class PrescriptionOverridePayload(BaseModel):
+    exercise_id: str
+    weight: Union[float, int, str]
+    reps: int
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(os.path.join(static_dir, "css")):
@@ -285,6 +297,69 @@ def save_athlete_injuries(payload: Dict[str, Any]):
     state["injuries"] = payload
     save_live_state(state)
     return {"success": True, "injuries": payload}
+
+@app.post("/api/telemetry/override")
+def override_telemetry(payload: TelemetryOverridePayload):
+    state = load_live_state()
+    garmin = state.setdefault("garmin", {})
+
+    target_date = payload.date or state.get("date") or datetime.now().strftime("%Y-%m-%d")
+
+    if payload.sleep_score is not None:
+        garmin["sleep_score"] = payload.sleep_score
+        garmin["sleep_score_source"] = "manual_override"
+        garmin["sleep_score_manual_date"] = target_date
+
+    if payload.sleep_duration is not None:
+        garmin["sleep_duration"] = payload.sleep_duration
+
+    if payload.body_battery is not None:
+        garmin["body_battery"] = payload.body_battery
+    elif payload.sleep_score is not None:
+        active_cals_val = garmin.get("active_calories") or 0
+        morning_bb = min(100, int(round(payload.sleep_score * 1.05)))
+        burn_drain = int(round(active_cals_val / 45.0))
+        garmin["body_battery"] = max(25, min(100, morning_bb - burn_drain))
+
+    if payload.training_readiness is not None:
+        garmin["training_readiness"] = payload.training_readiness
+        tr_val = payload.training_readiness
+        garmin["readiness_level"] = "OPTIMAL" if tr_val >= 85 else ("HIGH" if tr_val >= 75 else "MODERATE")
+        garmin["readiness_feedback"] = "WELL_RECOVERED" if tr_val >= 75 else "MODERATE_LOAD"
+    elif payload.sleep_score is not None:
+        active_cals_val = garmin.get("active_calories") or 0
+        morning_bb = min(100, int(round(payload.sleep_score * 1.05)))
+        calc_tr = int(round(payload.sleep_score * 0.65 + morning_bb * 0.38 - min(10, active_cals_val / 150.0)))
+        calc_tr = max(40, min(98, calc_tr))
+        garmin["training_readiness"] = calc_tr
+        garmin["readiness_level"] = "OPTIMAL" if calc_tr >= 85 else ("HIGH" if calc_tr >= 75 else "MODERATE")
+        garmin["readiness_feedback"] = "WELL_RECOVERED" if calc_tr >= 75 else "MODERATE_LOAD"
+
+    save_live_state(state)
+    return {"success": True, "garmin": garmin}
+
+@app.post("/api/prescription/override")
+def override_prescription(payload: PrescriptionOverridePayload):
+    state = load_live_state()
+    prescriptions = state.setdefault("strength_prescriptions", {})
+    item = prescriptions.setdefault(payload.exercise_id, {})
+
+    item["weight"] = payload.weight
+    item["reps"] = payload.reps
+    item["last_logged_weight"] = payload.weight
+    item["last_logged_reps"] = payload.reps
+
+    # Optionally calculate e1rm if weight is numeric
+    try:
+        w_val = float(payload.weight)
+        e1rm = round(w_val * (1.0 + payload.reps / 30.0), 1)
+        item["e1rm"] = e1rm
+        item["last_e1rm"] = e1rm
+    except (ValueError, TypeError):
+        pass
+
+    save_live_state(state)
+    return {"success": True, "exercise_id": payload.exercise_id, "prescription": item}
 
 # Background Continuous Sync (APScheduler)
 from apscheduler.schedulers.background import BackgroundScheduler

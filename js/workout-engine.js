@@ -548,21 +548,55 @@
       }
     };
 
+    // ==================== TODAY EXERCISE SWAPS STORAGE ====================
+    function getTodayExerciseSwaps() {
+      try {
+        const raw = localStorage.getItem('pulse_today_exercise_swaps');
+        if (raw) return JSON.parse(raw) || {};
+      } catch(e) {}
+      return {};
+    }
+
+    function setTodayExerciseSwap(optId, idx, exId) {
+      const swaps = getTodayExerciseSwaps();
+      swaps[`${optId}_${idx}`] = exId;
+      try {
+        localStorage.setItem('pulse_today_exercise_swaps', JSON.stringify(swaps));
+      } catch(e) {}
+    }
+
     let currentArchetypeKey = 'option_a';
 
     function loadDailyArchetype(key) {
       currentArchetypeKey = key || 'option_a';
       const arch = dailyArchetypes[currentArchetypeKey] || dailyArchetypes.option_a;
+      const todaySwaps = getTodayExerciseSwaps();
       
       // Auto-swap contraindicated exercises based on athleteInjuries
-      activeWorkoutPlan = arch.exercises.map(ex => {
+      activeWorkoutPlan = arch.exercises.map((baseEx, idx) => {
+        const swappedExId = todaySwaps[`${currentArchetypeKey}_${idx}`];
+        let ex = baseEx;
+        if (swappedExId) {
+          const found = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === swappedExId) : null;
+          if (found) {
+            ex = {
+              id: found.id,
+              name: found.name,
+              family: found.family || baseEx.family,
+              setsCount: found.setsCount || baseEx.setsCount || 3,
+              rest: found.rest || baseEx.rest || "75s",
+              cue: found.cue || baseEx.cue || "",
+              rationale: found.rationale || baseEx.rationale || ""
+            };
+          }
+        }
         let modified = { ...ex };
         if (typeof getPrescribedLoad === 'function') {
           const rx = getPrescribedLoad(ex.id, ex);
           modified.targetWeight = rx.weight;
           modified.targetReps = rx.reps;
         }
-        if (currentArchetypeKey === 'option_kb' && gearConfig.kb && gearConfig.kb.weight) {
+        if (currentArchetypeKey === 'option_kb' && gearConfig.kb && gearConfig.kb.weight && !swappedExId) {
           modified.targetWeight = gearConfig.kb.weight;
         }
         if (athleteInjuries && athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) {
@@ -642,6 +676,10 @@
       }
 
       renderCurrentExercise();
+    }
+
+    function loadPreset(key) {
+      loadDailyArchetype(key);
     }
 
     function launchArchetypeSession(key) {
@@ -1852,6 +1890,14 @@ function generateWorkoutFromGearAndGoal() {
           }
         };
       } else {
+        const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_rdl') : null)) : { weight: 70, reps: 8 };
+        const rxPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_floor_press', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_floor_press') : null)) : { weight: 95, reps: 6 };
+        const rxDips = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('weighted_dips', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'weighted_dips') : null)) : { weight: 'Bodyweight', reps: 12 };
+        const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_pendlay_row') : null)) : { weight: 85, reps: 8 };
+        const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_z_press') : null)) : { weight: 45, reps: 10 };
+
+        const fmtLoad = (w) => (typeof w === 'number' ? `${w}kg` : `${w}`);
+
         return {
           presetKey: 'option_a',
           title: 'Option A: Heavy Barbell Strength & Muscle Anchor',
@@ -1881,11 +1927,11 @@ function generateWorkoutFromGearAndGoal() {
             }
           ],
           blueprint: [
-            { name: 'Barbell Romanian Deadlift (RDL)', prescription: '4 × 8 @ 70kg (90s rest)', cue: 'Hips back, neutral spine, explosive glute lockout.' },
-            { name: 'Barbell Flat / Floor Press', prescription: '4 × 6-8 @ 95kg (90s rest)', cue: 'Controlled eccentric, 45° elbow tuck, explosive press.' },
-            { name: 'Dip Bar Chest & Tricep Dips', prescription: '3 × 12 @ Bodyweight (75s rest)', cue: 'Slight forward torso lean, full tricep lockout.' },
-            { name: 'Barbell Pendlay Row', prescription: '4 × 8 @ 85kg (90s rest)', cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
-            { name: 'Floor Seated Barbell Z-Press', prescription: '3 × 10 @ 45kg (60s rest)', cue: 'Seated with straight legs; strict overhead deltoid power.' }
+            { name: 'Barbell Romanian Deadlift (RDL)', prescription: `4 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Hips back, neutral spine, explosive glute lockout.' },
+            { name: 'Barbell Flat / Floor Press', prescription: `4 × ${rxPress.reps} @ ${fmtLoad(rxPress.weight)} (90s rest)`, cue: 'Controlled eccentric, 45° elbow tuck, explosive press.' },
+            { name: 'Dip Bar Chest & Tricep Dips', prescription: `3 × ${rxDips.reps} @ ${fmtLoad(rxDips.weight)} (75s rest)`, cue: 'Slight forward torso lean, full tricep lockout.' },
+            { name: 'Barbell Pendlay Row', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
+            { name: 'Floor Seated Barbell Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Seated with straight legs; strict overhead deltoid power.' }
           ],
           alternative: {
             presetKey: 'option_c',
@@ -2014,6 +2060,32 @@ function generateWorkoutFromGearAndGoal() {
       showToast("Locked " + (lockLabels[presetKey] || presetKey) + " as tomorrow focus.");
     }
 
+    function renderArchetypeExercisesHtml(archKey, exercises) {
+      const swaps = getTodayExerciseSwaps();
+      return exercises.map((baseEx, idx) => {
+        const swapKey = `${archKey}_${idx}`;
+        const exId = swaps[swapKey] || baseEx.id;
+        const isSwapped = !!swaps[swapKey];
+        const me = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || baseEx : baseEx;
+        const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, me) : { weight: (baseEx.targetWeight || 'Body'), reps: (baseEx.targetReps || 8) };
+        const wStr = typeof rx.weight === 'number' ? `${rx.weight}kg` : `${rx.weight}`;
+        const reps = rx.reps;
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-top:4px; gap:6px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:5px; flex:1; min-width:140px;">
+              <span style="color:#fff; font-weight:700;">${idx + 1}. ${me.name}</span>
+              ${isSwapped ? '<span style="font-size:9px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--primary); padding:1px 4px; border-radius:3px;">SWAPPED</span>' : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <button type="button" class="header-pill-btn" onclick="openSwapModal('today', '${archKey}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:700; height:24px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); cursor:pointer;">⇄ Swap</button>
+              <button type="button" class="header-pill-btn" onclick="openEditLoadModal('${me.id}', '${archKey}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:800; height:24px; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.3); color:var(--primary); cursor:pointer;">✎ ${wStr}×${reps}</button>
+            </div>
+          </div>
+          <div style="font-size:10.5px; color:var(--text-muted); margin-top:-1px;">Cue: ${me.cue || baseEx.cue || ''}</div>
+        `;
+      }).join('');
+    }
+
     function getWorkoutArchetypeCardsHtml(isCompletedMode) {
       const btnStyleA = isCompletedMode 
         ? "height:36px; font-size:11.5px; font-weight:700; margin-top:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#a1a1aa;" 
@@ -2059,39 +2131,11 @@ function generateWorkoutFromGearAndGoal() {
           <!-- ELEPHANT ACCORDION -->
           <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
             <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>View Routine & Coaching Cues (5 exercises)</span>
+              <span>View Routine & Coaching Cues (${dailyArchetypes.option_a.exercises.length} exercises)</span>
               <span style="font-size:12px;">▾</span>
             </summary>
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-                <span style="color:#fff; font-weight:700;">1. Barbell Romanian Deadlift (RDL)</span>
-                <span style="color:var(--primary); font-weight:800;">4 × 8 @ 70kg (90s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Hips back, neutral cervical spine, explosive glute lockout.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">2. Barbell Flat / Floor Press</span>
-                <span style="color:var(--primary); font-weight:800;">4 × 6-8 @ 95kg (90s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Controlled eccentric, 45° elbow tuck, explosive concentric press.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">3. Dip Bar Chest & Tricep Dips</span>
-                <span style="color:var(--primary); font-weight:800;">3 × 12 @ Bodyweight (75s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Slight forward torso lean, full tricep lockout at top.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">4. Barbell Pendlay Row</span>
-                <span style="color:var(--primary); font-weight:800;">4 × 8 @ 85kg (90s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Dead-stop from floor each rep, strict horizontal torso.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">5. Floor Seated Barbell Z-Press</span>
-                <span style="color:var(--primary); font-weight:800;">3 × 10 @ 45kg (60s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Seated with straight legs; strict overhead deltoid power.</div>
+              ${renderArchetypeExercisesHtml('option_a', dailyArchetypes.option_a.exercises)}
             </div>
           </details>
 
@@ -2126,39 +2170,11 @@ function generateWorkoutFromGearAndGoal() {
           <!-- ELEPHANT ACCORDION -->
           <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
             <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>View Routine & Coaching Cues (5 exercises)</span>
+              <span>View Routine & Coaching Cues (${dailyArchetypes.option_b.exercises.length} exercises)</span>
               <span style="font-size:12px;">▾</span>
             </summary>
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-                <span style="color:#fff; font-weight:700;">1. Kettlebell Two-Hand Swings</span>
-                <span style="color:#38bdf8; font-weight:800;">4 × 15 @ 24-32kg (60s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Violent hip snap, bell floats weightless, glutes contracted.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">2. Dumbbell Chest Floor Press</span>
-                <span style="color:#38bdf8; font-weight:800;">4 × 10 @ 2×22kg (75s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Pause briefly on floor to eliminate momentum; press hard.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">3. Rotational Slam Ball Slams</span>
-                <span style="color:#38bdf8; font-weight:800;">4 × 12 @ 10-15kg (45s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Full overhead extension, drive ball into floor with core torque.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">4. Floor Push-ups (Tempo 3-0-1)</span>
-                <span style="color:#38bdf8; font-weight:800;">3 × 18 @ Bodyweight (60s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: 3-second lowering tempo, screw hands into floor.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">5. Speed Rope Double-Under Ladder</span>
-                <span style="color:#38bdf8; font-weight:800;">6 rounds × 45s work / 15s rest</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Wrists rotate near hips, light bounce on balls of feet.</div>
+              ${renderArchetypeExercisesHtml('option_b', dailyArchetypes.option_b.exercises)}
             </div>
           </details>
 
@@ -2193,33 +2209,11 @@ function generateWorkoutFromGearAndGoal() {
           <!-- ELEPHANT ACCORDION -->
           <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
             <summary style="font-size:11px; font-weight:700; color:#a1a1aa; padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>View Routine & Coaching Cues (4 exercises)</span>
+              <span>View Routine & Coaching Cues (${dailyArchetypes.option_c.exercises.length} exercises)</span>
               <span style="font-size:12px;">▾</span>
             </summary>
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
-                <span style="color:#fff; font-weight:700;">1. Incline Cadence Walk / Ruck</span>
-                <span style="color:#a78bfa; font-weight:800;">20 min @ Zone 2 (HR 105–120 bpm)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Nasal breathing only; gentle rhythmic hip and ankle propulsion.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">2. Banded Terminal Knee Extensions (TKE)</span>
-                <span style="color:#a78bfa; font-weight:800;">3 × 20 reps per leg</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Loop band behind knee; drive heel down and lock quad hard.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">3. Glute Bridge Isometric & Walkouts</span>
-                <span style="color:#a78bfa; font-weight:800;">3 × 15 reps (45s rest)</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Squeeze glutes at top; decompress anterior hip flexors.</div>
-
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:4px;">
-                <span style="color:#fff; font-weight:700;">4. Deadbug Anti-Extension Core Brace</span>
-                <span style="color:#a78bfa; font-weight:800;">3 × 45s hold per side</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Press lumbar flat into floor; prevent any lower back arching.</div>
+              ${renderArchetypeExercisesHtml('option_c', dailyArchetypes.option_c.exercises)}
             </div>
           </details>
 
@@ -2439,288 +2433,291 @@ function generateWorkoutFromGearAndGoal() {
 
       const completed = getTodayCompletedWorkout();
 
-      if (completed) {
-        if (dot) {
-          dot.style.background = 'var(--primary, #30d158)';
-          dot.style.boxShadow = 'none';
+      if (dot) {
+        dot.style.background = completed ? 'var(--primary, #30d158)' : 'var(--primary)';
+        dot.style.boxShadow = 'none';
+      }
+      if (hdrText) {
+        hdrText.innerText = completed ? "TODAY'S TRAINING & RECOMMENDATIONS" : "TODAY'S TRAINING RECOMMENDATIONS";
+        hdrText.style.color = "var(--text-muted)";
+      }
+
+      let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.7;
+      let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1;
+      let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 80.99;
+      let fatToLose = (window.athleteProfile && window.athleteProfile.fatToLoseKg) ? window.athleteProfile.fatToLoseKg : 2.42;
+      let targetWeight = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : 95.28;
+
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.renpho) {
+        const r = window.BAKED_LIVE_STATE.renpho;
+        if (r.weight_kg) scaleWeight = r.weight_kg;
+        if (r.body_fat_pct) bodyFatPct = r.body_fat_pct;
+        if (r.lean_mass_kg) leanMass = r.lean_mass_kg;
+        if (r.fat_to_lose_kg) fatToLose = r.fat_to_lose_kg;
+        if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
+      }
+
+      // Filter and sort options, placing verdict.optionId first when auto
+      let filteredOptions = todayWorkoutOptions.filter(opt => {
+        if (todayFilterLocation !== 'all') {
+          if (todayFilterLocation === 'gym' && opt.location !== 'gym') return false;
+          if (todayFilterLocation === 'kb' && opt.location !== 'kb') return false;
+          if (todayFilterLocation === 'bodyweight' && opt.location !== 'bodyweight') return false;
         }
-        if (hdrText) {
-          hdrText.innerText = "TODAY'S TRAINING COMPLETED";
-          hdrText.style.color = "var(--primary, #30d158)";
+        if (todayFilterFocus !== 'auto') {
+          if (opt.focus !== todayFilterFocus) return false;
         }
+        return true;
+      });
 
-        slot.innerHTML = `
-          <!-- ELEPHANT-GOLDFISH PROTOCOL: COMPACT TODAY'S SESSION COMPLETION HERO -->
-          <div class="card" style="padding:14px 16px; border:1px solid rgba(48,209,88,0.25); background:var(--surface-card, #14161e); border-radius:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-              <div style="display:flex; align-items:center; gap:6px;">
-                <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
-                  ✓ TODAY'S WORKOUT COMPLETED
-                </span>
-                <span style="font-size:11px; color:var(--text-muted);">${completed.source || 'Session Logged'}</span>
-              </div>
-              <span style="font-size:10.5px; font-weight:700; color:var(--primary, #30d158);">Stimulus Achieved</span>
-            </div>
-            <div style="font-size:15px; font-weight:800; color:#fff; font-family:var(--font-sans); margin-top:6px;">
-              ${completed.title}
-            </div>
-            <div style="display:flex; gap:12px; align-items:center; margin-top:6px; font-size:11.5px; color:var(--text-secondary); flex-wrap:wrap;">
-              <span>${completed.durationMin} min duration</span>
-              <span style="color:var(--text-dim);">•</span>
-              <span style="color:var(--primary, #30d158); font-weight:700;">${completed.calories} kcal burned</span>
-              <span style="color:var(--text-dim);">•</span>
-              <span style="color:#f59e0b; font-weight:600;">${completed.recoveryPill || '24–48h Recovery Window'}</span>
-            </div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:34px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; display:flex; align-items:center; justify-content:center; gap:5px; flex:1;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                View Full Physiological Benefits & Telemetry ➔
-              </button>
-              <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(false)" style="height:34px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:5px;">
-                ↺ Reopen Today
-              </button>
-            </div>
-          </div>
-
-          <!-- PROMINENT NEXT-DAY PREVIEW & INTELLIGENT RECOMMENDATION (ELEPHANT-GOLDFISH PROTOCOL) -->
-          ${renderTomorrowPreviewCard(completed)}
-
-          <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
-          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
-            <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
-              <span style="font-size:11px; color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
-              ${getWorkoutArchetypeCardsHtml(true)}
-            </div>
-          </details>
-
-          <!-- MANUAL OVERRIDE FOOTER LINK -->
-          <div style="text-align:center; padding:4px 0 2px;">
-            <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
-              ↺ Switch to Pre-Workout Prescription Mode
-            </span>
-          </div>
-        `;
-      } else {
-        if (dot) {
-          dot.style.background = 'var(--primary)';
-          dot.style.boxShadow = 'none';
-        }
-        if (hdrText) {
-          hdrText.innerText = "TODAY'S TRAINING RECOMMENDATIONS";
-          hdrText.style.color = "var(--text-muted)";
-        }
-
-        let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.7;
-        let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1;
-        let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 80.99;
-        let fatToLose = (window.athleteProfile && window.athleteProfile.fatToLoseKg) ? window.athleteProfile.fatToLoseKg : 2.42;
-        let targetWeight = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : 95.28;
-
-        if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.renpho) {
-          const r = window.BAKED_LIVE_STATE.renpho;
-          if (r.weight_kg) scaleWeight = r.weight_kg;
-          if (r.body_fat_pct) bodyFatPct = r.body_fat_pct;
-          if (r.lean_mass_kg) leanMass = r.lean_mass_kg;
-          if (r.fat_to_lose_kg) fatToLose = r.fat_to_lose_kg;
-          if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
-        }
-
-        const lastAct = (typeof recentActivitiesData !== 'undefined' && recentActivitiesData.length > 0) ? recentActivitiesData[0] : null;
-        const lastSessionStr = lastAct 
-          ? `${lastAct.durationMin || lastAct.duration_min} min ${lastAct.subTitle || lastAct.sub_title || lastAct.name} (${lastAct.calories} kcal) logged`
-          : "Hybrid Conditioning & Steps logged";
-
-        // Filter and sort options, placing verdict.optionId first when auto
-        let filteredOptions = todayWorkoutOptions.filter(opt => {
-          if (todayFilterLocation !== 'all') {
-            if (todayFilterLocation === 'gym' && opt.location !== 'gym') return false;
-            if (todayFilterLocation === 'kb' && opt.location !== 'kb') return false;
-            if (todayFilterLocation === 'bodyweight' && opt.location !== 'bodyweight') return false;
-          }
-          if (todayFilterFocus !== 'auto') {
-            if (opt.focus !== todayFilterFocus) return false;
-          }
-          return true;
+      if (todayFilterLocation === 'all' && todayFilterFocus === 'auto') {
+        filteredOptions.sort((a, b) => {
+          if (a.id === verdict.optionId) return -1;
+          if (b.id === verdict.optionId) return 1;
+          return 0;
         });
+      }
 
-        if (todayFilterLocation === 'all' && todayFilterFocus === 'auto') {
-          filteredOptions.sort((a, b) => {
-            if (a.id === verdict.optionId) return -1;
-            if (b.id === verdict.optionId) return 1;
-            return 0;
-          });
-        }
+      const todaySwaps = getTodayExerciseSwaps();
 
-        const workoutCardsHtml = filteredOptions.map(opt => {
-          const isRec = (opt.id === verdict.optionId);
-          const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
-          const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+      const workoutCardsHtml = filteredOptions.map(opt => {
+        const isRec = (opt.id === verdict.optionId);
+        const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
+        const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
 
-          const exercisesHtml = activeExerciseIds.map((exId, idx) => {
-            const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
-            const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
-            const weight = rx.weight;
-            const reps = rx.reps;
-            const wStr = typeof weight === 'number' ? `${weight}kg` : `${weight}`;
-            return `
-              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:3px;">
-                <span style="color:#fff; font-weight:700;">${idx + 1}. ${ex.name}</span>
-                <span style="color:var(--primary); font-weight:800;">${ex.setsCount} × ${reps} @ ${wStr} (${ex.rest})</span>
-              </div>
-              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-2px;">Cue: ${ex.cue}</div>
-            `;
-          }).join('');
-
+        const exercisesHtml = activeExerciseIds.map((origExId, idx) => {
+          const swapKey = `${opt.id}_${idx}`;
+          const exId = todaySwaps[swapKey] || origExId;
+          const isSwapped = !!todaySwaps[swapKey];
+          const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" } : { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
+          const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
+          const weight = rx.weight;
+          const reps = rx.reps;
+          const wStr = typeof weight === 'number' ? `${weight}kg` : `${weight}`;
           return `
-            <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:${isRec ? '1px solid rgba(0,229,255,0.45)' : '1px solid rgba(255,255,255,0.08)'}; margin-bottom:10px; position:relative;">
-              <div style="position:absolute; top:12px; right:12px; display:flex; gap:6px; align-items:center;">
-                ${rotatedInfo.rotationNote ? `<div style="font-size:9.5px; font-weight:700; background:rgba(167,139,250,0.15); color:#a78bfa; border:1px solid rgba(167,139,250,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.03em;">🔄 48H ROTATED</div>` : ''}
-                ${isRec ? `<div style="font-size:9.5px; font-weight:800; background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">⭐ RECOMMENDED</div>` : ''}
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-top:4px; gap:6px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:5px; flex:1; min-width:140px;">
+                <span style="color:#fff; font-weight:700;">${idx + 1}. ${ex.name}</span>
+                ${isSwapped ? '<span style="font-size:9px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--primary); padding:1px 4px; border-radius:3px;">SWAPPED</span>' : ''}
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <div>
-                  <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${opt.location.toUpperCase()} • ${opt.focus.toUpperCase()}</span>
-                  <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">${opt.title}</div>
-                  <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">${opt.subtitle}</div>
-                  ${rotatedInfo.rotationNote ? `<div style="font-size:11px; font-weight:700; color:#c4b5fd; margin-top:4px;">🛡️ ${rotatedInfo.rotationNote}</div>` : ''}
-                </div>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <button type="button" class="header-pill-btn" onclick="openSwapModal('today', '${opt.id}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:700; height:24px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); cursor:pointer;">
+                  ⇄ Swap
+                </button>
+                <button type="button" class="header-pill-btn" onclick="openEditLoadModal('${ex.id}', '${opt.id}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:800; height:24px; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.3); color:var(--primary); cursor:pointer;">
+                  ✎ ${wStr}×${reps}
+                </button>
               </div>
-
-              <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-                <div style="font-size:11.5px; font-weight:700; color:#fff;">${opt.durationMin} min</div>
-                <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-                <div style="font-size:11.5px; font-weight:700; color:var(--primary);">~${opt.calories} kcal</div>
-                <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-                <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">${opt.gearLabel}</div>
-              </div>
-
-              <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-                ${opt.description}
-              </div>
-
-              <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-                <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                  <span>View Routine & Coaching Cues (${activeExerciseIds.length} exercises)</span>
-                  <span style="font-size:12px;">▾</span>
-                </summary>
-                <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-                  ${exercisesHtml}
-                </div>
-              </details>
-
-              <button class="btn-action-primary" onclick="launchDynamicWorkout('${opt.id}')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:${isRec ? 'var(--primary)' : 'rgba(255,255,255,0.08)'}; color:${isRec ? '#000' : '#fff'};">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                START SESSION →
-              </button>
             </div>
+            <div style="font-size:10px; color:var(--text-muted); margin-top:-1px;">Cue: ${ex.cue || ''}</div>
           `;
         }).join('');
 
-        const ctaButtonHtml = verdict.isRest
-          ? `
-            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-              <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(true)" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:800; background:var(--primary); color:#000;">
-                ✓ Log Rest Day
-              </button>
-              <button class="btn-action-primary" onclick="launchDynamicWorkout('mobility_stretch')" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12);">
-                Start 15-Min Gentle Stretch Instead ➔
-              </button>
+        return `
+          <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:${isRec ? '1px solid rgba(0,229,255,0.45)' : '1px solid rgba(255,255,255,0.08)'}; margin-bottom:10px; position:relative;">
+            <div style="position:absolute; top:12px; right:12px; display:flex; gap:6px; align-items:center;">
+              ${rotatedInfo.rotationNote ? `<div style="font-size:9.5px; font-weight:700; background:rgba(167,139,250,0.15); color:#a78bfa; border:1px solid rgba(167,139,250,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.03em;">🔄 48H ROTATED</div>` : ''}
+              ${isRec ? `<div style="font-size:9.5px; font-weight:800; background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">⭐ RECOMMENDED</div>` : ''}
             </div>
-          `
-          : `
-            <button class="btn-action-primary" onclick="launchDynamicWorkout('${verdict.optionId}')" style="height:44px; font-size:13px; font-weight:800; width:100%; margin-top:12px; background:var(--primary); color:#000; box-shadow:0 0 15px rgba(0,229,255,0.25);">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              ${verdict.ctaText}
-            </button>
-          `;
-
-        slot.innerHTML = `
-          <!-- ELEPHANT-GOLDFISH PROTOCOL: 3-SECOND GLANCEABLE VERDICT HERO -->
-          <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.3); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-              <span style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
-                ${verdict.badge}
-              </span>
-              <span style="font-size:10.5px; color:var(--text-muted);">
-                Sleep ${verdict.sleepScore} • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
-              </span>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div>
+                <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${opt.location.toUpperCase()} • ${opt.focus.toUpperCase()}</span>
+                <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">${opt.title}</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">${opt.subtitle}</div>
+                ${rotatedInfo.rotationNote ? `<div style="font-size:11px; font-weight:700; color:#c4b5fd; margin-top:4px;">🛡️ ${rotatedInfo.rotationNote}</div>` : ''}
+              </div>
             </div>
 
-            <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
-              ${verdict.title}
-            </div>
-            
-            <!-- GOLDFISH 3-SECOND SUMMARY -->
-            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
-              ${verdict.goldfishReason}
+            <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+              <div style="font-size:11.5px; font-weight:700; color:#fff;">${opt.durationMin} min</div>
+              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+              <div style="font-size:11.5px; font-weight:700; color:var(--primary);">~${opt.calories} kcal</div>
+              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+              <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">${opt.gearLabel}</div>
             </div>
 
-            <!-- PRIMARY CLEAR CALL-TO-ACTION -->
-            ${ctaButtonHtml}
+            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
+              ${opt.description}
+            </div>
 
-            <!-- ELEPHANT COLLAPSIBLE: DEEP BIOMETRIC LOAD & DEFICIT RATIONALE -->
-            <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>🔬 View Biometric Load & Deficit Rationale</span>
-                <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+              <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>View Routine & Coaching Cues (${activeExerciseIds.length} exercises)</span>
+                <span style="font-size:12px;">▾</span>
               </summary>
-              <div style="padding:10px 12px; font-size:11px; color:#a1a1aa; line-height:1.45; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:5px;">
-                <div>• <strong>Cumulative Workload:</strong> ${verdict.consecutiveDays} consecutive training days • ~${verdict.burn72h} kcal burned across last 72 hours (${verdict.workoutsLast4Days} workouts in 4 days).</div>
-                <div>• <strong>Today's Status:</strong> ${verdict.activeCaloriesToday} kcal active burned • RHR ${verdict.restingHr} bpm • Body Battery ${verdict.bodyBattery}%.</div>
-                <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose).</div>
-                <div>• <strong>Joint Guardrails:</strong> Zero running volume and high-impact landings; patellofemoral cartilage spared while maintaining ${leanMass} kg lean mass.</div>
-                
-                <div style="margin-top:6px; pt-2; display:flex; gap:8px; flex-wrap:wrap;">
-                  <button class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700;">
-                    ⚙ Tailor Equipment
-                  </button>
-                  <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:10.5px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
-                    ✓ Mark Complete
-                  </button>
-                </div>
+              <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
+                ${exercisesHtml}
               </div>
             </details>
-          </div>
 
-          <!-- ALTERNATIVE WORKOUTS & FILTER CONTROLS -->
-          <div style="margin-top:14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:baseline;">
-            <span style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Alternative Workout Routines</span>
-            <span style="font-size:10.5px; color:var(--text-muted);">${filteredOptions.length} available</span>
+            <button class="btn-action-primary" onclick="launchDynamicWorkout('${opt.id}')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:${isRec ? 'var(--primary)' : 'rgba(255,255,255,0.08)'}; color:${isRec ? '#000' : '#fff'};">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              START SESSION →
+            </button>
           </div>
-
-          <!-- FILTER PILLS -->
-          <div class="filter-pill-row" style="margin-bottom:6px;">
-            <button type="button" class="filter-pill ${todayFilterLocation === 'all' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'all')">All Locations</button>
-            <button type="button" class="filter-pill ${todayFilterLocation === 'gym' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'gym')">Gym (Barbell)</button>
-            <button type="button" class="filter-pill ${todayFilterLocation === 'kb' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'kb')">KB / Van</button>
-            <button type="button" class="filter-pill ${todayFilterLocation === 'bodyweight' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'bodyweight')">Bodyweight</button>
-          </div>
-
-          <div class="filter-pill-row" style="margin-bottom:12px;">
-            <button type="button" class="filter-pill ${todayFilterFocus === 'auto' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'auto')">Auto Rec</button>
-            <button type="button" class="filter-pill ${todayFilterFocus === 'strength' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'strength')">Strength</button>
-            <button type="button" class="filter-pill ${todayFilterFocus === 'upper' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'upper')">Upper</button>
-            <button type="button" class="filter-pill ${todayFilterFocus === 'hinge' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'hinge')">Hinge</button>
-            <button type="button" class="filter-pill ${todayFilterFocus === 'conditioning' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'conditioning')">Conditioning</button>
-            <button type="button" class="filter-pill ${todayFilterFocus === 'flush' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'flush')">Flush</button>
-          </div>
-
-          <!-- DYNAMIC WORKOUT OPTIONS -->
-          ${workoutCardsHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No workouts match the selected filters.</div>'}
         `;
-      }
+      }).join('');
+
+      const ctaButtonHtml = verdict.isRest
+        ? `
+          <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+            <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(true)" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:800; background:var(--primary); color:#000;">
+              ✓ Log Rest Day
+            </button>
+            <button class="btn-action-primary" onclick="launchDynamicWorkout('mobility_stretch')" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12);">
+              Start 15-Min Gentle Stretch Instead ➔
+            </button>
+          </div>
+        `
+        : `
+          <button class="btn-action-primary" onclick="launchDynamicWorkout('${verdict.optionId}')" style="height:44px; font-size:13px; font-weight:800; width:100%; margin-top:12px; background:var(--primary); color:#000; box-shadow:0 0 15px rgba(0,229,255,0.25);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            ${verdict.ctaText}
+          </button>
+        `;
+
+      const completedBannerHtml = completed ? `
+        <!-- ELEPHANT-GOLDFISH PROTOCOL: COMPACT TODAY'S SESSION COMPLETION BANNER -->
+        <div class="card" style="padding:10px 14px; margin-bottom:12px; background:rgba(48,209,88,0.08); border:1px solid rgba(48,209,88,0.25); border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:12px; font-weight:800; color:var(--primary, #30d158);">✓ Morning Activity Logged (${completed.durationMin}m • ${completed.calories} kcal)</span>
+            <span style="font-size:11px; color:var(--text-muted);">${completed.title || 'Session Logged'}</span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:28px; padding:0 10px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              View Telemetry ➔
+            </button>
+            <button type="button" onclick="toggleWorkoutCompleteManual(false)" style="background:transparent; border:none; color:var(--text-muted); font-size:11px; cursor:pointer;" title="Reopen Pre-Workout Prescription Mode">
+              ↺
+            </button>
+          </div>
+        </div>
+      ` : '';
+
+      const tomorrowAccordionHtml = completed ? `
+        <!-- ELEPHANT ACCORDION: COLLAPSIBLE NEXT-DAY AUTOREGULATION PREVIEW -->
+        <details style="margin-top:14px; margin-bottom:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
+          <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span>📅 Tomorrow's Autoregulation Preview</span>
+              <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); color:var(--primary, #30d158); font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase;">Next Stimulus</span>
+            </div>
+            <span style="font-size:11px; color:var(--text-muted);">▾</span>
+          </summary>
+          <div style="padding:10px 12px; border-top:1px solid rgba(255,255,255,0.05);">
+            ${renderTomorrowPreviewCard(completed)}
+          </div>
+        </details>
+      ` : '';
+
+      slot.innerHTML = `
+        ${completedBannerHtml}
+
+        <!-- ELEPHANT-GOLDFISH PROTOCOL: 3-SECOND GLANCEABLE VERDICT HERO -->
+        <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.3); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+              ${verdict.badge}
+            </span>
+            <span style="font-size:10.5px; color:var(--text-muted);">
+              <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
+            </span>
+          </div>
+
+          <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
+            ${verdict.title}
+          </div>
+          
+          <!-- GOLDFISH 3-SECOND SUMMARY -->
+          <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
+            ${verdict.goldfishReason}
+          </div>
+
+          <!-- PRIMARY CLEAR CALL-TO-ACTION -->
+          ${ctaButtonHtml}
+
+          <!-- ELEPHANT COLLAPSIBLE: DEEP BIOMETRIC LOAD & DEFICIT RATIONALE -->
+          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
+            <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>🔬 View Biometric Load & Deficit Rationale</span>
+              <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:10px 12px; font-size:11px; color:#a1a1aa; line-height:1.45; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:5px;">
+              <div>• <strong>Cumulative Workload:</strong> ${verdict.consecutiveDays} consecutive training days • ~${verdict.burn72h} kcal burned across last 72 hours (${verdict.workoutsLast4Days} workouts in 4 days).</div>
+              <div>• <strong>Today's Status:</strong> ${verdict.activeCaloriesToday} kcal active burned • RHR ${verdict.restingHr} bpm • Body Battery ${verdict.bodyBattery}%.</div>
+              <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose).</div>
+              <div>• <strong>Joint Guardrails:</strong> Zero running volume and high-impact landings; patellofemoral cartilage spared while maintaining ${leanMass} kg lean mass.</div>
+              
+              <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700;">
+                  ⚙ Tailor Equipment
+                </button>
+                <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:10.5px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
+                  ✓ Mark Complete
+                </button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ALTERNATIVE WORKOUTS & FILTER CONTROLS -->
+        <div style="margin-top:14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:baseline;">
+          <span style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Alternative Workout Routines</span>
+          <span style="font-size:10.5px; color:var(--text-muted);">${filteredOptions.length} available</span>
+        </div>
+
+        <!-- FILTER PILLS -->
+        <div class="filter-pill-row" style="margin-bottom:6px;">
+          <button type="button" class="filter-pill ${todayFilterLocation === 'all' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'all')">All Locations</button>
+          <button type="button" class="filter-pill ${todayFilterLocation === 'gym' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'gym')">Gym (Barbell)</button>
+          <button type="button" class="filter-pill ${todayFilterLocation === 'kb' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'kb')">KB / Van</button>
+          <button type="button" class="filter-pill ${todayFilterLocation === 'bodyweight' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'bodyweight')">Bodyweight</button>
+        </div>
+
+        <div class="filter-pill-row" style="margin-bottom:12px;">
+          <button type="button" class="filter-pill ${todayFilterFocus === 'auto' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'auto')">Auto Rec</button>
+          <button type="button" class="filter-pill ${todayFilterFocus === 'strength' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'strength')">Strength</button>
+          <button type="button" class="filter-pill ${todayFilterFocus === 'upper' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'upper')">Upper</button>
+          <button type="button" class="filter-pill ${todayFilterFocus === 'hinge' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'hinge')">Hinge</button>
+          <button type="button" class="filter-pill ${todayFilterFocus === 'conditioning' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'conditioning')">Conditioning</button>
+          <button type="button" class="filter-pill ${todayFilterFocus === 'flush' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'flush')">Flush</button>
+        </div>
+
+        <!-- DYNAMIC WORKOUT OPTIONS -->
+        ${workoutCardsHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No workouts match the selected filters.</div>'}
+
+        ${tomorrowAccordionHtml}
+
+        <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
+        <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
+          <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+            <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
+            <span style="font-size:11px; color:var(--text-muted);">▾</span>
+          </summary>
+          <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
+            ${getWorkoutArchetypeCardsHtml(!!completed)}
+          </div>
+        </details>
+
+        <!-- MANUAL OVERRIDE FOOTER LINK -->
+        <div style="text-align:center; padding:8px 0 4px;">
+          <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
+            ↺ Switch to Pre-Workout Prescription Mode
+          </span>
+        </div>
+      `;
     }
 
     function launchDynamicWorkout(optionId) {
       const opt = todayWorkoutOptions.find(o => o.id === optionId) || todayWorkoutOptions[0];
       const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
       const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+      const todaySwaps = getTodayExerciseSwaps();
 
-      activeWorkoutPlan = activeExerciseIds.map(exId => {
-        const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
+      activeWorkoutPlan = activeExerciseIds.map((origExId, idx) => {
+        const exId = todaySwaps[`${opt.id}_${idx}`] || origExId;
+        const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" } : { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
         const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
         const targetW = rx.weight;
         const targetR = rx.reps;
@@ -2746,6 +2743,10 @@ function generateWorkoutFromGearAndGoal() {
       speak(opt.title + " loaded. Let's work!");
       renderCurrentExercise();
       saveActiveSessionToLocalStorage();
+    }
+
+    function startTodayOption(optId) {
+      launchDynamicWorkout(optId);
     }
 
     function toggleWorkoutCompleteManual(isComplete) {
@@ -2880,13 +2881,86 @@ function viewCompletedWorkoutBreakdown() {
       beep(450, 0.06);
     }
 
-    function openSwapModal(mode) {
+    let swapContext = { mode: 'swap', optId: null, exIdx: null };
+    let editLoadContext = { exId: null, optId: null, exIdx: null };
+
+    function ensureWorkoutModalsInDom() {
+      if (!document.getElementById('swapExerciseModal')) {
+        const swapDiv = document.createElement('div');
+        swapDiv.className = 'modal-overlay';
+        swapDiv.id = 'swapExerciseModal';
+        swapDiv.setAttribute('onclick', 'if(event.target === this) closeSwapModal()');
+        swapDiv.innerHTML = `
+          <div class="modal-card" style="max-width:380px; max-height:85vh; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="font-size:13px; color:#fff;" id="swapModalTitle">⇄ Swap Exercise</strong>
+                <div style="font-size:11px; color:var(--text-muted);">Choose a replacement or add mid-workout</div>
+              </div>
+              <span style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;" onclick="closeSwapModal()">✕</span>
+            </div>
+            <div style="margin-top:8px;">
+              <input id="swapSearchInput" type="text" placeholder="Search exercises (e.g. bench, press, row, rdl)..." oninput="renderSwapOptions()" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:12.5px; padding:6px 10px; border-radius:8px; outline:none; box-sizing:border-box;">
+            </div>
+            <div id="swapOptionsList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow-y:auto; margin-top:10px;"></div>
+          </div>
+        `;
+        document.body.appendChild(swapDiv);
+      }
+
+      if (!document.getElementById('editLoadModal')) {
+        const editDiv = document.createElement('div');
+        editDiv.className = 'modal-overlay';
+        editDiv.id = 'editLoadModal';
+        editDiv.setAttribute('onclick', 'if(event.target === this) closeEditLoadModal()');
+        editDiv.innerHTML = `
+          <div class="modal-card" style="max-width:340px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="font-size:13px; color:#fff;" id="editLoadModalTitle">✎ Edit Target Weight & Reps</strong>
+                <div style="font-size:11px; color:var(--text-muted);" id="editLoadModalSub">Update prescribed load</div>
+              </div>
+              <span style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;" onclick="closeEditLoadModal()">✕</span>
+            </div>
+            <div id="editLoadExName" style="font-size:13px; font-weight:700; color:#fff; margin-top:8px; margin-bottom:10px; padding:6px 8px; background:rgba(255,255,255,0.04); border-radius:6px; border-left:3px solid var(--primary);"></div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div>
+                <label style="font-size:11px; color:var(--cyan); display:block; margin-bottom:2px; font-weight:700;">Target Weight (kg or text, e.g. 70, Body, 24kg):</label>
+                <input type="text" id="editLoadWeightInput" placeholder="70" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11px; color:var(--lime); display:block; margin-bottom:2px; font-weight:700;">Target Reps per Set:</label>
+                <input type="text" id="editLoadRepsInput" placeholder="8" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+              </div>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                <button type="button" class="btn-action-ghost" style="flex:1; margin:0;" onclick="closeEditLoadModal()">Cancel</button>
+                <button type="button" class="btn-action-primary" style="flex:2; margin:0;" onclick="saveEditLoadModal()">✓ Save Prescribed Load</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(editDiv);
+      }
+    }
+
+    function openSwapModal(mode, optId, exIdx) {
+      ensureWorkoutModalsInDom();
       swapModalMode = mode || 'swap';
+      swapContext = {
+        mode: swapModalMode,
+        optId: optId !== undefined ? optId : null,
+        exIdx: exIdx !== undefined ? exIdx : currentExIdx
+      };
+
       const modal = document.getElementById('swapExerciseModal');
       if (modal) {
         modal.classList.add('open');
         const titleEl = document.getElementById('swapModalTitle');
-        if (titleEl) titleEl.innerText = swapModalMode === 'swap' ? '⇄ Swap Exercise' : '+ Add Exercise';
+        if (titleEl) {
+          if (swapContext.mode === 'today') titleEl.innerText = '⇄ Swap Exercise for Today';
+          else if (swapContext.mode === 'swap') titleEl.innerText = '⇄ Swap Exercise';
+          else titleEl.innerText = '+ Add Exercise';
+        }
         const search = document.getElementById('swapSearchInput');
         if (search) { search.value = ''; setTimeout(() => search.focus(), 50); }
         renderSwapOptions();
@@ -2901,15 +2975,33 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function renderSwapOptions() {
+      ensureWorkoutModalsInDom();
       const container = document.getElementById('swapOptionsList');
       if (!container) return;
       const searchEl = document.getElementById('swapSearchInput');
       const query = (searchEl ? searchEl.value : '').toLowerCase().trim();
 
-      const currentEx = activeWorkoutPlan[currentExIdx] || {};
-      const currentFamily = currentEx.family || '';
-
-      const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
+      let currentFamily = '';
+      if (swapContext.mode === 'today' && swapContext.optId !== null && swapContext.exIdx !== null) {
+        const swaps = getTodayExerciseSwaps();
+        const opt = todayWorkoutOptions.find(o => o.id === swapContext.optId);
+        const arch = dailyArchetypes[swapContext.optId];
+        let exId = null;
+        if (opt) {
+          const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds };
+          const activeIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+          exId = swaps[`${swapContext.optId}_${swapContext.exIdx}`] || activeIds[swapContext.exIdx];
+        } else if (arch && arch.exercises) {
+          exId = swaps[`${swapContext.optId}_${swapContext.exIdx}`] || arch.exercises[swapContext.exIdx]?.id;
+        }
+        if (exId) {
+          const matchEx = masterExercises.find(e => e.id === exId);
+          if (matchEx) currentFamily = matchEx.family || '';
+        }
+      } else {
+        const currentEx = activeWorkoutPlan[currentExIdx] || {};
+        currentFamily = currentEx.family || '';
+      }
 
       let matches = masterExercises.filter(e => {
         if (!query) return true;
@@ -2920,8 +3012,8 @@ function viewCompletedWorkoutBreakdown() {
 
       // Same pattern first
       matches.sort((a, b) => {
-        const aSame = a.family === currentFamily ? 1 : 0;
-        const bSame = b.family === currentFamily ? 1 : 0;
+        const aSame = (currentFamily && a.family === currentFamily) ? 1 : 0;
+        const bSame = (currentFamily && b.family === currentFamily) ? 1 : 0;
         return bSame - aSame;
       });
 
@@ -2932,9 +3024,9 @@ function viewCompletedWorkoutBreakdown() {
 
       container.innerHTML = matches.map(ex => {
         const isSamePattern = currentFamily && ex.family === currentFamily;
-        const rx = rxPrescriptions[ex.id] || {};
-        const targetW = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
-        const targetR = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+        const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(ex.id, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
+        const targetW = rx.weight;
+        const targetR = rx.reps;
         const wStr = typeof targetW === 'number' ? `${targetW}kg` : targetW;
 
         return `
@@ -2949,7 +3041,7 @@ function viewCompletedWorkoutBreakdown() {
               </div>
             </div>
             <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${ex.id}')">
-              ${swapModalMode === 'swap' ? 'Swap ⇄' : 'Add +'}
+              ${swapContext.mode === 'add' ? 'Add +' : 'Swap ⇄'}
             </button>
           </div>
         `;
@@ -2958,10 +3050,9 @@ function viewCompletedWorkoutBreakdown() {
 
     function selectSwapExercise(exId) {
       const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
-      const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
-      const rx = rxPrescriptions[exId] || {};
-      const targetW = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
-      const targetR = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+      const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
+      const targetW = rx.weight;
+      const targetR = rx.reps;
 
       const newExItem = {
         id: ex.id,
@@ -2975,18 +3066,29 @@ function viewCompletedWorkoutBreakdown() {
         rationale: ex.rationale || ""
       };
 
-      if (swapModalMode === 'swap') {
+      if (swapContext.mode === 'today') {
+        if (swapContext.optId !== null && swapContext.exIdx !== null) {
+          setTodayExerciseSwap(swapContext.optId, swapContext.exIdx, exId);
+        }
+        closeSwapModal();
+        showToast(`Swapped to ${ex.name} for Today!`);
+        renderTodayTrainingRecommendations();
+        beep(750, 0.08);
+      } else if (swapContext.mode === 'swap') {
         activeWorkoutPlan[currentExIdx] = newExItem;
+        closeSwapModal();
         showToast(`Swapped to ${ex.name}`);
+        renderCurrentExercise();
+        saveActiveSessionToLocalStorage();
+        beep(750, 0.08);
       } else {
         activeWorkoutPlan.push(newExItem);
+        closeSwapModal();
         showToast(`Added ${ex.name} to routine`);
+        renderCurrentExercise();
+        saveActiveSessionToLocalStorage();
+        beep(750, 0.08);
       }
-
-      closeSwapModal();
-      renderCurrentExercise();
-      saveActiveSessionToLocalStorage();
-      beep(750, 0.08);
     }
 
     function addCustomExerciseMidWorkout() {
@@ -3031,6 +3133,164 @@ function viewCompletedWorkoutBreakdown() {
       renderCurrentExercise();
       saveActiveSessionToLocalStorage();
       beep(750, 0.08);
+    }
+
+    function openEditLoadModal(exId, optId, exIdx) {
+      ensureWorkoutModalsInDom();
+      editLoadContext = {
+        exId: exId,
+        optId: optId || null,
+        exIdx: exIdx !== undefined ? exIdx : currentExIdx
+      };
+
+      const modal = document.getElementById('editLoadModal');
+      if (!modal) return;
+
+      const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId } : { id: exId, name: exId };
+      const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: 70, reps: 8 };
+
+      const nameEl = document.getElementById('editLoadExName');
+      if (nameEl) nameEl.innerText = `${ex.name}`;
+
+      const titleEl = document.getElementById('editLoadModalTitle');
+      if (titleEl) titleEl.innerText = `✎ Edit Prescribed Load`;
+
+      const subEl = document.getElementById('editLoadModalSub');
+      if (subEl) subEl.innerText = `Update load for ${ex.name}`;
+
+      const weightIn = document.getElementById('editLoadWeightInput');
+      const repsIn = document.getElementById('editLoadRepsInput');
+
+      if (weightIn) weightIn.value = (rx.weight !== undefined && rx.weight !== null) ? rx.weight : 70;
+      if (repsIn) repsIn.value = rx.reps || 8;
+
+      modal.classList.add('open');
+      if (weightIn) setTimeout(() => weightIn.focus(), 50);
+      beep(700, 0.05);
+    }
+
+    function openEditLoadModalForActive() {
+      if (activeWorkoutPlan.length === 0 || !activeWorkoutPlan[currentExIdx]) return;
+      const ex = activeWorkoutPlan[currentExIdx];
+      openEditLoadModal(ex.id, null, currentExIdx);
+    }
+
+    function closeEditLoadModal() {
+      const modal = document.getElementById('editLoadModal');
+      if (modal) modal.classList.remove('open');
+      beep(600, 0.04);
+    }
+
+    function saveEditLoadModal() {
+      const exId = editLoadContext.exId || (activeWorkoutPlan[currentExIdx] ? activeWorkoutPlan[currentExIdx].id : null);
+      if (!exId) {
+        closeEditLoadModal();
+        return;
+      }
+      const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId } : { id: exId, name: exId };
+
+      const weightIn = document.getElementById('editLoadWeightInput');
+      const repsIn = document.getElementById('editLoadRepsInput');
+
+      const rawWeight = weightIn ? weightIn.value.trim() : '';
+      const parsedNumWeight = parseFloat(rawWeight);
+      const targetWeight = (!isNaN(parsedNumWeight) && isFinite(rawWeight)) ? parsedNumWeight : (rawWeight || 'Body');
+
+      const rawReps = repsIn ? repsIn.value.trim() : '8';
+      const parsedNumReps = parseInt(rawReps, 10);
+      const targetReps = (!isNaN(parsedNumReps) && String(parsedNumReps) === rawReps) ? parsedNumReps : rawReps;
+
+      // 1. Persist to localStorage 'pulse_strength_prescriptions'
+      try {
+        let rxMap = {};
+        const raw = localStorage.getItem('pulse_strength_prescriptions');
+        if (raw) rxMap = JSON.parse(raw) || {};
+        if (!rxMap[exId]) rxMap[exId] = {};
+        rxMap[exId].weight = targetWeight;
+        rxMap[exId].reps = targetReps;
+        rxMap[exId].updated_at = new Date().toISOString();
+        localStorage.setItem('pulse_strength_prescriptions', JSON.stringify(rxMap));
+      } catch(e) {
+        console.warn('Could not persist prescription override:', e);
+      }
+
+      // 2. Persist to window.BAKED_LIVE_STATE.strength_prescriptions
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.strength_prescriptions = window.BAKED_LIVE_STATE.strength_prescriptions || {};
+      window.BAKED_LIVE_STATE.strength_prescriptions[exId] = window.BAKED_LIVE_STATE.strength_prescriptions[exId] || {};
+      window.BAKED_LIVE_STATE.strength_prescriptions[exId].weight = targetWeight;
+      window.BAKED_LIVE_STATE.strength_prescriptions[exId].reps = targetReps;
+
+      // 3. Update active workout plan if editing active exercise
+      if (activeWorkoutPlan && activeWorkoutPlan[currentExIdx] && activeWorkoutPlan[currentExIdx].id === exId) {
+        activeWorkoutPlan[currentExIdx].targetWeight = targetWeight;
+        activeWorkoutPlan[currentExIdx].targetReps = targetReps;
+        saveActiveSessionToLocalStorage();
+        renderCurrentExercise();
+      }
+
+      // 4. Fire POST to /api/prescription/override
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/prescription/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exercise_id: exId, weight: targetWeight, reps: targetReps })
+      }).catch(() => {});
+
+      closeEditLoadModal();
+      renderTodayTrainingRecommendations();
+      renderCurrentExercise();
+      const wDisplay = typeof targetWeight === 'number' ? `${targetWeight}kg` : targetWeight;
+      showToast(`✓ Updated ${ex.name}: ${wDisplay} × ${targetReps}`);
+      beep(880, 0.1);
+    }
+
+    function openSleepOverridePrompt() {
+      let currentScore = 82;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.sleep_score !== undefined) {
+        currentScore = window.BAKED_LIVE_STATE.garmin.sleep_score;
+      } else if (window.athleteProfile && window.athleteProfile.sleepScore !== undefined) {
+        currentScore = window.athleteProfile.sleepScore;
+      }
+
+      const input = window.prompt("Enter Sleep Score (0–100) to override Garmin:", currentScore);
+      if (input === null || input.trim() === '') return;
+      const score = parseInt(input.trim(), 10);
+      if (isNaN(score) || score < 0 || score > 100) {
+        showToast("Invalid Sleep Score. Enter a number 0–100.");
+        return;
+      }
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.sleep_score = score;
+      if (window.athleteProfile) {
+        window.athleteProfile.sleepScore = score;
+      }
+
+      try {
+        localStorage.setItem('pulse_sleep_score_override', String(score));
+      } catch(e) {}
+
+      const elSleep = document.getElementById('vSleep');
+      if (elSleep) elSleep.innerText = score;
+      const sleepRing = document.getElementById('vSleepRing');
+      if (sleepRing) {
+        const circ = 157;
+        const offset = (circ * (1 - (score / 100))).toFixed(1);
+        sleepRing.style.strokeDashoffset = offset;
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'sleep_score', value: score, category: 'garmin' })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      showToast(`✓ Sleep Score updated to ${score}`);
+      beep(880, 0.08);
     }
 
     function prevExercise() {
@@ -3463,6 +3723,13 @@ function viewCompletedWorkoutBreakdown() {
     window.skipCurrentExercise = skipCurrentExercise;
     window.openSwapModal = openSwapModal;
     window.closeSwapModal = closeSwapModal;
+    window.openEditLoadModal = openEditLoadModal;
+    window.openEditLoadModalForActive = openEditLoadModalForActive;
+    window.closeEditLoadModal = closeEditLoadModal;
+    window.saveEditLoadModal = saveEditLoadModal;
+    window.openSleepOverridePrompt = openSleepOverridePrompt;
+    window.startTodayOption = startTodayOption;
+    window.loadPreset = loadPreset;
     window.renderSwapOptions = renderSwapOptions;
     window.selectSwapExercise = selectSwapExercise;
     window.addCustomExerciseMidWorkout = addCustomExerciseMidWorkout;
@@ -3474,5 +3741,6 @@ function viewCompletedWorkoutBreakdown() {
     window.getRotatedExercisesForOption = getRotatedExercisesForOption;
     window.updateArchetypeStarBadge = updateArchetypeStarBadge;
     window.computeTodayWorkoutVerdict = computeTodayWorkoutVerdict;
+
 
 

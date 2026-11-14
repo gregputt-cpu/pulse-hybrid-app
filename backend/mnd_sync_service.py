@@ -191,8 +191,8 @@ class MyNetDiarySyncService:
             dur_pts = min(40.0, (total_sleep_min / 480.0) * 40.0)
             deep_pts = min(23.0, (deep_min / 100.0) * 23.0)
             rem_pts = min(23.0, (rem_min / 100.0) * 23.0)
-            awake_penalty = max(0.0, (awake_min - 8.0) * 0.25)
-            restfulness_pts = max(0.0, 14.0 - awake_penalty)
+            awake_penalty = max(0.0, (awake_min - 8.0) * 0.48)
+            restfulness_pts = max(-8.0, 14.0 - awake_penalty)
             sleep_score = int(round(min(99, max(45, dur_pts + deep_pts + rem_pts + restfulness_pts))))
 
             morning_bb = min(100, int(round(sleep_score * 1.05)))
@@ -465,16 +465,44 @@ class MyNetDiarySyncService:
                 garmin_state['active_minutes'] = garmin_bridge['active_minutes']
             if garmin_bridge.get('sleep_duration'):
                 garmin_state['sleep_duration'] = garmin_bridge['sleep_duration']
-            if garmin_bridge.get('sleep_score') is not None:
-                garmin_state['sleep_score'] = garmin_bridge['sleep_score']
-            if garmin_bridge.get('body_battery') is not None:
-                garmin_state['body_battery'] = garmin_bridge['body_battery']
-            if garmin_bridge.get('training_readiness') is not None:
-                garmin_state['training_readiness'] = garmin_bridge['training_readiness']
-            if garmin_bridge.get('readiness_level'):
-                garmin_state['readiness_level'] = garmin_bridge['readiness_level']
-            if garmin_bridge.get('readiness_feedback'):
-                garmin_state['readiness_feedback'] = garmin_bridge['readiness_feedback']
+            today_str = target_date_str or date.today().isoformat()
+            # Check manual override for sleep score
+            is_manual_override = (
+                garmin_state.get('sleep_score_manual_date') == today_str
+                and garmin_state.get('sleep_score') is not None
+            )
+
+            if is_manual_override:
+                effective_sleep_score = garmin_state['sleep_score']
+                garmin_state['sleep_score_source'] = "manual_override"
+            else:
+                effective_sleep_score = garmin_bridge.get('sleep_score')
+                if effective_sleep_score is not None:
+                    garmin_state['sleep_score'] = effective_sleep_score
+                    garmin_state['sleep_score_source'] = "mnd_estimated"
+
+            # Recalculate body battery and training readiness based on effective sleep score
+            if effective_sleep_score is not None:
+                active_cals_val = garmin_state.get('active_calories') or 0
+                morning_bb = min(100, int(round(effective_sleep_score * 1.05)))
+                burn_drain = int(round(active_cals_val / 45.0))
+                calc_bb = max(25, min(100, morning_bb - burn_drain))
+                calc_tr = int(round(effective_sleep_score * 0.65 + morning_bb * 0.38 - min(10, active_cals_val / 150.0)))
+                calc_tr = max(40, min(98, calc_tr))
+
+                garmin_state['body_battery'] = calc_bb
+                garmin_state['training_readiness'] = calc_tr
+                garmin_state['readiness_level'] = "OPTIMAL" if calc_tr >= 85 else ("HIGH" if calc_tr >= 75 else "MODERATE")
+                garmin_state['readiness_feedback'] = "WELL_RECOVERED" if calc_tr >= 75 else "MODERATE_LOAD"
+            else:
+                if garmin_bridge.get('body_battery') is not None:
+                    garmin_state['body_battery'] = garmin_bridge['body_battery']
+                if garmin_bridge.get('training_readiness') is not None:
+                    garmin_state['training_readiness'] = garmin_bridge['training_readiness']
+                if garmin_bridge.get('readiness_level'):
+                    garmin_state['readiness_level'] = garmin_bridge['readiness_level']
+                if garmin_bridge.get('readiness_feedback'):
+                    garmin_state['readiness_feedback'] = garmin_bridge['readiness_feedback']
 
             bridged_acts = garmin_bridge.get('bridged_activities', [])
             if bridged_acts:

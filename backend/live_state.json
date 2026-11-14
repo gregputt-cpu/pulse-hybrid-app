@@ -14,13 +14,13 @@
   },
   "garmin": {
     "device": "f\u0113nix 8 - 51mm AMOLED",
-    "training_readiness": 80,
+    "training_readiness": 75,
     "readiness_level": "HIGH",
     "readiness_feedback": "WELL_RECOVERED",
-    "sleep_score": 82,
+    "sleep_score": 75,
     "hrv_status": "balanced",
     "hrv_weekly_avg": 50,
-    "body_battery": 72,
+    "body_battery": 65,
     "resting_hr": 46,
     "active_calories": 623,
     "steps": 6432,
@@ -418,7 +418,9 @@
       }
     ],
     "distance_miles": 4.14,
-    "active_minutes": 72
+    "active_minutes": 72,
+    "sleep_score_source": "manual_override",
+    "sleep_score_manual_date": "2026-11-14"
   },
   "renpho": {
     "source": "renpho_direct_cloud",
