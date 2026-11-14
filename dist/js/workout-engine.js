@@ -315,7 +315,7 @@
             id: "barbell_rdl",
             name: "Barbell Romanian Deadlift (RDL)",
             family: "hip_hinge",
-            targetWeight: 110,
+            targetWeight: 70,
             targetReps: 8,
             setsCount: 4,
             rest: "90s",
@@ -557,6 +557,11 @@
       // Auto-swap contraindicated exercises based on athleteInjuries
       activeWorkoutPlan = arch.exercises.map(ex => {
         let modified = { ...ex };
+        if (typeof getPrescribedLoad === 'function') {
+          const rx = getPrescribedLoad(ex.id, ex);
+          modified.targetWeight = rx.weight;
+          modified.targetReps = rx.reps;
+        }
         if (currentArchetypeKey === 'option_kb' && gearConfig.kb && gearConfig.kb.weight) {
           modified.targetWeight = gearConfig.kb.weight;
         }
@@ -671,7 +676,7 @@
         name: "Barbell Romanian Deadlift (RDL)",
         family: "hip_hinge",
         requiredGear: ["barbell"],
-        getBaseWeight: () => 110,
+        getBaseWeight: () => 70,
         getBaseReps: () => 8,
         rest: "90s",
         cue: "Hips back, neutral cervical spine, explosive glute lockout.",
@@ -1088,6 +1093,150 @@
         exerciseIds: ["thoracic_openers", "couch_stretch_flow", "glute_bridge_hold", "deadbug_hold"]
       }
     ];
+
+    // ==================== DYNAMIC WEIGHT & REP PROGRESSION HELPER ====================
+    function getPrescribedLoad(exId, ex) {
+      let rxMap = {};
+      try {
+        const raw = localStorage.getItem('pulse_strength_prescriptions');
+        if (raw) rxMap = JSON.parse(raw) || {};
+      } catch(e) {}
+
+      const bakedMap = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
+      const rx = rxMap[exId] || bakedMap[exId] || {};
+
+      const weight = rx.weight ?? rx.last_logged_weight ?? (ex && typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : (ex?.targetWeight ?? 'Body'));
+      const reps = rx.reps ?? rx.last_logged_reps ?? (ex && typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : (ex?.targetReps ?? 8));
+
+      return {
+        weight,
+        reps,
+        lastWeight: rx.last_logged_weight,
+        lastReps: rx.last_logged_reps
+      };
+    }
+
+    // ==================== 48-HOUR MUSCLE-GROUP FATIGUE ROTATION ====================
+    function getFatiguedPatterns48h() {
+      const fatigued = {
+        hinge: false,
+        h_push: false,
+        h_pull: false,
+        v_push: false,
+        knee_dom: false
+      };
+
+      const now = Date.now();
+      const cutoff48h = now - (48 * 60 * 60 * 1000);
+
+      // 1. Inspect in-app pulse_session_history
+      try {
+        const histRaw = localStorage.getItem('pulse_session_history');
+        if (histRaw) {
+          const sessions = JSON.parse(histRaw);
+          if (Array.isArray(sessions)) {
+            sessions.forEach(s => {
+              if (!s.date) return;
+              const sTime = new Date(s.date).getTime();
+              if (isNaN(sTime) || sTime < cutoff48h) return;
+
+              // Inspect details (sessionLoggedSets)
+              if (s.details && typeof s.details === 'object') {
+                Object.values(s.details).forEach(set => {
+                  const exId = set.exercise_id || '';
+                  const me = masterExercises.find(e => e.id === exId);
+                  const fam = me ? me.family : '';
+                  if (exId.includes('rdl') || exId.includes('swing') || fam === 'hip_hinge') fatigued.hinge = true;
+                  if (exId.includes('press') || exId.includes('dip') || fam === 'horizontal_push') fatigued.h_push = true;
+                  if (exId.includes('row') || fam === 'pull') fatigued.h_pull = true;
+                  if (exId.includes('z_press') || fam === 'vertical_push') fatigued.v_push = true;
+                  if (exId.includes('squat') || exId.includes('lunge') || fam === 'squat') fatigued.knee_dom = true;
+                });
+              }
+
+              // Check preset/exercisesCompleted fallback
+              if (s.preset === 'gym') {
+                fatigued.hinge = true;
+                fatigued.h_push = true;
+              }
+            });
+          }
+        }
+      } catch(e) {}
+
+      // 2. Inspect Garmin recentActivitiesData (last 48 hours)
+      const acts = (typeof recentActivitiesData !== 'undefined' && Array.isArray(recentActivitiesData)) ? recentActivitiesData : [];
+      acts.forEach(act => {
+        let actTime = 0;
+        if (act.rawDate) {
+          actTime = new Date(act.rawDate.replace(' ', 'T')).getTime();
+        } else if (act.date) {
+          actTime = new Date(act.date.replace(' ', 'T')).getTime();
+        }
+        if (isNaN(actTime) || actTime === 0) {
+          if (act.isToday || (typeof act.date === 'string' && act.date.toLowerCase().includes('today'))) {
+            actTime = now;
+          }
+        }
+        if (actTime && actTime < cutoff48h) return;
+
+        const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
+        const duration = act.durationMin || act.duration_min || 0;
+        const steps = act.steps || 0;
+
+        // Garmin running, plyometrics, high-step (>12,000 steps), or cardio > 45 min
+        if (
+          text.includes('run') ||
+          text.includes('plyo') ||
+          text.includes('skip') ||
+          text.includes('jump') ||
+          steps > 12000 ||
+          ((text.includes('cardio') || text.includes('walk') || text.includes('hiit')) && duration >= 45)
+        ) {
+          fatigued.knee_dom = true;
+        }
+
+        if (text.includes('strength') || text.includes('weight')) {
+          if (text.includes('upper') || text.includes('push')) fatigued.h_push = true;
+          if (text.includes('pull') || text.includes('back')) fatigued.h_pull = true;
+          if (text.includes('leg') || text.includes('squat')) fatigued.knee_dom = true;
+          if (text.includes('hinge') || text.includes('deadlift')) fatigued.hinge = true;
+        }
+      });
+
+      return fatigued;
+    }
+
+    function getRotatedExercisesForOption(opt) {
+      if (!opt) return { exerciseIds: [], rotationNote: null };
+      const f = getFatiguedPatterns48h();
+
+      if (opt.id === 'bb_upper_hinge' && (f.hinge || f.h_push)) {
+        if (!f.knee_dom) {
+          return {
+            exerciseIds: ["barbell_pendlay_row", "barbell_z_press", "barbell_zercher_squat", "kb_suitcase_carry", "deadbug_hold"],
+            rotationNote: "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)"
+          };
+        } else {
+          return {
+            exerciseIds: ["barbell_pendlay_row", "barbell_z_press", "glute_bridge_hold", "kb_suitcase_carry", "deadbug_hold"],
+            rotationNote: "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)"
+          };
+        }
+      }
+
+      if (opt.id === 'bb_squat_press' && f.knee_dom) {
+        return {
+          exerciseIds: ["barbell_rdl", "barbell_floor_press", "barbell_pendlay_row", "weighted_dips"],
+          rotationNote: "Rotated: Knee extensors rested (Posterior & Push focus)"
+        };
+      }
+
+      return {
+        exerciseIds: opt.exerciseIds ? [...opt.exerciseIds] : [],
+        rotationNote: null
+      };
+    }
 
     let activeWorkoutPlan = [];
     let currentExIdx = 0;
@@ -1732,7 +1881,7 @@ function generateWorkoutFromGearAndGoal() {
             }
           ],
           blueprint: [
-            { name: 'Barbell Romanian Deadlift (RDL)', prescription: '4 × 8 @ 110kg (90s rest)', cue: 'Hips back, neutral spine, explosive glute lockout.' },
+            { name: 'Barbell Romanian Deadlift (RDL)', prescription: '4 × 8 @ 70kg (90s rest)', cue: 'Hips back, neutral spine, explosive glute lockout.' },
             { name: 'Barbell Flat / Floor Press', prescription: '4 × 6-8 @ 95kg (90s rest)', cue: 'Controlled eccentric, 45° elbow tuck, explosive press.' },
             { name: 'Dip Bar Chest & Tricep Dips', prescription: '3 × 12 @ Bodyweight (75s rest)', cue: 'Slight forward torso lean, full tricep lockout.' },
             { name: 'Barbell Pendlay Row', prescription: '4 × 8 @ 85kg (90s rest)', cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
@@ -1916,7 +2065,7 @@ function generateWorkoutFromGearAndGoal() {
             <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
               <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px;">
                 <span style="color:#fff; font-weight:700;">1. Barbell Romanian Deadlift (RDL)</span>
-                <span style="color:var(--primary); font-weight:800;">4 × 8 @ 110kg (90s rest)</span>
+                <span style="color:var(--primary); font-weight:800;">4 × 8 @ 70kg (90s rest)</span>
               </div>
               <div style="font-size:10.5px; color:var(--text-muted); margin-top:-3px;">Cue: Hips back, neutral cervical spine, explosive glute lockout.</div>
 
@@ -2285,6 +2434,9 @@ function generateWorkoutFromGearAndGoal() {
       const hdrText = document.getElementById('todayTrainingHeaderText');
       if (!slot) return;
 
+      const verdict = computeTodayWorkoutVerdict();
+      updateArchetypeStarBadge(verdict.archetypeKey);
+
       const completed = getTodayCompletedWorkout();
 
       if (completed) {
@@ -2361,9 +2513,6 @@ function generateWorkoutFromGearAndGoal() {
           hdrText.style.color = "var(--text-muted)";
         }
 
-        const verdict = computeTodayWorkoutVerdict();
-        updateArchetypeStarBadge(verdict.archetypeKey);
-
         let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.7;
         let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1;
         let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 80.99;
@@ -2405,15 +2554,16 @@ function generateWorkoutFromGearAndGoal() {
           });
         }
 
-        const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
-
         const workoutCardsHtml = filteredOptions.map(opt => {
           const isRec = (opt.id === verdict.optionId);
-          const exercisesHtml = opt.exerciseIds.map((exId, idx) => {
+          const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
+          const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+
+          const exercisesHtml = activeExerciseIds.map((exId, idx) => {
             const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
-            const rx = rxPrescriptions[exId] || {};
-            const weight = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
-            const reps = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+            const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
+            const weight = rx.weight;
+            const reps = rx.reps;
             const wStr = typeof weight === 'number' ? `${weight}kg` : `${weight}`;
             return `
               <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:3px;">
@@ -2426,12 +2576,16 @@ function generateWorkoutFromGearAndGoal() {
 
           return `
             <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:${isRec ? '1px solid rgba(0,229,255,0.45)' : '1px solid rgba(255,255,255,0.08)'}; margin-bottom:10px; position:relative;">
-              ${isRec ? `<div style="position:absolute; top:12px; right:12px; font-size:9.5px; font-weight:800; background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">⭐ RECOMMENDED</div>` : ''}
+              <div style="position:absolute; top:12px; right:12px; display:flex; gap:6px; align-items:center;">
+                ${rotatedInfo.rotationNote ? `<div style="font-size:9.5px; font-weight:700; background:rgba(167,139,250,0.15); color:#a78bfa; border:1px solid rgba(167,139,250,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.03em;">🔄 48H ROTATED</div>` : ''}
+                ${isRec ? `<div style="font-size:9.5px; font-weight:800; background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">⭐ RECOMMENDED</div>` : ''}
+              </div>
               <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div>
                   <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${opt.location.toUpperCase()} • ${opt.focus.toUpperCase()}</span>
                   <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">${opt.title}</div>
                   <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">${opt.subtitle}</div>
+                  ${rotatedInfo.rotationNote ? `<div style="font-size:11px; font-weight:700; color:#c4b5fd; margin-top:4px;">🛡️ ${rotatedInfo.rotationNote}</div>` : ''}
                 </div>
               </div>
 
@@ -2449,7 +2603,7 @@ function generateWorkoutFromGearAndGoal() {
 
               <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
                 <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                  <span>View Routine & Coaching Cues (${opt.exerciseIds.length} exercises)</span>
+                  <span>View Routine & Coaching Cues (${activeExerciseIds.length} exercises)</span>
                   <span style="font-size:12px;">▾</span>
                 </summary>
                 <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
@@ -2562,12 +2716,14 @@ function generateWorkoutFromGearAndGoal() {
 
     function launchDynamicWorkout(optionId) {
       const opt = todayWorkoutOptions.find(o => o.id === optionId) || todayWorkoutOptions[0];
-      const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
-      activeWorkoutPlan = opt.exerciseIds.map(exId => {
+      const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
+      const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+
+      activeWorkoutPlan = activeExerciseIds.map(exId => {
         const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
-        const rx = rxPrescriptions[exId] || {};
-        const targetW = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
-        const targetR = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+        const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
+        const targetW = rx.weight;
+        const targetR = rx.reps;
         return {
           id: ex.id,
           name: ex.name,
@@ -2990,6 +3146,50 @@ function viewCompletedWorkoutBreakdown() {
       }
 
       startRestCountdown(90, `Set ${setNum + 1}`);
+
+      // Persist logged set AND compute next-session prescription
+      try {
+        let currentRxMap = {};
+        try {
+          const raw = localStorage.getItem('pulse_strength_prescriptions');
+          if (raw) currentRxMap = JSON.parse(raw) || {};
+        } catch(e) {}
+
+        if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+        if (!window.BAKED_LIVE_STATE.strength_prescriptions) window.BAKED_LIVE_STATE.strength_prescriptions = {};
+
+        const existing = currentRxMap[exId] || window.BAKED_LIVE_STATE.strength_prescriptions[exId] || {};
+
+        let nextW;
+        let nextR;
+
+        if (isBodyweight) {
+          nextW = 'Body';
+          const baseR = typeof targetR === 'number' ? targetR : (typeof existing.reps === 'number' ? existing.reps : 10);
+          nextR = loggedR + (diffR >= 0 ? 1 : 0);
+          if (nextR < baseR && diffR >= 0) nextR = baseR + 1;
+        } else {
+          const loadInc = (diffR === 0 ? 2.5 : (diffR > 0 ? 2.5 : 0));
+          nextW = Math.round((loggedW + loadInc) * 10) / 10;
+          nextR = targetR;
+        }
+
+        const updatedRx = {
+          ...existing,
+          weight: nextW,
+          reps: nextR,
+          last_logged_weight: loggedW,
+          last_logged_reps: loggedR,
+          last_e1rm: achievedE1RM,
+          last_updated: new Date().toISOString()
+        };
+
+        currentRxMap[exId] = updatedRx;
+        window.BAKED_LIVE_STATE.strength_prescriptions[exId] = updatedRx;
+        localStorage.setItem('pulse_strength_prescriptions', JSON.stringify(currentRxMap));
+      } catch(e) {
+        console.warn('Could not persist prescription progression:', e);
+      }
     }
 
     function startRestCountdown(seconds, nextCue) {
@@ -3107,6 +3307,12 @@ function viewCompletedWorkoutBreakdown() {
       if (targetP) targetP.classList.add('active');
       if (targetB) targetB.classList.add('active');
       beep(550, 0.04);
+
+      if (key === 'train' && typeof updateArchetypeStarBadge === 'function' && typeof computeTodayWorkoutVerdict === 'function') {
+        try {
+          updateArchetypeStarBadge(computeTodayWorkoutVerdict().archetypeKey);
+        } catch(e) {}
+      }
     }
 
     function launchWorkoutPlayer() {
@@ -3263,5 +3469,10 @@ function viewCompletedWorkoutBreakdown() {
     window.renderTodayTrainingRecommendations = renderTodayTrainingRecommendations;
     window.masterExercises = masterExercises;
     window.todayWorkoutOptions = todayWorkoutOptions;
+    window.getPrescribedLoad = getPrescribedLoad;
+    window.getFatiguedPatterns48h = getFatiguedPatterns48h;
+    window.getRotatedExercisesForOption = getRotatedExercisesForOption;
+    window.updateArchetypeStarBadge = updateArchetypeStarBadge;
+    window.computeTodayWorkoutVerdict = computeTodayWorkoutVerdict;
 
 

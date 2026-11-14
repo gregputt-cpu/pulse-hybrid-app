@@ -261,13 +261,20 @@ def sync_set(payload: SetLogPayload):
         sp["last_logged_reps"] = payload.logged_reps
 
     if payload.logged_weight is not None and payload.logged_reps is not None:
-        e1rm = round(float(payload.logged_weight) * (1.0 + float(payload.logged_reps) / 30.0), 1)
-        db.log_strength_set(payload.exercise_id, payload.logged_weight, payload.logged_reps, e1rm)
+        w = float(payload.logged_weight)
+        r = int(payload.logged_reps)
+        e1rm = round(w * (1.0 + r / 30.0), 1)
+        db.log_strength_set(payload.exercise_id, w, r, e1rm)
         sp["last_e1rm"] = e1rm
-        if payload.target_reps and payload.logged_reps >= payload.target_reps:
+        sp["e1rm"] = e1rm
+        if payload.target_reps and r >= payload.target_reps:
             sp["progression_ready"] = True
+            sp["weight"] = round(w + (2.5 if w > 0 else 0.0), 1) if w > 0 else w
+            sp["reps"] = payload.target_reps if w > 0 else (r + 1)
         else:
             sp["progression_ready"] = False
+            sp["weight"] = w
+            sp["reps"] = payload.target_reps or r
 
     save_live_state(state)
     return {"success": True, "result": sp}

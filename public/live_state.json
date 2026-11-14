@@ -465,10 +465,13 @@
       "last_e1rm": 129.8
     },
     "barbell_rdl": {
-      "weight": 110.0,
+      "weight": 70.0,
       "reps": 8,
-      "e1rm": 139.3,
-      "status": "baseline"
+      "e1rm": 88.7,
+      "status": "baseline",
+      "last_logged_weight": 65.0,
+      "last_logged_reps": 8,
+      "last_e1rm": 82.3
     },
     "barbell_floor_press": {
       "weight": 95.0,
