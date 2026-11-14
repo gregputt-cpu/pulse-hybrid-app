@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v29-live-telemetry-sync';
+const CACHE_NAME = 'pulse-cache-v30-fixed-nav-no-flicker';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -49,8 +49,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation / HTML: Network-first with offline cache fallback (ensures immediate updates on reload)
-  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+  // 2. Navigation / HTML / JS / CSS: Network-first with offline cache fallback (ensures immediate updates on reload)
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json')) {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {

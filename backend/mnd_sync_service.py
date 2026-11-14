@@ -189,9 +189,9 @@ class MyNetDiarySyncService:
 
             # Calculate physiological Firstbeat-aligned sleep score from Garmin sleep stage breakdown
             dur_pts = min(40.0, (total_sleep_min / 480.0) * 40.0)
-            deep_pts = min(23.0, (deep_min / 105.0) * 23.0)
-            rem_pts = min(23.0, (rem_min / 105.0) * 23.0)
-            awake_penalty = max(0.0, (awake_min - 8.0) * 0.32)
+            deep_pts = min(23.0, (deep_min / 100.0) * 23.0)
+            rem_pts = min(23.0, (rem_min / 100.0) * 23.0)
+            awake_penalty = max(0.0, (awake_min - 8.0) * 0.25)
             restfulness_pts = max(0.0, 14.0 - awake_penalty)
             sleep_score = int(round(min(99, max(45, dur_pts + deep_pts + rem_pts + restfulness_pts))))
 
@@ -199,7 +199,7 @@ class MyNetDiarySyncService:
             burn_drain = int(round((active_cals or 0) / 45.0))
             body_battery = max(25, min(100, morning_bb - burn_drain))
 
-            training_readiness = int(round(sleep_score * 0.65 + morning_bb * 0.35 - min(10, (active_cals or 0) / 120.0)))
+            training_readiness = int(round(sleep_score * 0.65 + morning_bb * 0.38 - min(10, (active_cals or 0) / 150.0)))
             training_readiness = max(40, min(98, training_readiness))
             readiness_level = "OPTIMAL" if training_readiness >= 85 else ("HIGH" if training_readiness >= 75 else "MODERATE")
             readiness_feedback = "WELL_RECOVERED" if training_readiness >= 75 else "MODERATE_LOAD"

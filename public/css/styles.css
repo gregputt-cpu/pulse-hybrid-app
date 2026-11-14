@@ -141,16 +141,17 @@
 
     /* STRICT RESPONSIVE FULL-VIEWPORT APP FRAME WITH SAFE-AREA INSETS */
     html, body {
+      position: fixed;
+      inset: 0;
       width: 100%;
       height: 100%;
-      height: 100dvh;
       overflow: hidden;
       background: #030407;
       color: var(--text);
       font-family: var(--font);
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: stretch;
       user-select: none;
       -webkit-font-smoothing: antialiased;
     }
@@ -159,8 +160,7 @@
       width: 100%;
       max-width: 440px;
       height: 100%;
-      height: 100dvh;
-      max-height: 100dvh;
+      max-height: 100%;
       background: var(--bg);
       display: flex;
       flex-direction: column;
@@ -168,7 +168,7 @@
       overflow: hidden;
       border-left: 1px solid var(--border);
       border-right: 1px solid var(--border);
-      padding-top: env(safe-area-inset-top);
+      padding-top: env(safe-area-inset-top, 0px);
     }
 
     /* SLEEK APPLE-STYLE HEADER */
@@ -542,6 +542,7 @@
       min-height: 0;
       overflow: hidden;
       position: relative;
+      padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px));
     }
 
     /* TAB PANELS */
@@ -1688,16 +1689,25 @@
 
     /* FIXED BOTTOM NAVIGATION */
     .bottom-nav {
-      height: 60px;
-      min-height: 60px;
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px;
+      height: calc(62px + env(safe-area-inset-bottom, 0px));
+      min-height: 62px;
       flex-shrink: 0;
-      background: #090c13;
-      border-top: 1px solid var(--border);
-      display: grid;
+      background: rgba(9, 12, 19, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(0, 229, 255, 0.22);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+      display: grid !important;
       grid-template-columns: repeat(5, 1fr);
-      z-index: 100;
-      padding-bottom: env(safe-area-inset-bottom);
-      box-sizing: content-box;
+      z-index: 950;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      box-sizing: border-box;
     }
     .nav-btn {
       background: none;

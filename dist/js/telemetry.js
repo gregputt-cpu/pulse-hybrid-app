@@ -1279,15 +1279,15 @@
       if (!state) return;
       if (!window.athleteProfile) {
         window.athleteProfile = {
-          weightKg: 97.75,
+          weightKg: 97.7,
           bodyFatPct: 17.1,
-          leanMassKg: 81.03,
+          leanMassKg: 80.99,
           targetBfPct: 15.0,
-          targetWeightKg: 95.33,
+          targetWeightKg: 95.28,
           fatToLoseKg: 2.42,
           restingHr: 46,
-          sleepScore: 90,
-          readiness: 76
+          sleepScore: 82,
+          readiness: 80
         };
       }
       if (state.renpho) {
@@ -1351,8 +1351,326 @@
       }
     }
 
+    function applyLiveStateToDom(state) {
+      if (!state) return;
+      window.BAKED_LIVE_STATE = state;
+      updateAthleteProfileFromState(state);
+      
+      // 1. Garmin Telemetry Binding
+      if (state.garmin) {
+        const g = state.garmin;
+        if (g.training_readiness !== undefined) {
+          const numEl = document.getElementById('todayDialNum');
+          if (numEl && String(numEl.innerText).trim() !== String(g.training_readiness)) {
+            numEl.innerText = g.training_readiness;
+          }
+          const ringEl = document.getElementById('todayDialRing');
+          if (ringEl) {
+            const circ = 427.26;
+            const offset = (circ * (1 - (g.training_readiness / 100))).toFixed(1);
+            if (ringEl.style.strokeDashoffset !== offset) {
+              ringEl.style.strokeDashoffset = offset;
+            }
+          }
+          const subEl = document.getElementById('todayDialSub');
+          if (subEl) {
+            const subText = g.training_readiness >= 85 ? 'Optimal Readiness' : (g.training_readiness >= 75 ? 'High Readiness' : (g.training_readiness >= 60 ? 'Moderate Readiness' : 'Recovery Focus'));
+            if (subEl.innerText !== subText) subEl.innerText = subText;
+          }
+          const hdrEl = document.getElementById('hdrReadiness');
+          if (hdrEl) {
+            const hdrText = `${g.training_readiness} READY`;
+            if (hdrEl.innerText !== hdrText) hdrEl.innerText = hdrText;
+          }
+        }
+        if (g.sleep_score !== undefined) {
+          const el = document.getElementById('vSleep');
+          if (el && String(el.innerText).trim() !== String(g.sleep_score)) {
+            el.innerText = g.sleep_score;
+          }
+          const elSub = document.getElementById('vSleepSub');
+          if (elSub && g.sleep_duration && elSub.innerText !== g.sleep_duration) {
+            elSub.innerText = g.sleep_duration;
+          }
+          const sleepRing = document.getElementById('vSleepRing');
+          if (sleepRing) {
+            const circ = 157;
+            const offset = (circ * (1 - (g.sleep_score / 100))).toFixed(1);
+            if (sleepRing.style.strokeDashoffset !== offset) {
+              sleepRing.style.strokeDashoffset = offset;
+            }
+          }
+        }
+        if (g.resting_hr !== undefined) {
+          const el = document.getElementById('vitalRhrVal') || document.getElementById('vitalRhr') || document.getElementById('vRhr');
+          if (el && String(el.innerText).trim() !== String(g.resting_hr)) {
+            el.innerText = g.resting_hr;
+          }
+        }
+        if (g.body_battery !== undefined) {
+          const el = document.getElementById('vitalBattery');
+          const bbText = `${g.body_battery}%`;
+          if (el && el.innerText !== bbText) {
+            el.innerText = bbText;
+          }
+          const bbRing = document.getElementById('vitalBatteryRing');
+          if (bbRing) {
+            const circ = 157;
+            const offset = (circ * (1 - (g.body_battery / 100))).toFixed(1);
+            if (bbRing.style.strokeDashoffset !== offset) {
+              bbRing.style.strokeDashoffset = offset;
+            }
+          }
+          const elSub = document.getElementById('vitalBbSub');
+          if (elSub) {
+            const bbSubText = g.body_battery >= 85 ? 'Fully Charged' : (g.body_battery >= 65 ? 'Charged' : 'Restored');
+            if (elSub.innerText !== bbSubText) elSub.innerText = bbSubText;
+          }
+        }
+        if (g.active_calories !== undefined) {
+          const el1 = document.getElementById('vitalBurn');
+          if (el1) {
+            const desiredHtml = `${g.active_calories} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small>`;
+            if (el1.innerHTML !== desiredHtml) el1.innerHTML = desiredHtml;
+          }
+          const el2 = document.getElementById('vitalBurnSub');
+          if (el2) {
+            const desiredText = `fēnix 8 • ${g.steps || 105} Steps`;
+            if (el2.innerText !== desiredText) el2.innerText = desiredText;
+          }
+          const el3 = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
+          if (el3) {
+            const desiredHtml = `${g.active_calories} <small style="font-size:13px;">kcal</small>`;
+            if (el3.innerHTML !== desiredHtml) el3.innerHTML = desiredHtml;
+          }
+          const bannerBurn = document.getElementById('garminBannerBurn');
+          if (bannerBurn) {
+            const desiredText = `${g.active_calories} kcal`;
+            if (bannerBurn.innerText !== desiredText) bannerBurn.innerText = desiredText;
+          }
+        }
+        const bTitle = document.getElementById('garminBannerTitle');
+        const bSub = document.getElementById('garminBannerSub');
+        const syncDateStr = formatSyncDate(state.date, state.last_synced || (g && g.last_synced));
+        if (bTitle) {
+          const desiredTitle = `Garmin fēnix 8 Synced • ${syncDateStr}`;
+          if (bTitle.innerText !== desiredTitle) bTitle.innerText = desiredTitle;
+        }
+        if (bSub) {
+          const sleepNum = (g.sleep_score !== undefined) ? g.sleep_score : 94;
+          const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
+          const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
+          const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
+          const todayActsCount = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities.length : 0;
+          let desiredSub = '';
+          if (todayActsCount > 0) {
+            desiredSub = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${g.active_calories || 0} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
+          } else {
+            desiredSub = `Sleep ${sleepNum} (${sleepRating}) • Readiness ${readinessNum} • RHR ${rhrNum} bpm • 0 Workouts Today`;
+          }
+          if (bSub.innerText !== desiredSub) bSub.innerText = desiredSub;
+        }
+        if (Array.isArray(g.recent_activities) && g.recent_activities.length > 0) {
+          const garminActs = g.recent_activities.map((a, idx) => {
+            const actDate = a.date;
+            const formatted = formatActivityDisplay({ rawDate: actDate, date: actDate, id: a.id });
+            return {
+              id: String(a.id),
+              name: a.name,
+              subTitle: a.sub_title,
+              rawDate: actDate,
+              date: formatted.displayDate,
+              isToday: formatted.isToday,
+              durationMin: a.duration_min,
+              calories: a.calories,
+              avgHr: a.avg_hr,
+              maxHr: a.max_hr,
+              aerobicTe: a.aerobic_te,
+              anaerobicTe: a.anaerobic_te,
+              benefits: a.benefits
+            };
+          });
+
+          const localSaved = localStorage.getItem('pulse_recent_activities');
+          let localActs = [];
+          if (localSaved) {
+            try { localActs = JSON.parse(localSaved); } catch(e) {}
+          }
+
+          const merged = [...localActs];
+          garminActs.forEach(ga => {
+            const existingIdx = merged.findIndex(m => String(m.id) === String(ga.id));
+            if (existingIdx >= 0) {
+              const userSub = merged[existingIdx].subTitle;
+              merged[existingIdx] = { ...ga, subTitle: (userSub && userSub !== ga.name) ? userSub : ga.subTitle };
+            } else {
+              merged.push(ga);
+            }
+          });
+
+          merged.sort((a, b) => {
+            const da = new Date((a.rawDate || a.date || '').replace(' ', 'T')).getTime() || 0;
+            const db = new Date((b.rawDate || b.date || '').replace(' ', 'T')).getTime() || 0;
+            return db - da;
+          });
+
+          recentActivitiesData = merged.length > 0 ? merged : garminActs;
+          renderHistoryList();
+          renderTodayTrainingRecommendations();
+        }
+
+        // 1.1 MyNetDiary Food Ingestion from Live State
+        let ml = state.mnd_logged;
+        if (g && g.mnd_logged) {
+          if (!ml || (g.mnd_logged.last_pulled && (!ml.last_pulled || new Date(g.mnd_logged.last_pulled) >= new Date(ml.last_pulled)))) {
+            ml = g.mnd_logged;
+          }
+        }
+        if (ml) {
+          myNetDiaryData.totals.calories = ml.calories || 0;
+          myNetDiaryData.totals.protein = ml.protein_g || 0;
+          myNetDiaryData.totals.carbs = ml.carbs_g || 0;
+          myNetDiaryData.totals.fat = ml.fat_g || 0;
+          myNetDiaryData.totals.fiber = ml.fiber_g || 0;
+          myNetDiaryData.totals.sodium = ml.sodium_mg || 0;
+          myNetDiaryData.totals.water = ml.water_l || 0;
+          if (state.mnd_meals) {
+            myNetDiaryData.meals = state.mnd_meals;
+          }
+          saveMndToLocalStorage();
+          renderMyNetDiaryEngine();
+          renderTodayTrainingRecommendations();
+          renderHistoryList();
+        }
+      }
+
+      // 2. Renpho Scale Binding
+      if (state.injuries) {
+        athleteInjuries = { ...athleteInjuries, ...state.injuries };
+        updateInjuryBadge();
+      }
+
+      if (state.renpho) {
+        const r = state.renpho;
+        if (r.weight_kg) {
+          const el1 = document.getElementById('vitalScale');
+          if (el1) el1.innerText = Number(r.weight_kg.toFixed(2)).toString().includes('.') ? Number(r.weight_kg.toFixed(2)).toString() : r.weight_kg.toFixed(1);
+          const el2 = document.getElementById('bodyScaleWeight');
+          if (el2) el2.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+        }
+        if (r.body_fat_pct) {
+          const el1 = document.getElementById('vitalScaleSub');
+          if (el1) el1.innerText = `${r.body_fat_pct.toFixed(1)}`;
+          const el2 = document.getElementById('bodyScaleBf');
+          if (el2) el2.innerText = `${r.body_fat_pct.toFixed(1)}% Body Fat (Synced Today)`;
+          const el3 = document.getElementById('normBfVal');
+          if (el3) el3.innerText = `${r.body_fat_pct.toFixed(1)}%`;
+          const el4 = document.getElementById('normBfBadge');
+          if (el4) el4.innerText = `TOP ${r.body_fat_pct <= 16.7 ? '12%' : '15%'} OF 45yo MEN`;
+          const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
+          if (elMeasuredLabel) elMeasuredLabel.innerText = `${r.body_fat_pct.toFixed(1)}% Scale Measured`;
+        }
+        if (r.fat_to_lose_kg) {
+          const el1 = document.getElementById('bodyFatToBurnNum');
+          if (el1) el1.innerText = `${r.fat_to_lose_kg} kg (${(r.fat_to_lose_kg * 2.20462).toFixed(1)} lbs)`;
+          const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
+          const targetWeightAtGoal = (r.target_weight_at_15pct || 95.71).toFixed(2);
+          if (elGoalLabel) elGoalLabel.innerText = `${r.fat_to_lose_kg} kg to 15.0% Goal (${targetWeightAtGoal}kg)`;
+        }
+        if (r.muscle_mass_kg) {
+          const elMuscle = document.getElementById('renphoMuscleVal');
+          if (elMuscle) elMuscle.innerText = `${r.muscle_mass_kg.toFixed(1)}kg`;
+        }
+        if (r.lean_mass_kg) {
+          const elLbm = document.getElementById('renphoLbmVal');
+          if (elLbm) elLbm.innerText = `${r.lean_mass_kg.toFixed(1)}kg`;
+        }
+        if (r.water_pct) {
+          const elWater = document.getElementById('renphoWaterVal');
+          if (elWater) elWater.innerText = `${r.water_pct.toFixed(1)}%`;
+        }
+        if (r.visceral_fat !== undefined) {
+          const elVisceral = document.getElementById('renphoVisceralVal');
+          if (elVisceral) elVisceral.innerText = `${Number(r.visceral_fat).toFixed(1)}`;
+        }
+        if (r.last_synced) {
+          const syncEl = document.getElementById('renphoSyncTime');
+          try {
+            const parts = r.last_synced.replace('T', ' ').split(' ');
+            const datePart = parts[0];
+            const timePart = (parts[1] || '').slice(0, 5);
+            const dateLabel = formatSyncDate(datePart, r.last_synced);
+            if (syncEl) syncEl.innerText = `${dateLabel} • ${timePart}`;
+          } catch(e) {}
+        }
+      }
+
+      // Load manual local storage weight override only if no direct renpho sync exists
+      const savedWt = localStorage.getItem('pulse_athlete_weight');
+      const savedBf = localStorage.getItem('pulse_athlete_bf');
+      if (savedWt && !state.renpho) {
+        const pWt = parseFloat(savedWt);
+        const pBf = parseFloat(savedBf) || ((window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1);
+        const lbm = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
+        const targetWt = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : parseFloat((lbm / 0.85).toFixed(2));
+        const fatToBurn = parseFloat(Math.max(0, pWt - targetWt).toFixed(2));
+        const vs = document.getElementById('vitalScale');
+        if (vs) vs.innerHTML = `${pWt.toFixed(1)}`;
+        const vss = document.getElementById('vitalScaleSub');
+        if (vss) vss.innerText = `${pBf.toFixed(1)}`;
+        const bsw = document.getElementById('bodyScaleWeight');
+        if (bsw) bsw.innerHTML = `${pWt.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+        const bsbf = document.getElementById('bodyScaleBf');
+        if (bsbf) bsbf.innerText = `${pBf}% Body Fat (Logged Today)`;
+        const bfb = document.getElementById('bodyFatToBurnNum');
+        if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
+      }
+
+      // 3. Nutrition Targets
+      if (state.nutrition) {
+        const n = state.nutrition;
+        let activeBurn = 649;
+        const burnEl = document.getElementById('vitalBurn');
+        if (burnEl) {
+          const parsed = parseInt(burnEl.innerText);
+          if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
+        }
+
+        if (n.calorie_target) {
+          const el1 = document.getElementById('fuelTargetNum') || document.getElementById('fuelCalTarget');
+          if (el1) el1.innerHTML = `${n.calorie_target.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
+          const el2 = document.getElementById('fuelBudgetNum');
+          if (el2) el2.innerText = n.calorie_target;
+          athleteDailyBudget = n.calorie_target;
+        }
+        if (n.protein_target_g) {
+          const el = document.getElementById('macroProtein');
+          if (el) el.innerText = `${n.protein_target_g}g`;
+          athleteProteinAnchor = n.protein_target_g;
+        }
+        if (n.carbs_target_g) {
+          const el = document.getElementById('macroCarbs');
+          if (el) el.innerText = `${n.carbs_target_g}g`;
+        }
+        if (n.fat_target_g) {
+          const el = document.getElementById('macroFat');
+          if (el) el.innerText = `${n.fat_target_g}g`;
+        }
+        renderMyNetDiaryEngine();
+      }
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderRenphoTrendChart === 'function') renderRenphoTrendChart();
+      if (typeof renderStrengthProgressionChart === 'function') renderStrengthProgressionChart();
+    }
+
     // DYNAMIC TELEMETRY SYNC PIPELINE (Reads Railway /api/live_state or live_state.json)
     async function loadLiveState() {
+      // Synchronously apply baked state first to prevent any startup flash
+      if (typeof window.BAKED_LIVE_STATE !== 'undefined' && window.BAKED_LIVE_STATE) {
+        applyLiveStateToDom(window.BAKED_LIVE_STATE);
+      }
+
       try {
         let state = null;
         try {
@@ -1374,274 +1692,8 @@
           state = window.BAKED_LIVE_STATE;
         }
         if (!state) return;
-        window.BAKED_LIVE_STATE = state;
-        updateAthleteProfileFromState(state);
         
-                // 1. Garmin Telemetry Binding
-        if (state.garmin) {
-          const g = state.garmin;
-          if (g.training_readiness !== undefined) {
-            const numEl = document.getElementById('todayDialNum');
-            if (numEl) numEl.innerText = g.training_readiness;
-            const ringEl = document.getElementById('todayDialRing');
-            if (ringEl) {
-              const circ = 427.26;
-              const offset = circ * (1 - (g.training_readiness / 100));
-              ringEl.style.strokeDashoffset = offset.toFixed(1);
-            }
-            const subEl = document.getElementById('todayDialSub');
-            if (subEl) {
-              subEl.innerText = g.training_readiness >= 85 ? 'Optimal Readiness' : (g.training_readiness >= 75 ? 'High Readiness' : (g.training_readiness >= 60 ? 'Moderate Readiness' : 'Recovery Focus'));
-            }
-            const hdrEl = document.getElementById('hdrReadiness');
-            if (hdrEl) hdrEl.innerText = `${g.training_readiness} READY`;
-          }
-          if (g.sleep_score !== undefined) {
-            const el = document.getElementById('vSleep');
-            if (el) el.innerText = g.sleep_score;
-            const elSub = document.getElementById('vSleepSub');
-            if (elSub && g.sleep_duration) elSub.innerText = g.sleep_duration;
-            const sleepRing = document.getElementById('vSleepRing');
-            if (sleepRing) {
-              const circ = 157;
-              const offset = circ * (1 - (g.sleep_score / 100));
-              sleepRing.style.strokeDashoffset = offset.toFixed(1);
-            }
-          }
-          if (g.resting_hr !== undefined) {
-            const el = document.getElementById('vitalRhrVal') || document.getElementById('vitalRhr') || document.getElementById('vRhr');
-            if (el) el.innerText = g.resting_hr;
-          }
-          if (g.body_battery !== undefined) {
-            const el = document.getElementById('vitalBattery');
-            if (el) el.innerText = `${g.body_battery}%`;
-            const bbRing = document.getElementById('vitalBatteryRing');
-            if (bbRing) {
-              const circ = 157;
-              const offset = circ * (1 - (g.body_battery / 100));
-              bbRing.style.strokeDashoffset = offset.toFixed(1);
-            }
-            const elSub = document.getElementById('vitalBbSub');
-            if (elSub) elSub.innerText = g.body_battery >= 85 ? 'Fully Charged' : (g.body_battery >= 65 ? 'Charged' : 'Restored');
-          }
-          if (g.active_calories !== undefined) {
-            const el1 = document.getElementById('vitalBurn');
-            if (el1) el1.innerHTML = `${g.active_calories} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small>`;
-            const el2 = document.getElementById('vitalBurnSub');
-            if (el2) el2.innerText = `fēnix 8 • ${g.steps || 105} Steps`;
-            const el3 = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
-            if (el3) el3.innerHTML = `${g.active_calories} <small style="font-size:13px;">kcal</small>`;
-            const bannerBurn = document.getElementById('garminBannerBurn');
-            if (bannerBurn) bannerBurn.innerText = `${g.active_calories} kcal`;
-          }
-          const bTitle = document.getElementById('garminBannerTitle');
-          const bSub = document.getElementById('garminBannerSub');
-          const syncDateStr = formatSyncDate(state.date, state.last_synced || (g && g.last_synced));
-          if (bTitle) bTitle.innerText = `Garmin fēnix 8 Synced • ${syncDateStr}`;
-          if (bSub) {
-            const sleepNum = (g.sleep_score !== undefined) ? g.sleep_score : 94;
-            const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
-            const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
-            const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
-            const todayActsCount = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities.length : 0;
-            if (todayActsCount > 0) {
-              bSub.innerText = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${g.active_calories || 0} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
-            } else {
-              bSub.innerText = `Sleep ${sleepNum} (${sleepRating}) • Readiness ${readinessNum} • RHR ${rhrNum} bpm • 0 Workouts Today`;
-            }
-          }
-          if (Array.isArray(g.recent_activities) && g.recent_activities.length > 0) {
-            const garminActs = g.recent_activities.map((a, idx) => {
-              const actDate = a.date;
-              const formatted = formatActivityDisplay({ rawDate: actDate, date: actDate, id: a.id });
-              return {
-                id: String(a.id),
-                name: a.name,
-                subTitle: a.sub_title,
-                rawDate: actDate,
-                date: formatted.displayDate,
-                isToday: formatted.isToday,
-                durationMin: a.duration_min,
-                calories: a.calories,
-                avgHr: a.avg_hr,
-                maxHr: a.max_hr,
-                aerobicTe: a.aerobic_te,
-                anaerobicTe: a.anaerobic_te,
-                benefits: a.benefits
-              };
-            });
-
-            const localSaved = localStorage.getItem('pulse_recent_activities');
-            let localActs = [];
-            if (localSaved) {
-              try { localActs = JSON.parse(localSaved); } catch(e) {}
-            }
-
-            const merged = [...localActs];
-            garminActs.forEach(ga => {
-              const existingIdx = merged.findIndex(m => String(m.id) === String(ga.id));
-              if (existingIdx >= 0) {
-                const userSub = merged[existingIdx].subTitle;
-                merged[existingIdx] = { ...ga, subTitle: (userSub && userSub !== ga.name) ? userSub : ga.subTitle };
-              } else {
-                merged.push(ga);
-              }
-            });
-
-            merged.sort((a, b) => {
-              const da = new Date((a.rawDate || a.date || '').replace(' ', 'T')).getTime() || 0;
-              const db = new Date((b.rawDate || b.date || '').replace(' ', 'T')).getTime() || 0;
-              return db - da;
-            });
-
-            recentActivitiesData = merged.length > 0 ? merged : garminActs;
-            renderHistoryList();
-            renderTodayTrainingRecommendations();
-          }
-
-          // 1.1 MyNetDiary Food Ingestion from Live State
-          let ml = state.mnd_logged;
-          if (g && g.mnd_logged) {
-            if (!ml || (g.mnd_logged.last_pulled && (!ml.last_pulled || new Date(g.mnd_logged.last_pulled) >= new Date(ml.last_pulled)))) {
-              ml = g.mnd_logged;
-            }
-          }
-          if (ml) {
-            myNetDiaryData.totals.calories = ml.calories || 0;
-            myNetDiaryData.totals.protein = ml.protein_g || 0;
-            myNetDiaryData.totals.carbs = ml.carbs_g || 0;
-            myNetDiaryData.totals.fat = ml.fat_g || 0;
-            myNetDiaryData.totals.fiber = ml.fiber_g || 0;
-            myNetDiaryData.totals.sodium = ml.sodium_mg || 0;
-            myNetDiaryData.totals.water = ml.water_l || 0;
-            if (state.mnd_meals) {
-              myNetDiaryData.meals = state.mnd_meals;
-            }
-            saveMndToLocalStorage();
-            renderMyNetDiaryEngine();
-            renderTodayTrainingRecommendations();
-            renderHistoryList();
-          }
-        }
-
-        // 2. Renpho Scale Binding
-        if (state.injuries) {
-          athleteInjuries = { ...athleteInjuries, ...state.injuries };
-          updateInjuryBadge();
-        }
-
-        if (state.renpho) {
-          const r = state.renpho;
-          if (r.weight_kg) {
-            const el1 = document.getElementById('vitalScale');
-            if (el1) el1.innerText = Number(r.weight_kg.toFixed(2)).toString().includes('.') ? Number(r.weight_kg.toFixed(2)).toString() : r.weight_kg.toFixed(1);
-            const el2 = document.getElementById('bodyScaleWeight');
-            if (el2) el2.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
-          }
-          if (r.body_fat_pct) {
-            const el1 = document.getElementById('vitalScaleSub');
-            if (el1) el1.innerText = `${r.body_fat_pct.toFixed(1)}`;
-            const el2 = document.getElementById('bodyScaleBf');
-            if (el2) el2.innerText = `${r.body_fat_pct.toFixed(1)}% Body Fat (Synced Today)`;
-            const el3 = document.getElementById('normBfVal');
-            if (el3) el3.innerText = `${r.body_fat_pct.toFixed(1)}%`;
-            const el4 = document.getElementById('normBfBadge');
-            if (el4) el4.innerText = `TOP ${r.body_fat_pct <= 16.7 ? '12%' : '15%'} OF 45yo MEN`;
-            const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
-            if (elMeasuredLabel) elMeasuredLabel.innerText = `${r.body_fat_pct.toFixed(1)}% Scale Measured`;
-          }
-          if (r.fat_to_lose_kg) {
-            const el1 = document.getElementById('bodyFatToBurnNum');
-            if (el1) el1.innerText = `${r.fat_to_lose_kg} kg (${(r.fat_to_lose_kg * 2.20462).toFixed(1)} lbs)`;
-            const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
-            const targetWeightAtGoal = (r.target_weight_at_15pct || 95.71).toFixed(2);
-            if (elGoalLabel) elGoalLabel.innerText = `${r.fat_to_lose_kg} kg to 15.0% Goal (${targetWeightAtGoal}kg)`;
-          }
-          if (r.muscle_mass_kg) {
-            const elMuscle = document.getElementById('renphoMuscleVal');
-            if (elMuscle) elMuscle.innerText = `${r.muscle_mass_kg.toFixed(1)}kg`;
-          }
-          if (r.lean_mass_kg) {
-            const elLbm = document.getElementById('renphoLbmVal');
-            if (elLbm) elLbm.innerText = `${r.lean_mass_kg.toFixed(1)}kg`;
-          }
-          if (r.water_pct) {
-            const elWater = document.getElementById('renphoWaterVal');
-            if (elWater) elWater.innerText = `${r.water_pct.toFixed(1)}%`;
-          }
-          if (r.visceral_fat !== undefined) {
-            const elVisceral = document.getElementById('renphoVisceralVal');
-            if (elVisceral) elVisceral.innerText = `${Number(r.visceral_fat).toFixed(1)}`;
-          }
-          if (r.last_synced) {
-            const syncEl = document.getElementById('renphoSyncTime');
-            try {
-              const parts = r.last_synced.replace('T', ' ').split(' ');
-              const datePart = parts[0];
-              const timePart = (parts[1] || '').slice(0, 5);
-              const dateLabel = formatSyncDate(datePart, r.last_synced);
-              if (syncEl) syncEl.innerText = `${dateLabel} • ${timePart}`;
-            } catch(e) {}
-          }
-        }
-
-        // Load manual local storage weight override only if no direct renpho sync exists
-        const savedWt = localStorage.getItem('pulse_athlete_weight');
-        const savedBf = localStorage.getItem('pulse_athlete_bf');
-        if (savedWt && !state.renpho) {
-          const pWt = parseFloat(savedWt);
-          const pBf = parseFloat(savedBf) || ((window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1);
-          const lbm = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
-          const targetWt = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : parseFloat((lbm / 0.85).toFixed(2));
-          const fatToBurn = parseFloat(Math.max(0, pWt - targetWt).toFixed(2));
-          const vs = document.getElementById('vitalScale');
-          if (vs) vs.innerHTML = `${pWt.toFixed(1)}`;
-          const vss = document.getElementById('vitalScaleSub');
-          if (vss) vss.innerText = `${pBf.toFixed(1)}`;
-          const bsw = document.getElementById('bodyScaleWeight');
-          if (bsw) bsw.innerHTML = `${pWt.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
-          const bsbf = document.getElementById('bodyScaleBf');
-          if (bsbf) bsbf.innerText = `${pBf}% Body Fat (Logged Today)`;
-          const bfb = document.getElementById('bodyFatToBurnNum');
-          if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
-        }
-
-        // 3. Nutrition Targets
-        if (state.nutrition) {
-          const n = state.nutrition;
-          let activeBurn = 649;
-          const burnEl = document.getElementById('vitalBurn');
-          if (burnEl) {
-            const parsed = parseInt(burnEl.innerText);
-            if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
-          }
-
-          if (n.calorie_target) {
-            const el1 = document.getElementById('fuelTargetNum') || document.getElementById('fuelCalTarget');
-            if (el1) el1.innerHTML = `${n.calorie_target.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
-            const el2 = document.getElementById('fuelBudgetNum');
-            if (el2) el2.innerText = n.calorie_target;
-            athleteDailyBudget = n.calorie_target;
-          }
-          if (n.protein_target_g) {
-            const el = document.getElementById('macroProtein');
-            if (el) el.innerText = `${n.protein_target_g}g`;
-            athleteProteinAnchor = n.protein_target_g;
-          }
-          if (n.carbs_target_g) {
-            const el = document.getElementById('macroCarbs');
-            if (el) el.innerText = `${n.carbs_target_g}g`;
-          }
-          if (n.fat_target_g) {
-            const el = document.getElementById('macroFat');
-            if (el) el.innerText = `${n.fat_target_g}g`;
-          }
-          renderMyNetDiaryEngine();
-        }
-
-        renderTodayTrainingRecommendations();
-        if (typeof renderRenphoTrendChart === 'function') renderRenphoTrendChart();
-        if (typeof renderStrengthProgressionChart === 'function') renderStrengthProgressionChart();
+        applyLiveStateToDom(state);
         console.log("✓ Dynamic telemetry successfully synced from live_state.json");
       } catch(e) {
         console.log("Local static fallback active:", e.message);
@@ -1725,8 +1777,7 @@
               if (installing) {
                 installing.onstatechange = () => {
                   if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('New update available, auto-reloading...');
-                    window.location.reload();
+                    console.log('New update available in background.');
                   }
                 };
               }
