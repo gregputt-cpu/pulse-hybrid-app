@@ -2024,8 +2024,8 @@
       <div class="modal-card" style="max-width:340px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <strong style="font-size:13px; color:#fff;"><span>✎ Edit Target Weight & Reps</span></strong>
-            <div style="font-size:11px; color:var(--text-muted);">Update prescribed load for active exercise</div>
+            <strong style="font-size:13px; color:#fff;" id="editLoadModalTitle">✎ Edit Target Weight & Reps</strong>
+            <div style="font-size:11px; color:var(--text-muted);" id="editLoadModalSub">Update prescribed load for active exercise</div>
           </div>
           <span style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;" onclick="closeEditLoadModal()">✕</span>
         </div>
@@ -2035,12 +2035,12 @@
         <div style="display:flex; flex-direction:column; gap:8px;">
           <div>
             <label style="font-size:11px; color:var(--cyan); display:block; margin-bottom:2px; font-weight:700;">Target Weight (kg or text, e.g. 70, Body, 24kg):</label>
-            <input type="text" id="editLoadWeightInput" placeholder="70" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+            <input type="text" id="editLoadWeight" placeholder="70" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
           </div>
 
           <div>
             <label style="font-size:11px; color:var(--lime); display:block; margin-bottom:2px; font-weight:700;">Target Reps per Set:</label>
-            <input type="number" id="editLoadRepsInput" placeholder="8" min="1" max="100" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+            <input type="number" id="editLoadReps" placeholder="8" min="1" max="100" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
           </div>
 
           <div style="display:flex; gap:6px; margin-top:4px;">

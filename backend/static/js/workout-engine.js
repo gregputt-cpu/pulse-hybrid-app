@@ -2577,18 +2577,16 @@ function generateWorkoutFromGearAndGoal() {
         `;
 
       const completedBannerHtml = completed ? `
-        <!-- ELEPHANT-GOLDFISH PROTOCOL: COMPACT TODAY'S SESSION COMPLETION BANNER -->
         <div class="card" style="padding:10px 14px; margin-bottom:12px; background:rgba(48,209,88,0.08); border:1px solid rgba(48,209,88,0.25); border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:12px; font-weight:800; color:var(--primary, #30d158);">✓ Morning Activity Logged (${completed.durationMin}m • ${completed.calories} kcal)</span>
-            <span style="font-size:11px; color:var(--text-muted);">${completed.title || 'Session Logged'}</span>
+            <span style="font-size:11px; color:var(--text-muted);">${completed.title || 'Completed Session'}</span>
           </div>
           <div style="display:flex; gap:6px; align-items:center;">
             <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:28px; padding:0 10px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
               View Telemetry ➔
             </button>
-            <button type="button" onclick="toggleWorkoutCompleteManual(false)" style="background:transparent; border:none; color:var(--text-muted); font-size:11px; cursor:pointer;" title="Reopen Pre-Workout Prescription Mode">
+            <button type="button" onclick="toggleWorkoutCompleteManual(false)" style="background:transparent; border:none; color:var(--text-muted); font-size:11px; cursor:pointer;" title="Reopen Pre-Workout Mode">
               ↺
             </button>
           </div>
@@ -2596,16 +2594,15 @@ function generateWorkoutFromGearAndGoal() {
       ` : '';
 
       const tomorrowAccordionHtml = completed ? `
-        <!-- ELEPHANT ACCORDION: COLLAPSIBLE NEXT-DAY AUTOREGULATION PREVIEW -->
-        <details style="margin-top:14px; margin-bottom:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
-          <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+        <details style="margin-top:14px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
+          <summary style="font-size:12px; font-weight:800; color:var(--text-secondary); padding:12px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span>📅 Tomorrow's Autoregulation Preview</span>
               <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); color:var(--primary, #30d158); font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase;">Next Stimulus</span>
             </div>
-            <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            <span style="font-size:12px; color:var(--text-muted);">▾</span>
           </summary>
-          <div style="padding:10px 12px; border-top:1px solid rgba(255,255,255,0.05);">
+          <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05);">
             ${renderTomorrowPreviewCard(completed)}
           </div>
         </details>
@@ -2926,11 +2923,11 @@ function viewCompletedWorkoutBreakdown() {
             <div style="display:flex; flex-direction:column; gap:8px;">
               <div>
                 <label style="font-size:11px; color:var(--cyan); display:block; margin-bottom:2px; font-weight:700;">Target Weight (kg or text, e.g. 70, Body, 24kg):</label>
-                <input type="text" id="editLoadWeightInput" placeholder="70" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+                <input type="text" id="editLoadWeight" placeholder="70" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
               </div>
               <div>
                 <label style="font-size:11px; color:var(--lime); display:block; margin-bottom:2px; font-weight:700;">Target Reps per Set:</label>
-                <input type="text" id="editLoadRepsInput" placeholder="8" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+                <input type="text" id="editLoadReps" placeholder="8" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
               </div>
               <div style="display:flex; gap:6px; margin-top:4px;">
                 <button type="button" class="btn-action-ghost" style="flex:1; margin:0;" onclick="closeEditLoadModal()">Cancel</button>
@@ -3153,13 +3150,13 @@ function viewCompletedWorkoutBreakdown() {
       if (nameEl) nameEl.innerText = `${ex.name}`;
 
       const titleEl = document.getElementById('editLoadModalTitle');
-      if (titleEl) titleEl.innerText = `✎ Edit Prescribed Load`;
+      if (titleEl) titleEl.innerText = `Edit Prescribed Load: ${ex.name}`;
 
       const subEl = document.getElementById('editLoadModalSub');
       if (subEl) subEl.innerText = `Update load for ${ex.name}`;
 
-      const weightIn = document.getElementById('editLoadWeightInput');
-      const repsIn = document.getElementById('editLoadRepsInput');
+      const weightIn = document.getElementById('editLoadWeight') || document.getElementById('editLoadWeightInput');
+      const repsIn = document.getElementById('editLoadReps') || document.getElementById('editLoadRepsInput');
 
       if (weightIn) weightIn.value = (rx.weight !== undefined && rx.weight !== null) ? rx.weight : 70;
       if (repsIn) repsIn.value = rx.reps || 8;
@@ -3189,8 +3186,8 @@ function viewCompletedWorkoutBreakdown() {
       }
       const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId } : { id: exId, name: exId };
 
-      const weightIn = document.getElementById('editLoadWeightInput');
-      const repsIn = document.getElementById('editLoadRepsInput');
+      const weightIn = document.getElementById('editLoadWeight') || document.getElementById('editLoadWeightInput');
+      const repsIn = document.getElementById('editLoadReps') || document.getElementById('editLoadRepsInput');
 
       const rawWeight = weightIn ? weightIn.value.trim() : '';
       const parsedNumWeight = parseFloat(rawWeight);
