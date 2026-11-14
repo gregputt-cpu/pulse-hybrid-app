@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime
 from renpho import RenphoClient
+import db
 
 logger = logging.getLogger("pulse-renpho-sync")
 
@@ -39,6 +40,11 @@ class RenphoSyncService:
             if not measurements:
                 logger.warning("[RenphoSync] No measurements returned.")
                 return {"success": False, "error": "No measurements found"}
+
+            try:
+                db.upsert_renpho_measurements(measurements)
+            except Exception as dbe:
+                logger.warning(f"[RenphoSync] Failed upserting to SQLite db: {dbe}")
 
             measurements.sort(key=lambda m: m.get('timeStamp', 0), reverse=True)
             latest = measurements[0]
@@ -129,6 +135,23 @@ class RenphoSyncService:
         except Exception as e:
             logger.error(f"[RenphoSync] Error syncing from Renpho: {e}")
             return {"success": False, "error": str(e)}
+
+    def get_history(self, days=90):
+        try:
+            history = db.get_renpho_history(days=days)
+            if history:
+                return history
+
+            # If empty in SQLite, fetch all measurements from cloud and upsert
+            logger.info("[RenphoSync] SQLite renpho history empty. Fetching from Renpho cloud...")
+            client = self.get_client(force_refresh=True)
+            measurements = client.get_all_measurements()
+            if measurements:
+                db.upsert_renpho_measurements(measurements)
+            return db.get_renpho_history(days=days)
+        except Exception as e:
+            logger.error(f"[RenphoSync] Error fetching history: {e}")
+            return db.get_renpho_history(days=days)
 
 if __name__ == "__main__":
     service = RenphoSyncService()

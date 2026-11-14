@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -13,6 +14,7 @@ from benefits_engine import PhysiologicalBenefitsEngine
 from garmin_sync_service import GarminSyncService
 from mnd_sync_service import MyNetDiarySyncService
 from renpho_sync_service import RenphoSyncService
+import db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("pulse-backend")
@@ -69,7 +71,15 @@ class SetLogPayload(BaseModel):
 class DatePayload(BaseModel):
     date: Optional[str] = None
 
+class HydrationPayload(BaseModel):
+    amount_ml: int = 500
+    date: Optional[str] = None
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(os.path.join(static_dir, "css")):
+    app.mount("/css", StaticFiles(directory=os.path.join(static_dir, "css")), name="css")
+if os.path.isdir(os.path.join(static_dir, "js")):
+    app.mount("/js", StaticFiles(directory=os.path.join(static_dir, "js")), name="js")
 
 @app.get("/")
 def root():
@@ -165,6 +175,54 @@ def sync_renpho():
         logger.error(f"Renpho sync error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/renpho/history")
+def get_renpho_history(days: int = 90):
+    try:
+        data = renpho_service.get_history(days=days)
+        return {"success": True, "days": days, "count": len(data), "history": data}
+    except Exception as e:
+        logger.error(f"Renpho history error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/strength/history")
+def get_strength_history(days: int = 30):
+    try:
+        data = db.get_strength_history(days=days)
+        return {"success": True, "days": days, "exercises": data}
+    except Exception as e:
+        logger.error(f"Strength history error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/hydration/add")
+def add_hydration(payload: HydrationPayload):
+    try:
+        date_str = payload.date if payload.date else datetime.now().strftime("%Y-%m-%d")
+        total_ml = db.add_hydration(date_str, payload.amount_ml)
+
+        # Update live_state.json garmin.mnd_logged.water_l incremented by amount_ml / 1000.0
+        state = load_live_state()
+        garmin_state = state.setdefault("garmin", {})
+        mnd_logged = garmin_state.setdefault("mnd_logged", {})
+        current_water_l = float(mnd_logged.get("water_l") or 0.0)
+        new_water_l = round(current_water_l + (payload.amount_ml / 1000.0), 2)
+        mnd_logged["water_l"] = new_water_l
+
+        # Also keep state top-level mnd_logged in sync if present
+        if "mnd_logged" in state and isinstance(state["mnd_logged"], dict):
+            state["mnd_logged"]["water_l"] = new_water_l
+
+        save_live_state(state)
+        return {
+            "success": True,
+            "date": date_str,
+            "amount_added_ml": payload.amount_ml,
+            "total_ml": total_ml,
+            "water_l": new_water_l
+        }
+    except Exception as e:
+        logger.error(f"Hydration add error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/sync_set")
 def sync_set(payload: SetLogPayload):
     state = load_live_state()
@@ -173,6 +231,17 @@ def sync_set(payload: SetLogPayload):
         sp["last_logged_weight"] = payload.logged_weight
     if payload.logged_reps is not None:
         sp["last_logged_reps"] = payload.logged_reps
+
+    # Compute e1rm when both weight and reps are present
+    if payload.logged_weight is not None and payload.logged_reps is not None:
+        e1rm = round(float(payload.logged_weight) * (1.0 + float(payload.logged_reps) / 30.0), 1)
+        db.log_strength_set(payload.exercise_id, payload.logged_weight, payload.logged_reps, e1rm)
+        sp["last_e1rm"] = e1rm
+        if payload.target_reps and payload.logged_reps >= payload.target_reps:
+            sp["progression_ready"] = True
+        else:
+            sp["progression_ready"] = False
+
     save_live_state(state)
     return {"success": True, "result": sp}
 

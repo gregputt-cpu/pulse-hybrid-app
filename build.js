@@ -24,6 +24,22 @@ const assets = [
   'README.md'
 ];
 
+const assetDirs = ['css', 'js'];
+
+function copyDirRecursive(srcDir, destDir) {
+  if (!fs.existsSync(srcDir)) return;
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
 for (const file of assets) {
   const src = path.join(rootDir, file);
   if (fs.existsSync(src)) {
@@ -35,6 +51,15 @@ for (const file of assets) {
       if (fs.existsSync(backendDir)) {
         fs.copyFileSync(src, path.join(backendDir, file));
       }
+    }
+  }
+}
+
+for (const dir of assetDirs) {
+  const srcDir = path.join(rootDir, dir);
+  if (fs.existsSync(srcDir)) {
+    for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
+      copyDirRecursive(srcDir, path.join(d, dir));
     }
   }
 }

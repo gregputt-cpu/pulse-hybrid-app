@@ -120,7 +120,7 @@ class GarminSyncService:
         today_active_burn = 0
         today_activity_list = []
 
-        for ra in raw_activities:
+        for idx, ra in enumerate(raw_activities):
             act_id = str(ra.get('activityId'))
             act_name = ra.get('activityType', {}).get('typeKey', 'Cardio').capitalize()
             sub_title = ra.get('activityName', act_name)
@@ -144,6 +144,74 @@ class GarminSyncService:
                     act_name, sub_title, duration_min, calories, avg_hr, max_hr, aerobic_te, anaerobic_te
                 )
 
+            # Extract hr_samples and hr_zones (fetch for the most recent 3 activities if not already cached)
+            hr_samples = existing.get('hr_samples') if existing else None
+            hr_zones = existing.get('hr_zones') if existing else None
+
+            if idx < 3 and not hr_samples:
+                try:
+                    details = client.get_activity_details(act_id, maxchart=60)
+                    extracted_samples = []
+                    if isinstance(details, dict):
+                        descriptors = details.get('metricDescriptors', [])
+                        metrics_list = details.get('activityDetailMetrics', [])
+                        hr_idx = None
+                        for d in descriptors:
+                            if d.get('key') in ('directHeartRate', 'heartRate'):
+                                hr_idx = d.get('metricsIndex')
+                                break
+                        if hr_idx is not None and metrics_list:
+                            for row in metrics_list:
+                                vals = row.get('metrics', [])
+                                if isinstance(vals, list) and len(vals) > hr_idx:
+                                    v = vals[hr_idx]
+                                    if v is not None:
+                                        try:
+                                            extracted_samples.append(int(round(float(v))))
+                                        except (ValueError, TypeError):
+                                            pass
+                        if not extracted_samples:
+                            for candidate in ('heartRateValues', 'hr_samples', 'heartRates'):
+                                if candidate in details and isinstance(details[candidate], list):
+                                    for v in details[candidate]:
+                                        if isinstance(v, (int, float)):
+                                            extracted_samples.append(int(round(v)))
+                                        elif isinstance(v, dict) and 'value' in v:
+                                            extracted_samples.append(int(round(float(v['value']))))
+                    if extracted_samples:
+                        hr_samples = extracted_samples
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching activity details for {act_id}: {e}")
+
+            if idx < 3 and not hr_zones:
+                try:
+                    raw_zones = client.get_activity_hr_in_timezones(act_id)
+                    extracted_zones = {}
+                    if isinstance(raw_zones, list):
+                        for item in raw_zones:
+                            if isinstance(item, dict):
+                                z_num = item.get('zoneNumber') or item.get('zone')
+                                secs = item.get('secsInZone') or item.get('seconds') or item.get('timeInZone') or 0
+                                if z_num is not None:
+                                    try:
+                                        extracted_zones[f"z{int(z_num)}"] = int(round(float(secs)))
+                                    except (ValueError, TypeError):
+                                        pass
+                    elif isinstance(raw_zones, dict):
+                        for k, v in raw_zones.items():
+                            k_lower = str(k).lower()
+                            if k_lower.startswith('z') or 'zone' in k_lower:
+                                num = ''.join(c for c in k_lower if c.isdigit())
+                                if num:
+                                    try:
+                                        extracted_zones[f"z{num}"] = int(round(float(v)))
+                                    except (ValueError, TypeError):
+                                        pass
+                    if extracted_zones:
+                        hr_zones = extracted_zones
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching activity HR zones for {act_id}: {e}")
+
             entry = {
                 "id": int(act_id),
                 "name": act_name,
@@ -157,6 +225,11 @@ class GarminSyncService:
                 "anaerobic_te": anaerobic_te,
                 "benefits": benefits
             }
+            if hr_samples:
+                entry["hr_samples"] = hr_samples
+            if hr_zones:
+                entry["hr_zones"] = hr_zones
+
             today_activity_list.append(entry)
 
         # Update activities

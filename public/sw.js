@@ -1,8 +1,14 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v27-body-scroll-custom-gear';
+const CACHE_NAME = 'pulse-cache-v28-egm-overhaul';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/css/styles.css',
+  '/js/state.js',
+  '/js/workout-engine.js',
+  '/js/charts.js',
+  '/js/fuel-engine.js',
+  '/js/telemetry.js',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png'

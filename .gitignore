@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 .venv/
 venv/
+*.db
 
 # Environment and sensitive credentials
 .env
