@@ -654,6 +654,17 @@
       speak(cueMap[key] || "Workout session loaded. Let's work!");
     }
 
+    // STATE VARIABLES & FILTER CONTROLS
+    let todayFilterLocation = 'all'; // 'all' | 'gym' | 'kb' | 'bodyweight'
+    let todayFilterFocus = 'auto'; // 'auto' | 'strength' | 'upper' | 'hinge' | 'conditioning' | 'flush'
+    let swapModalMode = 'swap'; // 'swap' | 'add'
+
+    function setTodayWorkoutFilter(type, value) {
+      if (type === 'location') todayFilterLocation = value;
+      else if (type === 'focus') todayFilterFocus = value;
+      renderTodayTrainingRecommendations();
+    }
+
     const masterExercises = [
       {
         id: "barbell_rdl",
@@ -897,6 +908,146 @@
         rationale: "High-torque anti-lateral flexion and grip strength. Transfers directly to hybrid functional resilience.",
         setsCount: 3,
         goals: ["work_capacity", "recomp", "kb_strength"]
+      },
+      {
+        id: "barbell_squat",
+        name: "Barbell Back Squat",
+        family: "squat",
+        requiredGear: ["barbell"],
+        getBaseWeight: () => 100,
+        getBaseReps: () => 8,
+        rest: "120s",
+        cue: "Chest up, knees track over toes, drive through midfoot.",
+        rationale: "Maximal mechanical tension to quadriceps and adductors.",
+        setsCount: 4,
+        goals: ["recomp", "rdl"]
+      },
+      {
+        id: "zone2_flush",
+        name: "Incline Cadence Walk / Ruck (Zone 2)",
+        family: "cardio",
+        requiredGear: [],
+        getBaseWeight: () => "Body / Pack",
+        getBaseReps: () => "20 min",
+        rest: "60s",
+        cue: "Nasal breathing only; gentle rhythmic hip and ankle propulsion (HR 105–120 bpm).",
+        rationale: "Promotes venous return, clears blood lactate, and stimulates pure mitochondrial fat oxidation.",
+        setsCount: 1,
+        goals: ["flush", "work_capacity"]
+      },
+      {
+        id: "knee_tke",
+        name: "Banded Terminal Knee Extensions (TKE)",
+        family: "squat",
+        requiredGear: [],
+        getBaseWeight: () => "Band",
+        getBaseReps: () => 20,
+        rest: "45s",
+        cue: "Loop band behind knee; drive heel down and lock vastus medialis hard.",
+        rationale: "Increases knee joint synovial fluid circulation and restores patellar tracking after plyometric loading.",
+        setsCount: 3,
+        goals: ["recomp", "flush"]
+      },
+      {
+        id: "glute_bridge_hold",
+        name: "Glute Bridge Isometric & Walkouts",
+        family: "hip_hinge",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 15,
+        rest: "45s",
+        cue: "Squeeze glutes hard at top; decompress anterior hip flexors from running.",
+        rationale: "Awakens dormant gluteal fibers, stabilizes pelvis, and decompresses lumbar spine.",
+        setsCount: 3,
+        goals: ["recomp", "flush"]
+      },
+      {
+        id: "deadbug_hold",
+        name: "Deadbug Anti-Extension Core Brace",
+        family: "pull",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => "45s",
+        rest: "45s",
+        cue: "Press lumbar spine flat into floor; prevent any lower back arching.",
+        rationale: "Deep transverse abdominis activation without spinal flexion or compressive shear.",
+        setsCount: 3,
+        goals: ["recomp", "flush"]
+      }
+    ];
+
+    const todayWorkoutOptions = [
+      {
+        id: "bb_upper_hinge",
+        title: "Heavy Barbell Upper & Hinge",
+        subtitle: "Upper Push Power & Posterior Chain Hinge (Spares Knees)",
+        location: "gym",
+        focus: "upper",
+        durationMin: 45,
+        calories: 320,
+        gearLabel: "Barbell & Dip Station",
+        description: "Maximizes mechanical tension to anchor lean mass in a deficit without knee torque.",
+        exerciseIds: ["barbell_rdl", "barbell_floor_press", "weighted_dips", "barbell_pendlay_row", "barbell_z_press"]
+      },
+      {
+        id: "bb_squat_press",
+        title: "Heavy Barbell Squat & Press",
+        subtitle: "Full Body Barbell Mechanical Tension & Anterior Chain",
+        location: "gym",
+        focus: "hinge",
+        durationMin: 45,
+        calories: 340,
+        gearLabel: "Barbell, Squat Rack & Bench",
+        description: "Comprehensive compound barbell loading targeting lower extensor drive and horizontal chest power.",
+        exerciseIds: ["barbell_squat", "barbell_bench_press", "barbell_pendlay_row", "barbell_rdl"]
+      },
+      {
+        id: "kb_complex",
+        title: "Heavy Single-KB Complex",
+        subtitle: "Heavy Kettlebell Upper Tension & Rotational Density",
+        location: "kb",
+        focus: "strength",
+        durationMin: 35,
+        calories: 310,
+        gearLabel: "Single Heavy Kettlebell (24–32kg)",
+        description: "Pure myofibrillar retention without spinal axial loading. Perfect for van/studio setting.",
+        exerciseIds: ["kb_clean_and_strict_press", "kb_front_rack_squat", "kb_gorilla_row", "kb_swings"]
+      },
+      {
+        id: "hybrid_work_capacity",
+        title: "20-Min Hybrid Work Capacity",
+        subtitle: "Metabolic Conditioning & Rotational Agility Ladder",
+        location: "kb",
+        focus: "conditioning",
+        durationMin: 20,
+        calories: 280,
+        gearLabel: "KB, Slam Ball & Speed Rope",
+        description: "High density conditioning maintaining athletic speed skipping and explosive triple extension.",
+        exerciseIds: ["speed_rope_intervals", "slam_ball_slams", "kb_swings", "pushups_renegade"]
+      },
+      {
+        id: "joint_friendly_hypertrophy",
+        title: "Joint-Friendly Hypertrophy",
+        subtitle: "Dumbbell & Kettlebell Upper Body High-Threshold Volume",
+        location: "gym",
+        focus: "upper",
+        durationMin: 35,
+        calories: 300,
+        gearLabel: "Dumbbells, KB & Dip Bar",
+        description: "Spares shoulders and spine with neutral grip and floor pressing while driving upper body hypertrophy.",
+        exerciseIds: ["db_press", "weighted_dips", "barbell_pendlay_row", "kb_suitcase_carry"]
+      },
+      {
+        id: "recovery_flush_walk",
+        title: "20-Min Recovery Flush Walk",
+        subtitle: "Zone 1/2 Walk & Knee Synovial Fluid Restoration",
+        location: "bodyweight",
+        focus: "flush",
+        durationMin: 20,
+        calories: 140,
+        gearLabel: "Bands & Treadmill / Flat Ground",
+        description: "Zero spinal compression. Stimulates lymphatic clearance, venous blood return, and joint prehab.",
+        exerciseIds: ["zone2_flush", "knee_tke", "glute_bridge_hold", "deadbug_hold"]
       }
     ];
 
@@ -1999,6 +2150,81 @@ function generateWorkoutFromGearAndGoal() {
           if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
         }
 
+        const lastAct = (typeof recentActivitiesData !== 'undefined' && recentActivitiesData.length > 0) ? recentActivitiesData[0] : null;
+        const lastSessionStr = lastAct 
+          ? `${lastAct.durationMin} min ${lastAct.subTitle || lastAct.name} (${lastAct.calories} kcal) logged`
+          : "32.7 min strength + 38.5 min walking logged";
+
+        const filteredOptions = todayWorkoutOptions.filter(opt => {
+          if (todayFilterLocation !== 'all') {
+            if (todayFilterLocation === 'gym' && opt.location !== 'gym') return false;
+            if (todayFilterLocation === 'kb' && opt.location !== 'kb') return false;
+            if (todayFilterLocation === 'bodyweight' && opt.location !== 'bodyweight') return false;
+          }
+          if (todayFilterFocus !== 'auto') {
+            if (opt.focus !== todayFilterFocus) return false;
+          }
+          return true;
+        });
+
+        const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
+
+        const workoutCardsHtml = filteredOptions.map(opt => {
+          const exercisesHtml = opt.exerciseIds.map((exId, idx) => {
+            const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
+            const rx = rxPrescriptions[exId] || {};
+            const weight = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
+            const reps = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+            const wStr = typeof weight === 'number' ? `${weight}kg` : `${weight}`;
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:11.5px; margin-top:3px;">
+                <span style="color:#fff; font-weight:700;">${idx + 1}. ${ex.name}</span>
+                <span style="color:var(--primary); font-weight:800;">${ex.setsCount} × ${reps} @ ${wStr} (${ex.rest})</span>
+              </div>
+              <div style="font-size:10.5px; color:var(--text-muted); margin-top:-2px;">Cue: ${ex.cue}</div>
+            `;
+          }).join('');
+
+          return `
+            <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); margin-bottom:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${opt.location.toUpperCase()} • ${opt.focus.toUpperCase()}</span>
+                  <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">${opt.title}</div>
+                  <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">${opt.subtitle}</div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+                <div style="font-size:11.5px; font-weight:700; color:#fff;">${opt.durationMin} min</div>
+                <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+                <div style="font-size:11.5px; font-weight:700; color:var(--primary);">~${opt.calories} kcal</div>
+                <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
+                <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">${opt.gearLabel}</div>
+              </div>
+
+              <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
+                ${opt.description}
+              </div>
+
+              <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+                <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                  <span>View Routine & Coaching Cues (${opt.exerciseIds.length} exercises)</span>
+                  <span style="font-size:12px;">▾</span>
+                </summary>
+                <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
+                  ${exercisesHtml}
+                </div>
+              </details>
+
+              <button class="btn-action-primary" onclick="launchDynamicWorkout('${opt.id}')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                START SESSION →
+              </button>
+            </div>
+          `;
+        }).join('');
+
         slot.innerHTML = `
           <!-- ELEPHANT-GOLDFISH HEAD COACH RECOMMENDATION & WEARABLE SYNTHESIS -->
           <div class="card" style="padding:14px; margin-bottom:10px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08);">
@@ -2025,7 +2251,7 @@ function generateWorkoutFromGearAndGoal() {
                 <span style="font-size:11px; color:var(--text-muted);">▾</span>
               </summary>
               <div style="padding:8px 10px; font-size:11px; color:#a1a1aa; line-height:1.4; border-top:1px solid rgba(255,255,255,0.05);">
-                • <strong>Yesterday's Stimulus:</strong> 32.7 min strength + 38.5 min walking logged.<br>
+                • <strong>Last Session:</strong> ${lastSessionStr}.<br>
                 • <strong>Current Composition:</strong> ${scaleWeight} kg (${bodyFatPct}% BF). Target: ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat remaining).<br>
                 • <strong>Hypertrophic Anchor:</strong> Protecting all ${leanMass} kg lean tissue under current 350 kcal deficit.
               </div>
@@ -2041,10 +2267,59 @@ function generateWorkoutFromGearAndGoal() {
             </div>
           </div>
 
-          <!-- THREE DISCIPLINED ARCHETYPES (OPTIONS A, B, C) -->
-          ${getWorkoutArchetypeCardsHtml(false)}
+          <!-- FILTER PILLS -->
+          <div class="filter-pill-row" style="margin-top:12px; margin-bottom:6px;">
+            <button type="button" class="filter-pill ${todayFilterLocation === 'all' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'all')">All Locations</button>
+            <button type="button" class="filter-pill ${todayFilterLocation === 'gym' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'gym')">Gym (Barbell)</button>
+            <button type="button" class="filter-pill ${todayFilterLocation === 'kb' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'kb')">KB / Van</button>
+            <button type="button" class="filter-pill ${todayFilterLocation === 'bodyweight' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'bodyweight')">Bodyweight</button>
+          </div>
+
+          <div class="filter-pill-row" style="margin-bottom:12px;">
+            <button type="button" class="filter-pill ${todayFilterFocus === 'auto' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'auto')">Auto Rec</button>
+            <button type="button" class="filter-pill ${todayFilterFocus === 'strength' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'strength')">Strength</button>
+            <button type="button" class="filter-pill ${todayFilterFocus === 'upper' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'upper')">Upper</button>
+            <button type="button" class="filter-pill ${todayFilterFocus === 'hinge' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'hinge')">Hinge</button>
+            <button type="button" class="filter-pill ${todayFilterFocus === 'conditioning' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'conditioning')">Conditioning</button>
+            <button type="button" class="filter-pill ${todayFilterFocus === 'flush' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'flush')">Flush</button>
+          </div>
+
+          <!-- DYNAMIC WORKOUT OPTIONS -->
+          ${workoutCardsHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No workouts match the selected filters.</div>'}
         `;
       }
+    }
+
+    function launchDynamicWorkout(optionId) {
+      const opt = todayWorkoutOptions.find(o => o.id === optionId) || todayWorkoutOptions[0];
+      const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
+      activeWorkoutPlan = opt.exerciseIds.map(exId => {
+        const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
+        const rx = rxPrescriptions[exId] || {};
+        const targetW = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
+        const targetR = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+        return {
+          id: ex.id,
+          name: ex.name,
+          family: ex.family,
+          targetWeight: targetW,
+          targetReps: targetR,
+          setsCount: ex.setsCount || 3,
+          rest: ex.rest || "75s",
+          cue: ex.cue || "",
+          rationale: ex.rationale || ""
+        };
+      });
+      currentExIdx = 0;
+      const badgeEl = document.getElementById('wPlanBadge');
+      if (badgeEl) badgeEl.innerText = opt.title.toUpperCase();
+      switchTab('train');
+      switchTrainView('prescribed');
+      requestWakeLock();
+      beep(750, 0.08);
+      speak(opt.title + " loaded. Let's work!");
+      renderCurrentExercise();
+      saveActiveSessionToLocalStorage();
     }
 
     function toggleWorkoutCompleteManual(isComplete) {
@@ -2082,6 +2357,29 @@ function viewCompletedWorkoutBreakdown() {
     // EXERCISE STEPPER & AUTOREGULATION LOGGING
     function renderCurrentExercise() {
       if (activeWorkoutPlan.length === 0) return;
+
+      const stepperEl = document.getElementById('exerciseStepperPills');
+      if (stepperEl) {
+        stepperEl.innerHTML = activeWorkoutPlan.map((exItem, idx) => {
+          const isActive = idx === currentExIdx;
+          const isSkipped = !!exItem.skipped;
+          let isDone = false;
+          if (!isSkipped) {
+            let loggedCount = 0;
+            for (let s = 1; s <= (exItem.setsCount || 1); s++) {
+              if (sessionLoggedSets[`${exItem.id}_${s}`]?.logged) loggedCount++;
+            }
+            if (loggedCount > 0) isDone = true;
+          }
+          let stateClass = '';
+          let icon = '';
+          if (isActive) stateClass = 'active';
+          else if (isSkipped) { stateClass = 'skipped'; icon = ' ⏭'; }
+          else if (isDone) { stateClass = 'done'; icon = ' ✓'; }
+          return `<button type="button" class="ex-pill-btn ${stateClass}" onclick="jumpToExercise(${idx})" title="${exItem.name}">${idx + 1}${icon}</button>`;
+        }).join('');
+      }
+
       const ex = activeWorkoutPlan[currentExIdx];
 
       document.getElementById('stepCounter').innerText = `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
@@ -2133,6 +2431,180 @@ function viewCompletedWorkoutBreakdown() {
         `;
         setRowsContainer.appendChild(row);
       }
+    }
+
+    function jumpToExercise(idx) {
+      if (idx >= 0 && idx < activeWorkoutPlan.length) {
+        currentExIdx = idx;
+        renderCurrentExercise();
+        saveActiveSessionToLocalStorage();
+        beep(500, 0.05);
+      }
+    }
+
+    function skipCurrentExercise() {
+      if (activeWorkoutPlan.length === 0) return;
+      activeWorkoutPlan[currentExIdx].skipped = true;
+      showToast(`Skipped ${activeWorkoutPlan[currentExIdx].name}`);
+      if (currentExIdx < activeWorkoutPlan.length - 1) {
+        currentExIdx++;
+      }
+      renderCurrentExercise();
+      saveActiveSessionToLocalStorage();
+      beep(450, 0.06);
+    }
+
+    function openSwapModal(mode) {
+      swapModalMode = mode || 'swap';
+      const modal = document.getElementById('swapExerciseModal');
+      if (modal) {
+        modal.classList.add('open');
+        const titleEl = document.getElementById('swapModalTitle');
+        if (titleEl) titleEl.innerText = swapModalMode === 'swap' ? '⇄ Swap Exercise' : '+ Add Exercise';
+        const search = document.getElementById('swapSearchInput');
+        if (search) { search.value = ''; setTimeout(() => search.focus(), 50); }
+        renderSwapOptions();
+      }
+      beep(700, 0.05);
+    }
+
+    function closeSwapModal() {
+      const modal = document.getElementById('swapExerciseModal');
+      if (modal) modal.classList.remove('open');
+      beep(600, 0.04);
+    }
+
+    function renderSwapOptions() {
+      const container = document.getElementById('swapOptionsList');
+      if (!container) return;
+      const searchEl = document.getElementById('swapSearchInput');
+      const query = (searchEl ? searchEl.value : '').toLowerCase().trim();
+
+      const currentEx = activeWorkoutPlan[currentExIdx] || {};
+      const currentFamily = currentEx.family || '';
+
+      const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
+
+      let matches = masterExercises.filter(e => {
+        if (!query) return true;
+        return (e.name && e.name.toLowerCase().includes(query)) ||
+               (e.family && e.family.toLowerCase().includes(query)) ||
+               (e.id && e.id.toLowerCase().includes(query));
+      });
+
+      // Same pattern first
+      matches.sort((a, b) => {
+        const aSame = a.family === currentFamily ? 1 : 0;
+        const bSame = b.family === currentFamily ? 1 : 0;
+        return bSame - aSame;
+      });
+
+      if (matches.length === 0) {
+        container.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-muted); font-size:12px;">No matching exercises found.</div>';
+        return;
+      }
+
+      container.innerHTML = matches.map(ex => {
+        const isSamePattern = currentFamily && ex.family === currentFamily;
+        const rx = rxPrescriptions[ex.id] || {};
+        const targetW = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
+        const targetR = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+        const wStr = typeof targetW === 'number' ? `${targetW}kg` : targetW;
+
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.06); border-radius:8px; gap:8px;">
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="font-size:12.5px; font-weight:700; color:#fff;">${ex.name}</span>
+                ${isSamePattern ? '<span style="background:rgba(0,240,255,0.14); border:1px solid rgba(0,240,255,0.3); color:var(--primary); font-size:9.5px; font-weight:800; padding:1px 5px; border-radius:4px; letter-spacing:0.04em;">SAME PATTERN</span>' : ''}
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                ${ex.setsCount || 3} sets × ${targetR} reps @ ${wStr} • Rest: ${ex.rest || '60s'}
+              </div>
+            </div>
+            <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${ex.id}')">
+              ${swapModalMode === 'swap' ? 'Swap ⇄' : 'Add +'}
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectSwapExercise(exId) {
+      const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
+      const rxPrescriptions = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.strength_prescriptions) || {};
+      const rx = rxPrescriptions[exId] || {};
+      const targetW = rx.weight !== undefined ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body');
+      const targetR = rx.reps !== undefined ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8);
+
+      const newExItem = {
+        id: ex.id,
+        name: ex.name,
+        family: ex.family,
+        targetWeight: targetW,
+        targetReps: targetR,
+        setsCount: ex.setsCount || 3,
+        rest: ex.rest || "75s",
+        cue: ex.cue || "",
+        rationale: ex.rationale || ""
+      };
+
+      if (swapModalMode === 'swap') {
+        activeWorkoutPlan[currentExIdx] = newExItem;
+        showToast(`Swapped to ${ex.name}`);
+      } else {
+        activeWorkoutPlan.push(newExItem);
+        showToast(`Added ${ex.name} to routine`);
+      }
+
+      closeSwapModal();
+      renderCurrentExercise();
+      saveActiveSessionToLocalStorage();
+      beep(750, 0.08);
+    }
+
+    function addCustomExerciseMidWorkout() {
+      const nameInput = document.getElementById('customExName');
+      const setsInput = document.getElementById('customExSets');
+      const repsInput = document.getElementById('customExReps');
+      const weightInput = document.getElementById('customExWeight');
+
+      const name = nameInput ? nameInput.value.trim() : '';
+      if (!name) {
+        showToast('Please enter an exercise name');
+        return;
+      }
+      const sets = setsInput ? parseInt(setsInput.value, 10) || 3 : 3;
+      const reps = repsInput ? (parseInt(repsInput.value, 10) || repsInput.value || 8) : 8;
+      const weightRaw = weightInput ? weightInput.value.trim() : 'Body';
+      const weight = !isNaN(parseFloat(weightRaw)) && isFinite(weightRaw) ? parseFloat(weightRaw) : (weightRaw || 'Body');
+
+      const customId = `custom_${Date.now()}`;
+      const newExItem = {
+        id: customId,
+        name: name,
+        family: "functional",
+        targetWeight: weight,
+        targetReps: reps,
+        setsCount: sets,
+        rest: "60s",
+        cue: "Focus on strict form and controlled cadence.",
+        rationale: "Custom athlete entry added mid-workout."
+      };
+
+      if (swapModalMode === 'swap') {
+        activeWorkoutPlan[currentExIdx] = newExItem;
+        showToast(`Swapped to ${name}`);
+      } else {
+        activeWorkoutPlan.push(newExItem);
+        showToast(`Added ${name} to session`);
+      }
+
+      if (nameInput) nameInput.value = '';
+      closeSwapModal();
+      renderCurrentExercise();
+      saveActiveSessionToLocalStorage();
+      beep(750, 0.08);
     }
 
     function prevExercise() {
@@ -2507,4 +2979,19 @@ function viewCompletedWorkoutBreakdown() {
       showToast(`✓ Logged ${tRounds} rounds conditioning to Garmin calendar!`);
       switchTab('fuel');
     }
+
+    // EXPOSE TO WINDOW FOR INLINE ONCLICK HANDLERS
+    window.setTodayWorkoutFilter = setTodayWorkoutFilter;
+    window.launchDynamicWorkout = launchDynamicWorkout;
+    window.jumpToExercise = jumpToExercise;
+    window.skipCurrentExercise = skipCurrentExercise;
+    window.openSwapModal = openSwapModal;
+    window.closeSwapModal = closeSwapModal;
+    window.renderSwapOptions = renderSwapOptions;
+    window.selectSwapExercise = selectSwapExercise;
+    window.addCustomExerciseMidWorkout = addCustomExerciseMidWorkout;
+    window.renderTodayTrainingRecommendations = renderTodayTrainingRecommendations;
+    window.masterExercises = masterExercises;
+    window.todayWorkoutOptions = todayWorkoutOptions;
+
 

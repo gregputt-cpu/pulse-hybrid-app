@@ -1332,6 +1332,23 @@
         const lbs = (window.athleteProfile.leanMassKg * 2.20462).toFixed(1);
         elNormLbm.innerText = `${window.athleteProfile.leanMassKg.toFixed(2)} kg (${lbs} lbs)`;
       }
+
+      const elCoachBody = document.getElementById('coachBriefingBody');
+      if (elCoachBody) {
+        const wt = window.athleteProfile.weightKg.toFixed(1);
+        const lbm = window.athleteProfile.leanMassKg.toFixed(2);
+        const fatLoss = window.athleteProfile.fatToLoseKg.toFixed(2);
+        const rhr = Math.round(window.athleteProfile.restingHr);
+        elCoachBody.innerHTML = `At <strong>190.5 cm (6'3") and ${wt} kg</strong>, standard medical BMI tables lazily categorize you as "overweight," completely failing to recognize that <strong>${lbm} kg is pure fat-free lean muscle mass</strong>. You have the athletic frame of a high-level decathlete or rugby back. You are already in the top 15% for body composition and top 1% for cardiovascular stroke volume (${rhr} bpm RHR). Your target of shedding <strong>${fatLoss} kg fat</strong> is not a drastic cut — it is precision tuning to reveal your muscular definition while protecting your joints.`;
+      }
+
+      const elNormBfNote = document.getElementById('normBfNote');
+      if (elNormBfNote) {
+        const bf = window.athleteProfile.bodyFatPct.toFixed(1);
+        const fatLoss = window.athleteProfile.fatToLoseKg.toFixed(2);
+        const targetBf = (window.athleteProfile.targetBfPct || 15.0).toFixed(1);
+        elNormBfNote.innerHTML = `Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Your ${bf}% places you firmly in the fit/athletic tier. You are only <strong>${fatLoss} kg</strong> away from your ${targetBf}% milestone!`;
+      }
     }
 
     // DYNAMIC TELEMETRY SYNC PIPELINE (Reads Railway /api/live_state or live_state.json)
