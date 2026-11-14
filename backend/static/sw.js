@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v30-fixed-nav-no-flicker';
+const CACHE_NAME = 'pulse-cache-v31-smart-rec-natural-voice';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

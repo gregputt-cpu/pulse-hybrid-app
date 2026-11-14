@@ -67,6 +67,40 @@
 
     // ==================== VOICE COACHING PROMPTS (Web Speech API) ====================
     let voicePromptsEnabled = true;
+    let cachedNaturalVoice = null;
+
+    function getPreferredNaturalVoice() {
+      if (cachedNaturalVoice) return cachedNaturalVoice;
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+      try {
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) return null;
+
+        // Priority 1: name matching /natural|neural|online/i and lang starting with en
+        const p1 = voices.find(v => /natural|neural|online/i.test(v.name) && /^en/i.test(v.lang));
+        if (p1) { cachedNaturalVoice = p1; return p1; }
+
+        // Priority 2: name matching /google uk english|google us english|samantha|daniel|serena|arthur|martha|aria|jenny|sonia|ryan|libby/i and lang starting with en
+        const p2 = voices.find(v => /google uk english|google us english|samantha|daniel|serena|arthur|martha|aria|jenny|sonia|ryan|libby/i.test(v.name) && /^en/i.test(v.lang));
+        if (p2) { cachedNaturalVoice = p2; return p2; }
+
+        // Priority 3: any en-GB or en-US voice not matching /espeak|compact/i
+        const p3 = voices.find(v => (/^en[-_](gb|us)/i.test(v.lang) || /^en$/i.test(v.lang)) && !/espeak|compact/i.test(v.name));
+        if (p3) { cachedNaturalVoice = p3; return p3; }
+
+        // Fallback: any en voice
+        const fallback = voices.find(v => /^en/i.test(v.lang)) || voices[0];
+        if (fallback) { cachedNaturalVoice = fallback; return fallback; }
+      } catch(e) {}
+      return null;
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        cachedNaturalVoice = null;
+        getPreferredNaturalVoice();
+      };
+    }
 
     function toggleVoicePrompts() {
       voicePromptsEnabled = !voicePromptsEnabled;
@@ -88,7 +122,9 @@
       try {
         if (cancelPrior) window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 1.08;
+        const naturalVoice = getPreferredNaturalVoice();
+        if (naturalVoice) utter.voice = naturalVoice;
+        utter.rate = 0.98;
         utter.pitch = 1.0;
         utter.volume = 1.0;
         window.speechSynthesis.speak(utter);
