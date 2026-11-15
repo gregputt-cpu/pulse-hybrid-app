@@ -332,6 +332,70 @@ function renderHistoryList() {
     const hasRealSamples = Array.isArray(act.hr_samples) && act.hr_samples.length >= 5;
     const sensorHeaderLabel = hasRealSamples ? 'OPTICAL SENSOR STREAM (GARMIN)' : 'OPTICAL SENSOR MODEL';
 
+    const matchedPulse = (typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act) : null;
+    let pulseDetailsHtml = '';
+    if (matchedPulse) {
+      let sessionName = matchedPulse.title || '';
+      if (!sessionName) {
+        if (matchedPulse.preset === 'gym') sessionName = 'Option A: Heavy Barbell Strength & Hinge';
+        else if (matchedPulse.preset === 'combat') sessionName = 'Option B: Hybrid Work Capacity Circuit';
+        else sessionName = 'Pulse Strength Session';
+      }
+
+      const garminStats = [
+        act.total_sets ? `${act.total_sets} Garmin Sets` : (matchedPulse.setsLogged ? `${matchedPulse.setsLogged} Sets Logged` : ''),
+        act.avgHr ? `${act.avgHr} bpm HR` : '',
+        act.calories ? `${act.calories} kcal` : ''
+      ].filter(Boolean).join(' • ');
+
+      let exerciseRows = '';
+      if (matchedPulse.details && typeof matchedPulse.details === 'object') {
+        const setsByEx = {};
+        const allEx = (typeof getAllExercises === 'function') ? getAllExercises() : [];
+        Object.values(matchedPulse.details).forEach(s => {
+          if (!s || !s.logged) return;
+          const exId = s.exercise_id || 'exercise';
+          if (!setsByEx[exId]) {
+            const exObj = allEx.find(e => e.id === exId);
+            setsByEx[exId] = {
+              name: exObj ? exObj.name : exId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+              sets: []
+            };
+          }
+          const wStr = (s.weight !== undefined && s.weight !== null && s.weight !== 'Bodyweight') ? `${s.weight}kg` : (s.weight === 'Bodyweight' ? 'BW' : '');
+          const rStr = `${s.reps || 0}r`;
+          setsByEx[exId].sets.push(wStr ? `${wStr} × ${rStr}` : rStr);
+        });
+
+        const exEntries = Object.values(setsByEx);
+        if (exEntries.length > 0) {
+          exerciseRows = `
+            <div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
+              ${exEntries.map(e => `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 7px;">
+                  <span style="font-weight:700; color:#fff;">${e.name}:</span>
+                  <span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${e.sets.join(', ')}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+
+      pulseDetailsHtml = `
+        <div style="margin:6px 0 8px; padding:8px 10px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:9.5px; font-weight:800; background:rgba(16,185,129,0.22); border:1px solid #10b981; color:#10b981; padding:2px 6px; border-radius:4px; letter-spacing:0.04em;">🔗 MATCHED WITH PULSE</span>
+              <span style="font-size:11.5px; font-weight:800; color:#fff;">${sessionName}</span>
+            </div>
+            ${garminStats ? `<span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${garminStats}</span>` : ''}
+          </div>
+          ${exerciseRows}
+        </div>
+      `;
+    }
+
     const card = document.createElement('div');
     card.className = `history-card ${isToday ? 'today-highlight' : ''}`;
     card.style.background = isToday ? '#141a24' : '#11141c';
@@ -359,6 +423,8 @@ function renderHistoryList() {
           ${egm.recoveryPill}
         </div>
       </div>
+
+      ${pulseDetailsHtml}
 
       <!-- PRIMARY GLANCEABLE TAKEAWAY -->
       <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">

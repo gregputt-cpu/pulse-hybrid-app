@@ -149,6 +149,13 @@ def update_live_state(state: Dict[str, Any]):
     save_live_state(state)
     return {"success": True, "state": state}
 
+@app.get("/api/garmin/export_token")
+def export_garmin_token():
+    tok = garmin_service.export_tokens_json()
+    if not tok:
+        return {"success": False, "error": "Not authenticated with Garmin"}
+    return {"success": True, "garmin_tokens_json": tok}
+
 @app.get("/api/garmin/sync")
 @app.post("/api/garmin/sync")
 def sync_garmin(payload: Optional[DatePayload] = None):
@@ -174,7 +181,7 @@ def sync_garmin(payload: Optional[DatePayload] = None):
         except Exception as rex:
             logger.warning(f"Renpho sync during Garmin pull: {rex}")
         updated = load_live_state()
-        return {"success": True, "state": updated, "live_state": updated}
+        return {"success": True, "state": updated, "live_state": updated, "has_fresh_token": True}
     except Exception as e:
         logger.error(f"Garmin sync error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -189,7 +196,7 @@ def submit_garmin_mfa(payload: MfaPayload):
     except Exception as e:
         logger.warning(f"Garmin sync after MFA warning: {e}")
     updated = load_live_state()
-    return {"success": True, "state": updated, "live_state": updated}
+    return {"success": True, "state": updated, "live_state": updated, "has_fresh_token": True}
 
 @app.get("/api/mnd/status")
 def mnd_status():

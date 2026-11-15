@@ -5,13 +5,28 @@ from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnec
 from benefits_engine import PhysiologicalBenefitsEngine
 
 TOKEN_DIR = os.environ.get('GARMIN_TOKEN_DIR', '/shared/user/.gemini/garmin_tokens')
-if 'GARMIN_TOKENS_JSON' in os.environ:
+if 'GARMIN_TOKENS_JSON' in os.environ and 'GARMIN_TOKEN_DIR' not in os.environ:
+    TOKEN_DIR = '/tmp/garmin_tokens'
+
+# Only fall back to /tmp/garmin_tokens if TOKEN_DIR isn't writable
+try:
+    os.makedirs(TOKEN_DIR, exist_ok=True)
+    test_file = os.path.join(TOKEN_DIR, '.write_test')
+    with open(test_file, 'w') as f:
+        f.write('1')
+    os.remove(test_file)
+except Exception:
     TOKEN_DIR = '/tmp/garmin_tokens'
     os.makedirs(TOKEN_DIR, exist_ok=True)
-    token_file = os.path.join(TOKEN_DIR, 'garmin_tokens.json')
-    if not os.path.exists(token_file):
-        with open(token_file, 'w') as f:
-            f.write(os.environ['GARMIN_TOKENS_JSON'])
+
+if 'GARMIN_TOKENS_JSON' in os.environ:
+    try:
+        token_file = os.path.join(TOKEN_DIR, 'garmin_tokens.json')
+        if not os.path.exists(token_file):
+            with open(token_file, 'w') as f:
+                f.write(os.environ['GARMIN_TOKENS_JSON'])
+    except Exception as e:
+        print(f"[GarminSync] Warning writing GARMIN_TOKENS_JSON to {TOKEN_DIR}: {e}")
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, 'live_state.json')
@@ -32,10 +47,46 @@ class GarminSyncService:
             try:
                 self.client.login(tokenstore=TOKEN_DIR)
             except Exception as e:
-                print(f"[GarminSync] Login from tokenstore error: {e}")
-                self.client = None
-                raise
+                print(f"[GarminSync] Login from tokenstore ({TOKEN_DIR}) error: {e}")
+                if 'GARMIN_TOKENS_JSON' in os.environ:
+                    try:
+                        self.client.login(tokenstore=os.environ['GARMIN_TOKENS_JSON'])
+                    except Exception:
+                        try:
+                            self.client.client.loads(os.environ['GARMIN_TOKENS_JSON'])
+                        except Exception as e2:
+                            print(f"[GarminSync] Login from GARMIN_TOKENS_JSON error: {e2}")
+                            self.client = None
+                            raise e2
+                else:
+                    self.client = None
+                    raise
         return self.client
+
+    def export_tokens_json(self):
+        if self.client:
+            try:
+                dumped = self.client.client.dumps()
+                if dumped:
+                    return dumped
+            except Exception as e:
+                print(f"[GarminSync] Warning dumping from active client: {e}")
+        try:
+            temp_client = Garmin()
+            try:
+                temp_client.login(tokenstore=TOKEN_DIR)
+            except Exception:
+                if 'GARMIN_TOKENS_JSON' in os.environ:
+                    try:
+                        temp_client.login(tokenstore=os.environ['GARMIN_TOKENS_JSON'])
+                    except Exception:
+                        temp_client.client.loads(os.environ['GARMIN_TOKENS_JSON'])
+                else:
+                    raise
+            return temp_client.client.dumps()
+        except Exception as e:
+            print(f"[GarminSync] Could not export tokens: {e}")
+            return None
 
     def login_with_credentials(self, email, password):
         try:
@@ -148,6 +199,7 @@ class GarminSyncService:
             raise GarminConnectAuthenticationError("Direct Garmin OAuth token expired (falling back to MND Garmin bridge)")
 
         garmin_state = state.setdefault('garmin', {})
+        garmin_state['source'] = 'garmin_oauth'
         if summary.get('totalSteps') is not None:
             garmin_state['steps'] = summary.get('totalSteps')
         if summary.get('restingHeartRate') is not None:
@@ -177,6 +229,9 @@ class GarminSyncService:
 
         for idx, ra in enumerate(raw_activities):
             act_id = str(ra.get('activityId'))
+            activity_type_key = ra.get('activityType', {}).get('typeKey', 'cardio')
+            total_sets = ra.get('totalSets')
+            total_reps = ra.get('totalReps')
             act_name = ra.get('activityType', {}).get('typeKey', 'Cardio').capitalize()
             sub_title = ra.get('activityName', act_name)
             calories = round(float(ra.get('calories', 0)))
@@ -201,6 +256,7 @@ class GarminSyncService:
 
             hr_samples = existing.get('hr_samples') if existing else None
             hr_zones = existing.get('hr_zones') if existing else None
+            exercise_sets = existing.get('exercise_sets') if existing else None
 
             if idx < 3 and not hr_samples:
                 try:
@@ -248,6 +304,27 @@ class GarminSyncService:
                 except Exception as e:
                     print(f"[GarminSync] Warning fetching activity HR zones for {act_id}: {e}")
 
+            if 'strength' in str(act_name).lower() and idx < 3 and not exercise_sets:
+                try:
+                    raw_sets = client.get_activity_exercise_sets(act_id)
+                    compact_sets = []
+                    sets_list = raw_sets.get('exerciseSets', []) if isinstance(raw_sets, dict) else (raw_sets if isinstance(raw_sets, list) else [])
+                    for s in sets_list:
+                        if isinstance(s, dict):
+                            compact_sets.append({
+                                "set_type": s.get('setType'),
+                                "reps": s.get('reps'),
+                                "weight": s.get('weight'),
+                                "exercise_name": s.get('exerciseName') or s.get('category'),
+                                "duration": s.get('duration')
+                            })
+                    if compact_sets:
+                        exercise_sets = compact_sets
+                    elif isinstance(raw_sets, (list, dict)) and raw_sets:
+                        exercise_sets = raw_sets
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching exercise sets for {act_id}: {e}")
+
             entry = {
                 "id": int(act_id),
                 "name": act_name,
@@ -259,12 +336,17 @@ class GarminSyncService:
                 "max_hr": max_hr,
                 "aerobic_te": aerobic_te,
                 "anaerobic_te": anaerobic_te,
-                "benefits": benefits
+                "benefits": benefits,
+                "activity_type_key": activity_type_key,
+                "total_sets": total_sets,
+                "total_reps": total_reps
             }
             if hr_samples:
                 entry["hr_samples"] = hr_samples
             if hr_zones:
                 entry["hr_zones"] = hr_zones
+            if exercise_sets:
+                entry["exercise_sets"] = exercise_sets
 
             today_activity_list.append(entry)
 

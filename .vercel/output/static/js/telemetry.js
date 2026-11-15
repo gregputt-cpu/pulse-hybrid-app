@@ -1,5 +1,86 @@
     let garminMfaState = null;
 
+    async function copyGarminPermanentToken() {
+      try {
+        showToast('Exporting Garmin permanent token...');
+        const res = await fetch('/api/garmin/export_token');
+        if (!res.ok) throw new Error('API request failed');
+        const data = await res.json();
+        if (data.success && data.garmin_tokens_json) {
+          const tokenText = typeof data.garmin_tokens_json === 'string'
+            ? data.garmin_tokens_json
+            : JSON.stringify(data.garmin_tokens_json);
+          await navigator.clipboard.writeText(tokenText);
+          showToast('✓ Permanent Garmin token copied! Paste into Railway GARMIN_TOKENS_JSON.');
+          beep(880, 0.15);
+        } else {
+          showToast(`⚠️ ${data.error || 'Garmin not authenticated yet'}`);
+        }
+      } catch(e) {
+        showToast('⚠️ Could not copy token. Please ensure clipboard permission.');
+      }
+    }
+    window.copyGarminPermanentToken = copyGarminPermanentToken;
+
+    function getMatchedPulseSessionForGarmin(act) {
+      if (!act) return null;
+      const actName = (act.name || '').toLowerCase();
+      const actKey = (act.activity_type_key || '').toLowerCase();
+      const actSub = (act.subTitle || '').toLowerCase();
+      const isStrength = actName.includes('strength') || actKey.includes('strength') || actSub.includes('strength');
+      if (!isStrength) return null;
+
+      let actDateStr = '';
+      const raw = act.rawDate || act.date || '';
+      if (typeof raw === 'string') {
+        const m = raw.match(/\d{4}-\d{2}-\d{2}/);
+        if (m) {
+          actDateStr = m[0];
+        } else if (raw.toLowerCase().includes('today') || act.isToday) {
+          const now = new Date();
+          actDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        }
+      }
+      if (!actDateStr && act.isToday) {
+        const now = new Date();
+        actDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      }
+
+      try {
+        const histRaw = localStorage.getItem('pulse_session_history');
+        if (!histRaw) return null;
+        const history = JSON.parse(histRaw);
+        if (!Array.isArray(history) || history.length === 0) return null;
+
+        const matched = history.find(s => {
+          if (!s.date) return false;
+          let sDateStr = '';
+          const sm = String(s.date).match(/\d{4}-\d{2}-\d{2}/);
+          if (sm) {
+            sDateStr = sm[0];
+          } else {
+            const sd = new Date(s.date);
+            if (!isNaN(sd.getTime())) {
+              sDateStr = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
+            }
+          }
+          return sDateStr && actDateStr && sDateStr === actDateStr;
+        });
+
+        return matched || null;
+      } catch(e) {
+        return null;
+      }
+    }
+    window.getMatchedPulseSessionForGarmin = getMatchedPulseSessionForGarmin;
+
+    function renderCompletedWorkouts(activities) {
+      if (typeof renderHistoryList === 'function') {
+        return renderHistoryList();
+      }
+    }
+    window.renderCompletedWorkouts = renderCompletedWorkouts;
+
     function openSyncModal(tab = 'garmin') {
       const modal = document.getElementById('syncModal');
       if (modal) modal.classList.add('open');
@@ -200,6 +281,8 @@
           }
           await loadLiveState();
           updateEquipmentTriggerSummary();
+          const exportBox = document.getElementById('garminTokenExportBox');
+          if (exportBox) exportBox.style.display = 'flex';
           closeSyncModal();
           beep(880, 0.15);
           showToast('✓ Garmin, Renpho & MyNetDiary Synced Live!');
@@ -243,6 +326,8 @@
         const data = await res.json();
         if (data.status === 'success') {
           await loadLiveState();
+          const exportBox = document.getElementById('garminTokenExportBox');
+          if (exportBox) exportBox.style.display = 'flex';
           closeSyncModal();
           beep(880, 0.2);
           showToast('✓ Garmin Authenticated & Synced Permanently!');
@@ -253,6 +338,8 @@
         showToast('Network error verifying MFA.');
       }
     }
+    window.submitGarminMfaCode = submitGarminMfaCode;
+    window.submitGarminMfa = submitGarminMfaCode;
 
     async function submitManualActivityModal() {
       const type = document.getElementById('actTypeInput').value || 'Walking';
@@ -1444,6 +1531,21 @@
             }
           } catch(e) {}
 
+          // Prevent double-counting pulse_inapp_burn_today if Garmin OAuth already measured Strength activity
+          try {
+            if (g.source === 'garmin_oauth') {
+              const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
+              const hasGarminStrength = todayActs.some(a => {
+                const name = (a.name || '').toLowerCase();
+                const key = (a.activity_type_key || '').toLowerCase();
+                return name.includes('strength') || key.includes('strength');
+              });
+              if (hasGarminStrength) {
+                inAppBurn = 0;
+              }
+            }
+          } catch(e) {}
+
           const totalActiveBurn = Number(g.active_calories) + inAppBurn;
           const el1 = document.getElementById('vitalBurn');
           if (el1) {
@@ -1504,7 +1606,13 @@
               maxHr: a.max_hr,
               aerobicTe: a.aerobic_te,
               anaerobicTe: a.anaerobic_te,
-              benefits: a.benefits
+              benefits: a.benefits,
+              activity_type_key: a.activity_type_key,
+              total_sets: a.total_sets,
+              total_reps: a.total_reps,
+              exercise_sets: a.exercise_sets,
+              hr_samples: a.hr_samples,
+              hr_zones: a.hr_zones
             };
           });
 
@@ -1655,6 +1763,22 @@
             const parsed = JSON.parse(rawBurn);
             if (parsed && parsed.date === _todayIso) {
               inAppBurn = Number(parsed.calories) || 0;
+            }
+          }
+        } catch(e) {}
+
+        // Prevent double-counting pulse_inapp_burn_today if Garmin OAuth already measured Strength activity
+        try {
+          const gState = state.garmin || (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin);
+          if (gState && gState.source === 'garmin_oauth') {
+            const todayActs = Array.isArray(gState.today_activities) ? gState.today_activities : [];
+            const hasGarminStrength = todayActs.some(a => {
+              const name = (a.name || '').toLowerCase();
+              const key = (a.activity_type_key || '').toLowerCase();
+              return name.includes('strength') || key.includes('strength');
+            });
+            if (hasGarminStrength) {
+              inAppBurn = 0;
             }
           }
         } catch(e) {}

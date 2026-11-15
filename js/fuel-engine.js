@@ -143,6 +143,22 @@
         }
       } catch(e) {}
 
+      // Prevent double-counting pulse_inapp_burn_today if Garmin OAuth already measured Strength activity
+      try {
+        const g = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) ? window.BAKED_LIVE_STATE.garmin : null;
+        if (g && g.source === 'garmin_oauth') {
+          const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
+          const hasGarminStrength = todayActs.some(a => {
+            const name = (a.name || '').toLowerCase();
+            const key = (a.activity_type_key || '').toLowerCase();
+            return name.includes('strength') || key.includes('strength');
+          });
+          if (hasGarminStrength) {
+            inAppBurn = 0;
+          }
+        }
+      } catch(e) {}
+
       const baseGarminBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
         ? Number(window.BAKED_LIVE_STATE.garmin.active_calories)
         : 623;
@@ -152,7 +168,7 @@
       if (burnEl) {
         const parsedBurn = parseInt(burnEl.innerText);
         if (!isNaN(parsedBurn) && parsedBurn >= 0) {
-          activeBurn = Math.max(parsedBurn, baseGarminBurn + inAppBurn);
+          activeBurn = parsedBurn;
         }
       }
       const totalBudget = 2092 + activeBurn;

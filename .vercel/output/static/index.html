@@ -1576,6 +1576,14 @@
             </button>
           </div>
 
+          <!-- PERMANENT TOKEN EXPORT BOX (Hidden by default, shown after sync / MFA) -->
+          <div id="garminTokenExportBox" style="display:none; flex-direction:column; gap:4px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:8px; margin-top:4px;">
+            <button class="btn-action-primary" style="height:32px; font-size:12px; background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#10b981; font-weight:800;" onclick="copyGarminPermanentToken()">
+              📋 Copy Permanent GARMIN_TOKENS_JSON
+            </button>
+            <div style="font-size:11px; color:var(--text-muted); text-align:center;">Paste this into Railway's GARMIN_TOKENS_JSON env var once to stay logged in across all future deploys.</div>
+          </div>
+
           <button class="btn-action-primary" id="btnTriggerGarminSync" style="height:36px; margin-top:4px;" onclick="triggerGarminCloudSync()">
             ⚡ PULL ALL TODAY'S WORKOUTS FROM GARMIN
           </button>
