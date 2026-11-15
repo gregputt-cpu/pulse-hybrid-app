@@ -1431,9 +1431,23 @@
           }
         }
         if (g.active_calories !== undefined) {
+          let inAppBurn = 0;
+          try {
+            const _now = new Date();
+            const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+            const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+            if (rawBurn) {
+              const parsed = JSON.parse(rawBurn);
+              if (parsed && parsed.date === _todayIso) {
+                inAppBurn = Number(parsed.calories) || 0;
+              }
+            }
+          } catch(e) {}
+
+          const totalActiveBurn = Number(g.active_calories) + inAppBurn;
           const el1 = document.getElementById('vitalBurn');
           if (el1) {
-            const desiredHtml = `${g.active_calories} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small>`;
+            const desiredHtml = `${totalActiveBurn} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small>`;
             if (el1.innerHTML !== desiredHtml) el1.innerHTML = desiredHtml;
           }
           const el2 = document.getElementById('vitalBurnSub');
@@ -1443,12 +1457,12 @@
           }
           const el3 = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
           if (el3) {
-            const desiredHtml = `${g.active_calories} <small style="font-size:13px;">kcal</small>`;
+            const desiredHtml = `${totalActiveBurn} <small style="font-size:13px;">kcal</small>`;
             if (el3.innerHTML !== desiredHtml) el3.innerHTML = desiredHtml;
           }
           const bannerBurn = document.getElementById('garminBannerBurn');
           if (bannerBurn) {
-            const desiredText = `${g.active_calories} kcal`;
+            const desiredText = `${totalActiveBurn} kcal`;
             if (bannerBurn.innerText !== desiredText) bannerBurn.innerText = desiredText;
           }
         }
@@ -1632,19 +1646,35 @@
       // 3. Nutrition Targets
       if (state.nutrition) {
         const n = state.nutrition;
+        let inAppBurn = 0;
+        try {
+          const _now = new Date();
+          const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+          const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+          if (rawBurn) {
+            const parsed = JSON.parse(rawBurn);
+            if (parsed && parsed.date === _todayIso) {
+              inAppBurn = Number(parsed.calories) || 0;
+            }
+          }
+        } catch(e) {}
+
         let activeBurn = 649;
         const burnEl = document.getElementById('vitalBurn');
         if (burnEl) {
           const parsed = parseInt(burnEl.innerText);
           if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
+        } else if (state.garmin && state.garmin.active_calories !== undefined) {
+          activeBurn = Number(state.garmin.active_calories) + inAppBurn;
         }
 
+        const calorieTarget = (n.calorie_target || 2092) + inAppBurn;
         if (n.calorie_target) {
           const el1 = document.getElementById('fuelTargetNum') || document.getElementById('fuelCalTarget');
-          if (el1) el1.innerHTML = `${n.calorie_target.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
+          if (el1) el1.innerHTML = `${calorieTarget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
           const el2 = document.getElementById('fuelBudgetNum');
-          if (el2) el2.innerText = n.calorie_target;
-          athleteDailyBudget = n.calorie_target;
+          if (el2) el2.innerText = calorieTarget;
+          athleteDailyBudget = calorieTarget;
         }
         if (n.protein_target_g) {
           const el = document.getElementById('macroProtein');

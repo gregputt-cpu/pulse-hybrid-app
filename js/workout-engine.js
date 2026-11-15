@@ -4241,13 +4241,18 @@ function viewCompletedWorkoutBreakdown() {
       setTimeout(() => beep(1100, 0.3), 150);
       speak("Outstanding session Coach Greg! Workout saved to training history.");
       
+      const setsLoggedCount = Object.keys(sessionLoggedSets).length;
+      const totalPlannedSets = activeWorkoutPlan.reduce((acc, ex) => acc + (ex.setsCount || 3), 0) || 15;
+      const sessionCalories = Math.max(80, Math.round(setsLoggedCount * 16 + activeWorkoutPlan.length * 10));
+
       const summary = {
         date: new Date().toISOString(),
         date_formatted: new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }),
         preset: currentPreset,
         goal: currentGoalKey,
         exercisesCompleted: activeWorkoutPlan.length,
-        setsLogged: Object.keys(sessionLoggedSets).length,
+        setsLogged: setsLoggedCount,
+        calories: sessionCalories,
         details: sessionLoggedSets
       };
 
@@ -4262,14 +4267,29 @@ function viewCompletedWorkoutBreakdown() {
       localStorage.removeItem('pulse_active_session');
       sessionLoggedSets = {};
 
-      showToast('🏆 Workout logged! Autoregulation state saved.');
+      showToast(`🏆 Workout logged! Autoregulation state saved. ~${sessionCalories} kcal added to today's fuel budget!`);
       try {
         const _now = new Date();
         const _iso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
         localStorage.setItem('pulse_strength_done_today', 'true');
         localStorage.setItem('pulse_workout_completed_date', _iso);
+
+        let existingBurn = 0;
+        try {
+          const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+          if (rawBurn) {
+            const parsedBurn = JSON.parse(rawBurn);
+            if (parsedBurn && parsedBurn.date === _iso) {
+              existingBurn = Number(parsedBurn.calories) || 0;
+            }
+          }
+        } catch(e) {}
+        const totalBurnToday = existingBurn + sessionCalories;
+        localStorage.setItem('pulse_inapp_burn_today', JSON.stringify({ date: _iso, calories: totalBurnToday }));
       } catch(e) {}
       renderTodayTrainingRecommendations();
+      if (typeof renderMyNetDiaryEngine === 'function') renderMyNetDiaryEngine();
+      if (typeof applyLiveStateToDom === 'function' && window.BAKED_LIVE_STATE) applyLiveStateToDom(window.BAKED_LIVE_STATE);
       switchTab('fuel');
     }
 

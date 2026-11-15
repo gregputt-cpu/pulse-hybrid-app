@@ -130,16 +130,38 @@
 
     function renderMyNetDiaryEngine() {
       // 1. Resolve Dynamic Daily Calorie Target
-      const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
+      let inAppBurn = 0;
+      try {
+        const _now = new Date();
+        const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+        const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+        if (rawBurn) {
+          const parsed = JSON.parse(rawBurn);
+          if (parsed && parsed.date === _todayIso) {
+            inAppBurn = Number(parsed.calories) || 0;
+          }
+        }
+      } catch(e) {}
+
+      const baseGarminBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
         ? Number(window.BAKED_LIVE_STATE.garmin.active_calories)
         : 623;
+
+      let activeBurn = baseGarminBurn + inAppBurn;
+      const burnEl = document.getElementById('vitalBurn');
       if (burnEl) {
         const parsedBurn = parseInt(burnEl.innerText);
-        if (!isNaN(parsedBurn) && parsedBurn >= 0) activeBurn = parsedBurn;
+        if (!isNaN(parsedBurn) && parsedBurn >= 0) {
+          activeBurn = Math.max(parsedBurn, baseGarminBurn + inAppBurn);
+        }
       }
       const totalBudget = 2092 + activeBurn;
       athleteDailyBudget = totalBudget;
+
+      const ftEl = document.getElementById('fuelTargetNum');
+      if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
+      const fbEl = document.getElementById('fuelBudgetNum');
+      if (fbEl) fbEl.innerText = totalBudget;
 
       // 2. Macro Targets (Greg Putt: 98.0kg, 17.2% BF -> 81.14kg lean mass)
       const pTarget = athleteProteinAnchor || 200; // 2.46g/kg lean mass
