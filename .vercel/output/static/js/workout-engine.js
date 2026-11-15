@@ -2926,8 +2926,13 @@ function generateWorkoutFromGearAndGoal() {
         dot.style.boxShadow = 'none';
       }
       if (hdrText) {
-        hdrText.innerText = completed ? "TODAY'S TRAINING & RECOMMENDATIONS" : "TODAY'S TRAINING RECOMMENDATIONS";
-        hdrText.style.color = "var(--text-muted)";
+        if (completed) {
+          hdrText.innerText = "TODAY'S TRAINING COMPLETE";
+          hdrText.style.color = "var(--primary, #30d158)";
+        } else {
+          hdrText.innerText = "TODAY'S TRAINING RECOMMENDATIONS";
+          hdrText.style.color = "var(--text-muted)";
+        }
       }
 
       let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.7;
@@ -3064,88 +3069,7 @@ function generateWorkoutFromGearAndGoal() {
           </button>
         `;
 
-      const completedBannerHtml = completed ? `
-        <div class="card" style="padding:10px 14px; margin-bottom:12px; background:rgba(48,209,88,0.08); border:1px solid rgba(48,209,88,0.25); border-radius:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:12px; font-weight:800; color:var(--primary, #30d158);">✓ Morning Activity Logged (${completed.durationMin}m • ${completed.calories} kcal)</span>
-            <span style="font-size:11px; color:var(--text-muted);">${completed.title || 'Completed Session'}</span>
-          </div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="height:28px; padding:0 10px; font-size:11px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
-              View Telemetry ➔
-            </button>
-            <button type="button" onclick="toggleWorkoutCompleteManual(false)" style="background:transparent; border:none; color:var(--text-muted); font-size:11px; cursor:pointer;" title="Reopen Pre-Workout Mode">
-              ↺
-            </button>
-          </div>
-        </div>
-      ` : '';
-
-      const tomorrowAccordionHtml = completed ? `
-        <details style="margin-top:14px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
-          <summary style="font-size:12px; font-weight:800; color:var(--text-secondary); padding:12px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span>📅 Tomorrow's Autoregulation Preview</span>
-              <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); color:var(--primary, #30d158); font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:4px; text-transform:uppercase;">Next Stimulus</span>
-            </div>
-            <span style="font-size:12px; color:var(--text-muted);">▾</span>
-          </summary>
-          <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05);">
-            ${renderTomorrowPreviewCard(completed)}
-          </div>
-        </details>
-      ` : '';
-
-      slot.innerHTML = `
-        ${completedBannerHtml}
-
-        <!-- ELEPHANT-GOLDFISH PROTOCOL: 3-SECOND GLANCEABLE VERDICT HERO -->
-        <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.3); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-            <span style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
-              ${verdict.badge}
-            </span>
-            <span style="font-size:10.5px; color:var(--text-muted);">
-              <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
-            </span>
-          </div>
-
-          <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
-            ${verdict.title}
-          </div>
-          
-          <!-- GOLDFISH 3-SECOND SUMMARY -->
-          <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
-            ${verdict.goldfishReason}
-          </div>
-
-          <!-- PRIMARY CLEAR CALL-TO-ACTION -->
-          ${ctaButtonHtml}
-
-          <!-- ELEPHANT COLLAPSIBLE: DEEP BIOMETRIC LOAD & DEFICIT RATIONALE -->
-          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
-            <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>🔬 View Biometric Load & Deficit Rationale</span>
-              <span style="font-size:11px; color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:10px 12px; font-size:11px; color:#a1a1aa; line-height:1.45; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:5px;">
-              <div>• <strong>Cumulative Workload:</strong> ${verdict.consecutiveDays} consecutive training days • ~${verdict.burn72h} kcal burned across last 72 hours (${verdict.workoutsLast4Days} workouts in 4 days).</div>
-              <div>• <strong>Today's Status:</strong> ${verdict.activeCaloriesToday} kcal active burned • RHR ${verdict.restingHr} bpm • Body Battery ${verdict.bodyBattery}%.</div>
-              <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose).</div>
-              <div>• <strong>Joint Guardrails:</strong> Zero running volume and high-impact landings; patellofemoral cartilage spared while maintaining ${leanMass} kg lean mass.</div>
-              
-              <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700;">
-                  ⚙ Tailor Equipment
-                </button>
-                <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:10.5px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
-                  ✓ Mark Complete
-                </button>
-              </div>
-            </div>
-          </details>
-        </div>
-
+      const filterAndWorkoutCardsHtml = `
         <!-- ALTERNATIVE WORKOUTS & FILTER CONTROLS -->
         <div style="margin-top:14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:baseline;">
           <span style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Alternative Workout Routines</span>
@@ -3171,27 +3095,143 @@ function generateWorkoutFromGearAndGoal() {
 
         <!-- DYNAMIC WORKOUT OPTIONS -->
         ${workoutCardsHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No workouts match the selected filters.</div>'}
-
-        ${tomorrowAccordionHtml}
-
-        <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
-        <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
-          <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-            <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
-            <span style="font-size:11px; color:var(--text-muted);">▾</span>
-          </summary>
-          <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
-            ${getWorkoutArchetypeCardsHtml(!!completed)}
-          </div>
-        </details>
-
-        <!-- MANUAL OVERRIDE FOOTER LINK -->
-        <div style="text-align:center; padding:8px 0 4px;">
-          <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
-            ↺ Switch to Pre-Workout Prescription Mode
-          </span>
-        </div>
       `;
+
+      if (completed) {
+        const proteinTarget = (window.BAKED_LIVE_STATE?.nutrition?.protein_target_g) || 200;
+
+        slot.innerHTML = `
+          <!-- TODAY'S TRAINING COMPLETE GOLDFISH HERO CARD -->
+          <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(48,209,88,0.35); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:10px; font-weight:800; color:var(--primary, #30d158); background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                ✓ TODAY'S TRAINING COMPLETE
+              </span>
+              <span style="font-size:10.5px; color:var(--text-muted);">
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
+              </span>
+            </div>
+
+            <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
+              ${completed.title || 'Completed Session'}
+            </div>
+
+            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
+              You've logged ${completed.durationMin}m (${completed.calories} kcal active burn) today. Focus on protein anchor (${proteinTarget}g), hydration, and recovery so your lean mass rebuilds cleanly.
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                View Full Telemetry & Benefits ➔
+              </button>
+              <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(false)" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                ↺ Log Another Session
+              </button>
+            </div>
+          </div>
+
+          <!-- TOMORROW'S AUTOREGULATION PREVIEW CARD -->
+          ${renderTomorrowPreviewCard(completed)}
+
+          <!-- COLLAPSED ALTERNATIVE WORKOUT ROUTINES ACCORDION -->
+          <details style="margin-top:12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
+            <summary style="font-size:12px; font-weight:800; color:var(--text-secondary); padding:12px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>➕ Need an extra / recovery session today? (${filteredOptions.length} options)</span>
+              <span style="font-size:12px; color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05);">
+              ${filterAndWorkoutCardsHtml}
+            </div>
+          </details>
+
+          <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
+          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
+            <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
+              <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
+              ${getWorkoutArchetypeCardsHtml(true)}
+            </div>
+          </details>
+
+          <!-- MANUAL OVERRIDE FOOTER LINK -->
+          <div style="text-align:center; padding:8px 0 4px;">
+            <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
+              ↺ Switch to Pre-Workout Prescription Mode
+            </span>
+          </div>
+        `;
+      } else {
+        slot.innerHTML = `
+          <!-- ELEPHANT-GOLDFISH PROTOCOL: 3-SECOND GLANCEABLE VERDICT HERO -->
+          <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.3); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                ${verdict.badge}
+              </span>
+              <span style="font-size:10.5px; color:var(--text-muted);">
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
+              </span>
+            </div>
+
+            <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
+              ${verdict.title}
+            </div>
+            
+            <!-- GOLDFISH 3-SECOND SUMMARY -->
+            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
+              ${verdict.goldfishReason}
+            </div>
+
+            <!-- PRIMARY CLEAR CALL-TO-ACTION -->
+            ${ctaButtonHtml}
+
+            <!-- ELEPHANT COLLAPSIBLE: DEEP BIOMETRIC LOAD & DEFICIT RATIONALE -->
+            <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
+              <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>🔬 View Biometric Load & Deficit Rationale</span>
+                <span style="font-size:11px; color:var(--text-muted);">▾</span>
+              </summary>
+              <div style="padding:10px 12px; font-size:11px; color:#a1a1aa; line-height:1.45; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:5px;">
+                <div>• <strong>Cumulative Workload:</strong> ${verdict.consecutiveDays} consecutive training days • ~${verdict.burn72h} kcal burned across last 72 hours (${verdict.workoutsLast4Days} workouts in 4 days).</div>
+                <div>• <strong>Today's Status:</strong> ${verdict.activeCaloriesToday} kcal active burned • RHR ${verdict.restingHr} bpm • Body Battery ${verdict.bodyBattery}%.</div>
+                <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose).</div>
+                <div>• <strong>Joint Guardrails:</strong> Zero running volume and high-impact landings; patellofemoral cartilage spared while maintaining ${leanMass} kg lean mass.</div>
+                
+                <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+                  <button class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700;">
+                    ⚙ Tailor Equipment
+                  </button>
+                  <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:10.5px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
+                    ✓ Mark Complete
+                  </button>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          ${filterAndWorkoutCardsHtml}
+
+          <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
+          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
+            <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
+              <span style="font-size:11px; color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
+              ${getWorkoutArchetypeCardsHtml(false)}
+            </div>
+          </details>
+
+          <!-- MANUAL OVERRIDE FOOTER LINK -->
+          <div style="text-align:center; padding:8px 0 4px;">
+            <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
+              ↺ Switch to Pre-Workout Prescription Mode
+            </span>
+          </div>
+        `;
+      }
     }
 
     function launchDynamicWorkout(optionId) {
