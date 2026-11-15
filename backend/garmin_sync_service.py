@@ -132,21 +132,36 @@ class GarminSyncService:
         hrv_weekly = None
         auth_failed = False
 
+        AUTH_ERROR_TERMS = ["401", "400", "Unauthorized", "invalid_grant", "OAuth2Token"]
+
+        def is_auth_error(exc):
+            err_str = str(exc)
+            return any(term in err_str for term in AUTH_ERROR_TERMS)
+
         # 1. Fetch user summary
         try:
             summary = client.get_user_summary(target_date_str)
         except Exception as e:
             print(f"[GarminSync] Warning fetching summary: {e}")
-            if "401" in str(e) or "Unauthorized" in str(e) or "invalid_grant" in str(e):
+            if is_auth_error(e):
                 auth_failed = True
             summary = {}
 
         # 2. Fetch today's activities
         if not auth_failed:
             try:
-                raw_activities = client.get_activities_by_date(target_date_str)
+                try:
+                    raw_activities = client.get_activities_by_date(target_date_str, target_date_str)
+                except Exception as inner_e:
+                    if is_auth_error(inner_e):
+                        raise inner_e
+                    # Fallback to get_activities(0, 15) so get_activities_by_date never fails due to arguments/API quirks
+                    all_acts = client.get_activities(0, 15)
+                    raw_activities = [a for a in all_acts if str(a.get('startTimeLocal', '')).startswith(target_date_str)]
             except Exception as e:
                 print(f"[GarminSync] Warning fetching activities: {e}")
+                if is_auth_error(e):
+                    auth_failed = True
                 raw_activities = []
         else:
             raw_activities = []
@@ -165,6 +180,8 @@ class GarminSyncService:
                     sleep_duration = f"{hours}h {mins}m"
             except Exception as e:
                 print(f"[GarminSync] Warning fetching sleep: {e}")
+                if is_auth_error(e):
+                    auth_failed = True
 
         # 4. Fetch morning training readiness
         if not auth_failed:
@@ -176,6 +193,8 @@ class GarminSyncService:
                 hrv_weekly = readiness.get('hrvWeeklyAverage')
             except Exception as e:
                 print(f"[GarminSync] Warning fetching readiness: {e}")
+                if is_auth_error(e):
+                    auth_failed = True
 
         # Persist refreshed tokens when direct calls succeed
         if not auth_failed and self.client:

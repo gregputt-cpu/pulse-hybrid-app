@@ -117,7 +117,7 @@ class MyNetDiarySyncService:
             return True, None
         return False, res.get('error', 'Login failed')
 
-    def _extract_garmin_bridge_data(self, dash_data, exercises_ByDate, target_date_str):
+    def _extract_garmin_bridge_data(self, dash_data, exercises_ByDate, target_date_str, raw_exercise_items=None):
         """
         Extracts Garmin fēnix 8 telemetry synced into MyNetDiary's Linked Activity Tracker:
         - Daily Steps (id: 61)
@@ -204,7 +204,7 @@ class MyNetDiarySyncService:
             readiness_level = "OPTIMAL" if training_readiness >= 85 else ("HIGH" if training_readiness >= 75 else "MODERATE")
             readiness_feedback = "WELL_RECOVERED" if training_readiness >= 75 else "MODERATE_LOAD"
 
-        # Build recent Garmin workouts from linked tracker days (today + past 2 days)
+        # Build recent Garmin workouts from linked tracker days (today + past 4 days)
         recent_days = sorted(list(set(list(by_id.get(103, {}).keys()) + [target_date_str])), reverse=True)[:5]
         bridged_activities = []
         for d_str in recent_days:
@@ -212,44 +212,185 @@ class MyNetDiarySyncService:
             d_active_mins = float(get_val(107, d_str) or 0)
             d_dist_miles = float(get_val(114, d_str) or 0)
             d_steps = int(round(get_val(61, d_str) or 0))
-
-            workout_cals = d_active_cals
             ex_notes = exercises_ByDate.get(d_str, '')
-            m_wc = re.search(r'including\s+([0-9,]+)\s+workout\s+calories', ex_notes)
-            if m_wc:
-                try:
-                    workout_cals = int(m_wc.group(1).replace(',', ''))
-                except Exception:
-                    pass
 
-            if d_active_cals > 0 or d_active_mins > 0:
-                act_id = int("99" + d_str.replace("-", ""))
-                act_name = "Hybrid Conditioning & Steps" if d_active_mins >= 60 else "Active Conditioning"
-                sub_title = f"fēnix 8 • {d_steps:,} steps ({d_dist_miles:.2f} mi)"
-                avg_hr = 128 if d_active_mins >= 60 else 118
-                max_hr = 162 if d_active_mins >= 60 else 148
-                aerobic_te = round(min(4.2, max(2.1, d_active_cals / 220.0)), 1)
-                anaerobic_te = round(min(2.4, max(0.4, d_active_cals / 480.0)), 1)
-                benefits = self.benefits_engine.generate_benefits(
-                    "Cardio", sub_title, d_active_mins or 45.0, d_active_cals, avg_hr, max_hr, aerobic_te, anaerobic_te
-                )
-                bridged_activities.append({
-                    "id": act_id,
-                    "name": act_name,
-                    "sub_title": sub_title,
-                    "date": f"{d_str} 09:30:00",
-                    "duration_min": round(d_active_mins or 45.0, 1),
-                    "calories": d_active_cals,
-                    "workout_calories": workout_cals,
-                    "distance_miles": d_dist_miles,
-                    "steps": d_steps,
-                    "avg_hr": avg_hr,
-                    "max_hr": max_hr,
-                    "aerobic_te": aerobic_te,
-                    "anaerobic_te": anaerobic_te,
-                    "benefits": benefits,
-                    "source": "garmin_via_mnd_bridge"
+            # Only target_date_str has raw_exercise_items passed in directly
+            day_raw_items = raw_exercise_items if (d_str == target_date_str and raw_exercise_items) else []
+
+            # 1. Check for explicit individual workout items (non-generic 1505/1507)
+            individual_items = []
+            for it in day_raw_items:
+                if not isinstance(it, dict):
+                    continue
+                act_id = (it.get('exercise') or {}).get('activityId')
+                name = (it.get('inputString') or (it.get('exercise') or {}).get('activityName') or '').strip()
+                if act_id in [1505, 1507] or name.lower() in ['garmin active calories', 'daily step bonus', 'step bonus']:
+                    continue
+
+                cals = it.get('calories')
+                if cals is None or cals == 0:
+                    m_c = re.search(r'(\d+)\s*(?:cal|calories|kcal)', str(it.get('amountInputString', '')) + ' ' + str(it.get('notes', '')))
+                    cals = int(m_c.group(1)) if m_c else 150
+                else:
+                    cals = int(round(float(cals)))
+
+                m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:min|mins|minutes)', str(it.get('amountInputString', '')) + ' ' + str(it.get('notes', '')))
+                dur = float(m_d.group(1)) if m_d else round(max(20.0, cals / 9.0), 1)
+                time_s = it.get('timeString') or '08:30:00'
+                if len(time_s) == 5:
+                    time_s += ':00'
+
+                individual_items.append({
+                    'name': name or 'Garmin Workout',
+                    'calories': cals,
+                    'duration_min': dur,
+                    'time': time_s,
+                    'notes': it.get('notes', '')
                 })
+
+            if individual_items:
+                # Add each individual workout as a distinct activity card
+                for idx, item in enumerate(individual_items):
+                    act_id = int(f"99{d_str.replace('-', '')}{idx+1:02d}")
+                    act_name = item['name']
+                    sub_title = f"fēnix 8 • {item['calories']} kcal ({item['duration_min']} min)"
+                    avg_hr = 130
+                    max_hr = 160
+                    aerobic_te = round(min(4.5, max(1.5, item['calories'] / 200.0)), 1)
+                    anaerobic_te = round(min(2.5, max(0.2, item['calories'] / 450.0)), 1)
+                    benefits = self.benefits_engine.generate_benefits(
+                        "Cardio", sub_title, item['duration_min'], item['calories'], avg_hr, max_hr, aerobic_te, anaerobic_te
+                    )
+                    bridged_activities.append({
+                        "id": act_id,
+                        "name": act_name,
+                        "sub_title": sub_title,
+                        "date": f"{d_str} {item['time']}",
+                        "duration_min": item['duration_min'],
+                        "calories": item['calories'],
+                        "workout_calories": item['calories'],
+                        "avg_hr": avg_hr,
+                        "max_hr": max_hr,
+                        "aerobic_te": aerobic_te,
+                        "anaerobic_te": anaerobic_te,
+                        "benefits": benefits,
+                        "source": "garmin_via_mnd_bridge"
+                    })
+
+                # If steps were taken, append a separate movement card
+                if d_steps >= 1000:
+                    step_cals = max(60, int(round(d_steps * 0.038)))
+                    s_id = int(f"99{d_str.replace('-', '')}99")
+                    s_sub = f"fēnix 8 • {d_steps:,} steps ({d_dist_miles:.2f} mi)"
+                    s_benefits = self.benefits_engine.generate_benefits(
+                        "Walking", s_sub, 45.0, step_cals, 92, 118, 0.8, 0.0
+                    )
+                    bridged_activities.append({
+                        "id": s_id,
+                        "name": "Daily Steps & Movement",
+                        "sub_title": s_sub,
+                        "date": f"{d_str} 17:30:00",
+                        "duration_min": 45.0,
+                        "calories": step_cals,
+                        "workout_calories": step_cals,
+                        "steps": d_steps,
+                        "distance_miles": d_dist_miles,
+                        "avg_hr": 92,
+                        "max_hr": 118,
+                        "aerobic_te": 0.8,
+                        "anaerobic_te": 0.0,
+                        "benefits": s_benefits,
+                        "source": "garmin_via_mnd_bridge"
+                    })
+            elif d_active_cals > 0 or d_active_mins > 0:
+                # 2. Check if ex_notes contains workout calories, e.g. "(including 581 workout calories)"
+                m_wc = re.search(r'including\s+([0-9,]+)\s+workout\s+calories', ex_notes)
+                workout_cals = int(m_wc.group(1).replace(',', '')) if m_wc else 0
+
+                if workout_cals > 0 and d_str == target_date_str:
+                    # Build separate individual workout card for today
+                    w_id = int(f"99{d_str.replace('-', '')}01")
+                    w_dur = round(min(d_active_mins or 50.0, max(30.0, workout_cals / 9.5)), 1)
+                    w_name = "Hybrid Training Session" if w_dur >= 45 else "Active Conditioning"
+                    w_sub = f"fēnix 8 • {workout_cals} kcal Workout"
+                    w_avg_hr = 132 if workout_cals >= 500 else 122
+                    w_max_hr = 166 if workout_cals >= 500 else 150
+                    w_aero = round(min(4.5, max(2.2, workout_cals / 190.0)), 1)
+                    w_anaero = round(min(2.5, max(0.5, workout_cals / 420.0)), 1)
+                    w_benefits = self.benefits_engine.generate_benefits(
+                        "Cardio", w_sub, w_dur, workout_cals, w_avg_hr, w_max_hr, w_aero, w_anaero
+                    )
+                    bridged_activities.append({
+                        "id": w_id,
+                        "name": w_name,
+                        "sub_title": w_sub,
+                        "date": f"{d_str} 08:30:00",
+                        "duration_min": w_dur,
+                        "calories": workout_cals,
+                        "workout_calories": workout_cals,
+                        "avg_hr": w_avg_hr,
+                        "max_hr": w_max_hr,
+                        "aerobic_te": w_aero,
+                        "anaerobic_te": w_anaero,
+                        "benefits": w_benefits,
+                        "source": "garmin_via_mnd_bridge"
+                    })
+
+                    # Build separate steps/daily movement card if steps recorded
+                    if d_steps >= 500:
+                        s_id = int(f"99{d_str.replace('-', '')}02")
+                        s_dur = round(max(15.0, (d_active_mins or 30.0) - min(d_active_mins or 0, w_dur)), 1) if d_active_mins else 30.0
+                        s_cals = max(50, d_active_cals - workout_cals) if d_active_cals > workout_cals else max(50, int(round(d_steps * 0.038)))
+                        s_sub = f"fēnix 8 • {d_steps:,} steps ({d_dist_miles:.2f} mi)"
+                        s_benefits = self.benefits_engine.generate_benefits(
+                            "Walking", s_sub, s_dur, s_cals, 92, 118, 0.8, 0.0
+                        )
+                        bridged_activities.append({
+                            "id": s_id,
+                            "name": "Daily Steps & Movement",
+                            "sub_title": s_sub,
+                            "date": f"{d_str} 17:30:00",
+                            "duration_min": s_dur,
+                            "calories": s_cals,
+                            "workout_calories": s_cals,
+                            "steps": d_steps,
+                            "distance_miles": d_dist_miles,
+                            "avg_hr": 92,
+                            "max_hr": 118,
+                            "aerobic_te": 0.8,
+                            "anaerobic_te": 0.0,
+                            "benefits": s_benefits,
+                            "source": "garmin_via_mnd_bridge"
+                        })
+                else:
+                    # Single activity summary card for the day
+                    act_id = int("99" + d_str.replace("-", ""))
+                    act_name = "Hybrid Conditioning & Steps" if d_active_mins >= 60 else "Active Conditioning"
+                    sub_title = f"fēnix 8 • {d_steps:,} steps ({d_dist_miles:.2f} mi)"
+                    avg_hr = 128 if d_active_mins >= 60 else 118
+                    max_hr = 162 if d_active_mins >= 60 else 148
+                    aerobic_te = round(min(4.2, max(2.1, d_active_cals / 220.0)), 1)
+                    anaerobic_te = round(min(2.4, max(0.4, d_active_cals / 480.0)), 1)
+                    benefits = self.benefits_engine.generate_benefits(
+                        "Cardio", sub_title, d_active_mins or 45.0, d_active_cals, avg_hr, max_hr, aerobic_te, anaerobic_te
+                    )
+                    bridged_activities.append({
+                        "id": act_id,
+                        "name": act_name,
+                        "sub_title": sub_title,
+                        "date": f"{d_str} 09:30:00",
+                        "duration_min": round(d_active_mins or 45.0, 1),
+                        "calories": d_active_cals,
+                        "workout_calories": workout_cals if workout_cals > 0 else d_active_cals,
+                        "distance_miles": d_dist_miles,
+                        "steps": d_steps,
+                        "avg_hr": avg_hr,
+                        "max_hr": max_hr,
+                        "aerobic_te": aerobic_te,
+                        "anaerobic_te": anaerobic_te,
+                        "benefits": benefits,
+                        "source": "garmin_via_mnd_bridge"
+                    })
 
         return {
             "steps": int(round(steps)) if steps is not None else None,
@@ -264,7 +405,8 @@ class MyNetDiarySyncService:
             "training_readiness": training_readiness,
             "readiness_level": readiness_level,
             "readiness_feedback": readiness_feedback,
-            "bridged_activities": bridged_activities
+            "bridged_activities": bridged_activities,
+            "raw_exercise_items": raw_exercise_items or []
         }
 
     def fetch_today_data(self, target_date_str=None):
@@ -305,6 +447,7 @@ class MyNetDiarySyncService:
 
         dash_data = {}
         exercises_by_date = {}
+        raw_exercise_items = []
         try:
             dash_resp = self.session.get('https://www.mynetdiary.com/muiGetDashboard.do', params={'date': target_date_str}, headers=headers, timeout=12)
             if dash_resp.status_code == 200:
@@ -312,12 +455,13 @@ class MyNetDiarySyncService:
             ex_resp = self.session.get('https://www.mynetdiary.com/muiGetExercises.do', params={'date': target_date_str}, headers=headers, timeout=10)
             if ex_resp.status_code == 200:
                 ex_json = ex_resp.json()
-                notes_list = [str(item.get('notes', '')) for item in ex_json.get('list', []) if isinstance(item, dict)]
+                raw_exercise_items = [item for item in ex_json.get('list', []) if isinstance(item, dict)]
+                notes_list = [str(item.get('notes', '')) for item in raw_exercise_items]
                 exercises_by_date[target_date_str] = " | ".join(notes_list)
         except Exception as e:
             print(f"[MNDSync] Warning fetching dashboard/exercises bridge: {e}")
 
-        garmin_bridge = self._extract_garmin_bridge_data(dash_data, exercises_by_date, target_date_str)
+        garmin_bridge = self._extract_garmin_bridge_data(dash_data, exercises_by_date, target_date_str, raw_exercise_items)
         totals, meals = self._parse_mnd_response(data, analysis_data)
 
         weight_info = analysis_data.get('weightInfo')
@@ -504,6 +648,9 @@ class MyNetDiarySyncService:
                 if garmin_bridge.get('readiness_feedback'):
                     garmin_state['readiness_feedback'] = garmin_bridge['readiness_feedback']
 
+            if garmin_bridge.get('raw_exercise_items'):
+                garmin_state['raw_exercise_items'] = garmin_bridge['raw_exercise_items']
+
             bridged_acts = garmin_bridge.get('bridged_activities', [])
             if bridged_acts:
                 today_str = target_date_str or date.today().isoformat()
@@ -522,6 +669,7 @@ class MyNetDiarySyncService:
                 merged_recent = list(existing_recent)
                 for ba in bridged_acts:
                     b_date = str(ba.get('date', ''))[:10]
+                    # Only insert bridged activities for dates where direct OAuth hasn't already provided activities
                     if b_date not in existing_dates:
                         merged_recent.append(ba)
                 merged_recent.sort(key=lambda x: str(x.get('date', '')), reverse=True)

@@ -1,5 +1,5 @@
 {
-  "last_synced": "2026-11-14T11:42:25.554188",
+  "last_synced": "2026-11-15T20:57:03.899187",
   "athlete": {
     "name": "Greg Putt",
     "age": 45,
@@ -14,36 +14,80 @@
   },
   "garmin": {
     "device": "f\u0113nix 8 - 51mm AMOLED",
-    "training_readiness": 75,
-    "readiness_level": "HIGH",
-    "readiness_feedback": "WELL_RECOVERED",
-    "sleep_score": 75,
+    "training_readiness": 74,
+    "readiness_level": "MODERATE",
+    "readiness_feedback": "MODERATE_LOAD",
+    "sleep_score": 74,
     "hrv_status": "balanced",
     "hrv_weekly_avg": 50,
-    "body_battery": 65,
+    "body_battery": 66,
     "resting_hr": 46,
-    "active_calories": 623,
-    "steps": 6432,
+    "active_calories": 552,
+    "steps": 5103,
     "recent_activities": [
       {
-        "id": 9920261114,
-        "name": "Hybrid Conditioning & Steps",
-        "sub_title": "f\u0113nix 8 \u2022 6,432 steps (4.14 mi)",
-        "date": "2026-11-14 09:30:00",
-        "duration_min": 72.0,
-        "calories": 623,
-        "workout_calories": 743,
-        "distance_miles": 4.14,
-        "steps": 6432,
-        "avg_hr": 128,
-        "max_hr": 162,
-        "aerobic_te": 2.8,
-        "anaerobic_te": 1.3,
+        "id": 992026111502,
+        "name": "Daily Steps & Movement",
+        "sub_title": "f\u0113nix 8 \u2022 5,103 steps (3.15 mi)",
+        "date": "2026-11-15 17:30:00",
+        "duration_min": 15.0,
+        "calories": 194,
+        "workout_calories": 194,
+        "steps": 5103,
+        "distance_miles": 3.15,
+        "avg_hr": 92,
+        "max_hr": 118,
+        "aerobic_te": 0.8,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+          "cardio": "Average HR 92 bpm with peak spike at 118 bpm (62% estimated HRmax). Aerobic TE 0.8 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "194 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
+        },
+        "source": "garmin_via_mnd_bridge"
+      },
+      {
+        "id": 992026111501,
+        "name": "Hybrid Training Session",
+        "sub_title": "f\u0113nix 8 \u2022 581 kcal Workout",
+        "date": "2026-11-15 08:30:00",
+        "duration_min": 61.2,
+        "calories": 581,
+        "workout_calories": 581,
+        "avg_hr": 132,
+        "max_hr": 166,
+        "aerobic_te": 3.1,
+        "anaerobic_te": 1.4,
         "benefits": {
           "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
           "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
-          "cardio": "Average HR 128 bpm with peak spike at 162 bpm (85% estimated HRmax). Aerobic TE 2.8 + Anaerobic TE 1.3 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
-          "metabolic": "623 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "cardio": "Average HR 132 bpm with peak spike at 166 bpm (87% estimated HRmax). Aerobic TE 3.1 + Anaerobic TE 1.4 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "581 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        },
+        "source": "garmin_via_mnd_bridge"
+      },
+      {
+        "id": 9920261114,
+        "name": "Hybrid Conditioning & Steps",
+        "sub_title": "f\u0113nix 8 \u2022 14,795 steps (8.52 mi)",
+        "date": "2026-11-14 09:30:00",
+        "duration_min": 116.0,
+        "calories": 912,
+        "workout_calories": 912,
+        "distance_miles": 8.52,
+        "steps": 14795,
+        "avg_hr": 128,
+        "max_hr": 162,
+        "aerobic_te": 4.1,
+        "anaerobic_te": 1.9,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 128 bpm with peak spike at 162 bpm (85% estimated HRmax). Aerobic TE 4.1 + Anaerobic TE 1.9 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "912 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
           "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
         },
         "source": "garmin_via_mnd_bridge"
@@ -381,46 +425,109 @@
       }
     ],
     "mnd_logged": {
-      "calories": 0,
-      "protein_g": 0,
-      "carbs_g": 0,
-      "fat_g": 0,
-      "fiber_g": 0,
-      "sodium_mg": 0,
+      "calories": 2568,
+      "protein_g": 311,
+      "carbs_g": 200,
+      "fat_g": 65,
+      "fiber_g": 30,
+      "sodium_mg": 2630,
       "water_l": 0.0,
-      "last_pulled": "2026-11-14T11:42:25.554223",
+      "last_pulled": "2026-11-15T20:57:03.899228",
       "source": "live_mynetdiary_cloud"
     },
-    "sleep_duration": "7h 20m",
+    "sleep_duration": "7h 34m",
     "today_activities": [
       {
-        "id": 9920261114,
-        "name": "Hybrid Conditioning & Steps",
-        "sub_title": "f\u0113nix 8 \u2022 6,432 steps (4.14 mi)",
-        "date": "2026-11-14 09:30:00",
-        "duration_min": 72.0,
-        "calories": 623,
-        "workout_calories": 743,
-        "distance_miles": 4.14,
-        "steps": 6432,
-        "avg_hr": 128,
-        "max_hr": 162,
-        "aerobic_te": 2.8,
-        "anaerobic_te": 1.3,
+        "id": 992026111501,
+        "name": "Hybrid Training Session",
+        "sub_title": "f\u0113nix 8 \u2022 581 kcal Workout",
+        "date": "2026-11-15 08:30:00",
+        "duration_min": 61.2,
+        "calories": 581,
+        "workout_calories": 581,
+        "avg_hr": 132,
+        "max_hr": 166,
+        "aerobic_te": 3.1,
+        "anaerobic_te": 1.4,
         "benefits": {
           "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
           "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
-          "cardio": "Average HR 128 bpm with peak spike at 162 bpm (85% estimated HRmax). Aerobic TE 2.8 + Anaerobic TE 1.3 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
-          "metabolic": "623 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "cardio": "Average HR 132 bpm with peak spike at 166 bpm (87% estimated HRmax). Aerobic TE 3.1 + Anaerobic TE 1.4 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "581 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
           "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        },
+        "source": "garmin_via_mnd_bridge"
+      },
+      {
+        "id": 992026111502,
+        "name": "Daily Steps & Movement",
+        "sub_title": "f\u0113nix 8 \u2022 5,103 steps (3.15 mi)",
+        "date": "2026-11-15 17:30:00",
+        "duration_min": 15.0,
+        "calories": 194,
+        "workout_calories": 194,
+        "steps": 5103,
+        "distance_miles": 3.15,
+        "avg_hr": 92,
+        "max_hr": 118,
+        "aerobic_te": 0.8,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+          "cardio": "Average HR 92 bpm with peak spike at 118 bpm (62% estimated HRmax). Aerobic TE 0.8 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "194 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
         },
         "source": "garmin_via_mnd_bridge"
       }
     ],
-    "distance_miles": 4.14,
-    "active_minutes": 72,
-    "sleep_score_source": "manual_override",
-    "sleep_score_manual_date": "2026-11-14"
+    "distance_miles": 3.15,
+    "active_minutes": 64,
+    "sleep_score_source": "mnd_estimated",
+    "sleep_score_manual_date": "2026-11-14",
+    "raw_exercise_items": [
+      {
+        "entryNo": 0,
+        "inputString": "Garmin Active calories",
+        "amountInputString": "71 cal",
+        "calories": 71,
+        "notes": "1794 Garmin Total calories (including 581 workout calories) minus 1,723 MyNetDiary Weight Maintenance Calories for 12 hours 31 minutes of the day.",
+        "energyAmount": "71",
+        "energyUnit": "cal",
+        "day": "2026-11-15",
+        "initialDay": "2026-11-15",
+        "exercise": {
+          "activityId": 1505,
+          "custom": false,
+          "imageId": 1504,
+          "imageSrc": "https://assets.mynetdiary.com/bean/i1504.png",
+          "activityName": "Garmin Active calories",
+          "energies": [
+            {
+              "unit": "calorie",
+              "calories": 1,
+              "recent": false,
+              "amount": "1"
+            },
+            {
+              "unit": "calorie",
+              "calories": 2,
+              "recent": false,
+              "amount": "2"
+            },
+            {
+              "unit": "calorie",
+              "calories": 3,
+              "recent": false,
+              "amount": "3"
+            }
+          ],
+          "defaultEnergyUnit": "calorie",
+          "defaultEnergyCalories": 1
+        }
+      }
+    ]
   },
   "renpho": {
     "source": "renpho_direct_cloud",
@@ -445,16 +552,16 @@
     "bmr": 2149,
     "pt_neat": 292,
     "tdee": 3091,
-    "calorie_target": 2715,
+    "calorie_target": 2644,
     "deficit": 350,
     "protein_target_g": 200,
     "carbs_target_g": 251,
     "fat_target_g": 80,
-    "calories_remaining": 2715,
-    "protein_remaining": 200,
-    "remaining_calories": 2715,
-    "remaining_protein_g": 200,
-    "protein_achieved_pct": 0.0
+    "calories_remaining": 76,
+    "protein_remaining": 0,
+    "remaining_calories": 76,
+    "remaining_protein_g": 0,
+    "protein_achieved_pct": 155.5
   },
   "strength_prescriptions": {
     "barbell_squat": {
@@ -531,21 +638,86 @@
     },
     "lunch": {
       "name": "Lunch",
-      "time": "12:45",
-      "calories": 0,
-      "protein": 0,
-      "carbs": 0,
-      "fat": 0,
-      "items": []
+      "time": "13:14",
+      "calories": 2179,
+      "protein": 267,
+      "carbs": 152,
+      "fat": 63,
+      "items": [
+        {
+          "name": "5% Fat Beef Mince",
+          "cals": 656,
+          "p": 108,
+          "c": 4,
+          "f": 24
+        },
+        {
+          "name": "Butcher's Choice Cooked Chicken Slices",
+          "cals": 390,
+          "p": 80,
+          "c": 6,
+          "f": 6
+        },
+        {
+          "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack",
+          "cals": 347,
+          "p": 9,
+          "c": 52,
+          "f": 15
+        },
+        {
+          "name": "Beansprouts Tender & Crunchy",
+          "cals": 141,
+          "p": 8,
+          "c": 12,
+          "f": 8
+        },
+        {
+          "name": "British Chicken Diced Breast",
+          "cals": 263,
+          "p": 54,
+          "c": 0,
+          "f": 5
+        },
+        {
+          "name": "Sweet Chilli Stir Fry Sauce Medium",
+          "cals": 136,
+          "p": 0,
+          "c": 28,
+          "f": 3
+        },
+        {
+          "name": "Customized Egg Noodles",
+          "cals": 246,
+          "p": 8,
+          "c": 50,
+          "f": 2
+        }
+      ]
     },
     "dinner": {
       "name": "Dinner",
-      "time": "Pending",
-      "calories": 0,
-      "protein": 0,
-      "carbs": 0,
-      "fat": 0,
-      "items": []
+      "time": "15:33",
+      "calories": 389,
+      "protein": 44,
+      "carbs": 48,
+      "fat": 2,
+      "items": [
+        {
+          "name": "0% Fat Authentic Greek Natural Yogurt",
+          "cals": 252,
+          "p": 42,
+          "c": 20,
+          "f": 0
+        },
+        {
+          "name": "Whole Strawberries",
+          "cals": 137,
+          "p": 2,
+          "c": 28,
+          "f": 2
+        }
+      ]
     },
     "snacks": {
       "name": "Snacks & Hydration",
@@ -558,14 +730,14 @@
     }
   },
   "mnd_logged": {
-    "calories": 0,
-    "protein_g": 0,
-    "carbs_g": 0,
-    "fat_g": 0,
-    "fiber_g": 0,
-    "sodium_mg": 0,
+    "calories": 2568,
+    "protein_g": 311,
+    "carbs_g": 200,
+    "fat_g": 65,
+    "fiber_g": 30,
+    "sodium_mg": 2630,
     "water_l": 0.0,
-    "last_pulled": "2026-11-14T11:42:25.554223",
+    "last_pulled": "2026-11-15T20:57:03.899228",
     "source": "live_mynetdiary_cloud"
   },
   "injuries": {
@@ -577,5 +749,5 @@
     "ankles": false,
     "notes": ""
   },
-  "date": "2026-11-14"
+  "date": "2026-11-15"
 }
