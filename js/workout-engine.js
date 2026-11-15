@@ -4229,6 +4229,14 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function finishSession() {
+      // Immediately stop and hide rest timer
+      if (typeof skipRest === 'function') skipRest();
+      clearInterval(restTimerInterval);
+      restTimerInterval = null;
+      restSecs = 0;
+      const fp = document.getElementById('floatingRestPill');
+      if (fp) fp.classList.remove('active');
+
       beep(880, 0.2);
       setTimeout(() => beep(1100, 0.3), 150);
       speak("Outstanding session Coach Greg! Workout saved to training history.");

@@ -161,6 +161,9 @@
         btn.innerHTML = '↻ CONNECTING TO GARMIN CLOUD...';
       }
 
+      // Best-effort Renpho cloud sync so clicking Sync always pulls latest weigh-in
+      fetch('/api/renpho/sync').catch(() => {});
+
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -1695,6 +1698,39 @@
         
         applyLiveStateToDom(state);
         console.log("✓ Dynamic telemetry successfully synced from live_state.json");
+
+        // Non-blocking auto-sync for Renpho if last_synced is not today
+        if (!window._renphoAutoSynced) {
+          const lastSynced = window.BAKED_LIVE_STATE?.renpho?.last_synced;
+          const _now = new Date();
+          const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+          const isToday = lastSynced && lastSynced.startsWith(_todayIso);
+
+          if (!isToday) {
+            window._renphoAutoSynced = true;
+            fetch('/api/renpho/sync')
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data && data.renpho && data.renpho.last_synced) {
+                  const currentLast = window.BAKED_LIVE_STATE?.renpho?.last_synced;
+                  if (!currentLast || data.renpho.last_synced > currentLast) {
+                    if (window.BAKED_LIVE_STATE) {
+                      window.BAKED_LIVE_STATE.renpho = data.renpho;
+                    }
+                    if (typeof applyRenphoTelemetry === 'function') {
+                      applyRenphoTelemetry(window.BAKED_LIVE_STATE);
+                    }
+                    if (typeof updateTelemetryUI === 'function') {
+                      updateTelemetryUI(window.BAKED_LIVE_STATE);
+                    }
+                    applyLiveStateToDom(window.BAKED_LIVE_STATE);
+                    console.log("✓ Renpho auto-synced today's weigh-in successfully");
+                  }
+                }
+              })
+              .catch(() => {});
+          }
+        }
       } catch(e) {
         console.log("Local static fallback active:", e.message);
       }
