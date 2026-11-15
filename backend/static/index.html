@@ -2015,6 +2015,16 @@
           <input id="swapSearchInput" type="text" placeholder="Search exercises (e.g. bench, press, row, rdl)..." oninput="renderSwapOptions()" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:12.5px; padding:6px 10px; border-radius:8px; outline:none; box-sizing:border-box;">
         </div>
 
+        <!-- PREFERENCE & HIDE BAR -->
+        <div style="margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-secondary); cursor:pointer;">
+            <input type="checkbox" id="rememberSwapCheckbox" style="accent-color:var(--primary); cursor:pointer;">
+            <span>Remember swap for future workouts</span>
+          </label>
+          <button type="button" id="hideExerciseBtn" onclick="hideCurrentExerciseFromModal()" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;">🚫 Don't recommend current</button>
+        </div>
+        <div id="hiddenExercisesBar" style="font-size:10.5px; color:var(--text-muted); margin-top:6px;"></div>
+
         <div id="swapOptionsList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow-y:auto; margin-top:10px;"></div>
       </div>
     </div>

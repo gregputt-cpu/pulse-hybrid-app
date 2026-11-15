@@ -259,6 +259,8 @@
       bench: { active: true },
       dipbar: { active: true },
       db: { active: true, weight: "2×22.5kg" },
+      get dumbbells() { return this.db; },
+      set dumbbells(v) { this.db = v; },
       kb: { active: true, weight: "24kg" },
       slamball: { active: false, weight: "10kg" },
       sandbag: { active: false, weight: "15kg" },
@@ -548,6 +550,28 @@
       }
     };
 
+    // ==================== REST TIMER HELPER ====================
+    function parseRestSeconds(restVal) {
+      if (typeof restVal === 'number' && !isNaN(restVal) && restVal > 0) {
+        return Math.round(restVal);
+      }
+      if (!restVal) return 60;
+      const s = String(restVal).trim().toLowerCase();
+      // Match minutes & seconds like 2 min, 1m 30s, 1m30s, 2m
+      const minSecMatch = s.match(/(\d+)\s*(?:m|min)(?:\s*(\d+)\s*(?:s|sec)?)?/);
+      if (minSecMatch) {
+        const mins = parseInt(minSecMatch[1], 10) || 0;
+        const secs = minSecMatch[2] ? (parseInt(minSecMatch[2], 10) || 0) : 0;
+        return (mins * 60) + secs;
+      }
+      // Match seconds like 60s, 75s, 90s, 120s, 90 sec, or pure number string 90
+      const secMatch = s.match(/(\d+)\s*(?:s|sec)?/);
+      if (secMatch) {
+        return parseInt(secMatch[1], 10) || 60;
+      }
+      return 60;
+    }
+
     // ==================== TODAY EXERCISE SWAPS STORAGE ====================
     function getTodayExerciseSwaps() {
       try {
@@ -565,19 +589,264 @@
       } catch(e) {}
     }
 
+    // ==================== PERSONAL CUSTOM EXERCISES & PREFERENCES ====================
+    function getCustomExercises() {
+      try {
+        const raw = localStorage.getItem('pulse_custom_exercises');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) return list;
+        }
+      } catch(e) {}
+      if (window.BAKED_LIVE_STATE?.exercise_preferences?.custom_exercises && Array.isArray(window.BAKED_LIVE_STATE.exercise_preferences.custom_exercises)) {
+        return window.BAKED_LIVE_STATE.exercise_preferences.custom_exercises;
+      }
+      return [];
+    }
+
+    function syncExercisePreferencesToApi(prefs) {
+      try {
+        fetch('/api/preferences/exercises', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(prefs)
+        }).catch(err => {
+          console.warn('Could not sync exercise preferences to API:', err);
+        });
+      } catch(e) {
+        console.warn('syncExercisePreferencesToApi error:', e);
+      }
+    }
+
+    function saveCustomExercise(exObj) {
+      if (!exObj || !exObj.id) return;
+      const list = getCustomExercises();
+      const existingIdx = list.findIndex(e => e.id === exObj.id);
+      if (existingIdx >= 0) {
+        list[existingIdx] = exObj;
+      } else {
+        list.push(exObj);
+      }
+      try {
+        localStorage.setItem('pulse_custom_exercises', JSON.stringify(list));
+      } catch(e) {}
+      if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+      if (!window.BAKED_LIVE_STATE.exercise_preferences) window.BAKED_LIVE_STATE.exercise_preferences = {};
+      window.BAKED_LIVE_STATE.exercise_preferences.custom_exercises = list;
+      syncExercisePreferencesToApi({ custom_exercises: list });
+    }
+
+    function createCustomExerciseObj(id, name, family, weight, reps, rest, cue, rationale) {
+      return {
+        id: id || ('custom_' + Date.now()),
+        name: name || 'Custom Exercise',
+        family: family || 'horizontal_push',
+        targetWeight: weight !== undefined ? weight : 'Body',
+        targetReps: reps !== undefined ? reps : 10,
+        getBaseWeight: () => weight !== undefined ? weight : 'Body',
+        getBaseReps: () => reps !== undefined ? reps : 10,
+        setsCount: 3,
+        rest: rest || '60s',
+        cue: cue || generateAutoCue(name, family),
+        rationale: rationale || generateAutoRationale(name, family),
+        goals: ["recomp", "work_capacity"],
+        requiredGear: []
+      };
+    }
+
+    function getAllExercises() {
+      const base = (typeof masterExercises !== 'undefined') ? masterExercises : [];
+      const customs = getCustomExercises().map(e => ({
+        ...e,
+        getBaseWeight: typeof e.getBaseWeight === 'function' ? e.getBaseWeight : (() => (e.targetWeight !== undefined ? e.targetWeight : 'Body')),
+        getBaseReps: typeof e.getBaseReps === 'function' ? e.getBaseReps : (() => (e.targetReps !== undefined ? e.targetReps : 10))
+      }));
+      return [...base, ...customs];
+    }
+
+    function generateAutoRationale(name, family) {
+      const display = name || 'Exercise';
+      switch (family) {
+        case 'horizontal_push':
+          return `Targeted anterior mechanical tension for ${display}, developing pectoral and tricep pressing power while protecting the shoulder capsule.`;
+        case 'hip_hinge':
+          return `Posterior chain recruitment with ${display}, reinforcing hamstring, gluteal, and lumbar motor control under controlled tension.`;
+        case 'squat':
+          return `Quad-dominant and glute extensor loading with ${display}, building unilateral and bilateral knee-dominant power without joint shear.`;
+        case 'pull':
+          return `Upper back, rhomboid, and lat hypertrophy with ${display}, maintaining structural shoulder balance against heavy pressing volume.`;
+        case 'vertical_push':
+          return `Deltoid and upper chest recruitment with strict abdominal anti-extension bracing during ${display}.`;
+        case 'cardio':
+          return `Mitochondrial biogenesis, work capacity expansion, and athletic conditioning through ${display}.`;
+        case 'core_carry':
+          return `Anti-lateral flexion, spinal erector endurance, and foundational bracing capacity via ${display}.`;
+        case 'mobility':
+          return `Active joint decompression and tissue restoration with ${display}, optimizing movement mechanics and relieving local tightness.`;
+        case 'functional':
+        default:
+          return `Functional multi-planar movement development with ${display}, improving kinetic chain transfer and athletic durability.`;
+      }
+    }
+
+    function generateAutoCue(name, family) {
+      switch (family) {
+        case 'horizontal_push':
+          return "Brace core tightly, control the eccentric descent, drive aggressively through palms to full lockout.";
+        case 'hip_hinge':
+          return "Hips back like reaching for a wall, neutral spine, snap hips forward into hard glute squeeze.";
+        case 'squat':
+          return "Chest proud, descend between hips with knees tracking over toes, drive floor away.";
+        case 'pull':
+          return "Depress shoulders down and back, pull elbows into hips, pause and squeeze scapulae.";
+        case 'vertical_push':
+          return "Squeeze glutes and brace ribcage down, press vertically without overarching lumbar spine.";
+        case 'cardio':
+          return "Maintain steady cadence, rhythmic nasal breathing, smooth athletic foot strike.";
+        case 'core_carry':
+          return "Stand tall with shoulders squared, small controlled heel-to-toe strides, immovable core brace.";
+        case 'mobility':
+          return "Smooth continuous breathing, gentle movement through end range without sharp pinching.";
+        case 'functional':
+        default:
+          return "Move with strict control, maintain rigid core tension, and prioritize pristine joint alignment.";
+      }
+    }
+
+    function getPermanentSwaps() {
+      try {
+        const raw = localStorage.getItem('pulse_permanent_swaps');
+        if (raw) return JSON.parse(raw) || {};
+      } catch(e) {}
+      if (window.BAKED_LIVE_STATE?.exercise_preferences?.permanent_swaps && typeof window.BAKED_LIVE_STATE.exercise_preferences.permanent_swaps === 'object') {
+        return window.BAKED_LIVE_STATE.exercise_preferences.permanent_swaps;
+      }
+      return {};
+    }
+
+    function savePermanentSwap(origExId, newExId) {
+      if (!origExId || !newExId) return;
+      const swaps = getPermanentSwaps();
+      swaps[origExId] = newExId;
+      try {
+        localStorage.setItem('pulse_permanent_swaps', JSON.stringify(swaps));
+      } catch(e) {}
+      if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+      if (!window.BAKED_LIVE_STATE.exercise_preferences) window.BAKED_LIVE_STATE.exercise_preferences = {};
+      window.BAKED_LIVE_STATE.exercise_preferences.permanent_swaps = swaps;
+      syncExercisePreferencesToApi({ permanent_swaps: swaps });
+    }
+
+    function removePermanentSwap(origExId) {
+      if (!origExId) return;
+      const swaps = getPermanentSwaps();
+      if (swaps[origExId]) {
+        delete swaps[origExId];
+        try {
+          localStorage.setItem('pulse_permanent_swaps', JSON.stringify(swaps));
+        } catch(e) {}
+        if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+        if (!window.BAKED_LIVE_STATE.exercise_preferences) window.BAKED_LIVE_STATE.exercise_preferences = {};
+        window.BAKED_LIVE_STATE.exercise_preferences.permanent_swaps = swaps;
+        syncExercisePreferencesToApi({ permanent_swaps: swaps });
+      }
+    }
+
+    function getHiddenExercises() {
+      try {
+        const raw = localStorage.getItem('pulse_hidden_exercises');
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) return list;
+        }
+      } catch(e) {}
+      if (window.BAKED_LIVE_STATE?.exercise_preferences?.hidden_exercises && Array.isArray(window.BAKED_LIVE_STATE.exercise_preferences.hidden_exercises)) {
+        return window.BAKED_LIVE_STATE.exercise_preferences.hidden_exercises;
+      }
+      return [];
+    }
+
+    function addHiddenExercise(exId) {
+      if (!exId) return;
+      const list = getHiddenExercises();
+      if (!list.includes(exId)) {
+        list.push(exId);
+        try {
+          localStorage.setItem('pulse_hidden_exercises', JSON.stringify(list));
+        } catch(e) {}
+        if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+        if (!window.BAKED_LIVE_STATE.exercise_preferences) window.BAKED_LIVE_STATE.exercise_preferences = {};
+        window.BAKED_LIVE_STATE.exercise_preferences.hidden_exercises = list;
+        syncExercisePreferencesToApi({ hidden_exercises: list });
+      }
+    }
+
+    function unhideAllExercises() {
+      try {
+        localStorage.removeItem('pulse_hidden_exercises');
+      } catch(e) {}
+      if (window.BAKED_LIVE_STATE?.exercise_preferences) {
+        window.BAKED_LIVE_STATE.exercise_preferences.hidden_exercises = [];
+      }
+      syncExercisePreferencesToApi({ hidden_exercises: [] });
+      showToast("Reset all hidden exercises.");
+      if (typeof renderTodayTrainingRecommendations === 'function') {
+        renderTodayTrainingRecommendations();
+      }
+      const hiddenBar = document.getElementById('hiddenExercisesBar');
+      if (hiddenBar) hiddenBar.innerHTML = '';
+      if (typeof renderSwapOptions === 'function') {
+        renderSwapOptions();
+      }
+    }
+
+    function resolvePreferredExerciseId(exId, family = null, todayKey = null) {
+      // 1) Check todayKey in getTodayExerciseSwaps()
+      if (todayKey) {
+        const todaySwaps = getTodayExerciseSwaps();
+        if (todaySwaps[todayKey]) {
+          return todaySwaps[todayKey];
+        }
+      }
+
+      // 2) Check getPermanentSwaps()[exId]
+      const permSwaps = getPermanentSwaps();
+      if (permSwaps[exId]) {
+        return permSwaps[exId];
+      }
+
+      // 3) If exId is in getHiddenExercises()
+      const hidden = getHiddenExercises();
+      if (hidden.includes(exId)) {
+        const all = getAllExercises();
+        let targetFam = family;
+        if (!targetFam) {
+          const match = all.find(e => e.id === exId);
+          if (match && match.family) targetFam = match.family;
+        }
+        if (targetFam) {
+          const nonHidden = all.find(e => e.family === targetFam && !hidden.includes(e.id) && e.id !== exId);
+          if (nonHidden) return nonHidden.id;
+        }
+        return exId;
+      }
+
+      // 4) Otherwise return exId
+      return exId;
+    }
+
     let currentArchetypeKey = 'option_a';
 
     function loadDailyArchetype(key) {
       currentArchetypeKey = key || 'option_a';
       const arch = dailyArchetypes[currentArchetypeKey] || dailyArchetypes.option_a;
-      const todaySwaps = getTodayExerciseSwaps();
       
-      // Auto-swap contraindicated exercises based on athleteInjuries
+      // Auto-swap contraindicated exercises based on athleteInjuries and preferences
       activeWorkoutPlan = arch.exercises.map((baseEx, idx) => {
-        const swappedExId = todaySwaps[`${currentArchetypeKey}_${idx}`];
+        const finalExId = resolvePreferredExerciseId(baseEx.id, baseEx.family, `${currentArchetypeKey}_${idx}`);
         let ex = baseEx;
-        if (swappedExId) {
-          const found = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === swappedExId) : null;
+        if (finalExId && finalExId !== baseEx.id) {
+          const found = getAllExercises().find(e => e.id === finalExId);
           if (found) {
             ex = {
               id: found.id,
@@ -1042,6 +1311,227 @@
         rationale: "Lengthens hypertonic psoas and rectus femoris from sitting and high step volume, protecting knees and low back.",
         setsCount: 2,
         goals: ["flush", "recomp"]
+      },
+      {
+        id: "narrow_pushups",
+        name: "Narrow / Close-Grip Push-Ups",
+        family: "horizontal_push",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 12,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Elbows tucked tight against ribs; drive through palms and lock triceps at peak.",
+        rationale: "Tricep-biased horizontal press progression building lockout strength for higher unbroken push-up totals.",
+        goals: ["recomp", "pushups"]
+      },
+      {
+        id: "incline_pushups",
+        name: "Incline Push-Ups (Hands Elevated)",
+        family: "horizontal_push",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 15,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Hands on elevated bench or box; maintain strict hollow plank, touch chest softly.",
+        rationale: "Horizontal push regression reducing load percentage to accumulate high clean volume and groove movement mechanics.",
+        goals: ["recomp", "pushups"]
+      },
+      {
+        id: "bench_dips",
+        name: "Bench / Box Tricep Dips",
+        family: "horizontal_push",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 12,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Torso upright, shoulders depressed away from ears, press through heels of hands to lockout.",
+        rationale: "Triceps and anterior deltoid regression developing vertical-plane push resilience with scalable lever arm.",
+        goals: ["recomp", "pushups"]
+      },
+      {
+        id: "db_close_grip_press",
+        name: "Dumbbell Close-Grip Floor Press",
+        family: "horizontal_push",
+        requiredGear: ["dumbbells"],
+        getBaseWeight: () => (gearConfig.dumbbells && gearConfig.dumbbells.weight) || "2×20kg",
+        getBaseReps: () => 10,
+        setsCount: 3,
+        rest: "75s",
+        cue: "Keep bells touching and elbows brushing ribcage to floor; press straight up with chest tension.",
+        rationale: "Neutral-grip tricep and inner-chest overload sparing shoulder capsule while transferring directly to pushing volume.",
+        goals: ["recomp", "pushups"]
+      },
+      {
+        id: "db_rdl",
+        name: "Dumbbell Romanian Deadlift (RDL)",
+        family: "hip_hinge",
+        requiredGear: ["dumbbells"],
+        getBaseWeight: () => (gearConfig.dumbbells && gearConfig.dumbbells.weight) || "2×22kg",
+        getBaseReps: () => 10,
+        setsCount: 4,
+        rest: "75s",
+        cue: "Hinge at hips, keep dumbbells grazing thighs, squeeze hamstrings and glutes to stand tall.",
+        rationale: "Bilateral posterior chain hinge with dumbbells allowing personalized wrist rotation and low lumbar sheer.",
+        goals: ["recomp", "rdl"]
+      },
+      {
+        id: "single_leg_rdl",
+        name: "Single-Leg KB / DB Romanian Deadlift",
+        family: "hip_hinge",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => 8,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Hinge on working hip, kick back leg straight like a pendulum, keep pelvis square to floor.",
+        rationale: "Unilateral hip hinge addressing pelvic asymmetry, stabilizing foot arch, and loading hamstrings with zero spinal compression.",
+        goals: ["recomp", "rdl"]
+      },
+      {
+        id: "hip_thrust_weighted",
+        name: "Barbell / KB Glute Bridge / Hip Thrust",
+        family: "hip_hinge",
+        requiredGear: ["barbell"],
+        getBaseWeight: () => 60,
+        getBaseReps: () => 10,
+        setsCount: 4,
+        rest: "75s",
+        cue: "Upper back on bench or box, drive through mid-heels, lock hips at 180° with posterior pelvic tilt.",
+        rationale: "Maximum gluteus maximus mechanical tension at shortened peak contraction with minimal knee shear.",
+        goals: ["recomp", "rdl"]
+      },
+      {
+        id: "goblet_squat",
+        name: "Kettlebell / DB Goblet Squat",
+        family: "squat",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "24kg",
+        getBaseReps: () => 12,
+        setsCount: 3,
+        rest: "75s",
+        cue: "Hold bell close to chest, vertical spine, spread floor with feet and descend between hips.",
+        rationale: "Anterior loaded squat pattern grooving upright torso posture and quadricep hypertrophy without spinal loading.",
+        goals: ["recomp", "work_capacity"]
+      },
+      {
+        id: "split_squat",
+        name: "Bodyweight / DB Bulgarian Split Squat",
+        family: "squat",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 10,
+        setsCount: 3,
+        rest: "75s",
+        cue: "Rear foot on bench/box, descend straight down until front thigh is parallel, push through front heel.",
+        rationale: "High unilateral quad and glute recruitment eliminating bilateral compensations while saving lower back.",
+        goals: ["recomp", "work_capacity"]
+      },
+      {
+        id: "box_step_ups",
+        name: "Controlled Step-Ups",
+        family: "squat",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 12,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Drive purely through front foot on box; control 2-second eccentric descent without bouncing off floor.",
+        rationale: "Knee-friendly concentric-dominant knee extension building single-leg power and glute medius stability.",
+        goals: ["recomp", "flush"]
+      },
+      {
+        id: "db_single_arm_row",
+        name: "Single-Arm Dumbbell Row",
+        family: "pull",
+        requiredGear: ["dumbbells"],
+        getBaseWeight: () => (gearConfig.dumbbells && gearConfig.dumbbells.weight) || "22kg",
+        getBaseReps: () => 10,
+        setsCount: 4,
+        rest: "75s",
+        cue: "Flat back braced on bench or knee, pull elbow towards hip pocket, pause and squeeze lat at peak.",
+        rationale: "Unilateral horizontal pull eliminating lat asymmetry, protecting lumbar spine, and strengthening scapular retractors.",
+        goals: ["recomp", "pullups"]
+      },
+      {
+        id: "inverted_row",
+        name: "Bodyweight / Bar Inverted Row",
+        family: "pull",
+        requiredGear: ["barbell"],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 10,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Straight rigid plank bodyline, pull sternum to bar, pinch shoulder blades together at top.",
+        rationale: "Bodyweight horizontal pull building upper back thickness and rhomboid/rear delt endurance without lumbar loading.",
+        goals: ["recomp", "pullups"]
+      },
+      {
+        id: "band_pull_aparts",
+        name: "Banded Face Pulls / Pull-Aparts",
+        family: "pull",
+        requiredGear: [],
+        getBaseWeight: () => "Band",
+        getBaseReps: () => 15,
+        setsCount: 3,
+        rest: "45s",
+        cue: "Arms locked straight, pull band horizontally across chest until it touches sternum, control return.",
+        rationale: "Postural scapular retraction and rotator cuff activation counteracting forward-shoulder posture and bench press volume.",
+        goals: ["flush", "recomp"]
+      },
+      {
+        id: "half_kneeling_kb_press",
+        name: "Half-Kneeling Single-Arm KB/DB Press",
+        family: "vertical_push",
+        requiredGear: ["kb"],
+        getBaseWeight: () => (gearConfig.kb && gearConfig.kb.weight) || "20kg",
+        getBaseReps: () => 8,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Down knee glute squeezed tight, vertical torso, press bell overhead without rib flare or lumbar arch.",
+        rationale: "Unilateral vertical pressing enforcing anti-extension core stability and pristine glenohumeral mechanics.",
+        goals: ["recomp", "kb_strength"]
+      },
+      {
+        id: "pike_pushups",
+        name: "Pike Push-Ups (Shoulder Focus)",
+        family: "vertical_push",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 10,
+        setsCount: 3,
+        rest: "60s",
+        cue: "Hips high in inverted V, head moves forward of hands in tripod pattern, press floor away to lockout.",
+        rationale: "Bodyweight overhead pressing progression loading anterior deltoids and upper pecs with zero equipment.",
+        goals: ["recomp", "pushups"]
+      },
+      {
+        id: "plank_shoulder_taps",
+        name: "Hollow Plank Shoulder Taps",
+        family: "core_carry",
+        requiredGear: [],
+        getBaseWeight: () => "Body",
+        getBaseReps: () => 20,
+        setsCount: 3,
+        rest: "45s",
+        cue: "Feet slightly wider than hips, tap opposite shoulder without hips rocking or rotating.",
+        rationale: "High-level anti-rotational core stability and shoulder girdle endurance essential for athletic carryover.",
+        goals: ["recomp", "work_capacity"]
+      },
+      {
+        id: "farmers_walk",
+        name: "Heavy Dual Farmer's Walk",
+        family: "core_carry",
+        requiredGear: ["dumbbells"],
+        getBaseWeight: () => (gearConfig.dumbbells && gearConfig.dumbbells.weight) || "2×24kg",
+        getBaseReps: () => "45s",
+        setsCount: 3,
+        rest: "60s",
+        cue: "Stand tall, ribcage pinned down, take small brisk heel-to-toe strides with immovable core brace.",
+        rationale: "Full-body structural integrity, trapezius overload, and crushing grip work capacity.",
+        goals: ["work_capacity", "recomp"]
       }
     ];
 
@@ -1182,7 +1672,7 @@
               if (s.details && typeof s.details === 'object') {
                 Object.values(s.details).forEach(set => {
                   const exId = set.exercise_id || '';
-                  const me = masterExercises.find(e => e.id === exId);
+                  const me = getAllExercises().find(e => e.id === exId);
                   const fam = me ? me.family : '';
                   if (exId.includes('rdl') || exId.includes('swing') || fam === 'hip_hinge') fatigued.hinge = true;
                   if (exId.includes('press') || exId.includes('dip') || fam === 'horizontal_push') fatigued.h_push = true;
@@ -1249,30 +1739,29 @@
       if (!opt) return { exerciseIds: [], rotationNote: null };
       const f = getFatiguedPatterns48h();
 
+      let ids = [];
+      let note = null;
+
       if (opt.id === 'bb_upper_hinge' && (f.hinge || f.h_push)) {
         if (!f.knee_dom) {
-          return {
-            exerciseIds: ["barbell_pendlay_row", "barbell_z_press", "barbell_zercher_squat", "kb_suitcase_carry", "deadbug_hold"],
-            rotationNote: "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)"
-          };
+          ids = ["barbell_pendlay_row", "barbell_z_press", "barbell_zercher_squat", "kb_suitcase_carry", "deadbug_hold"];
+          note = "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)";
         } else {
-          return {
-            exerciseIds: ["barbell_pendlay_row", "barbell_z_press", "glute_bridge_hold", "kb_suitcase_carry", "deadbug_hold"],
-            rotationNote: "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)"
-          };
+          ids = ["barbell_pendlay_row", "barbell_z_press", "glute_bridge_hold", "kb_suitcase_carry", "deadbug_hold"];
+          note = "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)";
         }
+      } else if (opt.id === 'bb_squat_press' && f.knee_dom) {
+        ids = ["barbell_rdl", "barbell_floor_press", "barbell_pendlay_row", "weighted_dips"];
+        note = "Rotated: Knee extensors rested (Posterior & Push focus)";
+      } else {
+        ids = opt.exerciseIds ? [...opt.exerciseIds] : [];
+        note = null;
       }
 
-      if (opt.id === 'bb_squat_press' && f.knee_dom) {
-        return {
-          exerciseIds: ["barbell_rdl", "barbell_floor_press", "barbell_pendlay_row", "weighted_dips"],
-          rotationNote: "Rotated: Knee extensors rested (Posterior & Push focus)"
-        };
-      }
-
+      const resolvedIds = ids.map(id => resolvePreferredExerciseId(id));
       return {
-        exerciseIds: opt.exerciseIds ? [...opt.exerciseIds] : [],
-        rotationNote: null
+        exerciseIds: resolvedIds,
+        rotationNote: note
       };
     }
 
@@ -1634,11 +2123,11 @@ function generateWorkoutFromGearAndGoal() {
       }));
 
       if (activeWorkoutPlan.length === 0) {
-        const fallback = masterExercises.find(e => e.id === "pushups_renegade");
+        const fallback = getAllExercises().find(e => e.id === "pushups_renegade") || { id: "pushups_renegade", getBaseWeight: () => "Body", getBaseReps: () => 18 };
         activeWorkoutPlan = [{
           ...fallback,
-          targetWeight: fallback.getBaseWeight(),
-          targetReps: fallback.getBaseReps()
+          targetWeight: typeof fallback.getBaseWeight === 'function' ? fallback.getBaseWeight() : "Body",
+          targetReps: typeof fallback.getBaseReps === 'function' ? fallback.getBaseReps() : 18
         }];
       }
 
@@ -1890,11 +2379,11 @@ function generateWorkoutFromGearAndGoal() {
           }
         };
       } else {
-        const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_rdl') : null)) : { weight: 70, reps: 8 };
-        const rxPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_floor_press', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_floor_press') : null)) : { weight: 95, reps: 6 };
-        const rxDips = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('weighted_dips', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'weighted_dips') : null)) : { weight: 'Bodyweight', reps: 12 };
-        const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_pendlay_row') : null)) : { weight: 85, reps: 8 };
-        const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', (typeof masterExercises !== 'undefined' ? masterExercises.find(e => e.id === 'barbell_z_press') : null)) : { weight: 45, reps: 10 };
+        const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
+        const rxPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_floor_press', getAllExercises().find(e => e.id === 'barbell_floor_press')) : { weight: 95, reps: 6 };
+        const rxDips = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('weighted_dips', getAllExercises().find(e => e.id === 'weighted_dips')) : { weight: 'Bodyweight', reps: 12 };
+        const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
+        const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
 
         const fmtLoad = (w) => (typeof w === 'number' ? `${w}kg` : `${w}`);
 
@@ -2061,12 +2550,11 @@ function generateWorkoutFromGearAndGoal() {
     }
 
     function renderArchetypeExercisesHtml(archKey, exercises) {
-      const swaps = getTodayExerciseSwaps();
       return exercises.map((baseEx, idx) => {
         const swapKey = `${archKey}_${idx}`;
-        const exId = swaps[swapKey] || baseEx.id;
-        const isSwapped = !!swaps[swapKey];
-        const me = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || baseEx : baseEx;
+        const exId = resolvePreferredExerciseId(baseEx.id, baseEx.family, swapKey);
+        const isSwapped = exId !== baseEx.id;
+        const me = getAllExercises().find(e => e.id === exId) || baseEx;
         const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, me) : { weight: (baseEx.targetWeight || 'Body'), reps: (baseEx.targetReps || 8) };
         const wStr = typeof rx.weight === 'number' ? `${rx.weight}kg` : `${rx.weight}`;
         const reps = rx.reps;
@@ -2487,9 +2975,9 @@ function generateWorkoutFromGearAndGoal() {
 
         const exercisesHtml = activeExerciseIds.map((origExId, idx) => {
           const swapKey = `${opt.id}_${idx}`;
-          const exId = todaySwaps[swapKey] || origExId;
-          const isSwapped = !!todaySwaps[swapKey];
-          const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" } : { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
+          const exId = resolvePreferredExerciseId(origExId, null, swapKey);
+          const isSwapped = exId !== origExId;
+          const ex = getAllExercises().find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
           const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
           const weight = rx.weight;
           const reps = rx.reps;
@@ -2713,8 +3201,9 @@ function generateWorkoutFromGearAndGoal() {
       const todaySwaps = getTodayExerciseSwaps();
 
       activeWorkoutPlan = activeExerciseIds.map((origExId, idx) => {
-        const exId = todaySwaps[`${opt.id}_${idx}`] || origExId;
-        const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" } : { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
+        const swapKey = `${opt.id}_${idx}`;
+        const exId = resolvePreferredExerciseId(origExId, null, swapKey);
+        const ex = getAllExercises().find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
         const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
         const targetW = rx.weight;
         const targetR = rx.reps;
@@ -2805,6 +3294,10 @@ function viewCompletedWorkoutBreakdown() {
       }
 
       const ex = activeWorkoutPlan[currentExIdx];
+      if (!restTimerInterval) {
+        restSecs = parseRestSeconds(ex.rest);
+        updateRestDisplay();
+      }
 
       document.getElementById('stepCounter').innerText = `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
       document.getElementById('exName').innerText = ex.name;
@@ -2899,6 +3392,14 @@ function viewCompletedWorkoutBreakdown() {
             <div style="margin-top:8px;">
               <input id="swapSearchInput" type="text" placeholder="Search exercises (e.g. bench, press, row, rdl)..." oninput="renderSwapOptions()" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:12.5px; padding:6px 10px; border-radius:8px; outline:none; box-sizing:border-box;">
             </div>
+            <div style="margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+              <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-secondary); cursor:pointer;">
+                <input type="checkbox" id="rememberSwapCheckbox" style="accent-color:var(--primary); cursor:pointer;">
+                <span>Remember swap for future workouts</span>
+              </label>
+              <button type="button" id="hideExerciseBtn" onclick="hideCurrentExerciseFromModal()" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;">🚫 Don't recommend current</button>
+            </div>
+            <div id="hiddenExercisesBar" style="font-size:10.5px; color:var(--text-muted); margin-top:6px;"></div>
             <div id="swapOptionsList" style="display:flex; flex-direction:column; gap:8px; max-height:55vh; overflow-y:auto; margin-top:10px;"></div>
           </div>
         `;
@@ -2943,10 +3444,35 @@ function viewCompletedWorkoutBreakdown() {
     function openSwapModal(mode, optId, exIdx) {
       ensureWorkoutModalsInDom();
       swapModalMode = mode || 'swap';
+      
+      let origExId = null;
+      let origExName = '';
+      if (swapModalMode === 'today' && optId !== undefined && optId !== null && exIdx !== undefined && exIdx !== null) {
+        const swaps = getTodayExerciseSwaps();
+        const opt = todayWorkoutOptions.find(o => o.id === optId);
+        const arch = dailyArchetypes[optId];
+        if (opt) {
+          const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds };
+          const activeIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+          origExId = swaps[`${optId}_${exIdx}`] || activeIds[exIdx];
+        } else if (arch && arch.exercises) {
+          origExId = swaps[`${optId}_${exIdx}`] || arch.exercises[exIdx]?.id;
+        }
+      } else {
+        const cur = activeWorkoutPlan[exIdx !== undefined ? exIdx : currentExIdx];
+        if (cur) origExId = cur.id;
+      }
+
+      if (origExId) {
+        const found = getAllExercises().find(e => e.id === origExId);
+        origExName = found ? found.name : origExId;
+      }
+
       swapContext = {
         mode: swapModalMode,
         optId: optId !== undefined ? optId : null,
-        exIdx: exIdx !== undefined ? exIdx : currentExIdx
+        exIdx: exIdx !== undefined ? exIdx : currentExIdx,
+        origExId: origExId
       };
 
       const modal = document.getElementById('swapExerciseModal');
@@ -2958,6 +3484,37 @@ function viewCompletedWorkoutBreakdown() {
           else if (swapContext.mode === 'swap') titleEl.innerText = '⇄ Swap Exercise';
           else titleEl.innerText = '+ Add Exercise';
         }
+
+        const rememberCb = document.getElementById('rememberSwapCheckbox');
+        if (rememberCb) {
+          const permSwaps = getPermanentSwaps();
+          rememberCb.checked = !!(origExId && permSwaps[origExId]);
+        }
+
+        const hideBtn = document.getElementById('hideExerciseBtn');
+        if (hideBtn) {
+          if (origExName) {
+            hideBtn.innerText = `🚫 Don't recommend ${origExName}`;
+            hideBtn.style.display = 'inline-block';
+          } else {
+            hideBtn.innerText = `🚫 Don't recommend current`;
+          }
+        }
+
+        const hiddenBar = document.getElementById('hiddenExercisesBar');
+        if (hiddenBar) {
+          const hidden = getHiddenExercises();
+          if (hidden.length > 0) {
+            const hiddenNames = hidden.map(hId => {
+              const ex = getAllExercises().find(e => e.id === hId);
+              return ex ? ex.name : hId;
+            }).join(', ');
+            hiddenBar.innerHTML = `Hidden (${hidden.length}): ${hiddenNames} • <a href="javascript:void(0)" onclick="unhideAllExercises()" style="color:var(--primary); text-decoration:underline;">Reset hidden</a>`;
+          } else {
+            hiddenBar.innerHTML = '';
+          }
+        }
+
         const search = document.getElementById('swapSearchInput');
         if (search) { search.value = ''; setTimeout(() => search.focus(), 50); }
         renderSwapOptions();
@@ -2969,6 +3526,83 @@ function viewCompletedWorkoutBreakdown() {
       const modal = document.getElementById('swapExerciseModal');
       if (modal) modal.classList.remove('open');
       beep(600, 0.04);
+    }
+
+    function updateCustomSwapRationalePreview() {
+      const searchEl = document.getElementById('swapSearchInput');
+      const query = (searchEl ? searchEl.value : '').trim();
+      const familyEl = document.getElementById('customSwapFamily');
+      const family = familyEl ? familyEl.value : 'horizontal_push';
+      const previewEl = document.getElementById('customSwapRationalePreview');
+      if (previewEl) {
+        previewEl.innerText = generateAutoRationale(query || 'Custom Exercise', family);
+      }
+    }
+
+    function createAndSwapCustomExercise() {
+      const searchEl = document.getElementById('swapSearchInput');
+      const query = (searchEl ? searchEl.value : '').trim();
+      if (!query) {
+        showToast('Please type an exercise name');
+        return;
+      }
+      const familyEl = document.getElementById('customSwapFamily');
+      const family = familyEl ? familyEl.value : 'horizontal_push';
+
+      const weightEl = document.getElementById('customSwapWeight');
+      const rawWeight = weightEl ? weightEl.value.trim() : 'Body';
+      const parsedNumWeight = parseFloat(rawWeight);
+      const weight = (!isNaN(parsedNumWeight) && isFinite(rawWeight)) ? parsedNumWeight : (rawWeight || 'Body');
+
+      const repsEl = document.getElementById('customSwapReps');
+      const rawReps = repsEl ? repsEl.value.trim() : '12';
+      const parsedNumReps = parseInt(rawReps, 10);
+      const reps = (!isNaN(parsedNumReps) && String(parsedNumReps) === rawReps) ? parsedNumReps : rawReps;
+
+      const restEl = document.getElementById('customSwapRest');
+      const rest = restEl ? restEl.value : '60s';
+
+      const customId = `custom_${Date.now()}`;
+      const cue = generateAutoCue(query, family);
+      const rationale = generateAutoRationale(query, family);
+
+      const customEx = createCustomExerciseObj(customId, query, family, weight, reps, rest, cue, rationale);
+      saveCustomExercise(customEx);
+      selectSwapExercise(customId);
+    }
+
+    function hideCurrentExerciseFromModal() {
+      const origExId = swapContext.origExId;
+      if (!origExId) {
+        showToast('No exercise selected to hide');
+        return;
+      }
+      addHiddenExercise(origExId);
+      const found = getAllExercises().find(e => e.id === origExId);
+      const exName = found ? found.name : origExId;
+      showToast(`Hidden "${exName}" from recommendations`);
+
+      const hiddenBar = document.getElementById('hiddenExercisesBar');
+      if (hiddenBar) {
+        const hidden = getHiddenExercises();
+        const hiddenNames = hidden.map(hId => {
+          const ex = getAllExercises().find(e => e.id === hId);
+          return ex ? ex.name : hId;
+        }).join(', ');
+        hiddenBar.innerHTML = `Hidden (${hidden.length}): ${hiddenNames} • <a href="javascript:void(0)" onclick="unhideAllExercises()" style="color:var(--primary); text-decoration:underline;">Reset hidden</a>`;
+      }
+
+      // Try auto-swapping to a non-hidden exercise of same family if in swap/today mode
+      const all = getAllExercises();
+      const currentFam = found ? found.family : null;
+      const hidden = getHiddenExercises();
+      const replacement = all.find(e => e.family === currentFam && !hidden.includes(e.id) && e.id !== origExId);
+
+      if (replacement) {
+        selectSwapExercise(replacement.id);
+      } else {
+        renderSwapOptions();
+      }
     }
 
     function renderSwapOptions() {
@@ -2992,15 +3626,16 @@ function viewCompletedWorkoutBreakdown() {
           exId = swaps[`${swapContext.optId}_${swapContext.exIdx}`] || arch.exercises[swapContext.exIdx]?.id;
         }
         if (exId) {
-          const matchEx = masterExercises.find(e => e.id === exId);
+          const matchEx = getAllExercises().find(e => e.id === exId);
           if (matchEx) currentFamily = matchEx.family || '';
         }
       } else {
-        const currentEx = activeWorkoutPlan[currentExIdx] || {};
+        const currentEx = activeWorkoutPlan[swapContext.exIdx !== undefined ? swapContext.exIdx : currentExIdx] || {};
         currentFamily = currentEx.family || '';
       }
 
-      let matches = masterExercises.filter(e => {
+      const all = getAllExercises();
+      let matches = all.filter(e => {
         if (!query) return true;
         return (e.name && e.name.toLowerCase().includes(query)) ||
                (e.family && e.family.toLowerCase().includes(query)) ||
@@ -3014,42 +3649,116 @@ function viewCompletedWorkoutBreakdown() {
         return bSame - aSame;
       });
 
+      let itemsHtml = '';
       if (matches.length === 0) {
-        container.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-muted); font-size:12px;">No matching exercises found.</div>';
-        return;
+        itemsHtml = '<div style="padding:15px; text-align:center; color:var(--text-muted); font-size:12px;">No matching exercises found.</div>';
+      } else {
+        itemsHtml = matches.map(ex => {
+          const isSamePattern = currentFamily && ex.family === currentFamily;
+          const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(ex.id, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
+          const targetW = rx.weight;
+          const targetR = rx.reps;
+          const wStr = typeof targetW === 'number' ? `${targetW}kg` : targetW;
+
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.06); border-radius:8px; gap:8px;">
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span style="font-size:12.5px; font-weight:700; color:#fff;">${ex.name}</span>
+                  ${isSamePattern ? '<span style="background:rgba(0,240,255,0.14); border:1px solid rgba(0,240,255,0.3); color:var(--primary); font-size:9.5px; font-weight:800; padding:1px 5px; border-radius:4px; letter-spacing:0.04em;">SAME PATTERN</span>' : ''}
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                  ${ex.setsCount || 3} sets × ${targetR} reps @ ${wStr} • Rest: ${ex.rest || '60s'}
+                </div>
+              </div>
+              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${ex.id}')">
+                ${swapContext.mode === 'add' ? 'Add +' : 'Swap ⇄'}
+              </button>
+            </div>
+          `;
+        }).join('');
       }
 
-      container.innerHTML = matches.map(ex => {
-        const isSamePattern = currentFamily && ex.family === currentFamily;
-        const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(ex.id, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
-        const targetW = rx.weight;
-        const targetR = rx.reps;
-        const wStr = typeof targetW === 'number' ? `${targetW}kg` : targetW;
+      // Check if query is non-empty and does not match any existing exercise name
+      const hasExactMatch = all.some(e => e.name && e.name.toLowerCase() === query);
+      let createCardHtml = '';
+      if (query && !hasExactMatch) {
+        const rawSearchInput = document.getElementById('swapSearchInput');
+        const rawQueryText = rawSearchInput ? rawSearchInput.value.trim() : query;
+        const defaultFam = currentFamily || 'horizontal_push';
+        const initialRationale = generateAutoRationale(rawQueryText, defaultFam);
 
-        return `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.06); border-radius:8px; gap:8px;">
-            <div style="flex:1; min-width:0;">
-              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <span style="font-size:12.5px; font-weight:700; color:#fff;">${ex.name}</span>
-                ${isSamePattern ? '<span style="background:rgba(0,240,255,0.14); border:1px solid rgba(0,240,255,0.3); color:var(--primary); font-size:9.5px; font-weight:800; padding:1px 5px; border-radius:4px; letter-spacing:0.04em;">SAME PATTERN</span>' : ''}
-              </div>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-                ${ex.setsCount || 3} sets × ${targetR} reps @ ${wStr} • Rest: ${ex.rest || '60s'}
-              </div>
+        createCardHtml = `
+          <div style="margin-top:10px; padding:12px; background:rgba(0,240,255,0.04); border:1px dashed rgba(0,240,255,0.35); border-radius:8px;">
+            <div style="font-size:12px; font-weight:800; color:var(--primary); margin-bottom:8px;">
+              + Create & Swap "${rawQueryText}"
             </div>
-            <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${ex.id}')">
-              ${swapContext.mode === 'add' ? 'Add +' : 'Swap ⇄'}
-            </button>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div>
+                <label style="font-size:10.5px; color:var(--text-muted); display:block; margin-bottom:2px;">Movement Family:</label>
+                <select id="customSwapFamily" onchange="updateCustomSwapRationalePreview()" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:11.5px; padding:5px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+                  <option value="horizontal_push" ${defaultFam === 'horizontal_push' ? 'selected' : ''}>Horizontal Push (Chest/Triceps)</option>
+                  <option value="hip_hinge" ${defaultFam === 'hip_hinge' ? 'selected' : ''}>Hip Hinge (Posterior Chain)</option>
+                  <option value="squat" ${defaultFam === 'squat' ? 'selected' : ''}>Knee Dominant / Squat</option>
+                  <option value="pull" ${defaultFam === 'pull' ? 'selected' : ''}>Horizontal Pull (Back/Lats)</option>
+                  <option value="vertical_push" ${defaultFam === 'vertical_push' ? 'selected' : ''}>Vertical Push (Delts/Core)</option>
+                  <option value="cardio" ${defaultFam === 'cardio' ? 'selected' : ''}>Cardio / Conditioning</option>
+                  <option value="core_carry" ${defaultFam === 'core_carry' ? 'selected' : ''}>Core / Loaded Carry</option>
+                  <option value="functional" ${defaultFam === 'functional' ? 'selected' : ''}>Functional / Multi-Planar</option>
+                </select>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+                <div>
+                  <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Weight:</label>
+                  <input id="customSwapWeight" type="text" value="Body" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:11.5px; padding:4px 6px; border-radius:6px; outline:none; box-sizing:border-box;">
+                </div>
+                <div>
+                  <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Reps:</label>
+                  <input id="customSwapReps" type="number" value="12" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:11.5px; padding:4px 6px; border-radius:6px; outline:none; box-sizing:border-box;">
+                </div>
+                <div>
+                  <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Rest:</label>
+                  <select id="customSwapRest" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:11.5px; padding:4px 4px; border-radius:6px; outline:none; box-sizing:border-box;">
+                    <option value="45s">45s</option>
+                    <option value="60s" selected>60s</option>
+                    <option value="75s">75s</option>
+                    <option value="90s">90s</option>
+                  </select>
+                </div>
+              </div>
+              <div id="customSwapRationalePreview" style="font-size:10.5px; color:#cbd5e1; font-style:italic; padding:6px; background:rgba(255,255,255,0.03); border-radius:6px; line-height:1.35;">
+                ${initialRationale}
+              </div>
+              <button type="button" class="btn-action-primary" style="height:32px; font-size:11.5px; font-weight:800; margin-top:2px;" onclick="createAndSwapCustomExercise()">
+                ${swapContext.mode === 'add' ? 'Create & Add +' : 'Create & Swap ⇄'}
+              </button>
+            </div>
           </div>
         `;
-      }).join('');
+      }
+
+      container.innerHTML = itemsHtml + createCardHtml;
     }
 
     function selectSwapExercise(exId) {
-      const ex = masterExercises.find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
+      const ex = getAllExercises().find(e => e.id === exId) || { id: exId, name: exId, family: "functional", setsCount: 3, rest: "60s" };
       const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
       const targetW = rx.weight;
       const targetR = rx.reps;
+
+      // Handle rememberSwapCheckbox permanent swap preference
+      const rememberCb = document.getElementById('rememberSwapCheckbox');
+      const origExId = swapContext.origExId;
+      if (origExId) {
+        if (rememberCb && rememberCb.checked) {
+          savePermanentSwap(origExId, exId);
+        } else {
+          const permSwaps = getPermanentSwaps();
+          if (permSwaps[origExId]) {
+            removePermanentSwap(origExId);
+          }
+        }
+      }
 
       const newExItem = {
         id: ex.id,
@@ -3072,7 +3781,7 @@ function viewCompletedWorkoutBreakdown() {
         renderTodayTrainingRecommendations();
         beep(750, 0.08);
       } else if (swapContext.mode === 'swap') {
-        activeWorkoutPlan[currentExIdx] = newExItem;
+        activeWorkoutPlan[swapContext.exIdx !== undefined ? swapContext.exIdx : currentExIdx] = newExItem;
         closeSwapModal();
         showToast(`Swapped to ${ex.name}`);
         renderCurrentExercise();
@@ -3143,7 +3852,7 @@ function viewCompletedWorkoutBreakdown() {
       const modal = document.getElementById('editLoadModal');
       if (!modal) return;
 
-      const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId } : { id: exId, name: exId };
+      const ex = getAllExercises().find(e => e.id === exId) || { id: exId, name: exId };
       const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: 70, reps: 8 };
 
       const nameEl = document.getElementById('editLoadExName');
@@ -3184,7 +3893,7 @@ function viewCompletedWorkoutBreakdown() {
         closeEditLoadModal();
         return;
       }
-      const ex = (typeof masterExercises !== 'undefined') ? masterExercises.find(e => e.id === exId) || { id: exId, name: exId } : { id: exId, name: exId };
+      const ex = getAllExercises().find(e => e.id === exId) || { id: exId, name: exId };
 
       const weightIn = document.getElementById('editLoadWeight') || document.getElementById('editLoadWeightInput');
       const repsIn = document.getElementById('editLoadReps') || document.getElementById('editLoadRepsInput');
@@ -3402,7 +4111,9 @@ function viewCompletedWorkoutBreakdown() {
         speak("Target crushed! Extra reps recorded.");
       }
 
-      startRestCountdown(90, `Set ${setNum + 1}`);
+      const activeExObj = (activeWorkoutPlan && activeWorkoutPlan[currentExIdx]) || getAllExercises().find(e => e.id === exId);
+      const restSecsTarget = parseRestSeconds(activeExObj && activeExObj.rest);
+      startRestCountdown(restSecsTarget, `Set ${setNum + 1}`);
 
       // Persist logged set AND compute next-session prescription
       try {
@@ -3738,6 +4449,23 @@ function viewCompletedWorkoutBreakdown() {
     window.getRotatedExercisesForOption = getRotatedExercisesForOption;
     window.updateArchetypeStarBadge = updateArchetypeStarBadge;
     window.computeTodayWorkoutVerdict = computeTodayWorkoutVerdict;
+
+    // WORKOUT ENGINE PREFERENCES & CUSTOM LIBRARY EXPOSES
+    window.parseRestSeconds = parseRestSeconds;
+    window.getAllExercises = getAllExercises;
+    window.getCustomExercises = getCustomExercises;
+    window.saveCustomExercise = saveCustomExercise;
+    window.createCustomExerciseObj = createCustomExerciseObj;
+    window.createAndSwapCustomExercise = createAndSwapCustomExercise;
+    window.updateCustomSwapRationalePreview = updateCustomSwapRationalePreview;
+    window.hideCurrentExerciseFromModal = hideCurrentExerciseFromModal;
+    window.unhideAllExercises = unhideAllExercises;
+    window.resolvePreferredExerciseId = resolvePreferredExerciseId;
+    window.getPermanentSwaps = getPermanentSwaps;
+    window.savePermanentSwap = savePermanentSwap;
+    window.removePermanentSwap = removePermanentSwap;
+    window.getHiddenExercises = getHiddenExercises;
+    window.addHiddenExercise = addHiddenExercise;
 
 
 

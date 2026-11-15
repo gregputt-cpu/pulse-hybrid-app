@@ -2,7 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
@@ -94,6 +94,11 @@ class PrescriptionOverridePayload(BaseModel):
     exercise_id: str
     weight: Union[float, int, str]
     reps: int
+
+class ExercisePreferencesPayload(BaseModel):
+    custom_exercises: Optional[List[Any]] = None
+    permanent_swaps: Optional[Dict[str, Any]] = None
+    hidden_exercises: Optional[List[Any]] = None
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(os.path.join(static_dir, "css")):
@@ -360,6 +365,19 @@ def override_prescription(payload: PrescriptionOverridePayload):
 
     save_live_state(state)
     return {"success": True, "exercise_id": payload.exercise_id, "prescription": item}
+
+@app.post("/api/preferences/exercises")
+def update_exercise_preferences(payload: ExercisePreferencesPayload):
+    state = load_live_state()
+    prefs = state.setdefault("exercise_preferences", {})
+    if payload.custom_exercises is not None:
+        prefs["custom_exercises"] = payload.custom_exercises
+    if payload.permanent_swaps is not None:
+        prefs["permanent_swaps"] = payload.permanent_swaps
+    if payload.hidden_exercises is not None:
+        prefs["hidden_exercises"] = payload.hidden_exercises
+    save_live_state(state)
+    return {"success": True, "exercise_preferences": state["exercise_preferences"]}
 
 # Background Continuous Sync (APScheduler)
 from apscheduler.schedulers.background import BackgroundScheduler
