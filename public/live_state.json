@@ -36,7 +36,9 @@
         "max_hr": 114,
         "aerobic_te": 0.4,
         "anaerobic_te": 0.0,
-        "activity_type_key": "walking"
+        "activity_type_key": "walking",
+        "steps": 3794,
+        "distance_miles": 2.11
       },
       {
         "id": 25093818587,
@@ -361,7 +363,9 @@
         "max_hr": 114,
         "aerobic_te": 0.4,
         "anaerobic_te": 0.0,
-        "activity_type_key": "walking"
+        "activity_type_key": "walking",
+        "steps": 3794,
+        "distance_miles": 2.11
       },
       {
         "id": 25093818587,

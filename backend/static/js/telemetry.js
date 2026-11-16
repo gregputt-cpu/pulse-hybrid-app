@@ -26,13 +26,20 @@
       if (!act) return null;
       const actName = (act.name || '').toLowerCase();
       const actKey = (act.activity_type_key || '').toLowerCase();
-      const actSub = (act.subTitle || '').toLowerCase();
+      const actSub = (act.subTitle || act.sub_title || '').toLowerCase();
+      const isWalkOrRun = actName.includes('walk') || actKey.includes('walk') || actName.includes('running') || actKey.includes('running');
+      if (isWalkOrRun) return null;
+
       const isStrength = actName.includes('strength') || actKey.includes('strength') || actSub.includes('strength');
-      if (!isStrength) return null;
+      const isCardio = actName.includes('cardio') || actKey.includes('cardio') || actName.includes('hiit') || actSub.includes('cardio');
+      if (!isStrength && !isCardio) return null;
 
       let actDateStr = '';
+      let actTimeMs = 0;
       const raw = act.rawDate || act.date || '';
       if (typeof raw === 'string') {
+        const parsedT = new Date(raw.replace(' ', 'T')).getTime();
+        if (!isNaN(parsedT)) actTimeMs = parsedT;
         const m = raw.match(/\d{4}-\d{2}-\d{2}/);
         if (m) {
           actDateStr = m[0];
@@ -47,13 +54,35 @@
       }
 
       try {
+        const candidates = [];
         const histRaw = localStorage.getItem('pulse_session_history');
-        if (!histRaw) return null;
-        const history = JSON.parse(histRaw);
-        if (!Array.isArray(history) || history.length === 0) return null;
+        if (histRaw) {
+          const history = JSON.parse(histRaw);
+          if (Array.isArray(history)) {
+            history.forEach(s => { if (s && s.date) candidates.push({ ...s, _kind: 'session' }); });
+          }
+        }
+        const condRaw = localStorage.getItem('pulse_conditioning_history');
+        if (condRaw) {
+          const condHist = JSON.parse(condRaw);
+          if (Array.isArray(condHist)) {
+            condHist.forEach(c => {
+              if (c && c.date) {
+                candidates.push({
+                  date: c.date,
+                  title: `${c.name || 'Conditioning'} (${(c.format || 'interval').toUpperCase()} • ${c.roundsCompleted || c.rounds || 1} rds)`,
+                  preset: 'combat',
+                  setsLogged: c.roundsCompleted || c.rounds || 1,
+                  conditioningDrill: c,
+                  _kind: 'conditioning'
+                });
+              }
+            });
+          }
+        }
+        if (candidates.length === 0) return null;
 
-        const matched = history.find(s => {
-          if (!s.date) return false;
+        const sameDay = candidates.filter(s => {
           let sDateStr = '';
           const sm = String(s.date).match(/\d{4}-\d{2}-\d{2}/);
           if (sm) {
@@ -67,7 +96,35 @@
           return sDateStr && actDateStr && sDateStr === actDateStr;
         });
 
-        return matched || null;
+        if (sameDay.length === 0) return null;
+
+        // Prefer a session logged within 2 hours of the Garmin watch activity
+        if (actTimeMs > 0) {
+          let best = null;
+          let bestDiff = Infinity;
+          sameDay.forEach(s => {
+            const st = new Date(s.date).getTime();
+            if (!isNaN(st)) {
+              const diff = Math.abs(st - actTimeMs);
+              if (diff < bestDiff) {
+                bestDiff = diff;
+                best = s;
+              }
+            }
+          });
+          if (best && bestDiff <= 2 * 3600 * 1000) return best;
+        }
+
+        // Otherwise match by modality (strength vs cardio/conditioning)
+        if (isCardio) {
+          const cardioMatch = sameDay.find(s => s._kind === 'conditioning' || s.preset === 'combat');
+          if (cardioMatch) return cardioMatch;
+        }
+        if (isStrength) {
+          const strMatch = sameDay.find(s => s.preset === 'gym' || s._kind === 'session');
+          if (strMatch) return strMatch;
+        }
+        return sameDay[0] || null;
       } catch(e) {
         return null;
       }
@@ -85,6 +142,16 @@
       const modal = document.getElementById('syncModal');
       if (modal) modal.classList.add('open');
       switchSyncTab(tab);
+      renderGarminSyncNotice(window.BAKED_LIVE_STATE);
+      fetch('/api/garmin/export_token')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d && d.success && d.garmin_tokens_json) {
+            const exportBox = document.getElementById('garminTokenExportBox');
+            if (exportBox) exportBox.style.display = 'flex';
+          }
+        })
+        .catch(() => {});
       beep(600, 0.05);
     }
 
@@ -1734,6 +1801,8 @@
                 exercise_sets: a.exercise_sets,
                 hr_samples: a.hr_samples,
                 hr_zones: a.hr_zones,
+                steps: a.steps,
+                distance_miles: a.distance_miles,
                 source: a.source
               };
             });

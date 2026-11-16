@@ -403,6 +403,11 @@ class GarminSyncService:
                 except Exception as e:
                     print(f"[GarminSync] Warning fetching exercise sets for {act_id}: {e}")
 
+            act_steps_raw = ra.get('steps')
+            act_steps = int(round(float(act_steps_raw))) if act_steps_raw is not None and float(act_steps_raw or 0) > 0 else (existing.get('steps') if existing else None)
+            act_dist_m = float(ra.get('distance', 0) or 0)
+            act_dist_miles = round(act_dist_m / 1609.344, 2) if act_dist_m > 0 else (existing.get('distance_miles') if existing else None)
+
             entry = {
                 "id": int(act_id),
                 "name": act_name,
@@ -417,7 +422,9 @@ class GarminSyncService:
                 "benefits": benefits,
                 "activity_type_key": activity_type_key,
                 "total_sets": total_sets,
-                "total_reps": total_reps
+                "total_reps": total_reps,
+                "steps": act_steps,
+                "distance_miles": act_dist_miles
             }
             if hr_samples:
                 entry["hr_samples"] = hr_samples

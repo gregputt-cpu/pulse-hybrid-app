@@ -380,6 +380,15 @@ function renderHistoryList() {
             </div>
           `;
         }
+      } else if (matchedPulse.conditioningDrill) {
+        const cd = matchedPulse.conditioningDrill;
+        const durMin = cd.totalSeconds ? `${Math.round(cd.totalSeconds / 60)}m` : '';
+        exerciseRows = `
+          <div style="margin-top:6px; font-size:10.5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px;">
+            <span style="font-weight:700; color:#fff;">${cd.name || 'Conditioning'}:</span>
+            <span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${(cd.format || 'interval').toUpperCase()} • ${cd.roundsCompleted || cd.rounds || 1} rounds ${durMin ? `(${durMin})` : ''}</span>
+          </div>
+        `;
       }
 
       pulseDetailsHtml = `
@@ -396,6 +405,19 @@ function renderHistoryList() {
       `;
     }
 
+    const rawTitle = act.subTitle || act.sub_title || act.name || 'Workout';
+    const isGenericGarminTitle = /^(cardio|indoor_cardio|strength|strength_training)$/i.test(String(rawTitle).trim());
+    const displayTitle = (isGenericGarminTitle && matchedPulse && matchedPulse.title)
+      ? `${matchedPulse.title} (Garmin ${rawTitle})`
+      : rawTitle;
+
+    const isWalkOrRunAct = /walk|run|ruck|hike/i.test(`${act.name || ''} ${rawTitle} ${act.activity_type_key || ''}`);
+    const estSteps = act.steps ? Number(act.steps) : (isWalkOrRunAct && act.durationMin ? Math.round(Number(act.durationMin) * 91.5) : 0);
+    const estMiles = act.distance_miles ? Number(act.distance_miles) : (estSteps > 0 ? Number((estSteps / 1810).toFixed(2)) : 0);
+    const actStepPillHtml = (isWalkOrRunAct && estSteps > 0)
+      ? `<span>•</span><span style="color:var(--cyan); font-weight:700;">👣 ${estSteps.toLocaleString()} activity steps${estMiles > 0 ? ` (${estMiles} mi)` : ''}</span>`
+      : '';
+
     const card = document.createElement('div');
     card.className = `history-card ${isToday ? 'today-highlight' : ''}`;
     card.style.background = isToday ? '#141a24' : '#11141c';
@@ -408,14 +430,15 @@ function renderHistoryList() {
       <div class="history-top-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
         <div>
           <div class="history-title" style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
-            ${act.subTitle || act.name}
+            ${displayTitle}
           </div>
-          <div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; gap:6px; align-items:center;">
+          <div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
             <span>${displayDate}</span>
             <span>•</span>
             <span>⏱ ${act.durationMin} min</span>
             <span>•</span>
             <span style="color:var(--primary); font-weight:800;">🔥 ${act.calories} kcal</span>
+            ${actStepPillHtml}
           </div>
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">

@@ -3451,16 +3451,55 @@ function generateWorkoutFromGearAndGoal() {
         </details>
       `;
 
+      // 7-Day Recomp Ledger computation (Elephant depth, Goldfish 3-metric glance)
+      const now7 = Date.now();
+      const sevenDaysMs = 7 * 24 * 3600 * 1000;
+      const allRecentActs = (typeof recentActivitiesData !== 'undefined' && Array.isArray(recentActivitiesData) && recentActivitiesData.length > 0)
+        ? recentActivitiesData
+        : ((window.BAKED_LIVE_STATE?.garmin?.recent_activities) || []);
+      const acts7d = allRecentActs.filter(a => {
+        const rawD = a.rawDate || a.date || '';
+        const t = new Date(String(rawD).replace(' ', 'T')).getTime();
+        return !isNaN(t) && (now7 - t) <= sevenDaysMs && (now7 - t) >= -86400000;
+      });
+      const totalActiveBurn7d = acts7d.reduce((s, a) => s + Number(a.calories || 0), 0);
+      const avgActiveBurn7d = Math.round(totalActiveBurn7d / 7);
+      let strengthSessions7d = acts7d.filter(a => /strength|barbell|kettlebell/i.test(`${a.name || ''} ${a.subTitle || a.sub_title || ''} ${a.activity_type_key || ''}`)).length;
+      try {
+        const localSess = JSON.parse(localStorage.getItem('pulse_session_history') || '[]');
+        if (Array.isArray(localSess)) {
+          const inAppStr7d = localSess.filter(s => s && s.preset === 'gym' && s.date && (now7 - new Date(s.date).getTime()) <= sevenDaysMs).length;
+          strengthSessions7d = Math.max(strengthSessions7d, inAppStr7d);
+        }
+      } catch(e) {}
+      const targetDeficit = Number(window.BAKED_LIVE_STATE?.nutrition?.deficit || 350);
+      const weeklyFatLossEstG = Math.round(((targetDeficit + Math.round(avgActiveBurn7d * 0.25)) * 7) / 7.7);
+
       const stepBarHtml = `
         <div style="margin-top:10px; padding:9px 11px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:9px;">
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:5px;">
-            <span style="color:var(--text-secondary); font-weight:700;">👣 Daily Steps: <strong style="color:#fff;">${verdict.stepsToday.toLocaleString()}</strong> / 12,000</span>
+            <span style="color:var(--text-secondary); font-weight:700;">👣 Daily Total Steps: <strong style="color:#fff;">${verdict.stepsToday.toLocaleString()}</strong> / 12,000</span>
             <span style="color:${verdict.stepsRemaining === 0 ? '#10b981' : 'var(--primary)'}; font-weight:800;">
               ${verdict.stepsRemaining === 0 ? '✓ 12k Goal Hit' : `${verdict.stepsRemaining.toLocaleString()} left`}
             </span>
           </div>
           <div style="width:100%; height:5px; background:rgba(255,255,255,0.07); border-radius:999px; overflow:hidden;">
             <div style="width:${verdict.stepPct}%; height:100%; background:linear-gradient(90deg, #00F0FF, #3B82F6); border-radius:999px;"></div>
+          </div>
+          <!-- 7-DAY RECOMP LEDGER (GOLDFISH 3-PILL STRIP) -->
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:8px; padding-top:7px; border-top:1px solid rgba(255,255,255,0.06); text-align:center;">
+            <div>
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">7d Active Burn</div>
+              <div style="font-size:11.5px; font-weight:800; color:var(--primary); margin-top:1px;">${totalActiveBurn7d.toLocaleString()} kcal <span style="font-size:9.5px; color:var(--text-muted);">(${avgActiveBurn7d}/d)</span></div>
+            </div>
+            <div>
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">7d Strength</div>
+              <div style="font-size:11.5px; font-weight:800; color:${strengthSessions7d >= 3 ? '#10b981' : '#fbbf24'}; margin-top:1px;">${strengthSessions7d} / 3 Sessions</div>
+            </div>
+            <div>
+              <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">7d Deficit Pace</div>
+              <div style="font-size:11.5px; font-weight:800; color:#c4b5fd; margin-top:1px;">-${targetDeficit}/d (~${weeklyFatLossEstG}g/wk)</div>
+            </div>
           </div>
         </div>
       `;
