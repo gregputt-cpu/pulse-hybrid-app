@@ -197,7 +197,7 @@ def sync_garmin(payload: Optional[DatePayload] = None):
             "success": True,
             "state": updated,
             "live_state": updated,
-            "has_fresh_token": True,
+            "has_fresh_token": garmin_sync_error is None,
             "garmin_error": garmin_sync_error
         }
     except Exception as e:

@@ -381,20 +381,30 @@
             window.BAKED_LIVE_STATE = data.state;
             applyLiveStateToDom(data.state);
           }
-          const passEl = document.getElementById('garminPassInput');
-          if (passEl) passEl.value = '';
-          const mfaEl = document.getElementById('garminMfaInput');
-          if (mfaEl) mfaEl.value = '';
           await loadLiveState();
           renderGarminSyncNotice(window.BAKED_LIVE_STATE);
           const notice = document.getElementById('garminStatusNotice');
           if (notice) notice.style.display = 'flex';
           updateEquipmentTriggerSummary();
-          const exportBox = document.getElementById('garminTokenExportBox');
-          if (exportBox) exportBox.style.display = 'flex';
-          closeSyncModal();
-          beep(880, 0.15);
-          showToast('✓ Garmin, Renpho & MyNetDiary Synced Live!');
+
+          if (data.garmin_error) {
+            const authBox = document.getElementById('garminAuthBox');
+            if (authBox) authBox.style.display = 'flex';
+            const passInput = document.getElementById('garminPassInput');
+            if (passInput) passInput.focus();
+            beep(420, 0.15);
+            showToast('⚠️ Garmin session expired — MND synced, but enter Garmin password to pull live Body Battery.');
+          } else {
+            const passEl = document.getElementById('garminPassInput');
+            if (passEl) passEl.value = '';
+            const mfaEl = document.getElementById('garminMfaInput');
+            if (mfaEl) mfaEl.value = '';
+            const exportBox = document.getElementById('garminTokenExportBox');
+            if (exportBox) exportBox.style.display = 'flex';
+            closeSyncModal();
+            beep(880, 0.15);
+            showToast('✓ Garmin, Renpho & MyNetDiary Synced Live!');
+          }
         } else if (data.message === 'Application not found' || data.status === 'error') {
           await loadLiveState();
           renderGarminSyncNotice(window.BAKED_LIVE_STATE);
