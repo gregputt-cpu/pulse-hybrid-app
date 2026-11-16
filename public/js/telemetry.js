@@ -1899,6 +1899,23 @@
         applyLiveStateToDom(state);
         console.log("✓ Dynamic telemetry successfully synced from live_state.json");
 
+        // Non-blocking 14-day Renpho trend fetch for plateau & goal-trajectory coaching
+        if (!window._renphoHistoryFetched) {
+          window._renphoHistoryFetched = true;
+          fetch('/api/renpho/history?days=14')
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              const hist = Array.isArray(data) ? data : (data && Array.isArray(data.history) ? data.history : []);
+              if (hist.length > 0) {
+                window.PULSE_RENPHO_HISTORY = hist;
+                if (typeof renderTodayTrainingRecommendations === 'function') {
+                  renderTodayTrainingRecommendations();
+                }
+              }
+            })
+            .catch(() => {});
+        }
+
         // Non-blocking auto-sync for Renpho if last_synced is not today
         if (!window._renphoAutoSynced) {
           const lastSynced = window.BAKED_LIVE_STATE?.renpho?.last_synced;

@@ -2274,13 +2274,16 @@ function generateWorkoutFromGearAndGoal() {
               return !isNaN(d.getTime()) && d.toDateString() === todayStr;
             });
             if (found) {
+              const cals = found.calories || 320;
               return {
                 title: found.preset === 'gym' ? 'Option A: Heavy Barbell Strength & Hinge' : (found.preset === 'combat' ? 'Option B: Hybrid Work Capacity Circuit' : 'Option C: Active Recovery & Zone 2 Flush'),
                 durationMin: found.durationMin || 45,
-                calories: found.calories || 320,
+                calories: cals,
                 recoveryHours: 48,
                 recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
-                isStrength: true,
+                isStrength: found.preset === 'gym',
+                isLightOrNonStrength: cals < 300 || found.preset !== 'gym',
+                manualComplete: false,
                 source: 'In-App Workout Player',
                 completedAt: found.date
               };
@@ -2295,29 +2298,42 @@ function generateWorkoutFromGearAndGoal() {
         : (Array.isArray(recentActivitiesData) ? recentActivitiesData : []);
 
       if (Array.isArray(actsToCheck)) {
-        const todayAct = actsToCheck.find(a => {
+        const todayActs = actsToCheck.filter(a => {
           const isRealWorkout = (Number(a.duration_min || a.durationMin || 0) >= 10) || (Number(a.calories || 0) >= 80);
           if (!isRealWorkout) return false;
           if (a.date && String(a.date).startsWith(todayIsoDate)) return true;
           const fmt = (typeof formatActivityDisplay === 'function') ? formatActivityDisplay(a) : { isToday: false };
           return fmt.isToday;
         });
-        if (todayAct) {
-          const isStr = `${todayAct.name || ''} ${todayAct.subTitle || ''}`.toLowerCase().includes('strength');
+        if (todayActs.length > 0) {
+          const totalCalsToday = todayActs.reduce((sum, a) => sum + Number(a.calories || a.workout_calories || 0), 0);
+          const totalDurToday = todayActs.reduce((sum, a) => sum + Number(a.durationMin || a.duration_min || 0), 0);
+          const hasFullStrength = todayActs.some(a => {
+            const label = `${a.name || ''} ${a.sub_title || ''} ${a.subTitle || ''}`.toLowerCase();
+            return (label.includes('strength') || label.includes('barbell') || label.includes('kettlebell')) && Number(a.calories || 0) >= 300;
+          });
+          const primaryAct = todayActs[0];
+          const isStr = `${primaryAct.name || ''} ${primaryAct.sub_title || ''} ${primaryAct.subTitle || ''}`.toLowerCase().includes('strength');
+          let manualDone = false;
+          try {
+            manualDone = localStorage.getItem('pulse_strength_done_today') === 'true' && localStorage.getItem('pulse_workout_completed_date') === todayIsoDate;
+          } catch(e) {}
           return {
-            title: todayAct.sub_title || todayAct.subTitle || todayAct.name || 'Completed Workout Session',
-            durationMin: todayAct.durationMin || Math.round(todayAct.duration_min || 30),
-            calories: todayAct.calories || 250,
+            title: primaryAct.sub_title || primaryAct.subTitle || primaryAct.name || 'Completed Workout Session',
+            durationMin: Math.round(totalDurToday || primaryAct.durationMin || primaryAct.duration_min || 30),
+            calories: Math.round(totalCalsToday || primaryAct.calories || 250),
             recoveryHours: isStr ? 48 : 24,
             recoveryPill: isStr ? '⏳ 24–48h Recovery Window • In Progress' : '⚡ Aerobic Recovery • In Progress',
-            isStrength: isStr,
+            isStrength: isStr || hasFullStrength,
+            isLightOrNonStrength: !manualDone && (!hasFullStrength || totalCalsToday < 300),
+            manualComplete: manualDone,
             source: 'Garmin fēnix 8 Sync',
-            completedAt: todayAct.rawDate || todayAct.date
+            completedAt: primaryAct.rawDate || primaryAct.date
           };
         }
       }
 
-      // 3. User manual completion flag (strictly scoped to today\'s date)
+      // 3. User manual completion flag (strictly scoped to today's date)
       try {
         const manualFlag = localStorage.getItem('pulse_strength_done_today');
         const manualDate = localStorage.getItem('pulse_workout_completed_date');
@@ -2329,6 +2345,8 @@ function generateWorkoutFromGearAndGoal() {
             recoveryHours: 48,
             recoveryPill: '⏳ 24–48h Recovery Window • In Progress',
             isStrength: true,
+            isLightOrNonStrength: false,
+            manualComplete: true,
             source: 'Manually Logged Today',
             completedAt: todayIsoDate
           };
@@ -3101,10 +3119,91 @@ function generateWorkoutFromGearAndGoal() {
         isRest = false;
       }
 
+      const stepsToday = Number((window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.steps) || 0);
+      const stepGoal = 12000;
+      const stepsRemaining = Math.max(0, stepGoal - stepsToday);
+      const stepPct = Math.min(100, Math.round((stepsToday / stepGoal) * 100));
+
+      // 14-day Renpho plateau detection
+      let isPlateaued = false;
+      let weightDeltaKg = 0;
+      let bfDeltaPct = 0;
+      let trendDays = 0;
+      const hist = Array.isArray(window.PULSE_RENPHO_HISTORY) ? window.PULSE_RENPHO_HISTORY : [];
+      if (hist.length >= 2) {
+        const sorted = hist.slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        const first = sorted[0];
+        const last = sorted[sorted.length - 1];
+        const tsDiffDays = ((last.timestamp || 0) - (first.timestamp || 0)) / 86400;
+        trendDays = Math.round(tsDiffDays);
+        if (first.weight_kg && last.weight_kg) {
+          weightDeltaKg = Number((last.weight_kg - first.weight_kg).toFixed(2));
+        }
+        if (first.body_fat_pct && last.body_fat_pct) {
+          bfDeltaPct = Number((last.body_fat_pct - first.body_fat_pct).toFixed(2));
+        }
+        if (tsDiffDays >= 3 && (weightDeltaKg >= -0.25 && bfDeltaPct >= -0.2)) {
+          isPlateaued = true;
+        }
+      } else {
+        const fatToLose = Number((window.BAKED_LIVE_STATE?.renpho?.fat_to_lose_kg) || (window.athleteProfile?.fatToLoseKg) || 0);
+        if (fatToLose > 1.0) {
+          isPlateaued = true;
+        }
+      }
+
+      const baseCalTarget = Number(
+        (typeof myNetDiaryData !== 'undefined' && myNetDiaryData?.targets?.calories) ||
+        window.BAKED_LIVE_STATE?.nutrition?.calorie_target ||
+        2437
+      );
+      const consumedCals = Number((typeof myNetDiaryData !== 'undefined' && myNetDiaryData?.totals?.calories) || 0);
+      const tighterCalTarget = Math.max(1850, baseCalTarget - 250);
+
+      // Second-Session ("Room for More") evaluation
+      const completedCheck = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
+      const roomForMore = Boolean(
+        completedCheck &&
+        completedCheck.isLightOrNonStrength &&
+        todayFeeling !== 'beat_up' &&
+        effectiveBodyBattery >= 50 &&
+        effectiveReadiness >= 55
+      );
+
+      let secondSession = null;
+      if (roomForMore) {
+        if (!completedCheck.isStrength && todayGearMode !== 'bodyweight') {
+          const secArch = todayGearMode === 'kb' ? 'option_kb' : 'option_a';
+          secondSession = {
+            archetypeKey: secArch,
+            title: todayGearMode === 'kb' ? 'Heavy Kettlebell Strength Block' : 'Focused Barbell Strength & Hinge',
+            durationMin: todayTimeMode === '20m' ? 25 : 35,
+            targetBurn: 290,
+            reason: `Your morning session (${completedCheck.calories} kcal) was light cardio/movement, leaving ${stepsRemaining.toLocaleString()} steps to your 12,000 target and high recovery (${effectiveBodyBattery}% Battery, ${effectiveReadiness} Readiness). Adding focused resistance drives muscle retention and afterburn.`
+          };
+        } else if (stepsRemaining >= 4000) {
+          secondSession = {
+            archetypeKey: 'option_b',
+            title: 'Work Capacity + Zone 2 Step Finisher',
+            durationMin: 30,
+            targetBurn: 280,
+            reason: `Your morning session (${completedCheck.calories} kcal) left ${stepsRemaining.toLocaleString()} steps to hit 12,000 today. A brisk 30m Zone 2 / conditioning finisher adds ~3,500–4,000 steps and ~280 kcal without CNS overload.`
+          };
+        } else {
+          secondSession = {
+            archetypeKey: 'option_b',
+            title: '20–30m Conditioning / Kettlebell Finisher',
+            durationMin: 25,
+            targetBurn: 260,
+            reason: `With ${effectiveBodyBattery}% Body Battery remaining and a light ${completedCheck.calories} kcal morning session, a crisp conditioning finisher widens today's caloric deficit cleanly.`
+          };
+        }
+      }
+
       return {
         mode,
-        archetypeKey,
-        recommendedArchetype: archetypeKey,
+        archetypeKey: roomForMore && secondSession ? secondSession.archetypeKey : archetypeKey,
+        recommendedArchetype: roomForMore && secondSession ? secondSession.archetypeKey : archetypeKey,
         optionId,
         badge,
         title,
@@ -3127,7 +3226,20 @@ function generateWorkoutFromGearAndGoal() {
         optionLabels,
         todayFeeling,
         todayGearMode,
-        todayTimeMode
+        todayTimeMode,
+        stepsToday,
+        stepGoal,
+        stepsRemaining,
+        stepPct,
+        isPlateaued,
+        weightDeltaKg,
+        bfDeltaPct,
+        trendDays,
+        baseCalTarget,
+        consumedCals,
+        tighterCalTarget,
+        roomForMore,
+        secondSession
       };
     }
 
@@ -3249,7 +3361,92 @@ function generateWorkoutFromGearAndGoal() {
         </details>
       `;
 
-      if (completed) {
+      const stepBarHtml = `
+        <div style="margin-top:10px; padding:9px 11px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:9px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:5px;">
+            <span style="color:var(--text-secondary); font-weight:700;">👣 Daily Steps: <strong style="color:#fff;">${verdict.stepsToday.toLocaleString()}</strong> / 12,000</span>
+            <span style="color:${verdict.stepsRemaining === 0 ? '#10b981' : 'var(--primary)'}; font-weight:800;">
+              ${verdict.stepsRemaining === 0 ? '✓ 12k Goal Hit' : `${verdict.stepsRemaining.toLocaleString()} left`}
+            </span>
+          </div>
+          <div style="width:100%; height:5px; background:rgba(255,255,255,0.07); border-radius:999px; overflow:hidden;">
+            <div style="width:${verdict.stepPct}%; height:100%; background:linear-gradient(90deg, #00F0FF, #3B82F6); border-radius:999px;"></div>
+          </div>
+        </div>
+      `;
+
+      const plateauDualHtml = (verdict.isPlateaued || verdict.roomForMore) ? `
+        <div style="margin-top:10px; padding:10px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.25); border-radius:10px;">
+          <div style="font-size:10.5px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">
+            ⚖️ ${verdict.trendDays >= 3 ? `Weight/BF Plateau (${verdict.weightDeltaKg >= 0 ? '+' : ''}${verdict.weightDeltaKg}kg over ${verdict.trendDays}d)` : `Goal Runway (${scaleWeight}kg / ${bodyFatPct}% → 15.0%)`} • Pick Your Lever
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div style="background:rgba(0,229,255,0.07); border:1px solid rgba(0,229,255,0.25); border-radius:8px; padding:8px;">
+              <div style="font-size:10px; font-weight:800; color:var(--primary); text-transform:uppercase;">Option 1: Burn More</div>
+              <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:2px;">+${verdict.secondSession ? verdict.secondSession.targetBurn : 280} kcal Output</div>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:2px; line-height:1.35;">${verdict.stepsRemaining >= 3500 ? 'Add 30–40m brisk walk or second session' : 'Add 25m strength / KB finisher'}</div>
+              <button type="button" onclick="openWorkoutTabFromVerdict()" style="margin-top:6px; width:100%; padding:5px 6px; font-size:10.5px; font-weight:800; background:var(--primary); color:#000; border:none; border-radius:5px; cursor:pointer;">Open Session ➔</button>
+            </div>
+            <div style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.28); border-radius:8px; padding:8px;">
+              <div style="font-size:10px; font-weight:800; color:#c4b5fd; text-transform:uppercase;">Option 2: Eat Less</div>
+              <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:2px;">Cap ~${verdict.tighterCalTarget.toLocaleString()} kcal</div>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:2px; line-height:1.35;">-250 kcal tighter today (${verdict.consumedCals.toLocaleString()} logged so far)</div>
+              <button type="button" onclick="switchTab('fuel')" style="margin-top:6px; width:100%; padding:5px 6px; font-size:10.5px; font-weight:800; background:rgba(139,92,246,0.25); color:#fff; border:1px solid rgba(139,92,246,0.45); border-radius:5px; cursor:pointer;">Check Fuel Tab ➔</button>
+            </div>
+          </div>
+        </div>
+      ` : '';
+
+      if (completed && verdict.roomForMore && verdict.secondSession) {
+        if (hdrText) {
+          hdrText.innerText = "TODAY'S TRAINING • ROOM FOR MORE";
+          hdrText.style.color = "var(--primary)";
+        }
+        const sec = verdict.secondSession;
+        slot.innerHTML = `
+          ${contextPillsHtml}
+
+          <!-- GOLDFISH VERDICT HERO CARD (SECOND SESSION RECOMMENDED) -->
+          <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.4); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:10px; font-weight:800; color:#000; background:var(--primary); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+                ⚡ LIGHT AM (${completed.calories} kcal) • ROOM FOR MORE
+              </span>
+              <span style="font-size:10.5px; color:var(--text-muted);">
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness}
+              </span>
+            </div>
+
+            <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
+              Second Session: ${sec.title}
+            </div>
+
+            <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
+              ${sec.reason}
+            </div>
+
+            ${stepBarHtml}
+            ${plateauDualHtml}
+
+            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:2; min-width:190px; height:44px; font-size:12.5px; font-weight:800; background:var(--primary); color:#000; box-shadow:0 0 15px rgba(0,229,255,0.25); cursor:pointer;">
+                ▶ Open Second Session (~${sec.durationMin}m) ➔
+              </button>
+              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:120px; height:44px; font-size:11.5px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; cursor:pointer;">
+                AM Log (${completed.calories})
+              </button>
+            </div>
+
+            <div style="text-align:center; margin-top:10px;">
+              <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(true)">
+                ✓ I'm Done for Today (Mark Complete)
+              </span>
+            </div>
+          </div>
+
+          ${elephantAccordionHtml}
+        `;
+      } else if (completed) {
         const proteinTarget = (window.BAKED_LIVE_STATE?.nutrition?.protein_target_g) || 200;
 
         slot.innerHTML = `
@@ -3273,6 +3470,8 @@ function generateWorkoutFromGearAndGoal() {
             <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
               You've logged ${completed.durationMin || 45}m (${completed.calories || 320} kcal active burn) today. Focus on your protein anchor (${proteinTarget}g), hydration, and recovery so your lean mass rebuilds cleanly.
             </div>
+
+            ${stepBarHtml}
 
             <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
               <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
@@ -3300,7 +3499,7 @@ function generateWorkoutFromGearAndGoal() {
               <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(true)" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:800; background:var(--primary); color:#000; cursor:pointer;">
                 ✓ Log Rest Day
               </button>
-              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12); cursor:pointer;">
+              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:1; min-width:160px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12); cursor:pointer;">
                 Open Recovery Options →
               </button>
             </div>
@@ -3334,6 +3533,8 @@ function generateWorkoutFromGearAndGoal() {
               ${verdict.goldfishReason}
             </div>
 
+            ${stepBarHtml}
+            ${plateauDualHtml}
             ${ctaButtonsHtml}
           </div>
 
