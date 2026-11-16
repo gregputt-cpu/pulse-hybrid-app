@@ -1604,7 +1604,14 @@
           const _now = new Date();
           const todayIsoDate = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
           const rawTodayActs = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities : [];
-          const filteredTodayActs = rawTodayActs.filter(a => {
+          const rawRecentActs = (g.recent_activities && Array.isArray(g.recent_activities)) ? g.recent_activities : [];
+          const combinedActs = [...rawTodayActs];
+          rawRecentActs.forEach(ra => {
+            if (!combinedActs.some(ta => String(ta.id) === String(ra.id))) {
+              combinedActs.push(ra);
+            }
+          });
+          const filteredTodayActs = combinedActs.filter(a => {
             const actDateStr = String(a.date || a.rawDate || '');
             if (!actDateStr.startsWith(todayIsoDate)) return false;
             const name = String(a.name || '');
@@ -1614,10 +1621,29 @@
             if (duration < 10 && cals < 80) return false;
             return true;
           });
-          const todayActsCount = filteredTodayActs.length;
+          let inAppTodayCount = 0;
+          let inAppTodayCals = 0;
+          try {
+            const rawSess = localStorage.getItem('pulse_session_history');
+            if (rawSess) {
+              const sessions = JSON.parse(rawSess);
+              const todayStr = _now.toDateString();
+              if (Array.isArray(sessions)) {
+                sessions.forEach(s => {
+                  if (s.date && new Date(s.date).toDateString() === todayStr) {
+                    inAppTodayCount++;
+                    inAppTodayCals += Number(s.calories || 0);
+                  }
+                });
+              }
+            }
+          } catch(e) {}
+          const todayActsCount = filteredTodayActs.length + inAppTodayCount;
+          const todayWorkoutCals = filteredTodayActs.reduce((s, a) => s + Number(a.calories || a.workout_calories || 0), 0) + inAppTodayCals;
+          const displayKcal = todayWorkoutCals > 0 ? todayWorkoutCals : (g.active_calories || 0);
           let desiredSub = '';
           if (todayActsCount > 0) {
-            desiredSub = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${g.active_calories || 0} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
+            desiredSub = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${displayKcal} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
           } else {
             desiredSub = `Sleep ${sleepNum} (${sleepRating}) • Readiness ${readinessNum} • RHR ${rhrNum} bpm • 0 Workouts Today`;
           }
@@ -1878,8 +1904,8 @@
         let state = null;
         try {
           const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 4000);
-          const res = await fetch('/api/live_state', { signal: ctrl.signal });
+          const tid = setTimeout(() => ctrl.abort(), 10000);
+          const res = await fetch('/api/live_state', { signal: ctrl.signal, cache: 'no-store' });
           clearTimeout(tid);
           if (res.ok) state = await res.json();
         } catch(apiErr) {}
