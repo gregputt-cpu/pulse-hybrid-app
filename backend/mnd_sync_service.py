@@ -715,9 +715,38 @@ class MyNetDiarySyncService:
         state['mnd_logged'] = dict(mnd_payload)
         state['mnd_meals'] = meals
 
-        # Update Renpho scale weight from weight_info ONLY if not already sourced from direct Renpho cloud
-        is_direct_renpho = state.get('renpho', {}).get('source') == 'renpho_direct_cloud'
-        if weight_info and weight_info.get('currentWeight') and not is_direct_renpho:
+        # Update Renpho scale weight from weight_info
+        today_str = target_date_str or date.today().isoformat()
+        existing_renpho = state.get('renpho', {})
+        existing_date = str(existing_renpho.get('last_synced', ''))[:10]
+        is_direct_renpho = existing_renpho.get('source') == 'renpho_direct_cloud'
+
+        # Check if weight_info has today's weigh-in
+        last_weigh_in_stmt = str(weight_info.get('lastWeighInStatement', '')).lower() if weight_info else ''
+        bmi_expl = str(weight_info.get('bmiExplanation', '')) if weight_info else ''
+
+        # Match target_date_str (YYYY-MM-DD) or day-month formats (e.g. "16 Nov", "Nov 16", "16.11", "11/16")
+        target_day_month = ''
+        try:
+            target_dt = datetime.strptime(today_str, '%Y-%m-%d')
+            d_num = str(target_dt.day)
+            b_month = target_dt.strftime('%b')  # e.g. "Nov"
+            target_day_month_regex = rf'(?:{d_num}\s+{b_month}|{b_month}\s+{d_num})'
+        except Exception:
+            target_day_month_regex = r'$^'
+
+        has_target_date_in_expl = bool(today_str in bmi_expl or (target_day_month_regex and re.search(target_day_month_regex, bmi_expl, re.IGNORECASE)))
+        is_today_weighin = ('today' in last_weigh_in_stmt) or has_target_date_in_expl
+
+        is_manual_entry_today = (existing_renpho.get('source') == 'manual_scale_entry' and existing_date == today_str)
+
+        can_update_weight = (
+            bool(weight_info and weight_info.get('currentWeight'))
+            and (not is_direct_renpho or (is_today_weighin and existing_date < today_str))
+            and not is_manual_entry_today
+        )
+
+        if can_update_weight:
             raw_w = weight_info.get('currentWeight')
             kg = None
             expl = weight_info.get('bmiExplanation', '')
@@ -734,11 +763,19 @@ class MyNetDiarySyncService:
                 except Exception:
                     kg = 97.70
 
-            lbm = state.get('athlete', {}).get('lean_mass_kg', 80.99)
+            lbm = state.get('athlete', {}).get('lean_mass_kg', existing_renpho.get('lean_mass_kg', 80.99))
             target_wt_15 = round(lbm / (1.0 - 0.15), 2)
             fat_to_lose = round(max(0, kg - target_wt_15), 2)
 
             renpho = state.setdefault('renpho', {})
+            # Preserve existing Renpho bio-impedance metrics if available
+            for field in [
+                'body_fat_pct', 'water_pct', 'muscle_mass_kg', 'bone_mass_kg',
+                'visceral_fat', 'subcutaneous_fat_pct', 'protein_pct', 'bmr', 'body_age'
+            ]:
+                if field in existing_renpho:
+                    renpho[field] = existing_renpho[field]
+
             renpho['weight_kg'] = kg
             renpho['lean_mass_kg'] = lbm
             renpho['fat_to_lose_kg'] = fat_to_lose
@@ -748,6 +785,8 @@ class MyNetDiarySyncService:
 
             athlete = state.setdefault('athlete', {})
             athlete['weight_kg'] = kg
+            athlete['lean_mass_kg'] = lbm
+            athlete['target_weight_kg'] = target_wt_15
             athlete['fat_to_lose_kg'] = fat_to_lose
 
         # Autoregulation & Runway expansion recalculation
