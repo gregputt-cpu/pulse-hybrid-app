@@ -49,6 +49,13 @@
       }
     }
 
+    function pulseHaptic(pattern = 25) {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(pattern); } catch(e) {}
+      }
+    }
+    window.pulseHaptic = pulseHaptic;
+
     // SCREEN WAKE LOCK API (Prevents phone sleeping during active intervals/rest)
     let screenWakeLock = null;
     async function requestWakeLock() {

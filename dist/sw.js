@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-hybrid-v5.12';
+const CACHE_NAME = 'pulse-hybrid-v5.13';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
   '/js/fuel-engine.js',
   '/js/telemetry.js',
   '/manifest.json',
+  '/icon.svg',
   '/icon-192.png',
   '/icon-512.png'
 ];

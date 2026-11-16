@@ -5,8 +5,8 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#090A0F",
-  "theme_color": "#090A0F",
+  "background_color": "#06080e",
+  "theme_color": "#06080e",
   "categories": ["fitness", "health", "sports"],
   "icons": [
     {
@@ -20,6 +20,35 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "2H KB Flow (30m AMRAP)",
+      "short_name": "KB Flow",
+      "description": "Jump straight to Option KB 2H Flow AMRAP",
+      "url": "/?tab=train&kb=flow_2h",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Interval & AMRAP Timer",
+      "short_name": "Timer",
+      "description": "Open the Goldfish Conditioning Timer",
+      "url": "/?tab=timer",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Fuel & Macro Runway",
+      "short_name": "Fuel",
+      "description": "Check today's calories, protein & hydration",
+      "url": "/?tab=fuel",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

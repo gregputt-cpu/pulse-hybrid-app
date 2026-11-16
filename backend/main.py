@@ -137,6 +137,27 @@ def get_manifest():
         return FileResponse(mf_file, media_type="application/manifest+json")
     raise HTTPException(status_code=404, detail="manifest.json not found")
 
+@app.get("/icon.svg")
+def get_icon_svg():
+    p = os.path.join(static_dir, "icon.svg")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="icon.svg not found")
+
+@app.get("/icon-192.png")
+def get_icon_192():
+    p = os.path.join(static_dir, "icon-192.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    raise HTTPException(status_code=404, detail="icon-192.png not found")
+
+@app.get("/icon-512.png")
+def get_icon_512():
+    p = os.path.join(static_dir, "icon-512.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    raise HTTPException(status_code=404, detail="icon-512.png not found")
+
 @app.get("/api/health")
 def health():
     return {

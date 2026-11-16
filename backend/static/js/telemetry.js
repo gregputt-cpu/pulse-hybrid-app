@@ -1593,9 +1593,104 @@
       }
     }
 
+    function recordDailyBiometricSnapshot(state) {
+      if (!state) return;
+      try {
+        const g = state.garmin || {};
+        const r = state.renpho || {};
+        const dateStr = state.date || new Date().toISOString().split('T')[0];
+        const raw = localStorage.getItem('pulse_daily_biometrics_history');
+        const list = raw ? JSON.parse(raw) : [];
+        const entry = {
+          date: dateStr,
+          body_battery: g.body_battery !== undefined ? Number(g.body_battery) : null,
+          resting_hr: g.resting_hr !== undefined ? Number(g.resting_hr) : null,
+          sleep_score: g.sleep_score !== undefined ? Number(g.sleep_score) : null,
+          readiness: g.training_readiness !== undefined ? Number(g.training_readiness) : null,
+          weight_kg: r.weight_kg !== undefined ? Number(r.weight_kg) : null
+        };
+        const idx = list.findIndex(item => item.date === dateStr);
+        if (idx >= 0) list[idx] = { ...list[idx], ...Object.fromEntries(Object.entries(entry).filter(([, v]) => v !== null)) };
+        else list.push(entry);
+        list.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        localStorage.setItem('pulse_daily_biometrics_history', JSON.stringify(list.slice(-14)));
+      } catch(e) {}
+    }
+
+    function buildSparklineSvg(values, color) {
+      const clean = values.filter(v => typeof v === 'number' && !isNaN(v));
+      if (clean.length < 2) {
+        return `<svg viewBox="0 0 100 28" style="width:100%; height:28px; overflow:visible;"><line x1="2" y1="14" x2="98" y2="14" stroke="${color}" stroke-width="1.8" stroke-dasharray="3 3" opacity="0.5"/></svg>`;
+      }
+      const min = Math.min(...clean);
+      const max = Math.max(...clean);
+      const span = (max - min) || 1;
+      const pts = clean.map((v, i) => {
+        const x = 4 + (i / (clean.length - 1)) * 92;
+        const y = 24 - ((v - min) / span) * 18;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      const lastPt = pts[pts.length - 1].split(',');
+      return `<svg viewBox="0 0 100 28" style="width:100%; height:28px; overflow:visible;">
+        <polyline fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${pts.join(' ')}" />
+        <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="3" fill="${color}" />
+      </svg>`;
+    }
+
+    function renderBiometricSparklines() {
+      const card = document.getElementById('biometricSparklinesCard');
+      if (!card) return;
+      let hist = [];
+      try {
+        const raw = localStorage.getItem('pulse_daily_biometrics_history');
+        if (raw) hist = JSON.parse(raw);
+      } catch(e) {}
+      if (!Array.isArray(hist)) hist = [];
+      const recent7 = hist.slice(-7);
+
+      const metrics = [
+        { key: 'body_battery', label: 'Body Battery', unit: '%', color: '#a855f7' },
+        { key: 'resting_hr', label: 'Resting HR', unit: ' bpm', color: '#f97316' },
+        { key: 'sleep_score', label: 'Sleep Score', unit: '', color: '#00e5ff' },
+        { key: 'weight_kg', label: 'Scale Weight', unit: ' kg', color: '#10b981' }
+      ];
+
+      const tilesHtml = metrics.map(m => {
+        const vals = recent7.map(d => d[m.key]).filter(v => typeof v === 'number' && !isNaN(v));
+        const latest = vals.length ? vals[vals.length - 1] : '--';
+        const prev = vals.length >= 2 ? vals[vals.length - 2] : null;
+        const delta = (typeof latest === 'number' && typeof prev === 'number') ? +(latest - prev).toFixed(1) : null;
+        const deltaStr = delta === null ? 'Today' : (delta > 0 ? `+${delta}${m.unit}` : `${delta}${m.unit}`);
+        return `
+          <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:8px 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+              <span style="font-size:10.5px; font-weight:700; color:var(--text-muted);">${m.label}</span>
+              <span style="font-size:11px; font-weight:800; color:#fff;">${latest}${latest !== '--' ? m.unit : ''}</span>
+            </div>
+            ${buildSparklineSvg(vals, m.color)}
+            <div style="font-size:9.5px; color:var(--text-secondary); margin-top:2px; display:flex; justify-content:space-between;">
+              <span>${recent7.length || 1}d window</span>
+              <span style="color:${m.color}; font-weight:700;">${deltaStr}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="font-size:12px; color:#fff;">📈 7-Day Biometric Trends</strong>
+          <span style="font-size:10px; color:var(--text-muted);">Garmin & Renpho</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">${tilesHtml}</div>
+      `;
+    }
+    window.renderBiometricSparklines = renderBiometricSparklines;
+
     function applyLiveStateToDom(state) {
       if (!state) return;
       window.BAKED_LIVE_STATE = state;
+      recordDailyBiometricSnapshot(state);
+      renderBiometricSparklines();
       updateAthleteProfileFromState(state);
       
       // 1. Garmin Telemetry Binding
@@ -2175,11 +2270,21 @@
       } catch(e) {}
       updateInjuryBadge();
 
+      window.dismissBootSplash = function() {
+        const el = document.getElementById('pulseBootSplash');
+        if (el) el.classList.add('boot-splash-hidden');
+      };
+      setTimeout(window.dismissBootSplash, 900);
+
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const tabParam = urlParams.get('tab');
+        const kbParam = urlParams.get('kb');
         if (tabParam && ['today', 'train', 'timer', 'fuel', 'body'].includes(tabParam)) {
           switchTab(tabParam);
+          if (tabParam === 'train' && kbParam && ['flow_2h', 'flow_1h', 'grinds'].includes(kbParam) && typeof setKbSubMode === 'function') {
+            setKbSubMode(kbParam);
+          }
         } else if (window.location.hash) {
           const tabKey = window.location.hash.replace('#', '');
           if (['today', 'train', 'timer', 'fuel', 'body'].includes(tabKey)) {

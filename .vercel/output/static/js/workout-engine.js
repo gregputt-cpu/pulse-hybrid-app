@@ -2559,14 +2559,91 @@ function generateWorkoutFromGearAndGoal() {
       updateEquipmentTriggerSummary();
     }
 
+    function renderWeeklyPatternBalance() {
+      const el = document.getElementById('weeklyPatternBalance');
+      if (!el) return;
+      const now = Date.now();
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      const counts = { Hinge: 0, Squat: 0, Push: 0, Pull: 0, Conditioning: 0 };
+
+      try {
+        const rawStr = localStorage.getItem('pulse_strength_history');
+        if (rawStr) {
+          const map = JSON.parse(rawStr);
+          Object.entries(map).forEach(([exId, entry]) => {
+            const dt = entry && (entry.lastDate || entry.date) ? new Date(entry.lastDate || entry.date).getTime() : now;
+            if (!isNaN(dt) && (now - dt) > sevenDaysMs) return;
+            const sets = Number(entry.sets || entry.setsCount || 3);
+            if (exId.includes('rdl') || exId.includes('hinge') || exId.includes('swing') || exId.includes('bridge')) counts.Hinge += sets;
+            else if (exId.includes('squat') || exId.includes('lunge')) counts.Squat += sets;
+            else if (exId.includes('press') || exId.includes('dip') || exId.includes('push')) counts.Push += sets;
+            else if (exId.includes('row') || exId.includes('pull')) counts.Pull += sets;
+            else counts.Conditioning += sets;
+          });
+        }
+      } catch(e) {}
+
+      try {
+        const rawCond = localStorage.getItem('pulse_conditioning_history');
+        if (rawCond) {
+          const cmap = JSON.parse(rawCond);
+          Object.values(cmap).forEach(entry => {
+            const dt = entry && (entry.lastDate || entry.date) ? new Date(entry.lastDate || entry.date).getTime() : 0;
+            if (dt && (now - dt) <= sevenDaysMs) {
+              counts.Conditioning += Math.max(1, Number(entry.amrapRounds || entry.roundsCompleted || 2));
+            }
+          });
+        }
+      } catch(e) {}
+
+      const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
+      acts.forEach(a => {
+        const dt = new Date(String(a.rawDate || a.date || '').replace(' ', 'T')).getTime();
+        if (!isNaN(dt) && (now - dt) <= sevenDaysMs) {
+          const nm = String(a.name || a.sub_title || '').toLowerCase();
+          if (nm.includes('strength')) { counts.Push += 2; counts.Pull += 2; counts.Hinge += 2; }
+          else counts.Conditioning += 2;
+        }
+      });
+
+      const targets = { Hinge: 8, Squat: 8, Push: 10, Pull: 10, Conditioning: 6 };
+      const colors = { Hinge: '#f59e0b', Squat: '#00e5ff', Push: '#ec4899', Pull: '#8b5cf6', Conditioning: '#10b981' };
+
+      const barsHtml = Object.keys(counts).map(k => {
+        const pct = Math.min(100, Math.round((counts[k] / targets[k]) * 100));
+        return `
+          <div style="display:flex; align-items:center; gap:8px; font-size:10.5px;">
+            <span style="width:82px; font-weight:700; color:var(--text-secondary);">${k}</span>
+            <div style="flex:1; height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;">
+              <div style="width:${pct}%; height:100%; background:${colors[k]}; border-radius:999px;"></div>
+            </div>
+            <span style="width:42px; text-align:right; font-family:var(--font-mono); font-weight:700; color:#fff;">${counts[k]}/${targets[k]}</span>
+          </div>
+        `;
+      }).join('');
+
+      el.innerHTML = `
+        <div style="background:rgba(15,23,42,0.85); border:1px solid var(--border); border-radius:12px; padding:10px 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
+            <strong style="font-size:11.5px; color:#fff;">⚖️ 7-Day Movement Pattern Balance</strong>
+            <span style="font-size:10px; color:var(--text-muted);">Sets / Blocks vs Target</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:5px;">${barsHtml}</div>
+        </div>
+      `;
+    }
+    window.renderWeeklyPatternBalance = renderWeeklyPatternBalance;
+
     // WORKOUT TAB SUBVIEW SWITCHER (Prescribed vs Completed History)
     function switchTrainView(viewKey) {
       currentTrainView = viewKey;
       document.querySelectorAll('.btn-subview').forEach(b => b.classList.remove('active'));
+      const balEl = document.getElementById('weeklyPatternBalance');
       if (viewKey === 'prescribed') {
         document.getElementById('btnTrainPrescribed').classList.add('active');
         document.getElementById('trainViewPrescribed').style.display = 'flex';
         document.getElementById('trainViewHistory').style.display = 'none';
+        if (balEl) balEl.style.display = 'none';
         const tb = document.getElementById('trainHistoryToolbar');
         if (tb) tb.style.display = 'none';
         renderCurrentExercise();
@@ -2574,6 +2651,10 @@ function generateWorkoutFromGearAndGoal() {
         document.getElementById('btnTrainHistory').classList.add('active');
         document.getElementById('trainViewPrescribed').style.display = 'none';
         document.getElementById('trainViewHistory').style.display = 'flex';
+        if (balEl) {
+          balEl.style.display = 'block';
+          renderWeeklyPatternBalance();
+        }
         const tb = document.getElementById('trainHistoryToolbar');
         if (tb) tb.style.display = 'flex';
         renderHistoryList();
@@ -4393,6 +4474,7 @@ function viewCompletedWorkoutBreakdown() {
         restSecs = 60;
         startRestTimer();
       }
+      if (typeof pulseHaptic === 'function') pulseHaptic([20, 35, 20]);
       beep(880, 0.12);
     }
     window.completeKbFlowRound = completeKbFlowRound;
@@ -4645,8 +4727,65 @@ function viewCompletedWorkoutBreakdown() {
         if (e1rmEl) e1rmEl.innerText = `~${estBurn} kcal`;
       }
       if (ex) renderCurrentExercise();
+      if (typeof pulseHaptic === 'function') pulseHaptic([35, 50, 35, 50, 60]);
       showToast(`✓ Logged ${ex ? ex.name : 'Conditioning'}`);
+      openSessionSummaryModal({
+        title: ex ? ex.name : 'Conditioning Block',
+        format: st.format,
+        durationSec: totalDurationSec,
+        rounds: st.format === 'kb_flow' || st.format === 'amrap' ? st.amrapRounds : st.rounds,
+        tonnageKg: totalTonnageKg,
+        estBurn,
+        note: nextMsg
+      });
     }
+
+    function openSessionSummaryModal(opts = {}) {
+      const modal = document.getElementById('sessionSummaryModal');
+      const card = document.getElementById('sessionSummaryCard');
+      if (!modal || !card) return;
+      const mins = Math.max(1, Math.round((opts.durationSec || 0) / 60));
+      const tonnage = Number(opts.tonnageKg || 0);
+      const rounds = opts.rounds !== undefined ? opts.rounds : '--';
+      const estBurn = opts.estBurn || 0;
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#00e5ff; text-transform:uppercase;">🏆 Session Complete</span>
+          <span onclick="closeSessionSummaryModal()" style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;">✕</span>
+        </div>
+        <div style="font-size:16px; font-weight:800; color:#fff; line-height:1.25; margin-bottom:12px;">${opts.title || 'Workout Logged'}</div>
+        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:12px;">
+          <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">DURATION</div>
+            <div style="font-size:20px; font-weight:800; color:#fff; font-family:var(--font-mono);">${mins}m</div>
+          </div>
+          <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">ROUNDS</div>
+            <div style="font-size:20px; font-weight:800; color:#00e5ff; font-family:var(--font-mono);">${rounds}</div>
+          </div>
+          <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">TONNAGE</div>
+            <div style="font-size:20px; font-weight:800; color:#a855f7; font-family:var(--font-mono);">${tonnage > 0 ? tonnage.toLocaleString() + 'kg' : 'Body'}</div>
+          </div>
+          <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
+            <div style="font-size:10px; color:var(--text-muted); font-weight:700;">EST. BURN</div>
+            <div style="font-size:20px; font-weight:800; color:#10b981; font-family:var(--font-mono);">~${estBurn} kcal</div>
+          </div>
+        </div>
+        <div style="font-size:11.5px; color:#cbd5e1; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2); border-radius:8px; padding:8px 10px; line-height:1.4; margin-bottom:12px;">
+          ${opts.note || 'Saved to PULSE conditioning history & ready for Garmin activity auto-pairing.'}
+        </div>
+        <button type="button" onclick="closeSessionSummaryModal()" class="btn-action-primary" style="width:100%; margin:0;">✓ Done</button>
+      `;
+      modal.classList.add('active');
+    }
+    window.openSessionSummaryModal = openSessionSummaryModal;
+
+    function closeSessionSummaryModal() {
+      const modal = document.getElementById('sessionSummaryModal');
+      if (modal) modal.classList.remove('active');
+    }
+    window.closeSessionSummaryModal = closeSessionSummaryModal;
 
     // EXERCISE STEPPER & AUTOREGULATION LOGGING
     function renderCurrentExercise() {
