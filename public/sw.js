@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-hybrid-v5.13';
+const CACHE_NAME = 'pulse-hybrid-v5.14';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -50,8 +50,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation / HTML / JS / CSS: Network-first with offline cache fallback (ensures immediate updates on reload)
-  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json')) {
+  // 2. Navigation / HTML / JS / CSS / Icons: Network-first with offline cache fallback (ensures immediate updates on reload)
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json') || url.pathname.endsWith('.svg') || url.pathname.endsWith('.png')) {
     event.respondWith(
       fetch(event.request)
         .then((networkResponse) => {

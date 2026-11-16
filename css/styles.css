@@ -2218,7 +2218,7 @@
 }
 
 /* ==========================================================================
-   PULSE BOOT SPLASH SCREEN
+   PULSE BOOT SPLASH SCREEN & HEARTBEAT ANIMATIONS
    ========================================================================== */
 #pulseBootSplash {
   position: fixed;
@@ -2229,7 +2229,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.45s ease, visibility 0.45s ease;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
   user-select: none;
 }
 
@@ -2239,27 +2239,76 @@
   pointer-events: none;
 }
 
+@keyframes lubDubBeat {
+  0%   { transform: scale(1); }
+  14%  { transform: scale(1.16); }
+  28%  { transform: scale(0.97); }
+  42%  { transform: scale(1.22); }
+  65%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulseRingExpand {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
 @keyframes pulseEkgSweep {
   0% {
-    stroke-dashoffset: 620;
+    stroke-dashoffset: 420;
   }
   100% {
     stroke-dashoffset: 0;
   }
 }
 
-@keyframes pulseNodeBeat {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.35);
-  }
+.boot-logo-badge {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  border-radius: 30px;
+  background: linear-gradient(145deg, #0f172a 0%, #06080e 100%);
+  border: 1.5px solid rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 32px rgba(0, 229, 255, 0.25), inset 0 0 18px rgba(139, 92, 246, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lubDubBeat 1.15s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.boot-pulse-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 32px;
+  border: 2px solid rgba(0, 229, 255, 0.55);
+  pointer-events: none;
+  animation: pulseRingExpand 1.15s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.boot-pulse-ring-delay {
+  border-color: rgba(139, 92, 246, 0.45);
+  animation-delay: 0.28s;
 }
 
 .boot-ekg-path {
-  stroke-dasharray: 620;
-  stroke-dashoffset: 620;
-  animation: pulseEkgSweep 1.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-  filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.7));
+  stroke-dasharray: 140 280;
+  stroke-dashoffset: 420;
+  animation: pulseEkgSweep 1.15s linear infinite;
+  filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.85));
+}
+
+.header-heartbeat-avatar {
+  background: linear-gradient(145deg, #0f172a 0%, #090d16 100%) !important;
+  border: 1px solid rgba(0, 229, 255, 0.4) !important;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: lubDubBeat 1.35s ease-in-out infinite;
 }
