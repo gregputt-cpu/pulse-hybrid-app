@@ -838,9 +838,6 @@
     let currentArchetypeKey = 'option_a';
     let activeWorkoutPlan = [];
     let currentExIdx = 0;
-    if (typeof window.sessionLoggedSets === 'undefined') {
-      window.sessionLoggedSets = {};
-    }
 
     function loadDailyArchetype(key) {
       currentArchetypeKey = key || 'option_a';
@@ -2308,7 +2305,7 @@ function generateWorkoutFromGearAndGoal() {
         if (todayAct) {
           const isStr = `${todayAct.name || ''} ${todayAct.subTitle || ''}`.toLowerCase().includes('strength');
           return {
-            title: todayAct.subTitle || todayAct.name || 'Completed Workout Session',
+            title: todayAct.sub_title || todayAct.subTitle || todayAct.name || 'Completed Workout Session',
             durationMin: todayAct.durationMin || Math.round(todayAct.duration_min || 30),
             calories: todayAct.calories || 250,
             recoveryHours: isStr ? 48 : 24,

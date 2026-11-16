@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v32-muscle-rotation-progressive-load';
+const CACHE_NAME = 'pulse-cache-v33-full-audit-fix';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

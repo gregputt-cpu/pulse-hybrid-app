@@ -180,9 +180,9 @@
       if (fbEl) fbEl.innerText = totalBudget;
 
       // 2. Macro Targets (Greg Putt: 98.0kg, 17.2% BF -> 81.14kg lean mass)
-      const pTarget = athleteProteinAnchor || 200; // 2.46g/kg lean mass
-      const cTarget = 251; // Glycogen recharge for hybrid lifting + cardio
-      const fTarget = 80;  // Endocrine & cell health floor
+      const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200; // 2.46g/kg lean mass
+      const cTarget = (myNetDiaryData.targets && myNetDiaryData.targets.carbs) || 251; // Glycogen recharge for hybrid lifting + cardio
+      const fTarget = (myNetDiaryData.targets && myNetDiaryData.targets.fat) || 80;  // Endocrine & cell health floor
 
       // Current Consumed Totals
       if (!myNetDiaryData.totals) {
@@ -315,9 +315,9 @@
       const carbs = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.carbs) || 0;
       const fats = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.fat) || 0;
       const fiber = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.fiber) || 0;
-      const pTarget = athleteProteinAnchor || 200;
-      const cTarget = 251;
-      const fTarget = 80;
+      const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
+      const cTarget = (myNetDiaryData.targets && myNetDiaryData.targets.carbs) || 251;
+      const fTarget = (myNetDiaryData.targets && myNetDiaryData.targets.fat) || 80;
 
       const diff = totalBudget - cals;
       const remainingCals = Math.max(0, diff);
@@ -1067,4 +1067,228 @@
 
       showToast(`✓ +${amountMl}ml Hydration Logged`);
     }
+
+    // ==================== FUEL TAB CONTROLS & QUICK LOG MODAL ====================
+
+    function openQuickLogModal() {
+      const modal = document.getElementById('quickLogModal');
+      if (modal) modal.classList.add('open');
+      const desc = document.getElementById('quickLogDesc');
+      const cals = document.getElementById('quickLogCals');
+      const prot = document.getElementById('quickLogProtein');
+      if (desc) desc.value = '';
+      if (cals) cals.value = '';
+      if (prot) prot.value = '';
+    }
+
+    function closeQuickLogModal() {
+      const modal = document.getElementById('quickLogModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function addQuickLogPresets(cals, prot) {
+      const desc = document.getElementById('quickLogDesc');
+      const calsEl = document.getElementById('quickLogCals');
+      const protEl = document.getElementById('quickLogProtein');
+      if (desc && !desc.value.trim()) {
+        desc.value = 'Quick Protein Intake';
+      }
+      if (calsEl) calsEl.value = cals;
+      if (protEl) protEl.value = prot;
+    }
+
+    function submitQuickLog() {
+      const descEl = document.getElementById('quickLogDesc');
+      const calsEl = document.getElementById('quickLogCals');
+      const protEl = document.getElementById('quickLogProtein');
+
+      const desc = (descEl && descEl.value.trim()) || 'Quick Intake';
+      const cals = parseInt(calsEl && calsEl.value) || 0;
+      const prot = parseInt(protEl && protEl.value) || 0;
+
+      if (cals <= 0 && prot <= 0) return;
+
+      const carbs = 0;
+      const fat = Math.max(0, Math.round((cals - prot * 4) / 9));
+
+      if (!myNetDiaryData.meals) myNetDiaryData.meals = {};
+      if (!myNetDiaryData.meals.snacks) {
+        myNetDiaryData.meals.snacks = {
+          name: 'Snacks & Hydration',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          items: []
+        };
+      }
+      if (!Array.isArray(myNetDiaryData.meals.snacks.items)) {
+        myNetDiaryData.meals.snacks.items = [];
+      }
+
+      myNetDiaryData.meals.snacks.items.push({
+        name: desc,
+        cals: cals,
+        p: prot,
+        c: carbs,
+        f: fat
+      });
+
+      myNetDiaryData.meals.snacks.calories = (myNetDiaryData.meals.snacks.calories || 0) + cals;
+      myNetDiaryData.meals.snacks.protein = (myNetDiaryData.meals.snacks.protein || 0) + prot;
+      myNetDiaryData.meals.snacks.carbs = (myNetDiaryData.meals.snacks.carbs || 0) + carbs;
+      myNetDiaryData.meals.snacks.fat = (myNetDiaryData.meals.snacks.fat || 0) + fat;
+
+      if (!myNetDiaryData.totals) {
+        myNetDiaryData.totals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, water: 0.0 };
+      }
+      myNetDiaryData.totals.calories = (myNetDiaryData.totals.calories || 0) + cals;
+      myNetDiaryData.totals.protein = (myNetDiaryData.totals.protein || 0) + prot;
+      myNetDiaryData.totals.carbs = (myNetDiaryData.totals.carbs || 0) + carbs;
+      myNetDiaryData.totals.fat = (myNetDiaryData.totals.fat || 0) + fat;
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+      closeQuickLogModal();
+
+      if (typeof showToast === 'function') {
+        showToast(`✓ Quick logged ${cals} kcal • ${prot}g P`);
+      }
+    }
+
+    function selectDietStrategy(key) {
+      activeDietStrategy = key;
+      const strategyMap = {
+        'balanced': ['btnDietBalanced', 'panelDietBalanced'],
+        'lowcarb': ['btnDietLowCarb', 'panelDietLowCarb'],
+        'carbcycle': ['btnDietCarbCycle', 'panelDietCarbCycle'],
+        'fasting': ['btnDietFasting', 'panelDietFasting'],
+        'custom': ['btnDietCustom', 'panelDietCustom']
+      };
+
+      Object.entries(strategyMap).forEach(([sKey, [btnId, panelId]]) => {
+        const btn = document.getElementById(btnId);
+        const panel = document.getElementById(panelId);
+        const isActive = (sKey === key);
+        if (btn) btn.classList.toggle('active', isActive);
+        if (panel) panel.classList.toggle('active', isActive);
+      });
+    }
+
+    function setCarbCycleLevel(level) {
+      currentCarbCycleLevel = level;
+      const levelBtns = {
+        'high': 'btnCcHigh',
+        'mod': 'btnCcMod',
+        'low': 'btnCcLow'
+      };
+      Object.entries(levelBtns).forEach(([k, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (btn) btn.classList.toggle('active', k === level);
+      });
+
+      if (!myNetDiaryData.targets) {
+        myNetDiaryData.targets = {
+          calories: athleteDailyBudget || 2437,
+          protein: athleteProteinAnchor || 200,
+          carbs: 251,
+          fat: 80
+        };
+      }
+
+      const carbMap = { high: 300, mod: 200, low: 80 };
+      myNetDiaryData.targets.carbs = carbMap[level] !== undefined ? carbMap[level] : 200;
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+    }
+
+    function updateFastingTimerDisplay() {
+      const d = document.getElementById('fastingTimerDisplay');
+      if (d) {
+        const h = Math.floor(fastingTimerSeconds / 3600);
+        const m = Math.floor((fastingTimerSeconds % 3600) / 60);
+        d.innerText = `${h}h ${m}m`;
+      }
+      const btn = document.getElementById('btnToggleFastTimer');
+      if (btn) btn.innerText = fastingTimerRunning ? 'Running' : 'Paused';
+    }
+
+    function toggleFastingTimer() {
+      fastingTimerRunning = !fastingTimerRunning;
+      if (fastingTimerRunning) {
+        if (!fastingTimerInterval) {
+          fastingTimerInterval = setInterval(() => {
+            fastingTimerSeconds++;
+            updateFastingTimerDisplay();
+          }, 1000);
+        }
+      } else {
+        if (fastingTimerInterval) {
+          clearInterval(fastingTimerInterval);
+          fastingTimerInterval = null;
+        }
+      }
+      updateFastingTimerDisplay();
+    }
+
+    function resetFastingTimer() {
+      fastingTimerSeconds = 0;
+      updateFastingTimerDisplay();
+    }
+
+    function updateProDial() {
+      const pSlider = document.getElementById('sliderProtein');
+      const fSlider = document.getElementById('sliderFat');
+      const prot = parseInt(pSlider ? pSlider.value : 200) || 200;
+      const fatPct = parseInt(fSlider ? fSlider.value : 30) || 30;
+      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || 2437;
+
+      const protValEl = document.getElementById('sliderValProtein');
+      const fatValEl = document.getElementById('sliderValFat');
+      const dialCalsEl = document.getElementById('proDialCals');
+      const carbsValEl = document.getElementById('sliderValCarbs');
+
+      if (protValEl) protValEl.innerText = `${prot}g`;
+      if (fatValEl) fatValEl.innerText = `${fatPct}%`;
+      if (dialCalsEl) dialCalsEl.innerText = `${cals.toLocaleString()} kcal`;
+
+      const carbs = Math.max(20, Math.round((cals - prot * 4 - cals * (fatPct / 100)) / 4));
+      if (carbsValEl) carbsValEl.innerText = `${carbs}g`;
+    }
+
+    function applyCustomProDial() {
+      const pSlider = document.getElementById('sliderProtein');
+      const fSlider = document.getElementById('sliderFat');
+      const prot = parseInt(pSlider ? pSlider.value : 200) || 200;
+      const fatPct = parseInt(fSlider ? fSlider.value : 30) || 30;
+      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || 2437;
+      const carbs = Math.max(20, Math.round((cals - prot * 4 - cals * (fatPct / 100)) / 4));
+      const fatGrams = Math.max(20, Math.round((cals * (fatPct / 100)) / 9));
+
+      if (!myNetDiaryData.targets) myNetDiaryData.targets = {};
+      myNetDiaryData.targets.calories = cals;
+      myNetDiaryData.targets.protein = prot;
+      myNetDiaryData.targets.carbs = carbs;
+      myNetDiaryData.targets.fat = fatGrams;
+      athleteProteinAnchor = prot;
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
+
+      if (typeof showToast === 'function') {
+        showToast(`✓ Targets Updated: ${prot}g P • ${carbs}g C • ${fatGrams}g F`);
+      }
+    }
+
+    function refreshLiveNutritionTelemetry() {
+      if (typeof triggerMndAutoPull === 'function') {
+        triggerMndAutoPull();
+      } else if (typeof loadLiveState === 'function') {
+        loadLiveState();
+      }
+      renderMyNetDiaryEngine();
+    }
+
 
