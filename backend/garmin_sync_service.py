@@ -3,10 +3,17 @@ import json
 from datetime import datetime, date
 from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnectTooManyRequestsError
 from benefits_engine import PhysiologicalBenefitsEngine
+try:
+    import db
+except Exception:
+    db = None
 
-TOKEN_DIR = os.environ.get('GARMIN_TOKEN_DIR', '/shared/user/.gemini/garmin_tokens')
-if 'GARMIN_TOKENS_JSON' in os.environ and 'GARMIN_TOKEN_DIR' not in os.environ:
-    TOKEN_DIR = '/tmp/garmin_tokens'
+if 'GARMIN_TOKEN_DIR' in os.environ:
+    TOKEN_DIR = os.environ['GARMIN_TOKEN_DIR']
+elif os.path.exists('/data'):
+    TOKEN_DIR = '/data/garmin_tokens'
+else:
+    TOKEN_DIR = '/shared/user/.gemini/garmin_tokens'
 
 # Only fall back to /tmp/garmin_tokens if TOKEN_DIR isn't writable
 try:
@@ -24,13 +31,6 @@ if 'GARMIN_TOKENS_JSON' in os.environ:
     if (raw_env.startswith('"') and raw_env.endswith('"')) or (raw_env.startswith("'") and raw_env.endswith("'")):
         raw_env = raw_env[1:-1].strip()
     os.environ['GARMIN_TOKENS_JSON'] = raw_env
-    try:
-        token_file = os.path.join(TOKEN_DIR, 'garmin_tokens.json')
-        if not os.path.exists(token_file):
-            with open(token_file, 'w') as f:
-                f.write(raw_env)
-    except Exception as e:
-        print(f"[GarminSync] Warning writing GARMIN_TOKENS_JSON to {TOKEN_DIR}: {e}")
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, 'live_state.json')
@@ -45,35 +45,73 @@ class GarminSyncService:
         self.client = None
         self.pending_login_state = None
 
+    def _persist_tokens(self, client):
+        if not client:
+            return
+        try:
+            os.makedirs(TOKEN_DIR, exist_ok=True)
+            client.client.dump(TOKEN_DIR)
+        except Exception as e:
+            print(f"[GarminSync] Warning dumping tokens to {TOKEN_DIR}: {e}")
+        if db is not None:
+            try:
+                dumped = client.client.dumps()
+                if dumped:
+                    db.set_kv('garmin_tokens_json', dumped)
+            except Exception as e:
+                print(f"[GarminSync] Warning persisting tokens to DB: {e}")
+
+    def _try_load_token_str(self, client, raw_tok):
+        if not raw_tok:
+            return False
+        tok = raw_tok.strip()
+        if (tok.startswith('"') and tok.endswith('"')) or (tok.startswith("'") and tok.endswith("'")):
+            tok = tok[1:-1].strip()
+        try:
+            client.login(tokenstore=tok)
+            return True
+        except Exception:
+            try:
+                client.client.loads(tok)
+                return True
+            except Exception:
+                return False
+
     def get_client(self):
         if not self.client:
             self.client = Garmin()
-            try:
-                self.client.login(tokenstore=TOKEN_DIR)
-            except Exception as e:
-                print(f"[GarminSync] Login from tokenstore ({TOKEN_DIR}) error: {e}")
-                if 'GARMIN_TOKENS_JSON' in os.environ:
-                    raw_tok = os.environ['GARMIN_TOKENS_JSON'].strip()
-                    if (raw_tok.startswith('"') and raw_tok.endswith('"')) or (raw_tok.startswith("'") and raw_tok.endswith("'")):
-                        raw_tok = raw_tok[1:-1].strip()
-                    try:
-                        self.client.login(tokenstore=raw_tok)
-                    except Exception:
-                        try:
-                            self.client.client.loads(raw_tok)
-                        except Exception as e2:
-                            print(f"[GarminSync] Login from GARMIN_TOKENS_JSON error: {e2}")
-                            self.client = None
-                            raise e2
-                else:
-                    self.client = None
-                    raise
+            loaded = False
+            # 1. Try SQLite persistent token store first (survives Railway restarts & stores refreshed OAuth2)
+            if db is not None:
+                try:
+                    db_tok = db.get_kv('garmin_tokens_json')
+                    if db_tok and self._try_load_token_str(self.client, db_tok):
+                        loaded = True
+                except Exception as e:
+                    print(f"[GarminSync] DB token load notice: {e}")
+
+            # 2. Try persistent TOKEN_DIR
+            if not loaded:
+                try:
+                    self.client.login(tokenstore=TOKEN_DIR)
+                    loaded = True
+                except Exception as e:
+                    print(f"[GarminSync] Login from tokenstore ({TOKEN_DIR}) error: {e}")
+
+            # 3. Fall back to GARMIN_TOKENS_JSON env var
+            if not loaded and 'GARMIN_TOKENS_JSON' in os.environ:
+                if self._try_load_token_str(self.client, os.environ['GARMIN_TOKENS_JSON']):
+                    loaded = True
+
+            if not loaded:
+                self.client = None
+                raise GarminConnectAuthenticationError("No valid Garmin token found in DB, tokenstore, or GARMIN_TOKENS_JSON")
+
             try:
                 self.client.display_name = self.client.client.profile.get('displayName')
             except Exception:
                 pass
         return self.client
-
 
     def export_tokens_json(self):
         if self.client:
@@ -83,16 +121,20 @@ class GarminSyncService:
                     return dumped
             except Exception as e:
                 print(f"[GarminSync] Warning dumping from active client: {e}")
+        if db is not None:
+            try:
+                db_tok = db.get_kv('garmin_tokens_json')
+                if db_tok:
+                    return db_tok
+            except Exception:
+                pass
         try:
             temp_client = Garmin()
             try:
                 temp_client.login(tokenstore=TOKEN_DIR)
             except Exception:
-                if 'GARMIN_TOKENS_JSON' in os.environ:
-                    try:
-                        temp_client.login(tokenstore=os.environ['GARMIN_TOKENS_JSON'])
-                    except Exception:
-                        temp_client.client.loads(os.environ['GARMIN_TOKENS_JSON'])
+                if 'GARMIN_TOKENS_JSON' in os.environ and self._try_load_token_str(temp_client, os.environ['GARMIN_TOKENS_JSON']):
+                    pass
                 else:
                     raise
             return temp_client.client.dumps()
@@ -108,7 +150,7 @@ class GarminSyncService:
             if isinstance(res, tuple) and len(res) == 2 and res[0] == "needs_mfa":
                 self.pending_login_state = (client, res[1])
                 return {"needs_mfa": True, "message": "2FA code required"}
-            client.client.dump(TOKEN_DIR)
+            self._persist_tokens(client)
             self.client = client
             return {"success": True}
         except Exception as e:
@@ -120,8 +162,7 @@ class GarminSyncService:
         try:
             client, client_state = self.pending_login_state
             client.resume_login(client_state, mfa_code.strip())
-            os.makedirs(TOKEN_DIR, exist_ok=True)
-            client.client.dump(TOKEN_DIR)
+            self._persist_tokens(client)
             self.client = client
             self.pending_login_state = None
             return {"success": True}
@@ -419,4 +460,5 @@ class GarminSyncService:
             except Exception:
                 pass
 
+        self._persist_tokens(client)
         return state

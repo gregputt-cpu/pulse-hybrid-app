@@ -303,11 +303,12 @@ class MyNetDiarySyncService:
                     s_benefits = self.benefits_engine.generate_benefits(
                         "Walking", s_sub, 45.0, step_cals, 92, 118, 0.8, 0.0
                     )
+                    s_time = datetime.now().strftime("%H:%M:%S") if d_str == target_date_str else "17:30:00"
                     bridged_activities.append({
                         "id": s_id,
                         "name": "Daily Steps & Movement",
                         "sub_title": s_sub,
-                        "date": f"{d_str} 17:30:00",
+                        "date": f"{d_str} {s_time}",
                         "duration_min": 45.0,
                         "calories": step_cals,
                         "workout_calories": step_cals,
@@ -359,11 +360,12 @@ class MyNetDiarySyncService:
                         s_benefits = self.benefits_engine.generate_benefits(
                             "Walking", s_sub, s_dur, s_cals, 92, 118, 0.8, 0.0
                         )
+                        s_time = datetime.now().strftime("%H:%M:%S") if d_str == target_date_str else "17:30:00"
                         bridged_activities.append({
                             "id": s_id,
                             "name": "Daily Steps & Movement",
                             "sub_title": s_sub,
-                            "date": f"{d_str} 17:30:00",
+                            "date": f"{d_str} {s_time}",
                             "duration_min": s_dur,
                             "calories": s_cals,
                             "workout_calories": s_cals,

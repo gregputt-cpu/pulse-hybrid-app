@@ -52,6 +52,13 @@ def init_db() -> None:
                 timestamp TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS kv_store (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TEXT
+            )
+        """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_renpho_timestamp ON renpho_history(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_strength_timestamp ON strength_logs(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_hydration_date ON hydration_logs(date_str)")
@@ -295,3 +302,25 @@ def get_hydration_total(date_str: str) -> int:
         )
         row = cursor.fetchone()
         return int(row["total"] or 0) if row and row["total"] is not None else 0
+
+def set_kv(key: str, value: str) -> None:
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO kv_store (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+            """,
+            (key, value, datetime.now().isoformat())
+        )
+        conn.commit()
+
+def get_kv(key: str) -> Optional[str]:
+    init_db()
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM kv_store WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        return str(row["value"]) if row and row["value"] is not None else None
