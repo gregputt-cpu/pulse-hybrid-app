@@ -1580,7 +1580,20 @@
           const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
           const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
           const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
-          const todayActsCount = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities.length : 0;
+          const _now = new Date();
+          const todayIsoDate = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+          const rawTodayActs = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities : [];
+          const filteredTodayActs = rawTodayActs.filter(a => {
+            const actDateStr = String(a.date || a.rawDate || '');
+            if (!actDateStr.startsWith(todayIsoDate)) return false;
+            const name = String(a.name || '');
+            if (name.includes('Daily Steps & Movement')) return false;
+            const duration = Number(a.duration_min || a.durationMin || 0);
+            const cals = Number(a.calories || a.workout_calories || 0);
+            if (duration < 10 && cals < 80) return false;
+            return true;
+          });
+          const todayActsCount = filteredTodayActs.length;
           let desiredSub = '';
           if (todayActsCount > 0) {
             desiredSub = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${g.active_calories || 0} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;

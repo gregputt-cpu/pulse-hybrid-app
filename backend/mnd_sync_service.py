@@ -662,11 +662,13 @@ class MyNetDiarySyncService:
                 ]
                 if not existing_today:
                     garmin_state['today_activities'] = today_bridged
+                else:
+                    garmin_state['today_activities'] = existing_today
             else:
-                # Clear any stale garmin_via_mnd_bridge entry for today_str while keeping real garmin_oauth activities
+                # In the else branch, garmin_state['today_activities'] must ONLY keep activities from today_str
                 garmin_state['today_activities'] = [
                     a for a in garmin_state.get('today_activities', [])
-                    if not (str(a.get('date', '')).startswith(today_str) and a.get('source') == 'garmin_via_mnd_bridge')
+                    if str(a.get('date', '')).startswith(today_str) and a.get('source') != 'garmin_via_mnd_bridge'
                 ]
 
             if bridged_acts:
