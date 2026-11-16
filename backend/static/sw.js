@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-cache-v35-banner-and-timeout-fix';
+const CACHE_NAME = 'pulse-cache-v36-inline-conditioning-engine';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -850,19 +850,19 @@
         liss_cardio: {
           option_a: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'thoracic_openers', 'deadbug_hold'],
           option_kb: ['kb_swings', 'kb_suitcase_carry', 'zone2_flush', 'deadbug_hold'],
-          option_b: ['speed_rope_intervals', 'slam_ball_slams', 'zone2_flush', 'deadbug_hold'],
+          option_b: ['speed_rope_intervals', 'emom_hybrid_10', 'amrap_hybrid_10', 'zone2_flush'],
           option_c: ['thoracic_openers', 'couch_stretch_flow', 'knee_tke', 'glute_bridge_hold']
         },
         lower_hinge: {
           option_a: ['barbell_rdl', 'barbell_zercher_squat', 'glute_bridge_hold', 'kb_suitcase_carry', 'deadbug_hold'],
           option_kb: ['kb_heavy_rdl', 'kb_swings', 'kb_front_rack_squat', 'kb_suitcase_carry', 'deadbug_hold'],
-          option_b: ['kb_swings', 'slam_ball_slams', 'goblet_squat', 'speed_rope_intervals', 'deadbug_hold'],
+          option_b: ['emom_hybrid_10', 'speed_rope_intervals', 'amrap_hybrid_10', 'for_time_kb_chipper', 'deadbug_hold'],
           option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'deadbug_hold', 'couch_stretch_flow']
         },
         upper_push_pull: {
           option_a: ['barbell_floor_press', 'barbell_pendlay_row', 'weighted_dips', 'barbell_z_press', 'deadbug_hold'],
           option_kb: ['kb_clean_and_strict_press', 'kb_goblet_floor_press', 'kb_gorilla_row', 'pushups_renegade', 'kb_suitcase_carry'],
-          option_b: ['pushups_renegade', 'narrow_pushups', 'bench_dips', 'speed_rope_intervals', 'deadbug_hold'],
+          option_b: ['pushups_renegade', 'narrow_pushups', 'tabata_rope_core', 'amrap_hybrid_10', 'deadbug_hold'],
           option_c: ['zone2_flush', 'thoracic_openers', 'deadbug_hold', 'knee_tke']
         },
         mobility_stretch: {
@@ -1179,16 +1179,86 @@
       },
       {
         id: "speed_rope_intervals",
-        name: "Speed Rope Double-Under Ladder",
+        name: "Speed Rope Intervals",
         family: "cardio",
+        format: "interval",
+        workSec: 45,
+        restSec: 15,
+        rounds: 6,
         requiredGear: ["speedrope"],
         getBaseWeight: () => "Rope",
         getBaseReps: () => "45s",
         rest: "15s",
-        cue: "Wrists rotate tight near hips, light bounce on balls of feet.",
-        rationale: "Calf stiffness, ankle reactivity, and fast-twitch cardiovascular conditioning matching athletic speed-skipping agility.",
+        cue: "Wrists rotate tight near hips, light bounce on balls of feet. Stay relaxed in shoulders.",
+        rationale: "Calf stiffness, Achilles reactivity, and fast-twitch cardiovascular conditioning. Time-based intervals scale density cleanly.",
         setsCount: 6,
         goals: ["work_capacity", "recomp"]
+      },
+      {
+        id: "emom_hybrid_10",
+        name: "10-Min Hybrid EMOM (Swings + Rope)",
+        family: "cardio",
+        format: "emom",
+        workSec: 60,
+        restSec: 0,
+        rounds: 10,
+        requiredGear: [],
+        getBaseWeight: () => "KB / Rope",
+        getBaseReps: () => "10m EMOM",
+        rest: "EMOM",
+        cue: "Odd Mins: 15 KB Swings (or 15 Air Squats) • Even Mins: 45s Speed Rope (or High Knees). Rest remainder of each minute.",
+        rationale: "Every-Minute-On-the-Minute pacing builds aerobic power and repeatable work capacity while capping systemic CNS fatigue.",
+        setsCount: 10,
+        goals: ["work_capacity", "recomp", "kb_strength"]
+      },
+      {
+        id: "amrap_hybrid_10",
+        name: "10-Min Engine AMRAP",
+        family: "cardio",
+        format: "amrap",
+        durationSec: 600,
+        rounds: 1,
+        requiredGear: [],
+        getBaseWeight: () => "Body / KB",
+        getBaseReps: () => "10:00 AMRAP",
+        rest: "Continuous",
+        cue: "Cycle cleanly: 10 KB Swings + 10 Push-Ups + 40 Speed Rope Skips. Log each completed round.",
+        rationale: "Continuous density benchmark that tracks total rounds completed over time for measurable metabolic progression.",
+        setsCount: 1,
+        goals: ["work_capacity", "recomp"]
+      },
+      {
+        id: "tabata_rope_core",
+        name: "Tabata Conditioning (20s / 10s × 8)",
+        family: "cardio",
+        format: "interval",
+        workSec: 20,
+        restSec: 10,
+        rounds: 8,
+        requiredGear: [],
+        getBaseWeight: () => "Rope / Body",
+        getBaseReps: () => "20s/10s",
+        rest: "10s",
+        cue: "Max crisp effort for 20s (speed rope, mountain climbers, or shadow boxing), 10s nasal reset.",
+        rationale: "4-minute VO2max & glycolytic spike with minimal joint wear and high EPOC afterburn.",
+        setsCount: 8,
+        goals: ["work_capacity", "recomp"]
+      },
+      {
+        id: "for_time_kb_chipper",
+        name: "For-Time Conditioning Chipper",
+        family: "cardio",
+        format: "for_time",
+        durationSec: 720,
+        rounds: 3,
+        requiredGear: [],
+        getBaseWeight: () => "KB / Body",
+        getBaseReps: () => "3 RFT",
+        rest: "For Time",
+        cue: "3 Rounds For Time (12m cap): 20 KB Swings + 15 Goblet Squats + 60s Speed Rope.",
+        rationale: "High-output threshold test measuring total completion time as an objective conditioning benchmark.",
+        setsCount: 1,
+        goals: ["work_capacity", "recomp", "kb_strength"]
       },
       {
         id: "pushups_renegade",
@@ -3627,6 +3697,441 @@ function viewCompletedWorkoutBreakdown() {
       }, 120);
     }
 
+    // ==================== INLINE CONDITIONING & TIME-BASED ENGINE (INTERVAL / EMOM / AMRAP / STEADY / FOR TIME) ====================
+    let inlineTimerState = {
+      exId: null,
+      format: 'interval',
+      phase: 'work', // 'work' | 'rest' | 'amrap' | 'emom' | 'steady' | 'for_time'
+      workSec: 45,
+      restSec: 15,
+      rounds: 6,
+      currentRound: 1,
+      durationSec: 600,
+      secsLeft: 45,
+      elapsedSec: 0,
+      amrapRounds: 0,
+      running: false,
+      intervalId: null
+    };
+
+    function stopInlineTimer() {
+      if (inlineTimerState.intervalId) {
+        clearInterval(inlineTimerState.intervalId);
+        inlineTimerState.intervalId = null;
+      }
+      inlineTimerState.running = false;
+    }
+
+    function getConditioningProgression(exId) {
+      try {
+        const raw = localStorage.getItem('pulse_conditioning_history');
+        if (!raw) return null;
+        const map = JSON.parse(raw);
+        return map[exId] || null;
+      } catch(e) { return null; }
+    }
+
+    function saveConditioningProgression(exId, entry) {
+      try {
+        const raw = localStorage.getItem('pulse_conditioning_history');
+        const map = raw ? JSON.parse(raw) : {};
+        map[exId] = entry;
+        localStorage.setItem('pulse_conditioning_history', JSON.stringify(map));
+      } catch(e) {}
+    }
+
+    function getExerciseFormatConfig(ex) {
+      if (!ex) return { isTimed: false, format: 'strength' };
+      const id = String(ex.id || '');
+      const repStr = String(ex.targetReps || '');
+      const prog = getConditioningProgression(id);
+
+      if (ex.format === 'interval' || id.includes('rope') || id.includes('tabata')) {
+        const wSec = (prog && prog.workSec) ? prog.workSec : (ex.workSec || 45);
+        const rSec = (prog && prog.restSec !== undefined) ? prog.restSec : (ex.restSec !== undefined ? ex.restSec : 15);
+        const rnds = (prog && prog.nextRounds) ? prog.nextRounds : (ex.rounds || ex.setsCount || 6);
+        return { isTimed: true, format: 'interval', workSec: wSec, restSec: rSec, rounds: rnds, label: `${rnds} Rounds × ${wSec}s Work / ${rSec}s Rest` };
+      }
+      if (ex.format === 'emom' || id.includes('emom')) {
+        const rnds = (prog && prog.nextRounds) ? prog.nextRounds : (ex.rounds || ex.setsCount || 10);
+        return { isTimed: true, format: 'emom', workSec: 60, restSec: 0, rounds: rnds, label: `${rnds}-Min EMOM (60s Rounds)` };
+      }
+      if (ex.format === 'amrap' || id.includes('amrap')) {
+        const dur = (prog && prog.durationSec) ? prog.durationSec : (ex.durationSec || 600);
+        const mins = Math.round(dur / 60);
+        return { isTimed: true, format: 'amrap', durationSec: dur, rounds: 1, prevRounds: prog ? prog.amrapRounds : null, label: `${mins}:00 AMRAP (As Many Rounds As Possible)` };
+      }
+      if (ex.format === 'for_time' || id.includes('for_time')) {
+        const dur = ex.durationSec || 720;
+        const mins = Math.round(dur / 60);
+        return { isTimed: true, format: 'for_time', durationSec: dur, rounds: ex.rounds || 3, prevSec: prog ? prog.elapsedSec : null, label: `For Time (${mins}m Cap • ${ex.rounds || 3} Rounds)` };
+      }
+      if (ex.format === 'steady' || id.includes('zone2') || id.includes('walk') || id.includes('hold') || id.includes('carry') || id.includes('stretch') || id.includes('openers') || /^\d+\s*(s|sec|m|min)$/i.test(repStr.trim())) {
+        let sec = 45;
+        const mMin = repStr.match(/(\d+)\s*(?:m|min)/i);
+        const mSec = repStr.match(/(\d+)\s*(?:s|sec)/i);
+        if (mMin) sec = parseInt(mMin[1], 10) * 60;
+        else if (mSec) sec = parseInt(mSec[1], 10);
+        else if (id.includes('zone2') || id.includes('walk')) sec = 1500;
+        const rnds = ex.setsCount || 1;
+        const restS = parseRestSeconds(ex.rest || '45s');
+        const disp = sec >= 60 ? `${Math.round(sec / 60)} min` : `${sec}s`;
+        return { isTimed: true, format: 'steady', workSec: sec, restSec: rnds > 1 ? restS : 0, rounds: rnds, label: rnds > 1 ? `${rnds} Sets × ${disp} Hold/Carry` : `${disp} Continuous Steady` };
+      }
+      return { isTimed: false, format: 'strength' };
+    }
+
+    function initInlineTimerForExercise(ex, fmt) {
+      if (inlineTimerState.exId === ex.id && inlineTimerState.format === fmt.format) return;
+      stopInlineTimer();
+      inlineTimerState = {
+        exId: ex.id,
+        format: fmt.format,
+        phase: fmt.format === 'amrap' ? 'amrap' : (fmt.format === 'emom' ? 'emom' : (fmt.format === 'for_time' ? 'for_time' : 'work')),
+        workSec: fmt.workSec || 45,
+        restSec: fmt.restSec || 0,
+        rounds: fmt.rounds || 1,
+        currentRound: 1,
+        durationSec: fmt.durationSec || (fmt.workSec || 60),
+        secsLeft: (fmt.format === 'amrap') ? (fmt.durationSec || 600) : (fmt.format === 'for_time' ? 0 : (fmt.workSec || 45)),
+        elapsedSec: 0,
+        amrapRounds: 0,
+        running: false,
+        intervalId: null
+      };
+    }
+
+    function formatClockMMSS(sec) {
+      const s = Math.max(0, Math.round(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function renderInlineConditioningPlayer(ex, fmt) {
+      const container = document.getElementById('setRows');
+      if (!container) return;
+      const st = inlineTimerState;
+      const isLogged = Boolean(sessionLoggedSets[`${ex.id}_1`]?.logged);
+
+      let phaseLabel = '';
+      let phaseColor = 'var(--primary)';
+      if (st.format === 'interval') {
+        phaseLabel = st.phase === 'work'
+          ? `🟢 WORK • ROUND ${st.currentRound} OF ${st.rounds}`
+          : `🔵 REST • NEXT: ROUND ${Math.min(st.rounds, st.currentRound + 1)}`;
+        phaseColor = st.phase === 'work' ? '#10b981' : '#38bdf8';
+      } else if (st.format === 'emom') {
+        phaseLabel = `⏱ EMOM • MINUTE ${st.currentRound} OF ${st.rounds}`;
+        phaseColor = 'var(--primary)';
+      } else if (st.format === 'amrap') {
+        phaseLabel = `🔥 AMRAP • ${st.amrapRounds} ROUNDS COMPLETED`;
+        phaseColor = '#f59e0b';
+      } else if (st.format === 'for_time') {
+        phaseLabel = `🏁 FOR TIME • ${st.amrapRounds}/${st.rounds} ROUNDS`;
+        phaseColor = '#a78bfa';
+      } else {
+        phaseLabel = st.phase === 'rest'
+          ? `🔵 REST • SET ${st.currentRound} DONE`
+          : (st.rounds > 1 ? `🟢 HOLD / WORK • SET ${st.currentRound} OF ${st.rounds}` : `🟢 STEADY STATE • ${formatClockMMSS(st.workSec)}`);
+        phaseColor = st.phase === 'rest' ? '#38bdf8' : '#10b981';
+      }
+
+      let presetsHtml = '';
+      if (st.format === 'interval') {
+        const opts = [
+          { label: '30/15 × 6', w: 30, r: 15, n: 6 },
+          { label: '45/15 × 6', w: 45, r: 15, n: 6 },
+          { label: '90/30 × 4', w: 90, r: 30, n: 4 },
+          { label: '20/10 Tabata', w: 20, r: 10, n: 8 }
+        ];
+        presetsHtml = opts.map(o => {
+          const active = st.workSec === o.w && st.restSec === o.r && st.rounds === o.n;
+          return `<button type="button" onclick="setInlinePreset('interval', ${o.w}, ${o.r}, ${o.n})" style="flex:1; min-width:72px; padding:5px 4px; font-size:10px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.12)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${o.label}</button>`;
+        }).join('');
+      } else if (st.format === 'amrap' || st.format === 'emom' || st.format === 'for_time') {
+        const minsList = [8, 10, 12, 15];
+        presetsHtml = minsList.map(m => {
+          const active = st.format === 'emom' ? (st.rounds === m) : (Math.round(st.durationSec / 60) === m);
+          return `<button type="button" onclick="setInlinePreset('${st.format}', ${m}, 0, ${m})" style="flex:1; padding:5px 4px; font-size:10.5px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.12)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${m} min</button>`;
+        }).join('');
+      } else {
+        const durations = st.workSec >= 300 ? [
+          { label: '15m', sec: 900 }, { label: '25m', sec: 1500 }, { label: '35m', sec: 2100 }, { label: '45m', sec: 2700 }
+        ] : [
+          { label: '30s', sec: 30 }, { label: '45s', sec: 45 }, { label: '60s', sec: 60 }, { label: '90s', sec: 90 }
+        ];
+        presetsHtml = durations.map(d => {
+          const active = st.workSec === d.sec;
+          return `<button type="button" onclick="setInlinePreset('steady', ${d.sec}, ${st.restSec}, ${st.rounds})" style="flex:1; padding:5px 4px; font-size:10.5px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.12)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${d.label}</button>`;
+        }).join('');
+      }
+
+      const showRoundsCtrl = (st.format === 'amrap' || st.format === 'for_time');
+      const progNote = (fmt.prevRounds !== null && fmt.prevRounds !== undefined)
+        ? `Previous AMRAP benchmark: <strong>${fmt.prevRounds} rounds</strong> (aim for ${fmt.prevRounds + 1}).`
+        : (fmt.prevSec ? `Previous benchmark time: <strong>${formatClockMMSS(fmt.prevSec)}</strong>.` : `Goldfish Timer active • Auto-logs duration & conditioning stimulus.`);
+
+      container.innerHTML = `
+        <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(0,229,255,0.28); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span id="inlineTimerPhaseBadge" style="font-size:10.5px; font-weight:800; color:${phaseColor}; letter-spacing:0.04em; text-transform:uppercase;">${phaseLabel}</span>
+            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${st.format.toUpperCase()} MODE</span>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div id="inlineTimerDigits" style="font-size:38px; font-weight:800; font-family:var(--font-mono); color:#fff; letter-spacing:-0.03em; line-height:1;">${formatClockMMSS(st.secsLeft)}</div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" onclick="toggleInlineTimer()" style="padding:8px 14px; border-radius:8px; border:none; background:${st.running ? '#f59e0b' : 'var(--primary)'}; color:#000; font-size:12px; font-weight:800; cursor:pointer;">${st.running ? '⏸ Pause' : '▶ Start'}</button>
+              <button type="button" onclick="resetInlineTimer()" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">↺</button>
+              ${(st.format === 'interval' || st.format === 'emom' || st.rounds > 1) ? `<button type="button" onclick="skipInlinePhase()" title="Next round/phase" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">⏭</button>` : ''}
+            </div>
+          </div>
+
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            ${presetsHtml}
+          </div>
+
+          ${showRoundsCtrl ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px;">
+              <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">Completed Rounds</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
+                <strong style="font-size:14px; color:var(--primary); min-width:24px; text-align:center;">${st.amrapRounds}</strong>
+                <button type="button" onclick="stepInlineRound(1)" style="width:28px; height:28px; border-radius:6px; border:none; background:var(--primary); color:#000; font-weight:800; cursor:pointer;">+</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:10.5px; color:var(--text-muted); flex:1;">${progNote}</span>
+            <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:8px 14px; border-radius:8px; border:none; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.5); color:${isLogged ? '#000' : '#34d399'}; font-size:11.5px; font-weight:800; cursor:pointer;">
+              ${isLogged ? '✓ Conditioning Logged' : '✓ Complete & Log'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function setInlinePreset(format, val1, val2, val3) {
+      stopInlineTimer();
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (!ex) return;
+      if (format === 'interval') {
+        inlineTimerState.workSec = val1;
+        inlineTimerState.restSec = val2;
+        inlineTimerState.rounds = val3;
+        inlineTimerState.phase = 'work';
+        inlineTimerState.currentRound = 1;
+        inlineTimerState.secsLeft = val1;
+      } else if (format === 'emom') {
+        inlineTimerState.workSec = 60;
+        inlineTimerState.rounds = val1;
+        inlineTimerState.currentRound = 1;
+        inlineTimerState.phase = 'emom';
+        inlineTimerState.secsLeft = 60;
+      } else if (format === 'amrap') {
+        inlineTimerState.durationSec = val1 * 60;
+        inlineTimerState.secsLeft = val1 * 60;
+        inlineTimerState.amrapRounds = 0;
+      } else if (format === 'for_time') {
+        inlineTimerState.durationSec = val1 * 60;
+        inlineTimerState.secsLeft = 0;
+        inlineTimerState.amrapRounds = 0;
+      } else {
+        inlineTimerState.workSec = val1;
+        inlineTimerState.restSec = val2;
+        inlineTimerState.rounds = val3;
+        inlineTimerState.currentRound = 1;
+        inlineTimerState.phase = 'work';
+        inlineTimerState.secsLeft = val1;
+      }
+      inlineTimerState.elapsedSec = 0;
+      renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(650, 0.05);
+    }
+
+    function stepInlineRound(delta) {
+      inlineTimerState.amrapRounds = Math.max(0, inlineTimerState.amrapRounds + delta);
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(780, 0.05);
+    }
+
+    function resetInlineTimer() {
+      stopInlineTimer();
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (!ex) return;
+      inlineTimerState.currentRound = 1;
+      inlineTimerState.elapsedSec = 0;
+      if (inlineTimerState.format === 'amrap') {
+        inlineTimerState.secsLeft = inlineTimerState.durationSec;
+      } else if (inlineTimerState.format === 'for_time') {
+        inlineTimerState.secsLeft = 0;
+      } else {
+        inlineTimerState.phase = inlineTimerState.format === 'emom' ? 'emom' : 'work';
+        inlineTimerState.secsLeft = inlineTimerState.workSec;
+      }
+      renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(450, 0.06);
+    }
+
+    function skipInlinePhase() {
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (!ex) return;
+      if (inlineTimerState.format === 'interval' || inlineTimerState.format === 'steady') {
+        if (inlineTimerState.phase === 'work' && inlineTimerState.restSec > 0 && inlineTimerState.currentRound < inlineTimerState.rounds) {
+          inlineTimerState.phase = 'rest';
+          inlineTimerState.secsLeft = inlineTimerState.restSec;
+        } else if (inlineTimerState.currentRound < inlineTimerState.rounds) {
+          inlineTimerState.currentRound++;
+          inlineTimerState.phase = 'work';
+          inlineTimerState.secsLeft = inlineTimerState.workSec;
+        } else {
+          stopInlineTimer();
+          completeInlineConditioning(ex.id);
+          return;
+        }
+      } else if (inlineTimerState.format === 'emom') {
+        if (inlineTimerState.currentRound < inlineTimerState.rounds) {
+          inlineTimerState.currentRound++;
+          inlineTimerState.secsLeft = 60;
+        } else {
+          stopInlineTimer();
+          completeInlineConditioning(ex.id);
+          return;
+        }
+      }
+      renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(700, 0.08);
+    }
+
+    function toggleInlineTimer() {
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (!ex) return;
+      if (inlineTimerState.running) {
+        stopInlineTimer();
+        renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+        return;
+      }
+      inlineTimerState.running = true;
+      requestWakeLock();
+      beep(880, 0.1);
+      if (inlineTimerState.format === 'interval') speak("Work! Let's go!");
+      else if (inlineTimerState.format === 'emom') speak("Minute 1. Go!");
+      else if (inlineTimerState.format === 'amrap') speak("AMRAP started.");
+
+      inlineTimerState.intervalId = setInterval(() => {
+        const st = inlineTimerState;
+        st.elapsedSec++;
+        if (st.format === 'for_time') {
+          st.secsLeft = st.elapsedSec;
+          if (st.elapsedSec >= st.durationSec) {
+            stopInlineTimer();
+            beep(900, 0.25);
+            speak("Time cap reached.");
+            completeInlineConditioning(ex.id);
+            return;
+          }
+        } else {
+          st.secsLeft--;
+          if (st.secsLeft <= 0) {
+            if (st.format === 'interval' || (st.format === 'steady' && st.rounds > 1)) {
+              if (st.phase === 'work' && st.restSec > 0 && st.currentRound < st.rounds) {
+                st.phase = 'rest';
+                st.secsLeft = st.restSec;
+                beep(520, 0.18);
+                speak("Rest.");
+              } else if (st.currentRound < st.rounds) {
+                st.currentRound++;
+                st.phase = 'work';
+                st.secsLeft = st.workSec;
+                beep(880, 0.18);
+                speak(`Round ${st.currentRound}. Work!`);
+              } else {
+                stopInlineTimer();
+                beep(950, 0.3);
+                speak("Conditioning block complete!");
+                completeInlineConditioning(ex.id);
+                return;
+              }
+            } else if (st.format === 'emom') {
+              if (st.currentRound < st.rounds) {
+                st.currentRound++;
+                st.secsLeft = 60;
+                beep(880, 0.18);
+                speak(`Minute ${st.currentRound}.`);
+              } else {
+                stopInlineTimer();
+                beep(950, 0.3);
+                speak("EMOM complete!");
+                completeInlineConditioning(ex.id);
+                return;
+              }
+            } else {
+              stopInlineTimer();
+              beep(950, 0.3);
+              speak("Time complete!");
+              completeInlineConditioning(ex.id);
+              return;
+            }
+          }
+        }
+        const digitsEl = document.getElementById('inlineTimerDigits');
+        if (digitsEl) digitsEl.innerText = formatClockMMSS(st.secsLeft);
+      }, 1000);
+
+      renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+    }
+
+    function completeInlineConditioning(exId) {
+      stopInlineTimer();
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      const st = inlineTimerState;
+      const totalDurationSec = st.elapsedSec > 10 ? st.elapsedSec : (st.format === 'amrap' ? st.durationSec : (st.workSec + st.restSec) * st.rounds);
+      const estBurn = Math.max(25, Math.round((totalDurationSec / 60) * 10.5));
+
+      sessionLoggedSets[`${exId}_1`] = {
+        weight: ex ? (ex.targetWeight || 'Body') : 'Body',
+        reps: st.format === 'amrap' ? `${st.amrapRounds} rds` : formatClockMMSS(totalDurationSec),
+        logged: true,
+        status: 'hit',
+        format: st.format,
+        durationSec: totalDurationSec,
+        estBurn
+      };
+
+      // Elephant Progression: advance rounds or record AMRAP/For-Time benchmark
+      let nextMsg = '';
+      if (st.format === 'interval' || st.format === 'emom') {
+        const nextRounds = Math.min(16, st.rounds + 1);
+        saveConditioningProgression(exId, { workSec: st.workSec, restSec: st.restSec, nextRounds, lastDate: new Date().toISOString() });
+        nextMsg = `Conditioning density hit (${st.rounds} rounds, ~${estBurn} kcal). Next session progresses to ${nextRounds} rounds.`;
+      } else if (st.format === 'amrap') {
+        saveConditioningProgression(exId, { durationSec: st.durationSec, amrapRounds: st.amrapRounds, lastDate: new Date().toISOString() });
+        nextMsg = `AMRAP logged: ${st.amrapRounds} rounds in ${Math.round(st.durationSec / 60)}m (~${estBurn} kcal). Beat ${st.amrapRounds} next time.`;
+      } else if (st.format === 'for_time') {
+        saveConditioningProgression(exId, { elapsedSec: totalDurationSec, lastDate: new Date().toISOString() });
+        nextMsg = `For-Time benchmark logged: ${formatClockMMSS(totalDurationSec)} (~${estBurn} kcal).`;
+      } else {
+        nextMsg = `Timed block logged (${formatClockMMSS(totalDurationSec)}, ~${estBurn} kcal).`;
+      }
+
+      saveActiveSessionToLocalStorage();
+      const banner = document.getElementById('autoregBanner');
+      const tag = document.getElementById('autoregTag');
+      const msg = document.getElementById('autoregMessage');
+      const e1rmEl = document.getElementById('e1rmMetric');
+      if (banner && tag && msg) {
+        banner.classList.add('active');
+        tag.innerText = '✓ CONDITIONING PROGRESS LOGGED';
+        msg.innerText = nextMsg;
+        if (e1rmEl) e1rmEl.innerText = `~${estBurn} kcal`;
+      }
+      if (ex) renderCurrentExercise();
+      showToast(`✓ Logged ${ex ? ex.name : 'Conditioning'}`);
+    }
+
     // EXERCISE STEPPER & AUTOREGULATION LOGGING
     function renderCurrentExercise() {
       if (activeWorkoutPlan.length === 0) return;
@@ -3672,15 +4177,25 @@ function viewCompletedWorkoutBreakdown() {
         core_carry: "Loaded Carry (Anti-Lateral Core)"
       };
       document.getElementById('movementFamilyTag').innerText = familyNames[ex.family] || "Functional";
+
+      const fmt = getExerciseFormatConfig(ex);
       const wLabel = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
-      document.getElementById('exTarget').innerText = `Prescribed: ${ex.setsCount} Sets × ${ex.targetReps} Reps @ ${wLabel}`;
-      document.getElementById('exRestTarget').innerText = `Rest: ${ex.rest}`;
+      document.getElementById('exTarget').innerText = fmt.isTimed
+        ? `Prescribed: ${fmt.label}`
+        : `Prescribed: ${ex.setsCount} Sets × ${ex.targetReps} Reps @ ${wLabel}`;
+      document.getElementById('exRestTarget').innerText = fmt.isTimed ? `Format: ${fmt.format.toUpperCase()}` : `Rest: ${ex.rest}`;
       document.getElementById('exCue').innerText = `Cue: ${ex.cue}`;
       document.getElementById('exRationale').innerHTML = `<strong>Why Selected:</strong> ${ex.rationale || 'Selected for target biomechanical recruitment.'}`;
       document.getElementById('autoregBanner').classList.remove('active');
 
       const setRowsContainer = document.getElementById('setRows');
       setRowsContainer.innerHTML = '';
+
+      if (fmt.isTimed) {
+        initInlineTimerForExercise(ex, fmt);
+        renderInlineConditioningPlayer(ex, fmt);
+        return;
+      }
 
       for (let s = 1; s <= ex.setsCount; s++) {
         const row = document.createElement('div');
