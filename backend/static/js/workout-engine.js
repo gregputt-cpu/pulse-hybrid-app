@@ -836,97 +836,160 @@
     }
 
     let currentArchetypeKey = 'option_a';
+    let activeWorkoutPlan = [];
+    let currentExIdx = 0;
+    if (typeof sessionLoggedSets === 'undefined') {
+      var sessionLoggedSets = {};
+    }
 
     function loadDailyArchetype(key) {
       currentArchetypeKey = key || 'option_a';
-      const arch = dailyArchetypes[currentArchetypeKey] || dailyArchetypes.option_a;
-      
-      // Auto-swap contraindicated exercises based on athleteInjuries and preferences
-      activeWorkoutPlan = arch.exercises.map((baseEx, idx) => {
-        const finalExId = resolvePreferredExerciseId(baseEx.id, baseEx.family, `${currentArchetypeKey}_${idx}`);
-        let ex = baseEx;
-        if (finalExId && finalExId !== baseEx.id) {
-          const found = getAllExercises().find(e => e.id === finalExId);
-          if (found) {
-            ex = {
-              id: found.id,
-              name: found.name,
-              family: found.family || baseEx.family,
-              setsCount: found.setsCount || baseEx.setsCount || 3,
-              rest: found.rest || baseEx.rest || "75s",
-              cue: found.cue || baseEx.cue || "",
-              rationale: found.rationale || baseEx.rationale || ""
-            };
-          }
+      const verdict = (typeof computeTodayWorkoutVerdict === 'function') ? computeTodayWorkoutVerdict() : null;
+      const todayGearMode = (typeof getTodayGearMode === 'function') ? getTodayGearMode() : 'gym';
+      const todayTimeMode = (typeof getTodayTimeMode === 'function') ? getTodayTimeMode() : '45m';
+      const targetCount = todayTimeMode === '20m' ? 3 : 5;
+
+      const exerciseMatrix = {
+        liss_cardio: {
+          option_a: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'thoracic_openers', 'deadbug_hold'],
+          option_kb: ['kb_swings', 'kb_suitcase_carry', 'zone2_flush', 'deadbug_hold'],
+          option_b: ['speed_rope_intervals', 'slam_ball_slams', 'zone2_flush', 'deadbug_hold'],
+          option_c: ['thoracic_openers', 'couch_stretch_flow', 'knee_tke', 'glute_bridge_hold']
+        },
+        lower_hinge: {
+          option_a: ['barbell_rdl', 'barbell_zercher_squat', 'glute_bridge_hold', 'kb_suitcase_carry', 'deadbug_hold'],
+          option_kb: ['kb_heavy_rdl', 'kb_swings', 'kb_front_rack_squat', 'kb_suitcase_carry', 'deadbug_hold'],
+          option_b: ['kb_swings', 'slam_ball_slams', 'goblet_squat', 'speed_rope_intervals', 'deadbug_hold'],
+          option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'deadbug_hold', 'couch_stretch_flow']
+        },
+        upper_push_pull: {
+          option_a: ['barbell_floor_press', 'barbell_pendlay_row', 'weighted_dips', 'barbell_z_press', 'deadbug_hold'],
+          option_kb: ['kb_clean_and_strict_press', 'kb_goblet_floor_press', 'kb_gorilla_row', 'pushups_renegade', 'kb_suitcase_carry'],
+          option_b: ['pushups_renegade', 'narrow_pushups', 'bench_dips', 'speed_rope_intervals', 'deadbug_hold'],
+          option_c: ['zone2_flush', 'thoracic_openers', 'deadbug_hold', 'knee_tke']
+        },
+        mobility_stretch: {
+          option_c: ['thoracic_openers', 'couch_stretch_flow', 'glute_bridge_hold', 'deadbug_hold'],
+          option_a: ['barbell_rdl', 'barbell_floor_press', 'deadbug_hold'],
+          option_kb: ['kb_swings', 'kb_suitcase_carry', 'deadbug_hold'],
+          option_b: ['pushups_renegade', 'speed_rope_intervals', 'deadbug_hold']
+        },
+        rest_day: {
+          option_c: ['thoracic_openers', 'couch_stretch_flow', 'glute_bridge_hold', 'deadbug_hold'],
+          option_a: ['barbell_rdl', 'barbell_floor_press', 'deadbug_hold'],
+          option_kb: ['kb_swings', 'kb_suitcase_carry', 'deadbug_hold'],
+          option_b: ['pushups_renegade', 'speed_rope_intervals', 'deadbug_hold']
+        },
+        full_body_strength: {
+          option_a: ['barbell_rdl', 'barbell_floor_press', 'weighted_dips', 'barbell_pendlay_row', 'barbell_z_press'],
+          option_kb: ['kb_clean_and_strict_press', 'kb_heavy_rdl', 'kb_goblet_floor_press', 'kb_gorilla_row', 'kb_suitcase_carry'],
+          option_b: ['kb_swings', 'db_press', 'slam_ball_slams', 'pushups_renegade', 'speed_rope_intervals'],
+          option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'deadbug_hold']
         }
+      };
+
+      const focusMode = (verdict && verdict.mode && exerciseMatrix[verdict.mode]) ? verdict.mode : 'full_body_strength';
+      const matrixForMode = exerciseMatrix[focusMode] || exerciseMatrix.full_body_strength;
+      const rawExIds = matrixForMode[currentArchetypeKey] || matrixForMode.option_a || ['zone2_flush', 'knee_tke', 'deadbug_hold'];
+      const slicedExIds = rawExIds.slice(0, targetCount);
+
+      const allExercises = getAllExercises();
+
+      activeWorkoutPlan = slicedExIds.map((origExId, idx) => {
+        const swapKey = `${currentArchetypeKey}_${idx}`;
+        const finalExId = resolvePreferredExerciseId(origExId, null, swapKey);
+        const found = allExercises.find(e => e.id === finalExId) || allExercises.find(e => e.id === origExId);
+        let ex = found ? { ...found } : {
+          id: finalExId,
+          name: finalExId.replace(/_/g, ' ').toUpperCase(),
+          family: 'functional',
+          setsCount: 3,
+          rest: '75s',
+          cue: '',
+          rationale: ''
+        };
+
         let modified = { ...ex };
         if (typeof getPrescribedLoad === 'function') {
           const rx = getPrescribedLoad(ex.id, ex);
           modified.targetWeight = rx.weight;
           modified.targetReps = rx.reps;
+        } else {
+          modified.targetWeight = typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : (ex.targetWeight !== undefined ? ex.targetWeight : 'Body');
+          modified.targetReps = typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : (ex.targetReps !== undefined ? ex.targetReps : 8);
         }
-        if (currentArchetypeKey === 'option_kb' && gearConfig.kb && gearConfig.kb.weight && !swappedExId) {
+
+        if (currentArchetypeKey === 'option_kb' && typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) {
           modified.targetWeight = gearConfig.kb.weight;
         }
-        if (athleteInjuries && athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) {
-          modified = {
-            id: "db_floor_press_neutral",
-            name: "Neutral-Grip DB Floor Press",
-            family: "horizontal_push",
-            targetWeight: "2×22kg",
-            targetReps: 10,
-            setsCount: 4,
-            rest: "75s",
-            cue: "Palms facing in, elbows tucked at 45°. Saves anterior rotator cuff.",
-            rationale: "[🛡️ Shoulder-Safe Swap] Substituted for deep dips to eliminate anterior capsule shear while preserving chest & tricep drive."
-          };
-        }
-        if (athleteInjuries && athleteInjuries.knees && (ex.id === 'kb_goblet_lunge' || ex.id === 'barbell_zercher_squat' || (ex.family === 'squat' && ex.id !== 'knee_tke'))) {
-          modified = {
-            id: "glute_bridge_elevated",
-            name: "Elevated Glute Bridge & RDL Hinge",
-            family: "hip_hinge",
-            targetWeight: "Body / DB",
-            targetReps: 15,
-            setsCount: 4,
-            rest: "60s",
-            cue: "Drive through heels, squeeze glutes hard. Zero knee flexion shear.",
-            rationale: "[🛡️ Knee-Safe Swap] Sparing patellar tendon while maintaining heavy posterior chain activation."
-          };
-        }
-        if (athleteInjuries && athleteInjuries.lumbar && (ex.id === 'barbell_zercher_squat' || ex.id === 'barbell_z_press')) {
-          modified = {
-            id: "chest_supported_db_row",
-            name: "Chest-Supported Dumbbell Row",
-            family: "pull",
-            targetWeight: "2×20kg",
-            targetReps: 10,
-            setsCount: 4,
-            rest: "60s",
-            cue: "Torso fully supported on incline; strictly upper-back squeeze.",
-            rationale: "[🛡️ Lumbar-Safe Swap] Bench supports upper torso to eliminate spinal axial shear."
-          };
-        }
-        if (athleteInjuries && athleteInjuries.ankles && ex.id === 'speed_rope_intervals') {
-          modified = {
-            id: "incline_walk_flush",
-            name: "Zone 2 Incline Treadmill Walk",
-            family: "cardio",
-            targetWeight: "Body",
-            targetReps: "15 min",
-            setsCount: 1,
-            rest: "60s",
-            cue: "Low-impact flat-foot heel-to-toe stride; zero Achilles ballistic shock.",
-            rationale: "[🛡️ Ankle-Safe Swap] Low impact cardiovascular flush sparing Achilles tendon."
-          };
+
+        // Apply athlete injury guardrails
+        if (typeof athleteInjuries !== 'undefined' && athleteInjuries) {
+          if (athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) {
+            modified = {
+              id: "db_floor_press_neutral",
+              name: "Neutral-Grip DB Floor Press",
+              family: "horizontal_push",
+              targetWeight: "2×22kg",
+              targetReps: 10,
+              setsCount: 4,
+              rest: "75s",
+              cue: "Palms facing in, elbows tucked at 45°. Saves anterior rotator cuff.",
+              rationale: "[🛡️ Shoulder-Safe Swap] Substituted for deep dips to eliminate anterior capsule shear while preserving chest & tricep drive."
+            };
+          }
+          if (athleteInjuries.knees && (ex.id === 'kb_goblet_lunge' || ex.id === 'barbell_zercher_squat' || (ex.family === 'squat' && ex.id !== 'knee_tke'))) {
+            modified = {
+              id: "glute_bridge_elevated",
+              name: "Elevated Glute Bridge & RDL Hinge",
+              family: "hip_hinge",
+              targetWeight: "Body / DB",
+              targetReps: 15,
+              setsCount: 4,
+              rest: "60s",
+              cue: "Drive through heels, squeeze glutes hard. Zero knee flexion shear.",
+              rationale: "[🛡️ Knee-Safe Swap] Sparing patellar tendon while maintaining heavy posterior chain activation."
+            };
+          }
+          if (athleteInjuries.lumbar && (ex.id === 'barbell_zercher_squat' || ex.id === 'barbell_z_press')) {
+            modified = {
+              id: "chest_supported_db_row",
+              name: "Chest-Supported Dumbbell Row",
+              family: "pull",
+              targetWeight: "2×20kg",
+              targetReps: 10,
+              setsCount: 4,
+              rest: "60s",
+              cue: "Torso fully supported on incline; strictly upper-back squeeze.",
+              rationale: "[🛡️ Lumbar-Safe Swap] Bench supports upper torso to eliminate spinal axial shear."
+            };
+          }
+          if (athleteInjuries.ankles && ex.id === 'speed_rope_intervals') {
+            modified = {
+              id: "incline_walk_flush",
+              name: "Zone 2 Incline Treadmill Walk",
+              family: "cardio",
+              targetWeight: "Body",
+              targetReps: "15 min",
+              setsCount: 1,
+              rest: "60s",
+              cue: "Low-impact flat-foot heel-to-toe stride; zero Achilles ballistic shock.",
+              rationale: "[🛡️ Ankle-Safe Swap] Low impact cardiovascular flush sparing Achilles tendon."
+            };
+          }
         }
         return modified;
       });
 
       currentExIdx = 0;
-      
+
       const badgeEl = document.getElementById('wPlanBadge');
-      if (badgeEl) badgeEl.innerText = arch.title.toUpperCase();
+      if (badgeEl) {
+        const optionLabel = (verdict && verdict.optionLabels && verdict.optionLabels[currentArchetypeKey])
+          ? verdict.optionLabels[currentArchetypeKey].replace(/⭐\s*/g, '')
+          : (dailyArchetypes[currentArchetypeKey] ? dailyArchetypes[currentArchetypeKey].title : currentArchetypeKey.toUpperCase());
+        badgeEl.innerText = optionLabel.toUpperCase();
+      }
 
       ['option_a', 'option_kb', 'option_b', 'option_c'].forEach(k => {
         const btn = document.getElementById(`btnArchetype_${k}`);
@@ -938,7 +1001,7 @@
 
       const gearStatusEl = document.getElementById('trainGearStatus');
       if (gearStatusEl) {
-        if (currentArchetypeKey === 'option_kb') gearStatusEl.innerText = `Heavy Kettlebell (${gearConfig.kb.weight || '24–32kg'})`;
+        if (currentArchetypeKey === 'option_kb') gearStatusEl.innerText = `Heavy Kettlebell (${(typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})`;
         else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
         else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Kettlebells, DB & Slam Ball";
         else gearStatusEl.innerText = "Bodyweight & Incline Cadence";
@@ -1765,8 +1828,7 @@
       };
     }
 
-    let activeWorkoutPlan = [];
-    let currentExIdx = 0;
+
 
     function toggleGear(gearKey) {
       gearConfig[gearKey].active = !gearConfig[gearKey].active;
@@ -2743,8 +2805,38 @@ function generateWorkoutFromGearAndGoal() {
       `;
     }
 
+    // ==================== CONTEXT STATE & PILL CONTROLS ====================
+    function getTodayFeeling() {
+      try { return localStorage.getItem('pulse_today_feeling') || 'normal'; } catch(e) { return 'normal'; }
+    }
+    function getTodayGearMode() {
+      try { return localStorage.getItem('pulse_today_gear') || 'gym'; } catch(e) { return 'gym'; }
+    }
+    function getTodayTimeMode() {
+      try { return localStorage.getItem('pulse_today_time') || '45m'; } catch(e) { return '45m'; }
+    }
+    function setTodayContext(key, val) {
+      try {
+        if (key === 'feeling' || key === 'pulse_today_feeling') localStorage.setItem('pulse_today_feeling', val);
+        if (key === 'gear' || key === 'pulse_today_gear') localStorage.setItem('pulse_today_gear', val);
+        if (key === 'time' || key === 'pulse_today_time') localStorage.setItem('pulse_today_time', val);
+      } catch(e) {}
+      if (typeof renderTodayTrainingRecommendations === 'function') {
+        renderTodayTrainingRecommendations();
+      }
+      if (typeof computeTodayWorkoutVerdict === 'function') {
+        const v = computeTodayWorkoutVerdict();
+        if (typeof updateArchetypeStarBadge === 'function') {
+          updateArchetypeStarBadge(v.archetypeKey, v.optionLabels);
+        }
+        if (typeof loadDailyArchetype === 'function') {
+          loadDailyArchetype(currentArchetypeKey || v.archetypeKey);
+        }
+      }
+    }
+
     // ==================== DYNAMIC TODAY WORKOUT VERDICT & AUTOREGULATION ====================
-    function updateArchetypeStarBadge(activeKey) {
+    function updateArchetypeStarBadge(activeKey, optionLabels) {
       const archetypes = [
         { key: 'option_a', defaultLabel: 'Option A (BB)' },
         { key: 'option_kb', defaultLabel: 'Option KB' },
@@ -2755,29 +2847,43 @@ function generateWorkoutFromGearAndGoal() {
       archetypes.forEach(arch => {
         const btn = document.getElementById(`btnArchetype_${arch.key}`);
         if (btn) {
+          const rawLabel = (optionLabels && optionLabels[arch.key]) ? optionLabels[arch.key] : arch.defaultLabel;
+          const cleanLabel = rawLabel.replace(/^⭐\s*/, '');
+
           if (arch.key === activeKey) {
-            btn.innerHTML = `⭐ ${arch.defaultLabel}`;
+            btn.innerHTML = `⭐ ${cleanLabel}`;
             btn.style.color = "var(--primary)";
             btn.style.fontWeight = "700";
+            btn.classList.add('active');
           } else {
-            btn.innerHTML = arch.defaultLabel;
+            btn.innerHTML = cleanLabel;
             btn.style.color = "";
             btn.style.fontWeight = "";
+            btn.classList.remove('active');
           }
         }
       });
     }
 
     function computeTodayWorkoutVerdict() {
-      let sleepScore = (window.athleteProfile && window.athleteProfile.sleepScore) ? window.athleteProfile.sleepScore : 82;
-      let readiness = (window.athleteProfile && window.athleteProfile.readiness) ? window.athleteProfile.readiness : 80;
-      let restingHr = (window.athleteProfile && window.athleteProfile.restingHr) ? window.athleteProfile.restingHr : 46;
+      let sleepScore = 82;
+      let sleepDuration = "7h 34m";
+      let readiness = 80;
+      let restingHr = 46;
       let bodyBattery = 72;
       let activeCaloriesToday = 0;
+
+      if (window.athleteProfile) {
+        if (window.athleteProfile.sleepScore !== undefined) sleepScore = window.athleteProfile.sleepScore;
+        if (window.athleteProfile.sleepDuration !== undefined) sleepDuration = window.athleteProfile.sleepDuration;
+        if (window.athleteProfile.readiness !== undefined) readiness = window.athleteProfile.readiness;
+        if (window.athleteProfile.restingHr !== undefined) restingHr = window.athleteProfile.restingHr;
+      }
 
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
         const g = window.BAKED_LIVE_STATE.garmin;
         if (g.sleep_score !== undefined) sleepScore = g.sleep_score;
+        if (g.sleep_duration !== undefined) sleepDuration = g.sleep_duration;
         if (g.training_readiness !== undefined) readiness = g.training_readiness;
         if (g.resting_hr !== undefined) restingHr = g.resting_hr;
         if (g.body_battery !== undefined) bodyBattery = g.body_battery;
@@ -2796,7 +2902,6 @@ function generateWorkoutFromGearAndGoal() {
       const todayDateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const oneDayMs = 24 * 60 * 60 * 1000;
 
-      // Map activities by day offset
       const actDayMap = {};
       let burn72h = 0;
       let workoutsLast4Days = 0;
@@ -2837,7 +2942,6 @@ function generateWorkoutFromGearAndGoal() {
         }
       });
 
-      // Compute consecutive days with workouts ending today or yesterday
       let consecutiveDays = 0;
       const startOffset = actDayMap[0] ? 0 : (actDayMap[1] ? 1 : null);
       if (startOffset !== null) {
@@ -2848,7 +2952,6 @@ function generateWorkoutFromGearAndGoal() {
         }
       }
 
-      // If activeCaloriesToday was 0 but today activities exist, calculate from activities
       if (activeCaloriesToday === 0 && actDayMap[0]) {
         acts.forEach(a => {
           if (a.isToday || (a.rawDate && a.rawDate.startsWith(now.toISOString().split('T')[0]))) {
@@ -2857,87 +2960,178 @@ function generateWorkoutFromGearAndGoal() {
         });
       }
 
-      const pKey = typeof currentPreset !== 'undefined' ? currentPreset : 'gym';
+      const fatigued = (typeof getFatiguedPatterns48h === 'function')
+        ? getFatiguedPatterns48h()
+        : { hinge: false, h_push: false, h_pull: false, v_push: false, knee_dom: false };
 
-      let verdict = {
-        mode: 'strength_bb',
-        archetypeKey: 'option_a',
-        optionId: 'bb_upper_hinge',
-        badge: '⭐ HEAVY BARBELL RECOMMENDED',
-        title: 'Heavy Barbell Upper & Hinge',
-        goldfishReason: `High readiness (${readiness}) and balanced sleep (${sleepScore}). Cleared for heavy mechanical tension sparing knees.`,
-        ctaText: 'Start Barbell Session ➔',
-        isRest: false,
+      const todayFeeling = getTodayFeeling();
+      const todayGearMode = getTodayGearMode();
+      const todayTimeMode = getTodayTimeMode();
+
+      let effectiveReadiness = readiness;
+      let effectiveBodyBattery = bodyBattery;
+
+      if (todayFeeling === 'fresh') {
+        effectiveReadiness = Math.min(100, readiness + 12);
+        effectiveBodyBattery = Math.min(100, bodyBattery + 15);
+      } else if (todayFeeling === 'beat_up') {
+        effectiveReadiness = Math.max(0, readiness - 15);
+        effectiveBodyBattery = Math.max(0, bodyBattery - 15);
+      }
+
+      // Priority order for mode
+      let mode = 'full_body_strength';
+      if (effectiveReadiness < 50 || effectiveBodyBattery < 35 || (sleepScore < 58 && consecutiveDays >= 3)) {
+        mode = 'rest_day';
+      } else if ((effectiveBodyBattery < 55 || consecutiveDays >= 3) && sleepScore >= 72) {
+        mode = 'liss_cardio';
+      } else if ((effectiveReadiness >= 50 && effectiveReadiness <= 62) || (sleepScore < 68 && consecutiveDays >= 2)) {
+        mode = 'mobility_stretch';
+      } else if ((fatigued.h_push || fatigued.h_pull) && (!fatigued.hinge && !fatigued.knee_dom)) {
+        mode = 'lower_hinge';
+      } else if ((fatigued.hinge || fatigued.knee_dom) && (!fatigued.h_push && !fatigued.h_pull)) {
+        mode = 'upper_push_pull';
+      } else {
+        mode = 'full_body_strength';
+      }
+
+      const muscleStatus = {
+        upperPush: fatigued.h_push ? 'Fatigued (48h volume)' : 'Fresh & Primed',
+        upperPull: fatigued.h_pull ? 'Fatigued (48h volume)' : 'Fresh & Primed',
+        lowerHinge: (fatigued.hinge || fatigued.knee_dom) ? 'Fatigued (48h volume)' : 'Fresh & Primed',
+        cns: (effectiveReadiness < 65 || effectiveBodyBattery < 50 || consecutiveDays >= 3) ? 'Autonomic Debt' : 'Fully Recovered'
+      };
+
+      let archetypeKey = 'option_a';
+      let optionLabels = {};
+      let badge = '';
+      let title = '';
+      let goldfishReason = '';
+      let isRest = false;
+      let ctaText = 'Start Workout ➔';
+      let optionId = 'bb_upper_hinge';
+
+      const gearTitleMap = {
+        gym: 'Barbell & Heavy Station',
+        kb: 'Heavy Kettlebell Complex',
+        bodyweight: 'Work Capacity & Bodyweight'
+      };
+
+      if (mode === 'rest_day') {
+        archetypeKey = 'option_c';
+        optionId = 'mobility_stretch';
+        optionLabels = {
+          option_a: 'Barbell Deload',
+          option_kb: 'Light KB Flow',
+          option_b: 'Work Capacity',
+          option_c: '⭐ Rest & Walk'
+        };
+        badge = '🛌 REST DAY RECOMMENDED';
+        title = 'Full Rest & Parasympathetic Recovery';
+        goldfishReason = `Accumulated autonomic debt with ${consecutiveDays} consecutive training days (Readiness ${effectiveReadiness}, Battery ${effectiveBodyBattery}%). Prioritize deep sleep (${sleepScore}), clean hydration, and myofibrillar repair.`;
+        ctaText = '✓ Log Rest Day';
+        isRest = true;
+      } else if (mode === 'liss_cardio') {
+        archetypeKey = 'option_a';
+        optionId = 'recovery_flush_walk';
+        optionLabels = {
+          option_a: '⭐ Zone 2 LISS',
+          option_kb: 'KB Flush',
+          option_b: 'Aerobic Work',
+          option_c: 'Mobility Flow'
+        };
+        badge = '🚶 ZONE 2 LISS RECOMMENDED';
+        title = 'Zone 2 Aerobic Engine & Flush';
+        goldfishReason = `Sleep restored (${sleepScore}, ${sleepDuration}) but cumulative workload (${consecutiveDays} consecutive days, Battery ${effectiveBodyBattery}%) favors low CNS aerobic work. Flushes metabolic waste without joint shear.`;
+        ctaText = 'Open Recommended Workouts →';
+        isRest = false;
+      } else if (mode === 'mobility_stretch') {
+        archetypeKey = 'option_c';
+        optionId = 'mobility_stretch';
+        optionLabels = {
+          option_a: 'Barbell Deload',
+          option_kb: 'KB Mobility',
+          option_b: 'Core Capacity',
+          option_c: '⭐ Mobility Flow'
+        };
+        badge = '🧘 MOBILITY & STRETCH RECOMMENDED';
+        title = 'Thoracic & Hip Mobility Reset';
+        goldfishReason = `Moderate recovery debt detected (Readiness ${effectiveReadiness}, Sleep ${sleepScore}). 20 minutes of joint decompression restores range of motion and clears connective tissue stiffness.`;
+        ctaText = 'Open Recommended Workouts →';
+        isRest = false;
+      } else if (mode === 'lower_hinge') {
+        archetypeKey = todayGearMode === 'kb' ? 'option_kb' : (todayGearMode === 'bodyweight' ? 'option_b' : 'option_a');
+        optionId = todayGearMode === 'kb' ? 'kb_complex' : (todayGearMode === 'bodyweight' ? 'hybrid_work_capacity' : 'bb_upper_hinge');
+        optionLabels = {
+          option_a: 'Lower/Hinge (BB)',
+          option_kb: 'KB Lower/Core',
+          option_b: 'Work Capacity',
+          option_c: 'LISS Flush'
+        };
+        badge = '🦵 LOWER & HINGE RECOMMENDED';
+        title = `Lower Posterior Chain & Hinge (${gearTitleMap[todayGearMode] || 'Gym'})`;
+        goldfishReason = `Upper pushing and pulling volume fatigued from past 48h. Posterior chain and knee-friendly hinges are fresh, primed, and cleared for mechanical loading.`;
+        ctaText = 'Open Recommended Workouts →';
+        isRest = false;
+      } else if (mode === 'upper_push_pull') {
+        archetypeKey = todayGearMode === 'kb' ? 'option_kb' : (todayGearMode === 'bodyweight' ? 'option_b' : 'option_a');
+        optionId = todayGearMode === 'kb' ? 'kb_complex' : (todayGearMode === 'bodyweight' ? 'hybrid_work_capacity' : 'bb_upper_hinge');
+        optionLabels = {
+          option_a: 'Upper Push/Pull',
+          option_kb: 'KB Upper Tension',
+          option_b: 'Push-Up Density',
+          option_c: 'Joint Flush'
+        };
+        badge = '💪 UPPER PUSH & PULL RECOMMENDED';
+        title = `Upper Body Push & Pull (${gearTitleMap[todayGearMode] || 'Gym'})`;
+        goldfishReason = `Lower body and hinge patterns carrying 48h fatigue. Upper pectorals, lats, and triceps are primed for high myofibrillar tension.`;
+        ctaText = 'Open Recommended Workouts →';
+        isRest = false;
+      } else {
+        // full_body_strength
+        archetypeKey = todayGearMode === 'kb' ? 'option_kb' : (todayGearMode === 'bodyweight' ? 'option_b' : 'option_a');
+        optionId = todayGearMode === 'kb' ? 'kb_complex' : (todayGearMode === 'bodyweight' ? 'hybrid_work_capacity' : 'bb_upper_hinge');
+        optionLabels = {
+          option_a: 'Barbell Option A',
+          option_kb: 'Option KB',
+          option_b: 'Work Capacity',
+          option_c: 'LISS Flush'
+        };
+        badge = todayGearMode === 'kb' ? '⭐ HEAVY KETTLEBELL RECOMMENDED' : (todayGearMode === 'bodyweight' ? '⭐ WORK CAPACITY RECOMMENDED' : '⭐ HEAVY BARBELL RECOMMENDED');
+        title = `Full Body Strength & Muscle Anchor (${gearTitleMap[todayGearMode] || 'Gym'})`;
+        goldfishReason = `High systemic readiness (${effectiveReadiness}), solid body battery (${effectiveBodyBattery}%), and quality rest (${sleepScore}, ${sleepDuration}). Fully cleared for peak mechanical tension.`;
+        ctaText = 'Open Recommended Workouts →';
+        isRest = false;
+      }
+
+      return {
+        mode,
+        archetypeKey,
+        recommendedArchetype: archetypeKey,
+        optionId,
+        badge,
+        title,
+        goldfishReason,
+        ctaText,
+        isRest,
         sleepScore,
+        sleepDuration,
         readiness,
+        effectiveReadiness,
         bodyBattery,
+        effectiveBodyBattery,
         restingHr,
         activeCaloriesToday,
         consecutiveDays,
         burn72h,
         workoutsLast4Days,
-        todayLogged
+        todayLogged,
+        muscleStatus,
+        optionLabels,
+        todayFeeling,
+        todayGearMode,
+        todayTimeMode
       };
-
-      if (readiness < 50 || bodyBattery < 35 || (sleepScore < 58 && consecutiveDays >= 4)) {
-        verdict.mode = 'rest_day';
-        verdict.archetypeKey = 'option_c';
-        verdict.optionId = 'mobility_stretch';
-        verdict.badge = '🛌 REST DAY RECOMMENDED';
-        verdict.title = 'Full Rest & Parasympathetic Recovery';
-        verdict.goldfishReason = `Accumulated autonomic fatigue (${consecutiveDays} consecutive workout days, Readiness ${readiness}, Body Battery ${bodyBattery}%). Prioritize complete recovery.`;
-        verdict.ctaText = '✓ Log Rest Day';
-        verdict.isRest = true;
-      } else if ((sleepScore < 68 && consecutiveDays >= 3) || (readiness >= 50 && readiness < 63) || (consecutiveDays >= 5 && bodyBattery < 65)) {
-        verdict.mode = 'mobility_stretch';
-        verdict.archetypeKey = 'option_c';
-        verdict.optionId = 'mobility_stretch';
-        verdict.badge = '🧘 STRETCH & MOBILITY RECOMMENDED';
-        verdict.title = '15-Min Mobility & Stretch Reset';
-        verdict.goldfishReason = `Moderate recovery debt from ${consecutiveDays} straight training days. 15-min decompression restores hip/thoracic range without CNS strain.`;
-        verdict.ctaText = 'Start 15-Min Mobility Reset ➔';
-        verdict.isRest = false;
-      } else if (readiness < 74 || (activeCaloriesToday >= 500 && bodyBattery < 68)) {
-        verdict.mode = 'flush';
-        verdict.archetypeKey = 'option_c';
-        verdict.optionId = 'recovery_flush_walk';
-        verdict.badge = '🚶 ACTIVE RECOVERY RECOMMENDED';
-        verdict.title = '20-Min Zone 2 Flush & Prehab';
-        verdict.goldfishReason = `Significant volume logged (${activeCaloriesToday} kcal active today). Zone 2 walk flushes metabolic waste and stimulates lymphatic return.`;
-        verdict.ctaText = 'Start Zone 2 Flush ➔';
-        verdict.isRest = false;
-      } else if (bodyBattery >= 70 && readiness >= 70 && (pKey === 'cardio' || (readiness < 78 && sleepScore >= 70))) {
-        verdict.mode = 'conditioning';
-        verdict.archetypeKey = 'option_b';
-        verdict.optionId = 'hybrid_work_capacity';
-        verdict.badge = '⚡ HIGH-ENERGY CONDITIONING RECOMMENDED';
-        verdict.title = '20-Min Hybrid Work Capacity';
-        verdict.goldfishReason = `Robust vitality (Body Battery ${bodyBattery}%, Readiness ${readiness}). Primed for dynamic work capacity and metabolic ladder.`;
-        verdict.ctaText = 'Start Work Capacity ➔';
-        verdict.isRest = false;
-      } else {
-        if (pKey === 'kb_heavy') {
-          verdict.mode = 'strength_kb';
-          verdict.archetypeKey = 'option_kb';
-          verdict.optionId = 'kb_complex';
-          verdict.badge = '⭐ HEAVY KETTLEBELL RECOMMENDED';
-          verdict.title = 'Heavy Single-KB Complex';
-          verdict.goldfishReason = `Readiness ${readiness} with Body Battery ${bodyBattery}%. Cleared for high myofibrillar tension via heavy kettlebell complex.`;
-          verdict.ctaText = 'Start Heavy KB Session ➔';
-          verdict.isRest = false;
-        } else {
-          verdict.mode = 'strength_bb';
-          verdict.archetypeKey = 'option_a';
-          verdict.optionId = 'bb_upper_hinge';
-          verdict.badge = '⭐ HEAVY BARBELL RECOMMENDED';
-          verdict.title = 'Heavy Barbell Upper & Hinge';
-          verdict.goldfishReason = `Optimal CNS readiness (${readiness}) and Sleep (${sleepScore}). Cleared for maximal mechanical tension sparing knees.`;
-          verdict.ctaText = 'Start Heavy Barbell Session ➔';
-          verdict.isRest = false;
-        }
-      }
-
-      return verdict;
     }
 
     function renderTodayTrainingRecommendations() {
@@ -2947,9 +3141,11 @@ function generateWorkoutFromGearAndGoal() {
       if (!slot) return;
 
       const verdict = computeTodayWorkoutVerdict();
-      updateArchetypeStarBadge(verdict.archetypeKey);
+      if (typeof updateArchetypeStarBadge === 'function') {
+        updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
+      }
 
-      const completed = getTodayCompletedWorkout();
+      const completed = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
 
       if (dot) {
         dot.style.background = completed ? 'var(--primary, #30d158)' : 'var(--primary)';
@@ -2980,165 +3176,96 @@ function generateWorkoutFromGearAndGoal() {
         if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
       }
 
-      // Filter and sort options, placing verdict.optionId first when auto
-      let filteredOptions = todayWorkoutOptions.filter(opt => {
-        if (todayFilterLocation !== 'all') {
-          if (todayFilterLocation === 'gym' && opt.location !== 'gym') return false;
-          if (todayFilterLocation === 'kb' && opt.location !== 'kb') return false;
-          if (todayFilterLocation === 'bodyweight' && opt.location !== 'bodyweight') return false;
-        }
-        if (todayFilterFocus !== 'auto') {
-          if (opt.focus !== todayFilterFocus) return false;
-        }
-        return true;
-      });
+      // Compact context pill strips
+      const f = verdict.todayFeeling;
+      const g = verdict.todayGearMode;
+      const t = verdict.todayTimeMode;
 
-      if (todayFilterLocation === 'all' && todayFilterFocus === 'auto') {
-        filteredOptions.sort((a, b) => {
-          if (a.id === verdict.optionId) return -1;
-          if (b.id === verdict.optionId) return 1;
-          return 0;
-        });
-      }
+      const pillActiveStyle = "background:var(--primary); color:#000; font-weight:800; border-color:var(--primary);";
+      const pillInactiveStyle = "background:rgba(255,255,255,0.05); color:var(--text-secondary); border-color:rgba(255,255,255,0.12);";
 
-      const todaySwaps = getTodayExerciseSwaps();
-
-      const workoutCardsHtml = filteredOptions.map(opt => {
-        const isRec = (opt.id === verdict.optionId);
-        const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
-        const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
-
-        const exercisesHtml = activeExerciseIds.map((origExId, idx) => {
-          const swapKey = `${opt.id}_${idx}`;
-          const exId = resolvePreferredExerciseId(origExId, null, swapKey);
-          const isSwapped = exId !== origExId;
-          const ex = getAllExercises().find(e => e.id === exId) || { id: exId, name: exId, setsCount: 3, rest: "60s", cue: "" };
-          const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exId, ex) : { weight: (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : 'Body'), reps: (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : 8) };
-          const weight = rx.weight;
-          const reps = rx.reps;
-          const wStr = typeof weight === 'number' ? `${weight}kg` : `${weight}`;
-          return `
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-top:4px; gap:6px; flex-wrap:wrap;">
-              <div style="display:flex; align-items:center; gap:5px; flex:1; min-width:140px;">
-                <span style="color:#fff; font-weight:700;">${idx + 1}. ${ex.name}</span>
-                ${isSwapped ? '<span style="font-size:9px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--primary); padding:1px 4px; border-radius:3px;">SWAPPED</span>' : ''}
-              </div>
-              <div style="display:flex; align-items:center; gap:4px;">
-                <button type="button" class="header-pill-btn" onclick="openSwapModal('today', '${opt.id}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:700; height:24px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); cursor:pointer;">
-                  ⇄ Swap
-                </button>
-                <button type="button" class="header-pill-btn" onclick="openEditLoadModal('${ex.id}', '${opt.id}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:800; height:24px; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.3); color:var(--primary); cursor:pointer;">
-                  ✎ ${wStr}×${reps}
-                </button>
-              </div>
-            </div>
-            <div style="font-size:10px; color:var(--text-muted); margin-top:-1px;">Cue: ${ex.cue || ''}</div>
-          `;
-        }).join('');
-
-        return `
-          <div class="card" style="padding:14px; background:var(--surface-card, #14161e); border:${isRec ? '1px solid rgba(0,229,255,0.45)' : '1px solid rgba(255,255,255,0.08)'}; margin-bottom:10px; position:relative;">
-            <div style="position:absolute; top:12px; right:12px; display:flex; gap:6px; align-items:center;">
-              ${rotatedInfo.rotationNote ? `<div style="font-size:9.5px; font-weight:700; background:rgba(167,139,250,0.15); color:#a78bfa; border:1px solid rgba(167,139,250,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.03em;">🔄 48H ROTATED</div>` : ''}
-              ${isRec ? `<div style="font-size:9.5px; font-weight:800; background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">⭐ RECOMMENDED</div>` : ''}
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-              <div>
-                <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${opt.location.toUpperCase()} • ${opt.focus.toUpperCase()}</span>
-                <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">${opt.title}</div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">${opt.subtitle}</div>
-                ${rotatedInfo.rotationNote ? `<div style="font-size:11px; font-weight:700; color:#c4b5fd; margin-top:4px;">🛡️ ${rotatedInfo.rotationNote}</div>` : ''}
-              </div>
-            </div>
-
-            <div style="display:flex; gap:12px; align-items:center; margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-              <div style="font-size:11.5px; font-weight:700; color:#fff;">${opt.durationMin} min</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:700; color:var(--primary);">~${opt.calories} kcal</div>
-              <div style="width:1px; height:12px; background:rgba(255,255,255,0.1);"></div>
-              <div style="font-size:11.5px; font-weight:600; color:var(--text-secondary);">${opt.gearLabel}</div>
-            </div>
-
-            <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin-top:8px;">
-              ${opt.description}
-            </div>
-
-            <details style="margin-top:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:var(--primary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>View Routine & Coaching Cues (${activeExerciseIds.length} exercises)</span>
-                <span style="font-size:12px;">▾</span>
-              </summary>
-              <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px; border-top:1px solid rgba(255,255,255,0.05);">
-                ${exercisesHtml}
-              </div>
-            </details>
-
-            <button class="btn-action-primary" onclick="launchDynamicWorkout('${opt.id}')" style="height:42px; font-size:12.5px; font-weight:700; margin-top:10px; background:${isRec ? 'var(--primary)' : 'rgba(255,255,255,0.08)'}; color:${isRec ? '#000' : '#fff'};">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              START SESSION →
+      const contextPillsHtml = `
+        <div style="margin-bottom:12px; display:flex; flex-direction:column; gap:6px;">
+          <!-- STRIP 1: FEEL -->
+          <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;">
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('feeling', 'fresh')" style="flex:1; min-height:30px; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap; ${f === 'fresh' ? pillActiveStyle : pillInactiveStyle}">
+              ⚡ Feeling Fresh
+            </button>
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('feeling', 'normal')" style="flex:1; min-height:30px; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap; ${f === 'normal' ? pillActiveStyle : pillInactiveStyle}">
+              ⚖️ As Metrics Say
+            </button>
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('feeling', 'beat_up')" style="flex:1; min-height:30px; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap; ${f === 'beat_up' ? pillActiveStyle : pillInactiveStyle}">
+              🪫 Beat Up
             </button>
           </div>
-        `;
-      }).join('');
 
-      const ctaButtonHtml = verdict.isRest
-        ? `
-          <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-            <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(true)" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:800; background:var(--primary); color:#000;">
-              ✓ Log Rest Day
+          <!-- STRIP 2: CONSTRAINTS (GEAR & TIME) -->
+          <div style="display:flex; gap:6px; align-items:center; overflow-x:auto; padding-bottom:2px;">
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('gear', 'gym')" style="flex:1; min-height:30px; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap; ${g === 'gym' ? pillActiveStyle : pillInactiveStyle}">
+              🏋️ Gym
             </button>
-            <button class="btn-action-primary" onclick="launchDynamicWorkout('mobility_stretch')" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12);">
-              Start 15-Min Gentle Stretch Instead ➔
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('gear', 'kb')" style="flex:1; min-height:30px; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap; ${g === 'kb' ? pillActiveStyle : pillInactiveStyle}">
+              🔔 KB
+            </button>
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('gear', 'bodyweight')" style="flex:1; min-height:30px; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer; white-space:nowrap; ${g === 'bodyweight' ? pillActiveStyle : pillInactiveStyle}">
+              🤸 Bodyweight
+            </button>
+            <div style="width:1px; height:18px; background:rgba(255,255,255,0.15); margin:0 2px;"></div>
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('time', '20m')" style="min-height:30px; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; white-space:nowrap; ${t === '20m' ? pillActiveStyle : pillInactiveStyle}">
+              ⏱ 20m
+            </button>
+            <button type="button" class="header-pill-btn" onclick="setTodayContext('time', '45m')" style="min-height:30px; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; white-space:nowrap; ${t === '45m' ? pillActiveStyle : pillInactiveStyle}">
+              ⏱ 45m
             </button>
           </div>
-        `
-        : `
-          <button class="btn-action-primary" onclick="launchDynamicWorkout('${verdict.optionId}')" style="height:44px; font-size:13px; font-weight:800; width:100%; margin-top:12px; background:var(--primary); color:#000; box-shadow:0 0 15px rgba(0,229,255,0.25);">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            ${verdict.ctaText}
-          </button>
-        `;
-
-      const filterAndWorkoutCardsHtml = `
-        <!-- ALTERNATIVE WORKOUTS & FILTER CONTROLS -->
-        <div style="margin-top:14px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:baseline;">
-          <span style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Alternative Workout Routines</span>
-          <span style="font-size:10.5px; color:var(--text-muted);">${filteredOptions.length} available</span>
         </div>
+      `;
 
-        <!-- FILTER PILLS -->
-        <div class="filter-pill-row" style="margin-bottom:6px;">
-          <button type="button" class="filter-pill ${todayFilterLocation === 'all' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'all')">All Locations</button>
-          <button type="button" class="filter-pill ${todayFilterLocation === 'gym' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'gym')">Gym (Barbell)</button>
-          <button type="button" class="filter-pill ${todayFilterLocation === 'kb' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'kb')">KB / Van</button>
-          <button type="button" class="filter-pill ${todayFilterLocation === 'bodyweight' ? 'active' : ''}" onclick="setTodayWorkoutFilter('location', 'bodyweight')">Bodyweight</button>
-        </div>
-
-        <div class="filter-pill-row" style="margin-bottom:12px;">
-          <button type="button" class="filter-pill ${todayFilterFocus === 'auto' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'auto')">Auto Rec</button>
-          <button type="button" class="filter-pill ${todayFilterFocus === 'strength' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'strength')">Strength</button>
-          <button type="button" class="filter-pill ${todayFilterFocus === 'upper' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'upper')">Upper</button>
-          <button type="button" class="filter-pill ${todayFilterFocus === 'hinge' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'hinge')">Hinge</button>
-          <button type="button" class="filter-pill ${todayFilterFocus === 'conditioning' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'conditioning')">Conditioning</button>
-          <button type="button" class="filter-pill ${todayFilterFocus === 'flush' ? 'active' : ''}" onclick="setTodayWorkoutFilter('focus', 'flush')">Flush</button>
-        </div>
-
-        <!-- DYNAMIC WORKOUT OPTIONS -->
-        ${workoutCardsHtml || '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12px;">No workouts match the selected filters.</div>'}
+      // Collapsed Elephant Accordion
+      const elephantAccordionHtml = `
+        <details style="margin-top:12px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+          <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 12px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+            <span>🔬 View Full Biometrics, 72h Load & Muscle Recovery Map</span>
+            <span style="font-size:11.5px; color:var(--text-muted);">▾</span>
+          </summary>
+          <div style="padding:10px 12px; font-size:11px; color:#a1a1aa; line-height:1.5; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:6px;">
+            <div>• <strong>Biometrics:</strong> Sleep ${verdict.sleepScore} (${verdict.sleepDuration}) • Body Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness} • RHR ${verdict.restingHr} bpm</div>
+            <div>• <strong>Cumulative Workload:</strong> ${verdict.consecutiveDays} consecutive training days • ~${verdict.burn72h} kcal burned across last 72 hours (${verdict.workoutsLast4Days} workouts in 4 days) • Today active burn: ${verdict.activeCaloriesToday} kcal</div>
+            <div style="background:rgba(255,255,255,0.02); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); margin-top:2px;">
+              <div style="font-weight:700; color:#fff; margin-bottom:3px; text-transform:uppercase; font-size:10px; letter-spacing:0.04em;">Muscle Recovery Map:</div>
+              <div>• Upper Push: <strong style="color:${verdict.muscleStatus.upperPush.includes('Fatigued') ? '#f59e0b' : 'var(--primary)'};">${verdict.muscleStatus.upperPush}</strong></div>
+              <div>• Upper Pull: <strong style="color:${verdict.muscleStatus.upperPull.includes('Fatigued') ? '#f59e0b' : 'var(--primary)'};">${verdict.muscleStatus.upperPull}</strong></div>
+              <div>• Lower & Hinge: <strong style="color:${verdict.muscleStatus.lowerHinge.includes('Fatigued') ? '#f59e0b' : 'var(--primary)'};">${verdict.muscleStatus.lowerHinge}</strong></div>
+              <div>• CNS Recovery: <strong style="color:${verdict.muscleStatus.cns.includes('Debt') ? '#ef4444' : 'var(--primary)'};">${verdict.muscleStatus.cns}</strong></div>
+            </div>
+            <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose, ${leanMass} kg lean mass preserved)</div>
+            ${completed && typeof renderTomorrowPreviewCard === 'function' ? `<div style="margin-top:6px;">${renderTomorrowPreviewCard(completed)}</div>` : ''}
+            <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700; cursor:pointer;">
+                ⚙ Tailor Equipment
+              </button>
+              <button type="button" class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:10.5px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700; cursor:pointer;">
+                ✓ Mark Complete
+              </button>
+            </div>
+          </div>
+        </details>
       `;
 
       if (completed) {
         const proteinTarget = (window.BAKED_LIVE_STATE?.nutrition?.protein_target_g) || 200;
 
         slot.innerHTML = `
-          <!-- TODAY'S TRAINING COMPLETE GOLDFISH HERO CARD -->
+          ${contextPillsHtml}
+
+          <!-- GOLDFISH VERDICT HERO CARD (COMPLETED) -->
           <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(48,209,88,0.35); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
               <span style="font-size:10px; font-weight:800; color:var(--primary, #30d158); background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
                 ✓ TODAY'S TRAINING COMPLETE
               </span>
               <span style="font-size:10.5px; color:var(--text-muted);">
-                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness}
               </span>
             </div>
 
@@ -3147,61 +3274,58 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
-              You've logged ${completed.durationMin}m (${completed.calories} kcal active burn) today. Focus on protein anchor (${proteinTarget}g), hydration, and recovery so your lean mass rebuilds cleanly.
+              You've logged ${completed.durationMin || 45}m (${completed.calories || 320} kcal active burn) today. Focus on your protein anchor (${proteinTarget}g), hydration, and recovery so your lean mass rebuilds cleanly.
             </div>
 
             <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-                View Full Telemetry & Benefits ➔
+              <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                View Telemetry ➔
               </button>
-              <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(false)" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.3); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                Open Tomorrow's Focus in Workout Tab ➔
+              </button>
+            </div>
+
+            <div style="text-align:center; margin-top:10px;">
+              <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
                 ↺ Log Another Session
-              </button>
+              </span>
             </div>
           </div>
 
-          <!-- TOMORROW'S AUTOREGULATION PREVIEW CARD -->
-          ${renderTomorrowPreviewCard(completed)}
-
-          <!-- COLLAPSED ALTERNATIVE WORKOUT ROUTINES ACCORDION -->
-          <details style="margin-top:12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
-            <summary style="font-size:12px; font-weight:800; color:var(--text-secondary); padding:12px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>➕ Need an extra / recovery session today? (${filteredOptions.length} options)</span>
-              <span style="font-size:12px; color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05);">
-              ${filterAndWorkoutCardsHtml}
-            </div>
-          </details>
-
-          <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
-          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
-            <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
-              <span style="font-size:11px; color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
-              ${getWorkoutArchetypeCardsHtml(true)}
-            </div>
-          </details>
-
-          <!-- MANUAL OVERRIDE FOOTER LINK -->
-          <div style="text-align:center; padding:8px 0 4px;">
-            <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
-              ↺ Switch to Pre-Workout Prescription Mode
-            </span>
-          </div>
+          ${elephantAccordionHtml}
         `;
       } else {
+        // NOT completed
+        const ctaButtonsHtml = verdict.isRest
+          ? `
+            <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+              <button class="btn-action-primary" onclick="toggleWorkoutCompleteManual(true)" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:800; background:var(--primary); color:#000; cursor:pointer;">
+                ✓ Log Rest Day
+              </button>
+              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.12); cursor:pointer;">
+                Open Recovery Options →
+              </button>
+            </div>
+          `
+          : `
+            <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="height:44px; font-size:13px; font-weight:800; width:100%; margin-top:12px; background:var(--primary); color:#000; box-shadow:0 0 15px rgba(0,229,255,0.25); cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Open Recommended Workouts →
+            </button>
+          `;
+
         slot.innerHTML = `
-          <!-- ELEPHANT-GOLDFISH PROTOCOL: 3-SECOND GLANCEABLE VERDICT HERO -->
+          ${contextPillsHtml}
+
+          <!-- GOLDFISH VERDICT HERO CARD (PRE-WORKOUT) -->
           <div class="card" style="padding:15px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.3); border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
               <span style="font-size:10px; font-weight:800; color:var(--primary); background:var(--primary-dim); padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
                 ${verdict.badge}
               </span>
               <span style="font-size:10.5px; color:var(--text-muted);">
-                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Readiness ${verdict.readiness} • Battery ${verdict.bodyBattery}%
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness}
               </span>
             </div>
 
@@ -3209,59 +3333,27 @@ function generateWorkoutFromGearAndGoal() {
               ${verdict.title}
             </div>
             
-            <!-- GOLDFISH 3-SECOND SUMMARY -->
             <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
               ${verdict.goldfishReason}
             </div>
 
-            <!-- PRIMARY CLEAR CALL-TO-ACTION -->
-            ${ctaButtonHtml}
-
-            <!-- ELEPHANT COLLAPSIBLE: DEEP BIOMETRIC LOAD & DEFICIT RATIONALE -->
-            <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
-              <summary style="font-size:11px; font-weight:700; color:var(--text-secondary); padding:8px 10px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>🔬 View Biometric Load & Deficit Rationale</span>
-                <span style="font-size:11px; color:var(--text-muted);">▾</span>
-              </summary>
-              <div style="padding:10px 12px; font-size:11px; color:#a1a1aa; line-height:1.45; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:5px;">
-                <div>• <strong>Cumulative Workload:</strong> ${verdict.consecutiveDays} consecutive training days • ~${verdict.burn72h} kcal burned across last 72 hours (${verdict.workoutsLast4Days} workouts in 4 days).</div>
-                <div>• <strong>Today's Status:</strong> ${verdict.activeCaloriesToday} kcal active burned • RHR ${verdict.restingHr} bpm • Body Battery ${verdict.bodyBattery}%.</div>
-                <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose).</div>
-                <div>• <strong>Joint Guardrails:</strong> Zero running volume and high-impact landings; patellofemoral cartilage spared while maintaining ${leanMass} kg lean mass.</div>
-                
-                <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
-                  <button class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700;">
-                    ⚙ Tailor Equipment
-                  </button>
-                  <button class="header-pill-btn" onclick="toggleWorkoutCompleteManual(true)" style="padding:4px 10px; font-size:10.5px; background:rgba(48,209,88,0.12); border:1px solid rgba(48,209,88,0.3); color:var(--primary); font-weight:700;">
-                    ✓ Mark Complete
-                  </button>
-                </div>
-              </div>
-            </details>
+            ${ctaButtonsHtml}
           </div>
 
-          ${filterAndWorkoutCardsHtml}
-
-          <!-- ELEPHANT ACCORDION: COLLAPSIBLE PRESCRIBED EXERCISE ROUTINES LIBRARY -->
-          <details style="margin-top:10px; background:#0d0f14; border:1px solid rgba(255,255,255,0.06); border-radius:12px; overflow:hidden;">
-            <summary style="font-size:11.5px; font-weight:700; color:var(--text-secondary); padding:10px 14px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>📋 View Prescribed Exercise Routines (Options A, B, C)</span>
-              <span style="font-size:11px; color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:10px 12px; display:flex; flex-direction:column; gap:10px; border-top:1px solid rgba(255,255,255,0.05);">
-              ${getWorkoutArchetypeCardsHtml(false)}
-            </div>
-          </details>
-
-          <!-- MANUAL OVERRIDE FOOTER LINK -->
-          <div style="text-align:center; padding:8px 0 4px;">
-            <span style="font-size:10.5px; color:var(--text-muted); text-decoration:underline; cursor:pointer;" onclick="toggleWorkoutCompleteManual(false)">
-              ↺ Switch to Pre-Workout Prescription Mode
-            </span>
-          </div>
+          ${elephantAccordionHtml}
         `;
       }
+    }
+
+    function openWorkoutTabFromVerdict() {
+      const verdict = computeTodayWorkoutVerdict();
+      switchTab('train');
+      switchTrainView('prescribed');
+      loadDailyArchetype(verdict.archetypeKey);
+      updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
+      requestWakeLock();
+      beep(750, 0.08);
+      speak((verdict.title || "Workout") + " loaded. Let's work!");
     }
 
     function launchDynamicWorkout(optionId) {
@@ -4547,6 +4639,12 @@ function viewCompletedWorkoutBreakdown() {
     window.getRotatedExercisesForOption = getRotatedExercisesForOption;
     window.updateArchetypeStarBadge = updateArchetypeStarBadge;
     window.computeTodayWorkoutVerdict = computeTodayWorkoutVerdict;
+    window.loadDailyArchetype = loadDailyArchetype;
+    window.setTodayContext = setTodayContext;
+    window.openWorkoutTabFromVerdict = openWorkoutTabFromVerdict;
+    window.getTodayFeeling = getTodayFeeling;
+    window.getTodayGearMode = getTodayGearMode;
+    window.getTodayTimeMode = getTodayTimeMode;
 
     // WORKOUT ENGINE PREFERENCES & CUSTOM LIBRARY EXPOSES
     window.parseRestSeconds = parseRestSeconds;
