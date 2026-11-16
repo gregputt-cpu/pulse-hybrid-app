@@ -1665,7 +1665,7 @@
           }
           const elSub = document.getElementById('vitalBbSub');
           if (elSub) {
-            const bbSubText = g.body_battery >= 85 ? 'Fully Charged' : (g.body_battery >= 65 ? 'Charged' : 'Restored');
+            const bbSubText = g.body_battery >= 85 ? 'Fully Charged' : (g.body_battery >= 65 ? 'Charged' : (g.body_battery >= 35 ? 'Moderate' : 'Low / Drained'));
             if (elSub.innerText !== bbSubText) elSub.innerText = bbSubText;
           }
         }

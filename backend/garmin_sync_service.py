@@ -241,14 +241,31 @@ class GarminSyncService:
                     auth_failed = True
                     last_auth_error = str(e)
 
-        # 4. Fetch morning training readiness
+        # 4. Fetch live training readiness (falls back to morning readiness if intraday list is empty)
         if not auth_failed:
             try:
-                readiness = client.get_morning_training_readiness(target_date_str)
-                readiness_score = readiness.get('score')
-                readiness_level = readiness.get('level')
-                readiness_feedback = readiness.get('feedbackShort')
-                hrv_weekly = readiness.get('hrvWeeklyAverage')
+                readiness = None
+                try:
+                    tr_list = client.get_training_readiness(target_date_str)
+                    if isinstance(tr_list, list) and len(tr_list) > 0:
+                        valid_tr = [r for r in tr_list if isinstance(r, dict) and r.get('score') is not None]
+                        if valid_tr:
+                            readiness = max(valid_tr, key=lambda r: str(r.get('timestamp') or r.get('timestampLocal') or ''))
+                    elif isinstance(tr_list, dict) and tr_list.get('score') is not None:
+                        readiness = tr_list
+                except Exception as tr_e:
+                    if is_auth_error(tr_e):
+                        raise tr_e
+                    readiness = None
+
+                if not readiness:
+                    readiness = client.get_morning_training_readiness(target_date_str)
+
+                if isinstance(readiness, dict):
+                    readiness_score = readiness.get('score')
+                    readiness_level = readiness.get('level')
+                    readiness_feedback = readiness.get('feedbackShort')
+                    hrv_weekly = readiness.get('hrvWeeklyAverage')
             except Exception as e:
                 print(f"[GarminSync] Warning fetching readiness: {e}")
                 if is_auth_error(e):
