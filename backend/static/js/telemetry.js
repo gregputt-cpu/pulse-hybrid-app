@@ -233,6 +233,38 @@
       };
     }
 
+    function renderGarminSyncNotice(state) {
+      const notice = document.getElementById('garminStatusNotice');
+      if (!notice) return;
+      const g = (state && state.garmin) || (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) || {};
+      const acts = Array.isArray(g.today_activities) ? g.today_activities : [];
+      const totalBurn = acts.reduce((s, a) => s + Number(a.calories || 0), 0) || Number(g.active_calories || 0);
+      const steps = Number(g.steps || 0);
+      if (acts.length === 0) {
+        notice.innerHTML = `
+          <div style="font-size:12.5px; font-weight:800; color:var(--primary);">✓ Cloud Sync Active (${steps.toLocaleString()} steps • ${totalBurn} kcal)</div>
+          <div style="font-size:11.5px; color:var(--text-muted); line-height:1.35;">No dedicated workouts logged on Garmin today yet.</div>
+        `;
+        return;
+      }
+      const rowsHtml = acts.map((a, idx) => {
+        const title = a.sub_title || a.subTitle || a.name || 'Workout';
+        const dur = Number(a.duration_min || a.durationMin || 0).toFixed(1);
+        const cals = Number(a.calories || 0);
+        const hr = a.avg_hr || a.avgHr ? ` • Avg HR ${a.avg_hr || a.avgHr} bpm` : '';
+        const color = idx === 0 ? 'var(--primary)' : 'var(--cyan)';
+        return `<div style="font-size:11.5px; font-weight:700; color:${color}; background:rgba(0,0,0,0.3); padding:5px 7px; border-radius:4px;">⚡ ${title} (${dur} min) • ${cals} kcal${hr}</div>`;
+      }).join('');
+      notice.innerHTML = `
+        <div style="font-size:12.5px; font-weight:800; color:var(--primary);">✓ Cloud Sync Active (${totalBurn} kcal • ${steps.toLocaleString()} steps)</div>
+        <div style="font-size:11.5px; color:#fff; line-height:1.35;">${acts.length} workout${acts.length > 1 ? 's' : ''} recorded today on your Garmin watch:</div>
+        <div style="display:flex; flex-direction:column; gap:4px;">${rowsHtml}</div>
+        <button class="btn-action-primary" style="height:32px; font-size:12px; background:var(--primary); color:#000; font-weight:800; margin-top:3px;" onclick="loadLiveState(); closeSyncModal(); showToast('✓ ${acts.length} Garmin Workout${acts.length > 1 ? 's' : ''} Loaded (${totalBurn} kcal)!');">
+          ✓ View Ingested Workouts (${totalBurn} kcal)
+        </button>
+      `;
+    }
+
     async function triggerGarminCloudSync() {
       const btn = document.getElementById('btnTriggerGarminSync');
       const email = document.getElementById('garminEmailInput')?.value.trim() || 'greg.putt@gmail.com';
@@ -247,7 +279,7 @@
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
         const res = await fetch('/api/garmin/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -258,6 +290,7 @@
 
         if (!res.ok || res.status === 404) {
           await loadLiveState();
+          renderGarminSyncNotice(window.BAKED_LIVE_STATE);
           showToast('✓ Synced with Railway Cloud & Local Cache');
           beep(880, 0.1);
           closeSyncModal();
@@ -279,12 +312,16 @@
         } else if (data.success || data.status === 'success') {
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
+            applyLiveStateToDom(data.state);
           }
           const passEl = document.getElementById('garminPassInput');
           if (passEl) passEl.value = '';
           const mfaEl = document.getElementById('garminMfaInput');
           if (mfaEl) mfaEl.value = '';
           await loadLiveState();
+          renderGarminSyncNotice(window.BAKED_LIVE_STATE);
+          const notice = document.getElementById('garminStatusNotice');
+          if (notice) notice.style.display = 'flex';
           updateEquipmentTriggerSummary();
           const exportBox = document.getElementById('garminTokenExportBox');
           if (exportBox) exportBox.style.display = 'flex';
@@ -292,19 +329,20 @@
           beep(880, 0.15);
           showToast('✓ Garmin, Renpho & MyNetDiary Synced Live!');
         } else if (data.message === 'Application not found' || data.status === 'error') {
+          await loadLiveState();
+          renderGarminSyncNotice(window.BAKED_LIVE_STATE);
           const notice = document.getElementById('garminStatusNotice');
           if (notice) notice.style.display = 'flex';
-          await loadLiveState();
           showToast('⚡ Cloud backend offline. Loaded today\'s biometrics from local master!');
           beep(720, 0.1);
         } else {
           showToast(`⚠️ Sync notice: ${data.error || data.message || 'Unable to connect'}`);
         }
       } catch(e) {
-        // When running in standalone phone mode or Google Drive, relative /api/ is not accessible
+        await loadLiveState();
+        renderGarminSyncNotice(window.BAKED_LIVE_STATE);
         const notice = document.getElementById('garminStatusNotice');
         if (notice) notice.style.display = 'flex';
-        await loadLiveState();
         showToast('✓ Today\'s Garmin workout is already loaded!');
       } finally {
         if (btn) {
@@ -332,6 +370,7 @@
         if (data.success || data.status === 'success') {
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
+            applyLiveStateToDom(data.state);
           }
           const passEl = document.getElementById('garminPassInput');
           if (passEl) passEl.value = '';
@@ -340,6 +379,7 @@
           const mfaBox = document.getElementById('garminMfaBox');
           if (mfaBox) mfaBox.style.display = 'none';
           await loadLiveState();
+          renderGarminSyncNotice(window.BAKED_LIVE_STATE);
           const exportBox = document.getElementById('garminTokenExportBox');
           if (exportBox) exportBox.style.display = 'flex';
           closeSyncModal();
@@ -1663,37 +1703,48 @@
           }
           if (bSub.innerText !== desiredSub) bSub.innerText = desiredSub;
         }
-        if (Array.isArray(g.recent_activities) && g.recent_activities.length > 0) {
-          const garminActs = g.recent_activities.map((a, idx) => {
-            const actDate = a.date;
-            const formatted = formatActivityDisplay({ rawDate: actDate, date: actDate, id: a.id });
-            return {
-              id: String(a.id),
-              name: a.name,
-              subTitle: a.sub_title,
-              rawDate: actDate,
-              date: formatted.displayDate,
-              isToday: formatted.isToday,
-              durationMin: a.duration_min,
-              calories: a.calories,
-              avgHr: a.avg_hr,
-              maxHr: a.max_hr,
-              aerobicTe: a.aerobic_te,
-              anaerobicTe: a.anaerobic_te,
-              benefits: a.benefits,
-              activity_type_key: a.activity_type_key,
-              total_sets: a.total_sets,
-              total_reps: a.total_reps,
-              exercise_sets: a.exercise_sets,
-              hr_samples: a.hr_samples,
-              hr_zones: a.hr_zones
-            };
-          });
+        const rawGarminActs = (Array.isArray(g.recent_activities) && g.recent_activities.length > 0)
+          ? g.recent_activities
+          : (Array.isArray(g.today_activities) ? g.today_activities : []);
+        if (rawGarminActs.length > 0) {
+          const isBridgeAct = (a) => a && (a.source === 'garmin_via_mnd_bridge' || String(a.id || '').startsWith('990') || String(a.id || '').startsWith('9920') || String(a.subTitle || a.sub_title || '').startsWith('fēnix 8 •'));
+          const hasRealOAuthActs = g.source === 'garmin_oauth' || rawGarminActs.some(a => !isBridgeAct(a));
+          const garminActs = rawGarminActs
+            .filter(a => !hasRealOAuthActs || !isBridgeAct(a))
+            .map((a) => {
+              const actDate = a.date;
+              const formatted = formatActivityDisplay({ rawDate: actDate, date: actDate, id: a.id });
+              return {
+                id: String(a.id),
+                name: a.name,
+                subTitle: a.sub_title || a.subTitle,
+                rawDate: actDate,
+                date: formatted.displayDate,
+                isToday: formatted.isToday,
+                durationMin: a.duration_min || a.durationMin,
+                calories: a.calories,
+                avgHr: a.avg_hr || a.avgHr,
+                maxHr: a.max_hr || a.maxHr,
+                aerobicTe: a.aerobic_te ?? a.aerobicTe,
+                anaerobicTe: a.anaerobic_te ?? a.anaerobicTe,
+                benefits: a.benefits,
+                activity_type_key: a.activity_type_key,
+                total_sets: a.total_sets,
+                total_reps: a.total_reps,
+                exercise_sets: a.exercise_sets,
+                hr_samples: a.hr_samples,
+                hr_zones: a.hr_zones,
+                source: a.source
+              };
+            });
 
           const localSaved = localStorage.getItem('pulse_recent_activities');
           let localActs = [];
           if (localSaved) {
             try { localActs = JSON.parse(localSaved); } catch(e) {}
+          }
+          if (hasRealOAuthActs && Array.isArray(localActs)) {
+            localActs = localActs.filter(a => !isBridgeAct(a));
           }
 
           const merged = [...localActs];
@@ -1714,6 +1765,9 @@
           });
 
           recentActivitiesData = merged.length > 0 ? merged : garminActs;
+          try {
+            localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
+          } catch(e) {}
           renderHistoryList();
           renderTodayTrainingRecommendations();
         }

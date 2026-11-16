@@ -435,8 +435,13 @@ class GarminSyncService:
             today_ids = {str(a['id']) for a in today_activity_list}
             all_activities = list(today_activity_list)
             for old in existing_activities:
-                if str(old.get('id')) not in today_ids:
-                    all_activities.append(old)
+                old_id = str(old.get('id', ''))
+                old_date = str(old.get('date', ''))
+                if old_id in today_ids:
+                    continue
+                if old.get('source') == 'garmin_via_mnd_bridge' or (old_date.startswith(target_date_str) and old_id.startswith(('990', '9920'))):
+                    continue
+                all_activities.append(old)
             garmin_state['recent_activities'] = all_activities
 
         nutrition = state.setdefault('nutrition', {})

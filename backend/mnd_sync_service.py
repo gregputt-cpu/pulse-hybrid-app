@@ -612,20 +612,27 @@ class MyNetDiarySyncService:
         state['last_synced'] = datetime.now().isoformat()
 
         garmin_state = state.setdefault('garmin', {})
+        today_str = target_date_str or date.today().isoformat()
+        has_live_garmin_oauth = (
+            garmin_state.get('source') == 'garmin_oauth'
+            and state.get('date') == today_str
+        )
 
-        # Apply live Garmin bridge metrics from MyNetDiary if present
+        # Apply live Garmin bridge metrics from MyNetDiary if present (only when direct Garmin OAuth hasn't already populated today)
         if garmin_bridge:
             if garmin_bridge.get('steps') is not None:
-                garmin_state['steps'] = garmin_bridge['steps']
-            if garmin_bridge.get('active_calories') is not None:
+                if not has_live_garmin_oauth or not garmin_state.get('steps'):
+                    garmin_state['steps'] = garmin_bridge['steps']
+                else:
+                    garmin_state['steps'] = max(int(garmin_state.get('steps') or 0), int(garmin_bridge['steps'] or 0))
+            if garmin_bridge.get('active_calories') is not None and (not has_live_garmin_oauth or not garmin_state.get('active_calories')):
                 garmin_state['active_calories'] = garmin_bridge['active_calories']
-            if garmin_bridge.get('distance_miles') is not None:
+            if garmin_bridge.get('distance_miles') is not None and (not has_live_garmin_oauth or not garmin_state.get('distance_miles')):
                 garmin_state['distance_miles'] = garmin_bridge['distance_miles']
-            if garmin_bridge.get('active_minutes') is not None:
+            if garmin_bridge.get('active_minutes') is not None and (not has_live_garmin_oauth or not garmin_state.get('active_minutes')):
                 garmin_state['active_minutes'] = garmin_bridge['active_minutes']
-            if garmin_bridge.get('sleep_duration'):
+            if garmin_bridge.get('sleep_duration') and (not has_live_garmin_oauth or not garmin_state.get('sleep_duration')):
                 garmin_state['sleep_duration'] = garmin_bridge['sleep_duration']
-            today_str = target_date_str or date.today().isoformat()
             # Check manual override for sleep score
             is_manual_override = (
                 garmin_state.get('sleep_score_manual_date') == today_str
