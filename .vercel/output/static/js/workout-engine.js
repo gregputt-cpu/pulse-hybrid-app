@@ -839,8 +839,24 @@
     let activeWorkoutPlan = [];
     let currentExIdx = 0;
 
+    function getKbSubMode() {
+      try {
+        const saved = localStorage.getItem('pulse_kb_submode');
+        if (saved === 'flow_2h' || saved === 'flow_1h' || saved === 'grinds') return saved;
+      } catch(e) {}
+      return 'flow_2h';
+    }
+
+    function setKbSubMode(mode) {
+      const valid = (mode === 'flow_2h' || mode === 'flow_1h' || mode === 'grinds') ? mode : 'flow_2h';
+      try { localStorage.setItem('pulse_kb_submode', valid); } catch(e) {}
+      loadDailyArchetype('option_kb');
+    }
+    window.setKbSubMode = setKbSubMode;
+
     function loadDailyArchetype(key) {
       currentArchetypeKey = key || 'option_a';
+      const kbSubMode = getKbSubMode();
       const verdict = (typeof computeTodayWorkoutVerdict === 'function') ? computeTodayWorkoutVerdict() : null;
       const todayGearMode = (typeof getTodayGearMode === 'function') ? getTodayGearMode() : 'gym';
       const todayTimeMode = (typeof getTodayTimeMode === 'function') ? getTodayTimeMode() : '45m';
@@ -887,8 +903,16 @@
 
       const focusMode = (verdict && verdict.mode && exerciseMatrix[verdict.mode]) ? verdict.mode : 'full_body_strength';
       const matrixForMode = exerciseMatrix[focusMode] || exerciseMatrix.full_body_strength;
-      const rawExIds = matrixForMode[currentArchetypeKey] || matrixForMode.option_a || ['zone2_flush', 'knee_tke', 'deadbug_hold'];
-      const slicedExIds = rawExIds.slice(0, targetCount);
+      let rawExIds = matrixForMode[currentArchetypeKey] || matrixForMode.option_a || ['zone2_flush', 'knee_tke', 'deadbug_hold'];
+      let slicedExIds = rawExIds.slice(0, targetCount);
+
+      if (currentArchetypeKey === 'option_kb') {
+        if (kbSubMode === 'flow_2h') {
+          slicedExIds = ['kb_flow_2h_out_about', 'kb_flow_2h_tactical_upper', 'kb_flow_2h_gladiator_post', 'kb_flow_2h_pyramid_1_5'];
+        } else if (kbSubMode === 'flow_1h') {
+          slicedExIds = ['kb_flow_1h_armor_chain', 'kb_flow_1h_viking_warrior', 'kb_flow_1h_dan_john_grind', 'kb_flow_1h_combat_core'];
+        }
+      }
 
       const allExercises = getAllExercises();
 
@@ -916,7 +940,7 @@
           modified.targetReps = typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : (ex.targetReps !== undefined ? ex.targetReps : 8);
         }
 
-        if (currentArchetypeKey === 'option_kb' && typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) {
+        if (currentArchetypeKey === 'option_kb' && ex.format !== 'kb_flow' && typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) {
           modified.targetWeight = gearConfig.kb.weight;
         }
 
@@ -996,9 +1020,24 @@
         }
       });
 
+      const kbSubBar = document.getElementById('kbSubModeBar');
+      if (kbSubBar) {
+        kbSubBar.style.display = currentArchetypeKey === 'option_kb' ? 'grid' : 'none';
+        ['flow_2h', 'flow_1h', 'grinds'].forEach(m => {
+          const sb = document.getElementById(`btnKbSub_${m}`);
+          if (sb) {
+            if (m === kbSubMode) sb.classList.add('active');
+            else sb.classList.remove('active');
+          }
+        });
+      }
+
       const gearStatusEl = document.getElementById('trainGearStatus');
       if (gearStatusEl) {
-        if (currentArchetypeKey === 'option_kb') gearStatusEl.innerText = `Heavy Kettlebell (${(typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})`;
+        if (currentArchetypeKey === 'option_kb') {
+          const kbModeDesc = kbSubMode === 'flow_2h' ? '2H KB Flow (30m AMRAP)' : (kbSubMode === 'flow_1h' ? '1H KB Flow (30m AMRAP)' : `Heavy KB (${(typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})`);
+          gearStatusEl.innerText = kbModeDesc;
+        }
         else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
         else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Kettlebells, DB & Slam Ball";
         else gearStatusEl.innerText = "Bodyweight & Incline Cadence";
@@ -1259,6 +1298,223 @@
         rationale: "High-output threshold test measuring total completion time as an objective conditioning benchmark.",
         setsCount: 1,
         goals: ["work_capacity", "recomp", "kb_strength"]
+      },
+      {
+        id: "kb_flow_2h_out_about",
+        name: "2H Out & About 9-Move Flow (30m AMRAP)",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "2h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 55,
+        kbRepsPerRound: 45,
+        flowSteps: [
+          "5 Bent-Over Rows",
+          "5 Cleans",
+          "5 Swings",
+          "5 Goblet Squats",
+          "5 Bicep Curls",
+          "5 OH Tricep Ext",
+          "5 Standing Pullovers",
+          "10 Hip-to-Halos",
+          "10 Push-Ups"
+        ],
+        cue: "Double-handed unbroken flow: 5 Rows → 5 Cleans → 5 Swings → 5 Goblet Squats → 5 Curls → 5 OH Tricep Ext → 5 Pullovers → 10 Hip-to-Halos → 10 Push-Ups. Then complete your repeating bodyweight intermission (or rest 60s).",
+        rationale: "55-rep full-body continuous chain (900 kg KB tonnage/round at 20kg + 10 push-ups) maximizing caloric density, grip endurance, and lean mass retention anywhere.",
+        setsCount: 1,
+        goals: ["kb_strength", "work_capacity", "recomp", "pushups"]
+      },
+      {
+        id: "kb_flow_2h_tactical_upper",
+        name: "2H Tactical Upper & Push-Up Engine Flow",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "2h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 38,
+        kbRepsPerRound: 28,
+        flowSteps: [
+          "5 Bent-Over Rows",
+          "5 Crush Floor Press",
+          "5 OH Tricep Ext",
+          "5 Crush Bicep Curls",
+          "8 Alt Reverse Goblet Lunges",
+          "10 Bell-Tap Push-Ups"
+        ],
+        cue: "Squeeze the bell horns hard on floor press and curls; finish each round with 10 crisp push-ups before your intermission.",
+        rationale: "Targets chest, triceps, lats, and push-up endurance without needing a bench or high ceiling.",
+        setsCount: 1,
+        goals: ["pushups", "kb_strength", "recomp"]
+      },
+      {
+        id: "kb_flow_2h_gladiator_post",
+        name: "2H Gladiator Posterior & Trunk Flow",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "2h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 38,
+        kbRepsPerRound: 38,
+        flowSteps: [
+          "8 Two-Hand Swings",
+          "6 Slow KB RDLs",
+          "6 Goblet Kang Squats",
+          "8 Hip-to-Halos",
+          "10 Plank KB Pull-Throughs"
+        ],
+        cue: "Explosive swings into slow 3-second eccentric RDLs; lock ribs down during halos and pull-throughs.",
+        rationale: "Posterior-chain and anti-rotation fat-loss flow sparing shoulders while reinforcing RDL hinge power.",
+        setsCount: 1,
+        goals: ["rdl", "work_capacity", "recomp"]
+      },
+      {
+        id: "kb_flow_2h_pyramid_1_5",
+        name: "2H 1-to-5 Pyramid Ladder Flow",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "2h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 75,
+        kbRepsPerRound: 60,
+        flowSteps: [
+          "1-2-3-4-5 Bent-Over Rows",
+          "1-2-3-4-5 Dead Cleans",
+          "1-2-3-4-5 Two-Hand Swings",
+          "1-2-3-4-5 Goblet Squats",
+          "1-2-3-4-5 Push-Ups"
+        ],
+        cue: "Do 1 rep of each move, then 2 of each, 3, 4, and 5 (= 1 macro-round of 75 reps) before your intermission.",
+        rationale: "Ascending ladder pacing prevents early grip burnout during 30-minute AMRAPs while stacking 75 total reps per round.",
+        setsCount: 1,
+        goals: ["work_capacity", "recomp", "pushups"]
+      },
+      {
+        id: "kb_flow_1h_armor_chain",
+        name: "1H Armor & Athletic Chain (5L → 5R)",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "1h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 60,
+        kbRepsPerRound: 60,
+        flowSteps: [
+          "5 1H Row (L)",
+          "5 1H Clean (L)",
+          "5 1H Swing (L)",
+          "5 Racked Squat (L)",
+          "5 Strict/Push Press (L)",
+          "5 OH Reverse Lunge (L)",
+          "Switch Hand → Repeat 5R"
+        ],
+        cue: "Complete all 30 reps on Left without setting the bell down, switch hands via a crisp swing, then complete all 30 reps on Right.",
+        rationale: "Unilateral anti-rotation loading challenges obliques, grip, and shoulder stability while keeping heart rate in Zone 3.",
+        setsCount: 1,
+        goals: ["kb_strength", "work_capacity", "recomp"]
+      },
+      {
+        id: "kb_flow_1h_viking_warrior",
+        name: "1H Viking Warrior Conditioning (5L → 5R)",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "1h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 50,
+        kbRepsPerRound: 50,
+        flowSteps: [
+          "5 1H Swings (L)",
+          "5 1H High Pulls (L)",
+          "5 Tactical Cleans (L)",
+          "5 Push Presses (L)",
+          "5 Racked Reverse Lunges (L)",
+          "Hand-to-Hand Switch → 5R"
+        ],
+        cue: "Ballistic hip snap from swings into high pulls and cleans; catch smoothly in the rack before pressing.",
+        rationale: "High VO2-max ballistic unilateral chain built for maximum fat oxidation and forearm stamina.",
+        setsCount: 1,
+        goals: ["work_capacity", "recomp"]
+      },
+      {
+        id: "kb_flow_1h_dan_john_grind",
+        name: "1H Dan John Armor + Grind (L → R)",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "1h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 32,
+        kbRepsPerRound: 32,
+        flowSteps: [
+          "5 1H Gorilla Rows (L)",
+          "4 1H Cleans (L)",
+          "3 Strict Presses (L)",
+          "4 Front Rack Squats (L)",
+          "30s Suitcase March (L)",
+          "Switch → Repeat Right"
+        ],
+        cue: "Heavy strict grind sequence; finish each side with a tall-posture 30s suitcase march before switching.",
+        rationale: "Gold-standard single-bell hypertrophy and trunk bracing complex for retaining lean mass in a deficit.",
+        setsCount: 1,
+        goals: ["kb_strength", "recomp"]
+      },
+      {
+        id: "kb_flow_1h_combat_core",
+        name: "1H Rotational Combat & Core (5L → 5R)",
+        family: "cardio",
+        format: "kb_flow",
+        handMode: "1h",
+        durationSec: 1800,
+        defaultWeight: "20kg",
+        requiredGear: ["kb"],
+        getBaseWeight: () => "20kg",
+        getBaseReps: () => "30m AMRAP",
+        rest: "Intermission",
+        repsPerRound: 56,
+        kbRepsPerRound: 48,
+        flowSteps: [
+          "5 Staggered 1H RDL (L)",
+          "5 Clean-to-Thruster (L)",
+          "5 Racked Side Bend / Windmill (L)",
+          "5 Hand-to-Hand Swings",
+          "Repeat L/R + 8 Renegade Row+Push-Ups"
+        ],
+        cue: "Control the hinge and rotational core tension; keep hips square during the finishing renegade row + push-up combo.",
+        rationale: "Rotational athletic core stability paired with push-up density.",
+        setsCount: 1,
+        goals: ["work_capacity", "recomp", "pushups"]
       },
       {
         id: "pushups_renegade",
@@ -3841,6 +4097,11 @@ function viewCompletedWorkoutBreakdown() {
         const rnds = (prog && prog.nextRounds) ? prog.nextRounds : (ex.rounds || ex.setsCount || 10);
         return { isTimed: true, format: 'emom', workSec: 60, restSec: 0, rounds: rnds, label: `${rnds}-Min EMOM (60s Rounds)` };
       }
+      if (ex.format === 'kb_flow' || id.startsWith('kb_flow_')) {
+        const dur = (prog && prog.durationSec) ? prog.durationSec : (ex.durationSec || 1800);
+        const mins = Math.round(dur / 60);
+        return { isTimed: true, format: 'kb_flow', durationSec: dur, rounds: 1, prevRounds: prog ? prog.amrapRounds : null, label: `${mins}:00 KB Flow AMRAP (${ex.flowSteps ? ex.flowSteps.length : 9} Moves)` };
+      }
       if (ex.format === 'amrap' || id.includes('amrap')) {
         const dur = (prog && prog.durationSec) ? prog.durationSec : (ex.durationSec || 600);
         const mins = Math.round(dur / 60);
@@ -3869,18 +4130,23 @@ function viewCompletedWorkoutBreakdown() {
     function initInlineTimerForExercise(ex, fmt) {
       if (inlineTimerState.exId === ex.id && inlineTimerState.format === fmt.format) return;
       stopInlineTimer();
+      let savedIntermission = 'none_rest';
+      try { savedIntermission = localStorage.getItem('pulse_kb_intermission') || 'none_rest'; } catch(e) {}
       inlineTimerState = {
         exId: ex.id,
         format: fmt.format,
-        phase: fmt.format === 'amrap' ? 'amrap' : (fmt.format === 'emom' ? 'emom' : (fmt.format === 'for_time' ? 'for_time' : 'work')),
+        phase: (fmt.format === 'amrap' || fmt.format === 'kb_flow') ? fmt.format : (fmt.format === 'emom' ? 'emom' : (fmt.format === 'for_time' ? 'for_time' : 'work')),
         workSec: fmt.workSec || 45,
         restSec: fmt.restSec || 0,
         rounds: fmt.rounds || 1,
         currentRound: 1,
         durationSec: fmt.durationSec || (fmt.workSec || 60),
-        secsLeft: (fmt.format === 'amrap') ? (fmt.durationSec || 600) : (fmt.format === 'for_time' ? 0 : (fmt.workSec || 45)),
+        secsLeft: (fmt.format === 'amrap' || fmt.format === 'kb_flow') ? (fmt.durationSec || (fmt.format === 'kb_flow' ? 1800 : 600)) : (fmt.format === 'for_time' ? 0 : (fmt.workSec || 45)),
         elapsedSec: 0,
         amrapRounds: 0,
+        intermissionMode: savedIntermission,
+        inIntermission: false,
+        flowStepIdx: 0,
         running: false,
         intervalId: null
       };
@@ -3901,7 +4167,17 @@ function viewCompletedWorkoutBreakdown() {
 
       let phaseLabel = '';
       let phaseColor = 'var(--primary)';
-      if (st.format === 'interval') {
+      if (st.format === 'kb_flow') {
+        if (st.inIntermission) {
+          phaseLabel = st.intermissionMode === 'none_rest'
+            ? `🔵 INTERMISSION • PASSIVE REST (60s)`
+            : `🔁 INTERMISSION • ${st.intermissionMode.toUpperCase()}`;
+          phaseColor = '#38bdf8';
+        } else {
+          phaseLabel = `🌊 ${ex.handMode === '1h' ? '1H' : '2H'} KB FLOW AMRAP • ${st.amrapRounds} ROUNDS`;
+          phaseColor = 'var(--primary)';
+        }
+      } else if (st.format === 'interval') {
         phaseLabel = st.phase === 'work'
           ? `🟢 WORK • ROUND ${st.currentRound} OF ${st.rounds}`
           : `🔵 REST • NEXT: ROUND ${Math.min(st.rounds, st.currentRound + 1)}`;
@@ -3923,7 +4199,13 @@ function viewCompletedWorkoutBreakdown() {
       }
 
       let presetsHtml = '';
-      if (st.format === 'interval') {
+      if (st.format === 'kb_flow') {
+        const minsList = [15, 20, 30, 40];
+        presetsHtml = minsList.map(m => {
+          const active = Math.round(st.durationSec / 60) === m;
+          return `<button type="button" onclick="setInlinePreset('kb_flow', ${m}, 0, ${m})" style="flex:1; padding:5px 4px; font-size:10.5px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.12)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${m} min</button>`;
+        }).join('');
+      } else if (st.format === 'interval') {
         const opts = [
           { label: '30/15 × 6', w: 30, r: 15, n: 6 },
           { label: '45/15 × 6', w: 45, r: 15, n: 6 },
@@ -3952,6 +4234,79 @@ function viewCompletedWorkoutBreakdown() {
         }).join('');
       }
 
+      let kbFlowExtraHtml = '';
+      if (st.format === 'kb_flow') {
+        const steps = Array.isArray(ex.flowSteps) ? ex.flowSteps : [];
+        const bellKg = parseInt(String(ex.targetWeight || '20kg'), 10) || 20;
+        const kbRepsRd = ex.kbRepsPerRound || 45;
+        const totalRepsRd = ex.repsPerRound || kbRepsRd;
+        const totalTonnage = st.amrapRounds * kbRepsRd * bellKg;
+        const totalReps = st.amrapRounds * totalRepsRd;
+
+        const weightPills = [16, 20, 24, 32].map(w => {
+          const active = bellKg === w;
+          return `<button type="button" onclick="setKbFlowWeight('${w}kg')" style="padding:3px 8px; font-size:10px; font-weight:800; border-radius:5px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.14)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${w}kg</button>`;
+        }).join('');
+
+        const stepsHtml = steps.map((s, idx) => {
+          const active = idx === (st.flowStepIdx || 0);
+          return `<button type="button" onclick="toggleKbFlowStep(${idx})" style="padding:4px 7px; font-size:10.5px; font-weight:700; border-radius:6px; cursor:pointer; text-align:left; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(0,229,255,0.16)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : '#cbd5e1'};">${idx + 1}. ${s}</button>`;
+        }).join('');
+
+        const intermissionOpts = [
+          { id: 'none_rest', label: '🧘 Rest Only (60s)' },
+          { id: '20 Mountain Climbers', label: '🧗 20 Mountain Climbers' },
+          { id: '15 Air Squats', label: '🦵 15 Air Squats' },
+          { id: '10 Burpees', label: '🔥 10 Burpees' },
+          { id: '30s Hollow / Plank', label: '🧱 30s Hollow / Plank' },
+          { id: '45s Boxer Bounce', label: '⚡ 45s Boxer Bounce' },
+          { id: '10 Push-Ups', label: '💪 10 Push-Ups' }
+        ];
+        const intermissionPills = intermissionOpts.map(opt => {
+          const active = st.intermissionMode === opt.id;
+          return `<button type="button" onclick="setKbFlowIntermission('${opt.id}')" style="padding:4px 7px; font-size:10px; font-weight:700; border-radius:6px; cursor:pointer; border:1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.12)'}; background:${active ? 'rgba(56,189,248,0.22)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : 'var(--text-muted)'};">${opt.label}</button>`;
+        }).join('');
+
+        const intermissionBanner = st.inIntermission ? `
+          <div style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.45); border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div style="font-size:11px; font-weight:800; color:#7dd3fc;">
+              ${st.intermissionMode === 'none_rest' ? '🧘 Passive Rest Window (60s) — Breathe & Shake Out Grip' : `🔁 Intermission: Complete ${st.intermissionMode}`}
+            </div>
+            <button type="button" onclick="finishKbFlowIntermission()" style="padding:5px 10px; font-size:10.5px; font-weight:800; border-radius:6px; border:none; background:#38bdf8; color:#000; cursor:pointer;">✓ Start Next Flow Round</button>
+          </div>
+        ` : '';
+
+        kbFlowExtraHtml = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:8px;">
+            <span style="font-size:10.5px; font-weight:800; color:var(--text-secondary);">🔔 Bell Weight:</span>
+            <div style="display:flex; gap:4px;">${weightPills}</div>
+          </div>
+
+          <div>
+            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Flow Sequence (${steps.length} moves • ${totalRepsRd} reps/rd • Tap step to mark spot)</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">${stepsHtml}</div>
+          </div>
+
+          <div>
+            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Between-Round Intermission (Optional Bodyweight or Rest Only)</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">${intermissionPills}</div>
+          </div>
+
+          ${intermissionBanner}
+
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px; gap:8px; flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#fff;">Completed: <span style="color:var(--primary);">${st.amrapRounds} Rounds</span></div>
+              <div style="font-size:10px; color:var(--text-muted);">${totalReps.toLocaleString()} total reps • ${totalTonnage.toLocaleString()} kg KB tonnage</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
+              <button type="button" onclick="completeKbFlowRound()" style="padding:6px 12px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
+            </div>
+          </div>
+        `;
+      }
+
       const showRoundsCtrl = (st.format === 'amrap' || st.format === 'for_time');
       const progNote = (fmt.prevRounds !== null && fmt.prevRounds !== undefined)
         ? `Previous AMRAP benchmark: <strong>${fmt.prevRounds} rounds</strong> (aim for ${fmt.prevRounds + 1}).`
@@ -3977,6 +4332,8 @@ function viewCompletedWorkoutBreakdown() {
             ${presetsHtml}
           </div>
 
+          ${kbFlowExtraHtml}
+
           ${showRoundsCtrl ? `
             <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px;">
               <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">Completed Rounds</span>
@@ -3991,12 +4348,63 @@ function viewCompletedWorkoutBreakdown() {
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
             <span style="font-size:10.5px; color:var(--text-muted); flex:1;">${progNote}</span>
             <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:8px 14px; border-radius:8px; border:none; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.5); color:${isLogged ? '#000' : '#34d399'}; font-size:11.5px; font-weight:800; cursor:pointer;">
-              ${isLogged ? '✓ Conditioning Logged' : '✓ Complete & Log'}
+              ${isLogged ? '✓ Flow / Conditioning Logged' : '✓ Complete & Log'}
             </button>
           </div>
         </div>
       `;
     }
+
+    function setKbFlowWeight(weightStr) {
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (!ex) return;
+      ex.targetWeight = weightStr;
+      renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      const tEl = document.getElementById('exTarget');
+      if (tEl) tEl.innerText = `Prescribed: ${ex.targetReps || '30m AMRAP'} @ ${weightStr}`;
+      beep(680, 0.05);
+    }
+    window.setKbFlowWeight = setKbFlowWeight;
+
+    function setKbFlowIntermission(mode) {
+      inlineTimerState.intermissionMode = mode;
+      try { localStorage.setItem('pulse_kb_intermission', mode); } catch(e) {}
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(620, 0.05);
+    }
+    window.setKbFlowIntermission = setKbFlowIntermission;
+
+    function toggleKbFlowStep(idx) {
+      inlineTimerState.flowStepIdx = idx;
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(540, 0.03);
+    }
+    window.toggleKbFlowStep = toggleKbFlowStep;
+
+    function completeKbFlowRound() {
+      inlineTimerState.amrapRounds = (inlineTimerState.amrapRounds || 0) + 1;
+      inlineTimerState.flowStepIdx = 0;
+      inlineTimerState.inIntermission = true;
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestTimer === 'function') {
+        restSecs = 60;
+        startRestTimer();
+      }
+      beep(880, 0.12);
+    }
+    window.completeKbFlowRound = completeKbFlowRound;
+
+    function finishKbFlowIntermission() {
+      inlineTimerState.inIntermission = false;
+      inlineTimerState.flowStepIdx = 0;
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+      beep(780, 0.08);
+    }
+    window.finishKbFlowIntermission = finishKbFlowIntermission;
 
     function setInlinePreset(format, val1, val2, val3) {
       stopInlineTimer();
@@ -4015,10 +4423,11 @@ function viewCompletedWorkoutBreakdown() {
         inlineTimerState.currentRound = 1;
         inlineTimerState.phase = 'emom';
         inlineTimerState.secsLeft = 60;
-      } else if (format === 'amrap') {
+      } else if (format === 'amrap' || format === 'kb_flow') {
         inlineTimerState.durationSec = val1 * 60;
         inlineTimerState.secsLeft = val1 * 60;
         inlineTimerState.amrapRounds = 0;
+        inlineTimerState.inIntermission = false;
       } else if (format === 'for_time') {
         inlineTimerState.durationSec = val1 * 60;
         inlineTimerState.secsLeft = 0;
@@ -4049,8 +4458,10 @@ function viewCompletedWorkoutBreakdown() {
       if (!ex) return;
       inlineTimerState.currentRound = 1;
       inlineTimerState.elapsedSec = 0;
-      if (inlineTimerState.format === 'amrap') {
+      if (inlineTimerState.format === 'amrap' || inlineTimerState.format === 'kb_flow') {
         inlineTimerState.secsLeft = inlineTimerState.durationSec;
+        inlineTimerState.inIntermission = false;
+        inlineTimerState.flowStepIdx = 0;
       } else if (inlineTimerState.format === 'for_time') {
         inlineTimerState.secsLeft = 0;
       } else {
@@ -4105,6 +4516,7 @@ function viewCompletedWorkoutBreakdown() {
       if (inlineTimerState.format === 'interval') speak("Work! Let's go!");
       else if (inlineTimerState.format === 'emom') speak("Minute 1. Go!");
       else if (inlineTimerState.format === 'amrap') speak("AMRAP started.");
+      else if (inlineTimerState.format === 'kb_flow') speak("Kettlebell flow AMRAP started.");
 
       inlineTimerState.intervalId = setInterval(() => {
         const st = inlineTimerState;
@@ -4173,12 +4585,15 @@ function viewCompletedWorkoutBreakdown() {
       stopInlineTimer();
       const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
       const st = inlineTimerState;
-      const totalDurationSec = st.elapsedSec > 10 ? st.elapsedSec : (st.format === 'amrap' ? st.durationSec : (st.workSec + st.restSec) * st.rounds);
+      const totalDurationSec = st.elapsedSec > 10 ? st.elapsedSec : ((st.format === 'amrap' || st.format === 'kb_flow') ? st.durationSec : (st.workSec + st.restSec) * st.rounds);
       const estBurn = Math.max(25, Math.round((totalDurationSec / 60) * 10.5));
+      const bellKg = parseInt(String((ex && ex.targetWeight) || '20kg'), 10) || 20;
+      const kbRepsRd = (ex && ex.kbRepsPerRound) ? ex.kbRepsPerRound : 45;
+      const totalTonnageKg = st.format === 'kb_flow' ? (st.amrapRounds * kbRepsRd * bellKg) : 0;
 
       sessionLoggedSets[`${exId}_1`] = {
         weight: ex ? (ex.targetWeight || 'Body') : 'Body',
-        reps: st.format === 'amrap' ? `${st.amrapRounds} rds` : formatClockMMSS(totalDurationSec),
+        reps: st.format === 'kb_flow' ? `${st.amrapRounds} rds (${totalTonnageKg}kg)` : (st.format === 'amrap' ? `${st.amrapRounds} rds` : formatClockMMSS(totalDurationSec)),
         logged: true,
         status: 'hit',
         format: st.format,
@@ -4195,6 +4610,22 @@ function viewCompletedWorkoutBreakdown() {
       } else if (st.format === 'amrap') {
         saveConditioningProgression(exId, { durationSec: st.durationSec, amrapRounds: st.amrapRounds, lastDate: new Date().toISOString() });
         nextMsg = `AMRAP logged: ${st.amrapRounds} rounds in ${Math.round(st.durationSec / 60)}m (~${estBurn} kcal). Beat ${st.amrapRounds} next time.`;
+      } else if (st.format === 'kb_flow') {
+        const intermissionLabel = st.intermissionMode === 'none_rest' ? 'Rest Only (60s)' : (st.intermissionMode || 'Rest Only');
+        saveConditioningProgression(exId, {
+          durationSec: st.durationSec,
+          amrapRounds: st.amrapRounds,
+          intermissionMode: st.intermissionMode,
+          bellWeight: ex ? ex.targetWeight : '20kg',
+          totalTonnageKg,
+          name: ex ? ex.name : 'KB Flow AMRAP',
+          format: 'kb_flow',
+          roundsCompleted: st.amrapRounds,
+          totalSeconds: totalDurationSec,
+          date: new Date().toISOString(),
+          lastDate: new Date().toISOString()
+        });
+        nextMsg = `KB Flow logged: ${st.amrapRounds} rounds (${totalTonnageKg.toLocaleString()} kg tonnage) in ${Math.round(st.durationSec / 60)}m • ${intermissionLabel} (~${estBurn} kcal). Beat ${st.amrapRounds} next time.`;
       } else if (st.format === 'for_time') {
         saveConditioningProgression(exId, { elapsedSec: totalDurationSec, lastDate: new Date().toISOString() });
         nextMsg = `For-Time benchmark logged: ${formatClockMMSS(totalDurationSec)} (~${estBurn} kcal).`;
