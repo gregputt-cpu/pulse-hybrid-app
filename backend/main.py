@@ -100,6 +100,11 @@ class ExercisePreferencesPayload(BaseModel):
     permanent_swaps: Optional[Dict[str, Any]] = None
     hidden_exercises: Optional[List[Any]] = None
 
+class ManualScalePayload(BaseModel):
+    weight_kg: float
+    body_fat_pct: Optional[float] = None
+
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(os.path.join(static_dir, "css")):
     app.mount("/css", StaticFiles(directory=os.path.join(static_dir, "css")), name="css")
@@ -236,6 +241,47 @@ def sync_renpho():
     except Exception as e:
         logger.error(f"Renpho sync error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/renpho/manual")
+def manual_renpho_entry(payload: ManualScalePayload):
+    state = load_live_state()
+    weight_kg = round(float(payload.weight_kg), 2)
+    if payload.body_fat_pct is not None:
+        body_fat_pct = round(float(payload.body_fat_pct), 1)
+        lean_mass_kg = round(weight_kg * (1.0 - (body_fat_pct / 100.0)), 2)
+    else:
+        existing_lbm = state.get('renpho', {}).get('lean_mass_kg') or state.get('athlete', {}).get('lean_mass_kg', 80.99)
+        lean_mass_kg = round(float(existing_lbm), 2)
+        body_fat_pct = round(max(0.0, (weight_kg - lean_mass_kg) / weight_kg) * 100.0, 1)
+
+    target_weight_at_15pct = round(lean_mass_kg / (1.0 - 0.15), 2)
+    fat_to_lose_kg = round(max(0.0, weight_kg - target_weight_at_15pct), 2)
+    last_synced = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    renpho_state = state.setdefault("renpho", {})
+    renpho_state.update({
+        "weight_kg": weight_kg,
+        "body_fat_pct": body_fat_pct,
+        "lean_mass_kg": lean_mass_kg,
+        "target_weight_at_15pct": target_weight_at_15pct,
+        "fat_to_lose_kg": fat_to_lose_kg,
+        "source": "manual_scale_entry",
+        "last_synced": last_synced
+    })
+
+    athlete_state = state.setdefault("athlete", {})
+    athlete_state.update({
+        "weight_kg": weight_kg,
+        "body_fat_pct": body_fat_pct,
+        "lean_mass_kg": lean_mass_kg,
+        "fat_to_lose_kg": fat_to_lose_kg,
+        "target_weight_at_15pct": target_weight_at_15pct,
+        "target_weight_kg": target_weight_at_15pct
+    })
+
+    save_live_state(state)
+    return {"success": True, "renpho": state["renpho"], "state": state}
+
 
 @app.get("/api/renpho/history")
 def get_renpho_history(days: int = 90):

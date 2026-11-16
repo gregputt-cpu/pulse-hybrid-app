@@ -1407,6 +1407,27 @@
         if (g.training_readiness !== undefined && g.training_readiness !== null) window.athleteProfile.readiness = Number(g.training_readiness);
       }
 
+      // Check if manual weigh-in was saved today and renpho data is older
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+      const manualScaleDate = localStorage.getItem('pulse_manual_scale_date');
+      const savedWt = localStorage.getItem('pulse_athlete_weight');
+      const savedBf = localStorage.getItem('pulse_athlete_bf');
+      const isManualToday = manualScaleDate === todayIso;
+      const renphoLastSynced = (state && state.renpho && state.renpho.last_synced) ? String(state.renpho.last_synced).slice(0, 10) : '';
+      const renphoIsOlder = !renphoLastSynced || renphoLastSynced < todayIso;
+
+      if (isManualToday && renphoIsOlder && savedWt) {
+        const pWt = parseFloat(savedWt);
+        const pBf = parseFloat(savedBf) || window.athleteProfile.bodyFatPct;
+        const lbm = window.athleteProfile.leanMassKg || 81.03;
+        const targetWt = window.athleteProfile.targetWeightKg || parseFloat((lbm / 0.85).toFixed(2));
+        const fatToBurn = parseFloat(Math.max(0, pWt - targetWt).toFixed(2));
+        window.athleteProfile.weightKg = pWt;
+        window.athleteProfile.bodyFatPct = pBf;
+        window.athleteProfile.fatToLoseKg = fatToBurn;
+      }
+
       // Dynamically update Body-tab / Today-tab elements
       const elTargetWt = document.getElementById('bodyTargetWeightNum');
       if (elTargetWt) elTargetWt.innerHTML = `${window.athleteProfile.targetWeightKg.toFixed(2)} <small style="font-size:13px; font-weight:500; color:var(--primary);">kg</small>`;
@@ -1688,15 +1709,25 @@
         updateInjuryBadge();
       }
 
+      const _nowScale = new Date();
+      const todayIsoScale = `${_nowScale.getFullYear()}-${String(_nowScale.getMonth() + 1).padStart(2, '0')}-${String(_nowScale.getDate()).padStart(2, '0')}`;
+      const manualScaleDate = localStorage.getItem('pulse_manual_scale_date');
+      const savedWt = localStorage.getItem('pulse_athlete_weight');
+      const savedBf = localStorage.getItem('pulse_athlete_bf');
+      const isManualToday = manualScaleDate === todayIsoScale;
+      const renphoLastSynced = (state && state.renpho && state.renpho.last_synced) ? String(state.renpho.last_synced).slice(0, 10) : '';
+      const renphoIsOlder = !renphoLastSynced || renphoLastSynced < todayIsoScale;
+      const manualOverrideActive = isManualToday && renphoIsOlder && !!savedWt;
+
       if (state.renpho) {
         const r = state.renpho;
-        if (r.weight_kg) {
+        if (r.weight_kg && !manualOverrideActive) {
           const el1 = document.getElementById('vitalScale');
           if (el1) el1.innerText = Number(r.weight_kg.toFixed(2)).toString().includes('.') ? Number(r.weight_kg.toFixed(2)).toString() : r.weight_kg.toFixed(1);
           const el2 = document.getElementById('bodyScaleWeight');
           if (el2) el2.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
         }
-        if (r.body_fat_pct) {
+        if (r.body_fat_pct && !manualOverrideActive) {
           const el1 = document.getElementById('vitalScaleSub');
           if (el1) el1.innerText = `${r.body_fat_pct.toFixed(1)}`;
           const el2 = document.getElementById('bodyScaleBf');
@@ -1708,7 +1739,7 @@
           const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
           if (elMeasuredLabel) elMeasuredLabel.innerText = `${r.body_fat_pct.toFixed(1)}% Scale Measured`;
         }
-        if (r.fat_to_lose_kg) {
+        if (r.fat_to_lose_kg && !manualOverrideActive) {
           const el1 = document.getElementById('bodyFatToBurnNum');
           if (el1) el1.innerText = `${r.fat_to_lose_kg} kg (${(r.fat_to_lose_kg * 2.20462).toFixed(1)} lbs)`;
           const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
@@ -1743,10 +1774,8 @@
         }
       }
 
-      // Load manual local storage weight override only if no direct renpho sync exists
-      const savedWt = localStorage.getItem('pulse_athlete_weight');
-      const savedBf = localStorage.getItem('pulse_athlete_bf');
-      if (savedWt && !state.renpho) {
+      // Load manual local storage weight override if no renpho sync exists OR if manual weigh-in today is newer than renpho sync
+      if (savedWt && (!state.renpho || (isManualToday && renphoIsOlder))) {
         const pWt = parseFloat(savedWt);
         const pBf = parseFloat(savedBf) || ((window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1);
         const lbm = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
@@ -1762,6 +1791,10 @@
         if (bsbf) bsbf.innerText = `${pBf}% Body Fat (Logged Today)`;
         const bfb = document.getElementById('bodyFatToBurnNum');
         if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
+        const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
+        if (elGoalLabel) elGoalLabel.innerText = `${fatToBurn} kg to 15.0% Goal (${targetWt.toFixed(2)}kg)`;
+        const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
+        if (elMeasuredLabel) elMeasuredLabel.innerText = `${pBf.toFixed(1)}% Scale Measured`;
       }
 
       // 3. Nutrition Targets

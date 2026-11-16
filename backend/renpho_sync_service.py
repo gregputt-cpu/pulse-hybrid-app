@@ -79,7 +79,16 @@ class RenphoSyncService:
                 except Exception as e:
                     logger.error(f"[RenphoSync] Error reading live_state: {e}")
 
+            if state.get('renpho', {}).get('source') == 'manual_scale_entry' and str(state.get('renpho', {}).get('last_synced', ''))[:10] >= timestamp_str[:10]:
+                logger.info(f"[RenphoSync] Preserving manual scale entry from {state['renpho'].get('last_synced')} over cloud reading {timestamp_str}")
+                return {
+                    "success": True,
+                    "metrics": state['renpho'],
+                    "state": state
+                }
+
             renpho_data = {
+
                 "source": "renpho_direct_cloud",
                 "weight_kg": weight_kg,
                 "body_fat_pct": body_fat,

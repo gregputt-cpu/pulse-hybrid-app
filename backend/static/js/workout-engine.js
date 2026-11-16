@@ -1909,6 +1909,29 @@
 
       localStorage.setItem('pulse_athlete_weight', val.toFixed(2));
       localStorage.setItem('pulse_athlete_bf', bfPct.toFixed(1));
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+      localStorage.setItem('pulse_manual_scale_date', todayIso);
+
+      fetch('/api/renpho/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weight_kg: val, body_fat_pct: !isNaN(inpBf) ? inpBf : null })
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.success && data.renpho) {
+          if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+          window.BAKED_LIVE_STATE.renpho = data.renpho;
+          if (data.state && data.state.athlete) {
+            window.BAKED_LIVE_STATE.athlete = data.state.athlete;
+          }
+          if (typeof applyLiveStateToDom === 'function') {
+            applyLiveStateToDom(window.BAKED_LIVE_STATE);
+          }
+        }
+      })
+      .catch(err => console.warn('Could not post manual weight:', err));
 
       closeWeightModal();
       showToast(`✓ Weigh-in saved: ${val.toFixed(2)} kg (${bfPct}% BF)`);

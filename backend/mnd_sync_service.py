@@ -188,12 +188,13 @@ class MyNetDiarySyncService:
             awake_min = (ah or 0) * 60 + (am or 0)
 
             # Calculate physiological Firstbeat-aligned sleep score from Garmin sleep stage breakdown
-            dur_pts = min(40.0, (total_sleep_min / 480.0) * 40.0)
-            deep_pts = min(23.0, (deep_min / 100.0) * 23.0)
-            rem_pts = min(23.0, (rem_min / 100.0) * 23.0)
+            dur_pts = min(36.0, (total_sleep_min / 480.0) * 36.0)
+            deep_pts = min(20.0, (deep_min / 100.0) * 20.0)
+            rem_pts = min(20.0, (rem_min / 100.0) * 20.0)
             awake_penalty = max(0.0, (awake_min - 8.0) * 0.48)
             restfulness_pts = max(-8.0, 14.0 - awake_penalty)
             sleep_score = int(round(min(99, max(45, dur_pts + deep_pts + rem_pts + restfulness_pts))))
+
 
             morning_bb = min(100, int(round(sleep_score * 1.05)))
             burn_drain = int(round((active_cals or 0) / 45.0))

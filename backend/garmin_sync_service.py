@@ -20,11 +20,15 @@ except Exception:
     os.makedirs(TOKEN_DIR, exist_ok=True)
 
 if 'GARMIN_TOKENS_JSON' in os.environ:
+    raw_env = os.environ['GARMIN_TOKENS_JSON'].strip()
+    if (raw_env.startswith('"') and raw_env.endswith('"')) or (raw_env.startswith("'") and raw_env.endswith("'")):
+        raw_env = raw_env[1:-1].strip()
+    os.environ['GARMIN_TOKENS_JSON'] = raw_env
     try:
         token_file = os.path.join(TOKEN_DIR, 'garmin_tokens.json')
         if not os.path.exists(token_file):
             with open(token_file, 'w') as f:
-                f.write(os.environ['GARMIN_TOKENS_JSON'])
+                f.write(raw_env)
     except Exception as e:
         print(f"[GarminSync] Warning writing GARMIN_TOKENS_JSON to {TOKEN_DIR}: {e}")
 
@@ -49,11 +53,14 @@ class GarminSyncService:
             except Exception as e:
                 print(f"[GarminSync] Login from tokenstore ({TOKEN_DIR}) error: {e}")
                 if 'GARMIN_TOKENS_JSON' in os.environ:
+                    raw_tok = os.environ['GARMIN_TOKENS_JSON'].strip()
+                    if (raw_tok.startswith('"') and raw_tok.endswith('"')) or (raw_tok.startswith("'") and raw_tok.endswith("'")):
+                        raw_tok = raw_tok[1:-1].strip()
                     try:
-                        self.client.login(tokenstore=os.environ['GARMIN_TOKENS_JSON'])
+                        self.client.login(tokenstore=raw_tok)
                     except Exception:
                         try:
-                            self.client.client.loads(os.environ['GARMIN_TOKENS_JSON'])
+                            self.client.client.loads(raw_tok)
                         except Exception as e2:
                             print(f"[GarminSync] Login from GARMIN_TOKENS_JSON error: {e2}")
                             self.client = None
@@ -61,7 +68,12 @@ class GarminSyncService:
                 else:
                     self.client = None
                     raise
+            try:
+                self.client.display_name = self.client.client.profile.get('displayName')
+            except Exception:
+                pass
         return self.client
+
 
     def export_tokens_json(self):
         if self.client:
@@ -131,6 +143,7 @@ class GarminSyncService:
         readiness_feedback = None
         hrv_weekly = None
         auth_failed = False
+        last_auth_error = None
 
         AUTH_ERROR_TERMS = ["401", "400", "Unauthorized", "invalid_grant", "OAuth2Token"]
 
@@ -145,6 +158,7 @@ class GarminSyncService:
             print(f"[GarminSync] Warning fetching summary: {e}")
             if is_auth_error(e):
                 auth_failed = True
+                last_auth_error = str(e)
             summary = {}
 
         # 2. Fetch today's activities
@@ -162,6 +176,7 @@ class GarminSyncService:
                 print(f"[GarminSync] Warning fetching activities: {e}")
                 if is_auth_error(e):
                     auth_failed = True
+                    last_auth_error = str(e)
                 raw_activities = []
         else:
             raw_activities = []
@@ -182,6 +197,7 @@ class GarminSyncService:
                 print(f"[GarminSync] Warning fetching sleep: {e}")
                 if is_auth_error(e):
                     auth_failed = True
+                    last_auth_error = str(e)
 
         # 4. Fetch morning training readiness
         if not auth_failed:
@@ -195,6 +211,7 @@ class GarminSyncService:
                 print(f"[GarminSync] Warning fetching readiness: {e}")
                 if is_auth_error(e):
                     auth_failed = True
+                    last_auth_error = str(e)
 
         # Persist refreshed tokens when direct calls succeed
         if not auth_failed and self.client:
@@ -215,7 +232,8 @@ class GarminSyncService:
         # If direct Garmin OAuth failed (401), do not overwrite with empty values; let MND Garmin bridge populate
         if auth_failed:
             self.client = None
-            raise GarminConnectAuthenticationError("Direct Garmin OAuth token expired (falling back to MND Garmin bridge)")
+            raise GarminConnectAuthenticationError(f"Direct Garmin OAuth error: {last_auth_error}")
+
 
         garmin_state = state.setdefault('garmin', {})
         garmin_state['source'] = 'garmin_oauth'
