@@ -214,6 +214,14 @@ class MyNetDiarySyncService:
             d_steps = int(round(get_val(61, d_str) or 0))
             ex_notes = exercises_ByDate.get(d_str, '')
 
+            # Check if ex_notes contains workout calories, e.g. "(including 581 workout calories)"
+            m_wc = re.search(r'including\s+([0-9,]+)\s+workout\s+calories', ex_notes)
+            workout_cals = int(m_wc.group(1).replace(',', '')) if m_wc else 0
+
+            # 1. When d_active_cals < 50 and workout_cals < 50, do NOT emit any individual_items (or bridged_activities) for d_str
+            if d_active_cals < 50 and workout_cals < 50:
+                continue
+
             # Only target_date_str has raw_exercise_items passed in directly
             day_raw_items = raw_exercise_items if (d_str == target_date_str and raw_exercise_items) else []
 
@@ -224,15 +232,24 @@ class MyNetDiarySyncService:
                     continue
                 act_id = (it.get('exercise') or {}).get('activityId')
                 name = (it.get('inputString') or (it.get('exercise') or {}).get('activityName') or '').strip()
-                if act_id in [1505, 1507] or name.lower() in ['garmin active calories', 'daily step bonus', 'step bonus']:
+                name_lower = name.lower()
+                if act_id in [1505, 1507] or name_lower in ['garmin active calories', 'daily step bonus', 'step bonus']:
+                    continue
+                if 'garmin' in name_lower or 'step' in name_lower or 'tracker' in name_lower or 'bmr' in name_lower:
                     continue
 
                 cals = it.get('calories')
                 if cals is None or cals == 0:
                     m_c = re.search(r'(\d+)\s*(?:cal|calories|kcal)', str(it.get('amountInputString', '')) + ' ' + str(it.get('notes', '')))
-                    cals = int(m_c.group(1)) if m_c else 150
+                    cals = int(m_c.group(1)) if m_c else 0
                 else:
-                    cals = int(round(float(cals)))
+                    try:
+                        cals = int(round(float(cals)))
+                    except (ValueError, TypeError):
+                        cals = 0
+
+                if cals <= 10:
+                    continue
 
                 m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:min|mins|minutes)', str(it.get('amountInputString', '')) + ' ' + str(it.get('notes', '')))
                 dur = float(m_d.group(1)) if m_d else round(max(20.0, cals / 9.0), 1)
@@ -247,10 +264,6 @@ class MyNetDiarySyncService:
                     'time': time_s,
                     'notes': it.get('notes', '')
                 })
-
-            # Check if ex_notes contains workout calories, e.g. "(including 581 workout calories)"
-            m_wc = re.search(r'including\s+([0-9,]+)\s+workout\s+calories', ex_notes)
-            workout_cals = int(m_wc.group(1).replace(',', '')) if m_wc else 0
 
             if individual_items:
                 # Add each individual workout as a distinct activity card
