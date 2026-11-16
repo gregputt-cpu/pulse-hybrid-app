@@ -280,6 +280,10 @@
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
           }
+          const passEl = document.getElementById('garminPassInput');
+          if (passEl) passEl.value = '';
+          const mfaEl = document.getElementById('garminMfaInput');
+          if (mfaEl) mfaEl.value = '';
           await loadLiveState();
           updateEquipmentTriggerSummary();
           const exportBox = document.getElementById('garminTokenExportBox');
@@ -329,6 +333,10 @@
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
           }
+          const passEl = document.getElementById('garminPassInput');
+          if (passEl) passEl.value = '';
+          const mfaEl = document.getElementById('garminMfaInput');
+          if (mfaEl) mfaEl.value = '';
           const mfaBox = document.getElementById('garminMfaBox');
           if (mfaBox) mfaBox.style.display = 'none';
           await loadLiveState();

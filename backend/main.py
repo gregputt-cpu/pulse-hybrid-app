@@ -165,20 +165,25 @@ def export_garmin_token():
 @app.post("/api/garmin/sync")
 def sync_garmin(payload: Optional[DatePayload] = None):
     target_date = payload.date if payload else None
-    if payload and payload.email and payload.password:
-        login_res = garmin_service.login_with_credentials(payload.email, payload.password)
-        if login_res.get("needs_mfa"):
-            return login_res
-        if not login_res.get("success"):
-            return {"success": False, "error": login_res.get("error", "Authentication failed")}
-
     garmin_sync_error = None
     try:
         try:
             garmin_service.sync_today(target_date)
         except Exception as gex:
-            garmin_sync_error = str(gex)
-            logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
+            if payload and payload.email and payload.password:
+                login_res = garmin_service.login_with_credentials(payload.email, payload.password)
+                if login_res.get("needs_mfa"):
+                    return login_res
+                if not login_res.get("success"):
+                    return {"success": False, "error": login_res.get("error", "Authentication failed")}
+                try:
+                    garmin_service.sync_today(target_date)
+                except Exception as gex2:
+                    garmin_sync_error = str(gex2)
+                    logger.warning(f"Direct Garmin OAuth sync notice after login (falling back to MND Garmin bridge): {gex2}")
+            else:
+                garmin_sync_error = str(gex)
+                logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
         try:
             mnd_service.fetch_today_data(target_date)
         except Exception as ex:
