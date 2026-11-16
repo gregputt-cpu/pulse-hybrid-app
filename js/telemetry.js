@@ -266,9 +266,10 @@
 
         const data = await res.json();
 
-        if (data.status === 'mfa_required') {
+        if (data.status === 'mfa_required' || data.needs_mfa) {
           garminMfaState = data.client_state;
           document.getElementById('garminMfaBox').style.display = 'flex';
+          document.getElementById('garminMfaInput')?.focus();
           showToast('📧 6-Digit MFA code emailed by Garmin. Enter code below.');
           beep(650, 0.1);
         } else if (data.status === 'auth_needed') {
@@ -293,7 +294,7 @@
           showToast('⚡ Cloud backend offline. Loaded today\'s biometrics from local master!');
           beep(720, 0.1);
         } else {
-          showToast(`⚠️ Sync notice: ${data.message || 'Unable to connect'}`);
+          showToast(`⚠️ Sync notice: ${data.error || data.message || 'Unable to connect'}`);
         }
       } catch(e) {
         // When running in standalone phone mode or Google Drive, relative /api/ is not accessible
@@ -324,7 +325,12 @@
           body: JSON.stringify({ mfa_code: code, client_state: garminMfaState })
         });
         const data = await res.json();
-        if (data.status === 'success') {
+        if (data.success || data.status === 'success') {
+          if (data.state) {
+            window.BAKED_LIVE_STATE = data.state;
+          }
+          const mfaBox = document.getElementById('garminMfaBox');
+          if (mfaBox) mfaBox.style.display = 'none';
           await loadLiveState();
           const exportBox = document.getElementById('garminTokenExportBox');
           if (exportBox) exportBox.style.display = 'flex';
@@ -332,7 +338,7 @@
           beep(880, 0.2);
           showToast('✓ Garmin Authenticated & Synced Permanently!');
         } else {
-          showToast(`MFA Error: ${data.message || 'Invalid code'}`);
+          showToast(`MFA Error: ${data.error || data.message || 'Invalid code'}`);
         }
       } catch(e) {
         showToast('Network error verifying MFA.');
