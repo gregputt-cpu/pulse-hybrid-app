@@ -838,8 +838,8 @@
     let currentArchetypeKey = 'option_a';
     let activeWorkoutPlan = [];
     let currentExIdx = 0;
-    if (typeof sessionLoggedSets === 'undefined') {
-      var sessionLoggedSets = {};
+    if (typeof window.sessionLoggedSets === 'undefined') {
+      window.sessionLoggedSets = {};
     }
 
     function loadDailyArchetype(key) {
