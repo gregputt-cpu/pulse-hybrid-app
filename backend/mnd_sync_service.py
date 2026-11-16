@@ -248,6 +248,10 @@ class MyNetDiarySyncService:
                     'notes': it.get('notes', '')
                 })
 
+            # Check if ex_notes contains workout calories, e.g. "(including 581 workout calories)"
+            m_wc = re.search(r'including\s+([0-9,]+)\s+workout\s+calories', ex_notes)
+            workout_cals = int(m_wc.group(1).replace(',', '')) if m_wc else 0
+
             if individual_items:
                 # Add each individual workout as a distinct activity card
                 for idx, item in enumerate(individual_items):
@@ -302,11 +306,7 @@ class MyNetDiarySyncService:
                         "benefits": s_benefits,
                         "source": "garmin_via_mnd_bridge"
                     })
-            elif d_active_cals > 0 or d_active_mins > 0:
-                # 2. Check if ex_notes contains workout calories, e.g. "(including 581 workout calories)"
-                m_wc = re.search(r'including\s+([0-9,]+)\s+workout\s+calories', ex_notes)
-                workout_cals = int(m_wc.group(1).replace(',', '')) if m_wc else 0
-
+            elif d_active_mins >= 10 or workout_cals >= 50 or d_active_cals >= 80:
                 if workout_cals > 0 and d_str == target_date_str:
                     # Build separate individual workout card for today
                     w_id = int(f"99{d_str.replace('-', '')}01")
@@ -652,15 +652,24 @@ class MyNetDiarySyncService:
                 garmin_state['raw_exercise_items'] = garmin_bridge['raw_exercise_items']
 
             bridged_acts = garmin_bridge.get('bridged_activities', [])
-            if bridged_acts:
-                today_str = target_date_str or date.today().isoformat()
+            today_str = target_date_str or date.today().isoformat()
+            today_bridged = [a for a in bridged_acts if str(a.get('date', '')).startswith(today_str)]
+
+            if today_bridged:
                 existing_today = [
                     a for a in garmin_state.get('today_activities', [])
                     if str(a.get('date', '')).startswith(today_str) and a.get('source') != 'garmin_via_mnd_bridge'
                 ]
                 if not existing_today:
-                    garmin_state['today_activities'] = [a for a in bridged_acts if str(a.get('date', '')).startswith(today_str)]
+                    garmin_state['today_activities'] = today_bridged
+            else:
+                # Clear any stale garmin_via_mnd_bridge entry for today_str while keeping real garmin_oauth activities
+                garmin_state['today_activities'] = [
+                    a for a in garmin_state.get('today_activities', [])
+                    if not (str(a.get('date', '')).startswith(today_str) and a.get('source') == 'garmin_via_mnd_bridge')
+                ]
 
+            if bridged_acts:
                 existing_recent = [
                     a for a in garmin_state.get('recent_activities', [])
                     if a.get('source') != 'garmin_via_mnd_bridge'

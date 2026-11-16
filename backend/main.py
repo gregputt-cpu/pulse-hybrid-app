@@ -167,10 +167,12 @@ def sync_garmin(payload: Optional[DatePayload] = None):
         if not login_res.get("success"):
             return {"success": False, "error": login_res.get("error", "Authentication failed")}
 
+    garmin_sync_error = None
     try:
         try:
             garmin_service.sync_today(target_date)
         except Exception as gex:
+            garmin_sync_error = str(gex)
             logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
         try:
             mnd_service.fetch_today_data(target_date)
@@ -181,7 +183,13 @@ def sync_garmin(payload: Optional[DatePayload] = None):
         except Exception as rex:
             logger.warning(f"Renpho sync during Garmin pull: {rex}")
         updated = load_live_state()
-        return {"success": True, "state": updated, "live_state": updated, "has_fresh_token": True}
+        return {
+            "success": True,
+            "state": updated,
+            "live_state": updated,
+            "has_fresh_token": True,
+            "garmin_error": garmin_sync_error
+        }
     except Exception as e:
         logger.error(f"Garmin sync error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

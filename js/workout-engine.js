@@ -2207,10 +2207,17 @@ function generateWorkoutFromGearAndGoal() {
         }
       } catch(e) {}
 
-      // 2. Check recentActivitiesData for any workout completed TODAY (Garmin fēnix 8)
-      if (Array.isArray(recentActivitiesData)) {
-        const todayAct = recentActivitiesData.find(a => {
-          const fmt = formatActivityDisplay(a);
+      // 2. Check today_activities or recentActivitiesData for any workout completed TODAY (Garmin fēnix 8)
+      const actsToCheck = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && Array.isArray(window.BAKED_LIVE_STATE.garmin.today_activities) && window.BAKED_LIVE_STATE.garmin.today_activities.length > 0)
+        ? window.BAKED_LIVE_STATE.garmin.today_activities
+        : (Array.isArray(recentActivitiesData) ? recentActivitiesData : []);
+
+      if (Array.isArray(actsToCheck)) {
+        const todayAct = actsToCheck.find(a => {
+          const isRealWorkout = (Number(a.duration_min || a.durationMin || 0) >= 10) || (Number(a.calories || 0) >= 80);
+          if (!isRealWorkout) return false;
+          if (a.date && String(a.date).startsWith(todayIsoDate)) return true;
+          const fmt = (typeof formatActivityDisplay === 'function') ? formatActivityDisplay(a) : { isToday: false };
           return fmt.isToday;
         });
         if (todayAct) {
