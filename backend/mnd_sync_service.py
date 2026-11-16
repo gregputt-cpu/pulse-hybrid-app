@@ -642,34 +642,42 @@ class MyNetDiarySyncService:
             if is_manual_override:
                 effective_sleep_score = garmin_state['sleep_score']
                 garmin_state['sleep_score_source'] = "manual_override"
+            elif has_live_garmin_oauth and garmin_state.get('sleep_score') is not None:
+                effective_sleep_score = garmin_state['sleep_score']
+                garmin_state['sleep_score_source'] = "garmin_oauth"
             else:
                 effective_sleep_score = garmin_bridge.get('sleep_score')
                 if effective_sleep_score is not None:
                     garmin_state['sleep_score'] = effective_sleep_score
                     garmin_state['sleep_score_source'] = "mnd_estimated"
 
-            # Recalculate body battery and training readiness based on effective sleep score
-            if effective_sleep_score is not None:
-                active_cals_val = garmin_state.get('active_calories') or 0
-                morning_bb = min(100, int(round(effective_sleep_score * 1.05)))
-                burn_drain = int(round(active_cals_val / 45.0))
-                calc_bb = max(25, min(100, morning_bb - burn_drain))
-                calc_tr = int(round(effective_sleep_score * 0.65 + morning_bb * 0.38 - min(10, active_cals_val / 150.0)))
-                calc_tr = max(40, min(98, calc_tr))
-
-                garmin_state['body_battery'] = calc_bb
-                garmin_state['training_readiness'] = calc_tr
-                garmin_state['readiness_level'] = "OPTIMAL" if calc_tr >= 85 else ("HIGH" if calc_tr >= 75 else "MODERATE")
-                garmin_state['readiness_feedback'] = "WELL_RECOVERED" if calc_tr >= 75 else "MODERATE_LOAD"
-            else:
-                if garmin_bridge.get('body_battery') is not None:
+            # Only estimate body battery / readiness from MND when live Garmin OAuth hasn't already provided them today
+            if not (has_live_garmin_oauth and garmin_state.get('body_battery') is not None):
+                if effective_sleep_score is not None:
+                    active_cals_val = garmin_state.get('active_calories') or 0
+                    morning_bb = min(100, int(round(effective_sleep_score * 1.05)))
+                    burn_drain = int(round(active_cals_val / 45.0))
+                    calc_bb = max(25, min(100, morning_bb - burn_drain))
+                    garmin_state['body_battery'] = calc_bb
+                elif garmin_bridge.get('body_battery') is not None:
                     garmin_state['body_battery'] = garmin_bridge['body_battery']
-                if garmin_bridge.get('training_readiness') is not None:
-                    garmin_state['training_readiness'] = garmin_bridge['training_readiness']
-                if garmin_bridge.get('readiness_level'):
-                    garmin_state['readiness_level'] = garmin_bridge['readiness_level']
-                if garmin_bridge.get('readiness_feedback'):
-                    garmin_state['readiness_feedback'] = garmin_bridge['readiness_feedback']
+
+            if not (has_live_garmin_oauth and garmin_state.get('training_readiness') is not None):
+                if effective_sleep_score is not None:
+                    active_cals_val = garmin_state.get('active_calories') or 0
+                    morning_bb = min(100, int(round(effective_sleep_score * 1.05)))
+                    calc_tr = int(round(effective_sleep_score * 0.65 + morning_bb * 0.38 - min(10, active_cals_val / 150.0)))
+                    calc_tr = max(40, min(98, calc_tr))
+                    garmin_state['training_readiness'] = calc_tr
+                    garmin_state['readiness_level'] = "OPTIMAL" if calc_tr >= 85 else ("HIGH" if calc_tr >= 75 else "MODERATE")
+                    garmin_state['readiness_feedback'] = "WELL_RECOVERED" if calc_tr >= 75 else "MODERATE_LOAD"
+                else:
+                    if garmin_bridge.get('training_readiness') is not None:
+                        garmin_state['training_readiness'] = garmin_bridge['training_readiness']
+                    if garmin_bridge.get('readiness_level'):
+                        garmin_state['readiness_level'] = garmin_bridge['readiness_level']
+                    if garmin_bridge.get('readiness_feedback'):
+                        garmin_state['readiness_feedback'] = garmin_bridge['readiness_feedback']
 
             if garmin_bridge.get('raw_exercise_items'):
                 garmin_state['raw_exercise_items'] = garmin_bridge['raw_exercise_items']

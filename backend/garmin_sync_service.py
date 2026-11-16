@@ -183,6 +183,7 @@ class GarminSyncService:
         readiness_level = None
         readiness_feedback = None
         hrv_weekly = None
+        live_body_battery = None
         auth_failed = False
         last_auth_error = None
 
@@ -254,6 +255,25 @@ class GarminSyncService:
                     auth_failed = True
                     last_auth_error = str(e)
 
+        # 5. Fetch live Body Battery timeline (more up-to-date than daily summary cache)
+        if not auth_failed:
+            try:
+                bb_data = client.get_body_battery(target_date_str)
+                if isinstance(bb_data, list) and len(bb_data) > 0:
+                    day_bb = bb_data[-1] if isinstance(bb_data[-1], dict) else {}
+                    vals = day_bb.get('bodyBatteryValuesArray') or []
+                    for entry in reversed(vals):
+                        if isinstance(entry, (list, tuple)) and len(entry) >= 2 and entry[1] is not None:
+                            live_body_battery = int(round(float(entry[1])))
+                            break
+                    if live_body_battery is None and day_bb.get('bodyBatteryMostRecentValue') is not None:
+                        live_body_battery = int(round(float(day_bb.get('bodyBatteryMostRecentValue'))))
+            except Exception as e:
+                print(f"[GarminSync] Warning fetching body battery: {e}")
+                if is_auth_error(e):
+                    auth_failed = True
+                    last_auth_error = str(e)
+
         # Persist refreshed tokens when direct calls succeed
         if not auth_failed and self.client:
             try:
@@ -282,7 +302,9 @@ class GarminSyncService:
             garmin_state['steps'] = summary.get('totalSteps')
         if summary.get('restingHeartRate') is not None:
             garmin_state['resting_hr'] = summary.get('restingHeartRate')
-        if summary.get('bodyBatteryMostRecentValue') is not None:
+        if live_body_battery is not None:
+            garmin_state['body_battery'] = live_body_battery
+        elif summary.get('bodyBatteryMostRecentValue') is not None:
             garmin_state['body_battery'] = summary.get('bodyBatteryMostRecentValue')
 
         if sleep_score is not None:
