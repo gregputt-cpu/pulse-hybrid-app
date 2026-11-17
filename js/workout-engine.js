@@ -912,6 +912,12 @@
         } else if (kbSubMode === 'flow_1h') {
           slicedExIds = ['kb_flow_1h_armor_chain', 'kb_flow_1h_viking_warrior', 'kb_flow_1h_dan_john_grind', 'kb_flow_1h_combat_core'];
         }
+      } else if (currentArchetypeKey === 'option_b') {
+        if (focusMode === 'liss_cardio' || focusMode === 'mobility_stretch' || focusMode === 'rest_day') {
+          slicedExIds = ['zone2_flush', 'speed_rope_intervals', 'emom_hybrid_10', 'amrap_hybrid_10', 'for_time_kb_chipper'];
+        } else {
+          slicedExIds = ['emom_hybrid_10', 'amrap_hybrid_10', 'for_time_kb_chipper', 'speed_rope_intervals', 'zone2_flush'];
+        }
       }
 
       const allExercises = getAllExercises();
@@ -1039,7 +1045,7 @@
           gearStatusEl.innerText = kbModeDesc;
         }
         else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
-        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Kettlebells, DB & Slam Ball";
+        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Pick 1 Session (Zone 2, Rope, EMOM, AMRAP)";
         else gearStatusEl.innerText = "Bodyweight & Incline Cadence";
       }
 
@@ -4791,6 +4797,35 @@ function viewCompletedWorkoutBreakdown() {
     function renderCurrentExercise() {
       if (activeWorkoutPlan.length === 0) return;
 
+      const isPickOneMenu = (currentArchetypeKey === 'option_b') || (currentArchetypeKey === 'option_kb' && getKbSubMode() !== 'grinds');
+      const stepperHdr = document.getElementById('exerciseStepperHeader');
+      if (stepperHdr) {
+        if (isPickOneMenu) {
+          stepperHdr.style.display = 'block';
+          stepperHdr.innerText = currentArchetypeKey === 'option_b'
+            ? `🎯 Pick 1 Conditioning / Aerobic Session (${activeWorkoutPlan.length} Options):`
+            : `🎯 Pick 1 Standalone 30-Min KB Flow (${activeWorkoutPlan.length} Options):`;
+        } else {
+          stepperHdr.style.display = 'none';
+        }
+      }
+
+      const shortPillLabels = {
+        zone2_flush: '🚶 20m Zone 2',
+        speed_rope_intervals: '🪢 6m Speed Rope',
+        emom_hybrid_10: '⚡ 10m EMOM',
+        amrap_hybrid_10: '🔥 10m AMRAP',
+        for_time_kb_chipper: '🏁 12m Chipper',
+        kb_flow_2h_out_about: '🌊 Out & About (9)',
+        kb_flow_2h_tactical_upper: '💪 Tactical Upper',
+        kb_flow_2h_gladiator_post: '🛡️ Gladiator Hinge',
+        kb_flow_2h_pyramid_1_5: '📐 1-to-5 Pyramid',
+        kb_flow_1h_armor_chain: '⚡ Armor Chain',
+        kb_flow_1h_viking_warrior: '⚔️ Viking Warrior',
+        kb_flow_1h_dan_john_grind: '🏋️ Dan John Grind',
+        kb_flow_1h_combat_core: '🥊 Combat Core'
+      };
+
       const stepperEl = document.getElementById('exerciseStepperPills');
       if (stepperEl) {
         stepperEl.innerHTML = activeWorkoutPlan.map((exItem, idx) => {
@@ -4804,12 +4839,15 @@ function viewCompletedWorkoutBreakdown() {
             }
             if (loggedCount > 0) isDone = true;
           }
-          let stateClass = '';
           let icon = '';
-          if (isActive) stateClass = 'active';
-          else if (isSkipped) { stateClass = 'skipped'; icon = ' ⏭'; }
-          else if (isDone) { stateClass = 'done'; icon = ' ✓'; }
-          return `<button type="button" class="ex-pill-btn ${stateClass}" onclick="jumpToExercise(${idx})" title="${exItem.name}">${idx + 1}${icon}</button>`;
+          if (isSkipped) icon = ' ⏭';
+          else if (isDone) icon = ' ✓';
+
+          const shortName = shortPillLabels[exItem.id] || (`${idx + 1}. ` + String(exItem.name || '').split('(')[0].replace(/^Barbell\s+|^Heavy\s+Kettlebell\s+|^Kettlebell\s+/i, '').trim().slice(0, 14));
+          const bg = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)');
+          const col = isActive ? '#000' : (isDone ? '#10b981' : 'var(--text-secondary)');
+          const bdr = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)');
+          return `<button type="button" onclick="jumpToExercise(${idx})" title="${exItem.name}" style="flex-shrink:0; padding:5px 9px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${shortName}${icon}</button>`;
         }).join('');
       }
 
@@ -4819,7 +4857,9 @@ function viewCompletedWorkoutBreakdown() {
         updateRestDisplay();
       }
 
-      document.getElementById('stepCounter').innerText = `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
+      document.getElementById('stepCounter').innerText = isPickOneMenu
+        ? `Pick 1 • Option ${currentExIdx + 1}/${activeWorkoutPlan.length}`
+        : `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
       document.getElementById('exName').innerText = ex.name;
       
       const familyNames = {
