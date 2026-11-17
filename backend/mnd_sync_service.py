@@ -715,8 +715,20 @@ class MyNetDiarySyncService:
                     a for a in garmin_state.get('recent_activities', [])
                     if a.get('source') != 'garmin_via_mnd_bridge'
                 ]
-                existing_dates = {str(a.get('date', ''))[:10] for a in existing_recent}
+                existing_today_non_bridge = [
+                    a for a in garmin_state.get('today_activities', [])
+                    if a.get('source') != 'garmin_via_mnd_bridge'
+                ]
+                existing_dates = (
+                    {str(a.get('date', ''))[:10] for a in existing_recent}
+                    | {str(a.get('date', ''))[:10] for a in existing_today_non_bridge}
+                )
                 merged_recent = list(existing_recent)
+                existing_ids = {str(a.get('id')) for a in merged_recent}
+                for ta in existing_today_non_bridge:
+                    if str(ta.get('id')) not in existing_ids:
+                        merged_recent.append(ta)
+                        existing_ids.add(str(ta.get('id')))
                 for ba in bridged_acts:
                     b_date = str(ba.get('date', ''))[:10]
                     # Only insert bridged activities for dates where direct OAuth hasn't already provided activities

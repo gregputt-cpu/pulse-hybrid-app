@@ -17,9 +17,9 @@
     "distance_miles": 3.63,
     "today_activities": [
       {
-        "id": 99202611170,
+        "id": 25109482110,
         "name": "Jump_rope",
-        "sub_title": "fēnix 8 • Skipping (2,185 skips • 361 kcal)",
+        "sub_title": "f\u0113nix 8 \u2022 Skipping (2,185 skips \u2022 361 kcal)",
         "date": "2026-11-17 10:15:00",
         "duration_min": 24.6,
         "calories": 361,
@@ -41,7 +41,336 @@
       "water_l": 0.0,
       "last_pulled": "2026-11-17T12:00:00.000000",
       "source": "live_mynetdiary_cloud"
-    }
+    },
+    "recent_activities": [
+      {
+        "id": 25109482110,
+        "name": "Jump_rope",
+        "sub_title": "f\u0113nix 8 \u2022 Skipping (2,185 skips \u2022 361 kcal)",
+        "date": "2026-11-17 10:15:00",
+        "duration_min": 24.6,
+        "calories": 361,
+        "avg_hr": 134,
+        "max_hr": 164,
+        "aerobic_te": 2.6,
+        "anaerobic_te": 1.4,
+        "activity_type_key": "jump_rope",
+        "source": "garmin_oauth"
+      },
+      {
+        "id": 25098224763,
+        "name": "Walking",
+        "sub_title": "Rushmoor Walking",
+        "date": "2026-11-16 14:55:00",
+        "duration_min": 41.4,
+        "calories": 237,
+        "avg_hr": 84,
+        "max_hr": 114,
+        "aerobic_te": 0.4,
+        "anaerobic_te": 0.0,
+        "activity_type_key": "walking",
+        "steps": 3794,
+        "distance_miles": 2.11
+      },
+      {
+        "id": 25093818587,
+        "name": "Indoor_cardio",
+        "sub_title": "Cardio",
+        "date": "2026-11-16 06:23:18",
+        "duration_min": 30.3,
+        "calories": 182,
+        "avg_hr": 92,
+        "max_hr": 120,
+        "aerobic_te": 0.4,
+        "anaerobic_te": 0.0,
+        "activity_type_key": "indoor_cardio"
+      },
+      {
+        "id": 25044212535,
+        "name": "Walking",
+        "sub_title": "Rushmoor Walking",
+        "date": "2026-11-11 14:39:10",
+        "duration_min": 38.5,
+        "calories": 209,
+        "avg_hr": 83,
+        "max_hr": 119,
+        "aerobic_te": 0.30000001192092896,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+          "cardio": "Average HR 83 bpm with peak spike at 119 bpm (63% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "209 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
+        }
+      },
+      {
+        "id": 25039840215,
+        "name": "Strength_training",
+        "sub_title": "Strength",
+        "date": "2026-11-11 07:43:45",
+        "duration_min": 32.7,
+        "calories": 235,
+        "avg_hr": 98,
+        "max_hr": 149,
+        "aerobic_te": 0.800000011920929,
+        "anaerobic_te": 0.8999999761581421,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 98 bpm with peak spike at 149 bpm (78% estimated HRmax). Aerobic TE 0.8 + Anaerobic TE 0.9 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "235 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        }
+      },
+      {
+        "id": 25039591131,
+        "name": "Indoor_cardio",
+        "sub_title": "Cardio",
+        "date": "2026-11-11 07:35:56",
+        "duration_min": 6.1,
+        "calories": 56,
+        "avg_hr": 105,
+        "max_hr": 124,
+        "aerobic_te": 0.30000001192092896,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 105 bpm with peak spike at 124 bpm (65% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "56 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        }
+      },
+      {
+        "id": 25028242260,
+        "name": "Indoor_cardio",
+        "sub_title": "Cardio",
+        "date": "2026-11-10 08:05:03",
+        "duration_min": 30.7,
+        "calories": 345,
+        "avg_hr": 119,
+        "max_hr": 151,
+        "aerobic_te": 2.200000047683716,
+        "anaerobic_te": 1.5,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 119 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.2 + Anaerobic TE 1.5 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "345 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        }
+      },
+      {
+        "id": 25020969123,
+        "name": "Walking",
+        "sub_title": "Runnymede Walking",
+        "date": "2026-11-09 15:27:38",
+        "duration_min": 42.7,
+        "calories": 205,
+        "avg_hr": 75,
+        "max_hr": 100,
+        "aerobic_te": 0.30000001192092896,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
+          "biomechanics": "Low-impact cyclical ground force absorption (~1.2\u00d7 bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
+          "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
+        }
+      },
+      {
+        "id": 25016923422,
+        "name": "Indoor_cardio",
+        "sub_title": "Cardio",
+        "date": "2026-11-09 08:18:44",
+        "duration_min": 34.4,
+        "calories": 419,
+        "avg_hr": 126,
+        "max_hr": 151,
+        "aerobic_te": 2.4000000953674316,
+        "anaerobic_te": 2.0999999046325684,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 126 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.4 + Anaerobic TE 2.1 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "419 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        }
+      },
+      {
+        "id": 25007961560,
+        "name": "Walking",
+        "sub_title": "Rushmoor Walking",
+        "date": "2026-11-08 11:01:35",
+        "duration_min": 56.5,
+        "calories": 294,
+        "avg_hr": 80,
+        "max_hr": 106,
+        "aerobic_te": 0.30000001192092896,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Core Stabilizers, Tibialis Anterior",
+          "biomechanics": "Low-impact cyclical steady cadence absorbing ~1.2\u00d7 bodyweight (~119.8kg) per stride. Promotes joint synovial fluid circulation, venous blood return, and lumbar decompression without CNS or axial strain.",
+          "cardio": "Average HR 80 bpm with peak anaerobic spike at 106 bpm (55% HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.",
+          "metabolic": "294 kcal active burn contributed to yesterday's 649 kcal active burn while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.",
+          "autoregulation": "Zero recovery debt; high parasympathetic tone stimulus that accelerates metabolic waste clearance and promotes recovery for subsequent lifting."
+        }
+      },
+      {
+        "id": 25006317774,
+        "name": "Indoor_cardio",
+        "sub_title": "10m Combat Warm-up + 300 Tuck Jumps",
+        "date": "2026-11-08 09:47:33",
+        "duration_min": 28.2,
+        "calories": 355,
+        "avg_hr": 128,
+        "max_hr": 165,
+        "aerobic_te": 2.5,
+        "anaerobic_te": 2.4000000953674316,
+        "benefits": {
+          "muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex (gastrocnemius/soleus), Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis, Rotator cuff & Deltoids, Obliques & Transverse Abdominis, Serratus anterior, Calf spring complex",
+          "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~349\u2013449kg peak eccentric ground reaction force per jump at 99.8kg bodyweight). Significantly enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
+          "cardio": "Average HR 128 bpm with peak anaerobic spike at 165 bpm (86% HRmax). Aerobic TE 2.5 + Anaerobic TE 2.4 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.",
+          "metabolic": "355 kcal active burn natively expands today's caloric runway while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.",
+          "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy axial squats."
+        }
+      },
+      {
+        "id": 24994235032,
+        "name": "Cardio",
+        "sub_title": "Aerobic Base Conditioning (73.8 min)",
+        "date": "2026-11-07 07:37:10",
+        "duration_min": 73.8,
+        "calories": 656,
+        "avg_hr": 118,
+        "max_hr": 168,
+        "aerobic_te": 2.5,
+        "anaerobic_te": 1.3,
+        "benefits": {
+          "muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
+          "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.",
+          "cardio": "Avg HR 118 bpm, Max HR 168 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.",
+          "metabolic": "656 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
+          "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
+        }
+      },
+      {
+        "id": 24983208933,
+        "name": "Cardio",
+        "sub_title": "Aerobic Base Conditioning (49.2 min)",
+        "date": "2026-11-06 06:07:11",
+        "duration_min": 49.2,
+        "calories": 514,
+        "avg_hr": 123,
+        "max_hr": 157,
+        "aerobic_te": 2.5,
+        "anaerobic_te": 1.6,
+        "benefits": {
+          "muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
+          "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.",
+          "cardio": "Avg HR 123 bpm, Max HR 157 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.",
+          "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
+          "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
+        }
+      },
+      {
+        "id": 24977983886,
+        "name": "Cardio",
+        "sub_title": "Cardio (26.2 min)",
+        "date": "2026-11-05 17:09:29",
+        "duration_min": 26.2,
+        "calories": 277,
+        "avg_hr": 124,
+        "max_hr": 162,
+        "aerobic_te": 2.3,
+        "anaerobic_te": 0.8,
+        "benefits": {
+          "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
+          "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
+          "cardio": "Avg HR 124 bpm, Max HR 162 bpm. Aerobic Training Effect 2.3 reinforces baseline aerobic engine.",
+          "metabolic": "277 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
+          "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
+        }
+      },
+      {
+        "id": 24971876362,
+        "name": "Cardio",
+        "sub_title": "Cardio (34.6 min)",
+        "date": "2026-11-05 06:29:03",
+        "duration_min": 34.6,
+        "calories": 514,
+        "avg_hr": 145,
+        "max_hr": 170,
+        "aerobic_te": 3.4,
+        "anaerobic_te": 1.1,
+        "benefits": {
+          "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
+          "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
+          "cardio": "Avg HR 145 bpm, Max HR 170 bpm. Aerobic Training Effect 3.4 reinforces baseline aerobic engine.",
+          "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
+          "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
+        }
+      },
+      {
+        "id": 24959919457,
+        "name": "Cardio",
+        "sub_title": "Cardio (22.9 min)",
+        "date": "2026-11-04 06:13:36",
+        "duration_min": 22.9,
+        "calories": 279,
+        "avg_hr": 128,
+        "max_hr": 162,
+        "aerobic_te": 2.5,
+        "anaerobic_te": 0.4,
+        "benefits": {
+          "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
+          "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
+          "cardio": "Avg HR 128 bpm, Max HR 162 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.",
+          "metabolic": "279 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
+          "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
+        }
+      },
+      {
+        "id": 24948635377,
+        "name": "Cardio",
+        "sub_title": "High-Intensity Plyometrics (26.6 min)",
+        "date": "2026-11-03 08:17:44",
+        "duration_min": 26.6,
+        "calories": 372,
+        "avg_hr": 136,
+        "max_hr": 162,
+        "aerobic_te": 3.0,
+        "anaerobic_te": 2.0,
+        "benefits": {
+          "muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex, Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis",
+          "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~350\u2013450kg peak eccentric ground reaction force per jump at 99.85kg bodyweight). Enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
+          "cardio": "Average HR 136 bpm with peak anaerobic spike at 162 bpm (94% HRmax). Aerobic TE 3.0 + Anaerobic TE 2.0 drives rapid lactate shuttling and anaerobic glycolytic buffering.",
+          "metabolic": "372 kcal active burn natively expands today's caloric runway from 2,092 kcal to 2464 kcal while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours.",
+          "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy squats."
+        }
+      },
+      {
+        "id": 24938502919,
+        "name": "Hart Walking",
+        "sub_title": "Hart Walking (4.7 min)",
+        "date": "2026-11-02 12:12:37",
+        "duration_min": 4.7,
+        "calories": 24,
+        "avg_hr": 86,
+        "max_hr": 108,
+        "aerobic_te": 0.0,
+        "anaerobic_te": 0.0,
+        "benefits": {
+          "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
+          "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
+          "cardio": "Avg HR 86 bpm, Max HR 108 bpm. Aerobic Training Effect 0.0 reinforces baseline aerobic engine.",
+          "metabolic": "24 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
+          "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
+        }
+      }
+    ]
   },
   "last_synced": "2026-11-17T12:00:00.000000",
   "mnd_logged": {

@@ -1923,14 +1923,28 @@
               combinedActs.push(ra);
             }
           });
+          const isBridgeAct = (a) => a && (
+            a.source === 'garmin_via_mnd_bridge' ||
+            String(a.id || '').startsWith('990') ||
+            String(a.id || '').startsWith('9920') ||
+            a.name === 'Active Conditioning' ||
+            a.name === 'Daily Steps & Movement' ||
+            a.name === 'Hybrid Conditioning & Steps'
+          );
+          const hasRealTodayAct = combinedActs.some(a => String(a.date || a.rawDate || '').startsWith(todayIsoDate) && !isBridgeAct(a));
+          const seenTodayCals = new Set();
           const filteredTodayActs = combinedActs.filter(a => {
             const actDateStr = String(a.date || a.rawDate || '');
             if (!actDateStr.startsWith(todayIsoDate)) return false;
+            if (hasRealTodayAct && isBridgeAct(a)) return false;
             const name = String(a.name || '');
             if (name.includes('Daily Steps & Movement')) return false;
             const duration = Number(a.duration_min || a.durationMin || 0);
             const cals = Number(a.calories || a.workout_calories || 0);
             if (duration < 10 && cals < 80) return false;
+            const roundedCals = Math.round(cals);
+            if (roundedCals > 0 && seenTodayCals.has(roundedCals)) return false;
+            if (roundedCals > 0) seenTodayCals.add(roundedCals);
             return true;
           });
           let inAppTodayCount = 0;
@@ -1965,7 +1979,14 @@
           ? g.recent_activities
           : (Array.isArray(g.today_activities) ? g.today_activities : []);
         if (rawGarminActs.length > 0) {
-          const isBridgeAct = (a) => a && (a.source === 'garmin_via_mnd_bridge' || String(a.id || '').startsWith('990') || String(a.id || '').startsWith('9920') || String(a.subTitle || a.sub_title || '').startsWith('fēnix 8 •'));
+          const isBridgeAct = (a) => a && (
+            a.source === 'garmin_via_mnd_bridge' ||
+            String(a.id || '').startsWith('990') ||
+            String(a.id || '').startsWith('9920') ||
+            a.name === 'Active Conditioning' ||
+            a.name === 'Daily Steps & Movement' ||
+            a.name === 'Hybrid Conditioning & Steps'
+          );
           const hasRealOAuthActs = g.source === 'garmin_oauth' || rawGarminActs.some(a => !isBridgeAct(a));
           const garminActs = rawGarminActs
             .filter(a => !hasRealOAuthActs || !isBridgeAct(a))
@@ -2003,8 +2024,13 @@
           if (localSaved) {
             try { localActs = JSON.parse(localSaved); } catch(e) {}
           }
-          if (hasRealOAuthActs && Array.isArray(localActs)) {
-            localActs = localActs.filter(a => !isBridgeAct(a));
+          if (Array.isArray(localActs)) {
+            localActs = localActs.filter(a => {
+              const sid = String(a && a.id);
+              if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702') return false;
+              if (hasRealOAuthActs && isBridgeAct(a)) return false;
+              return true;
+            });
           }
 
           const merged = [...localActs];

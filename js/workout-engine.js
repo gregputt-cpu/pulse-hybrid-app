@@ -2697,7 +2697,14 @@ function generateWorkoutFromGearAndGoal() {
         : (Array.isArray(recentActivitiesData) ? recentActivitiesData : []);
 
       if (Array.isArray(actsToCheck)) {
-        const isBridgeAct = (a) => a && (a.source === 'garmin_via_mnd_bridge' || String(a.id || '').startsWith('990') || String(a.id || '').startsWith('9920') || String(a.subTitle || a.sub_title || '').startsWith('fēnix 8 •'));
+        const isBridgeAct = (a) => a && (
+          a.source === 'garmin_via_mnd_bridge' ||
+          String(a.id || '').startsWith('990') ||
+          String(a.id || '').startsWith('9920') ||
+          a.name === 'Active Conditioning' ||
+          a.name === 'Daily Steps & Movement' ||
+          a.name === 'Hybrid Conditioning & Steps'
+        );
         const hasRealToday = actsToCheck.some(a => !isBridgeAct(a));
         const todayActs = actsToCheck.filter(a => {
           if (hasRealToday && isBridgeAct(a)) return false;
