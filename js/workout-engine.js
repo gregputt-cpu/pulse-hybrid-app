@@ -235,7 +235,7 @@
 
     function restoreActivitiesFromLocalStorage() {
       try {
-        const CURRENT_ACT_VERSION = "v4.9_nov9_rollover";
+        const CURRENT_ACT_VERSION = "v5.21_nov17_dedup";
         if (localStorage.getItem('pulse_act_version') !== CURRENT_ACT_VERSION) {
           localStorage.removeItem('pulse_recent_activities');
           localStorage.setItem('pulse_act_version', CURRENT_ACT_VERSION);
@@ -2717,7 +2717,7 @@ function generateWorkoutFromGearAndGoal() {
         if (todayActs.length > 0) {
           const totalCalsToday = todayActs.reduce((sum, a) => sum + Number(a.calories || a.workout_calories || 0), 0);
           const totalDurToday = todayActs.reduce((sum, a) => sum + Number(a.durationMin || a.duration_min || 0), 0);
-          const sessionCount = todayActs.length + inAppTodaySessions.length;
+          const sessionCount = todayActs.length;
           const hasFullStrength = todayActs.some(a => {
             const label = `${a.name || ''} ${a.sub_title || ''} ${a.subTitle || ''}`.toLowerCase();
             return (label.includes('strength') || label.includes('barbell') || label.includes('kettlebell')) && Number(a.calories || 0) >= 300;

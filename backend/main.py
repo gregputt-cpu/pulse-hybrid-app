@@ -33,6 +33,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def no_cache_static_assets(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.endswith((".html", ".js", ".css", ".json")) or path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, "live_state.json")
 if not os.path.exists(DEFAULT_STATE_PATH):

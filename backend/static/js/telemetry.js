@@ -1909,73 +1909,6 @@
           const desiredTitle = `Garmin fēnix 8 Synced • ${syncDateStr}`;
           if (bTitle.innerText !== desiredTitle) bTitle.innerText = desiredTitle;
         }
-        if (bSub) {
-          const sleepNum = (g.sleep_score !== undefined) ? g.sleep_score : 94;
-          const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
-          const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
-          const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
-          const _now = new Date();
-          const todayIsoDate = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-          const rawTodayActs = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities : [];
-          const rawRecentActs = (g.recent_activities && Array.isArray(g.recent_activities)) ? g.recent_activities : [];
-          const combinedActs = [...rawTodayActs];
-          rawRecentActs.forEach(ra => {
-            if (!combinedActs.some(ta => String(ta.id) === String(ra.id))) {
-              combinedActs.push(ra);
-            }
-          });
-          const isBridgeAct = (a) => a && (
-            a.source === 'garmin_via_mnd_bridge' ||
-            String(a.id || '').startsWith('990') ||
-            String(a.id || '').startsWith('9920') ||
-            a.name === 'Active Conditioning' ||
-            a.name === 'Daily Steps & Movement' ||
-            a.name === 'Hybrid Conditioning & Steps'
-          );
-          const hasRealTodayAct = combinedActs.some(a => String(a.date || a.rawDate || '').startsWith(todayIsoDate) && !isBridgeAct(a));
-          const seenTodayCals = new Set();
-          const filteredTodayActs = combinedActs.filter(a => {
-            const actDateStr = String(a.date || a.rawDate || '');
-            if (!actDateStr.startsWith(todayIsoDate)) return false;
-            if (hasRealTodayAct && isBridgeAct(a)) return false;
-            const name = String(a.name || '');
-            if (name.includes('Daily Steps & Movement')) return false;
-            const duration = Number(a.duration_min || a.durationMin || 0);
-            const cals = Number(a.calories || a.workout_calories || 0);
-            if (duration < 10 && cals < 80) return false;
-            const roundedCals = Math.round(cals);
-            if (roundedCals > 0 && seenTodayCals.has(roundedCals)) return false;
-            if (roundedCals > 0) seenTodayCals.add(roundedCals);
-            return true;
-          });
-          let inAppTodayCount = 0;
-          let inAppTodayCals = 0;
-          try {
-            const rawSess = localStorage.getItem('pulse_session_history');
-            if (rawSess) {
-              const sessions = JSON.parse(rawSess);
-              const todayStr = _now.toDateString();
-              if (Array.isArray(sessions)) {
-                sessions.forEach(s => {
-                  if (s.date && new Date(s.date).toDateString() === todayStr) {
-                    inAppTodayCount++;
-                    inAppTodayCals += Number(s.calories || 0);
-                  }
-                });
-              }
-            }
-          } catch(e) {}
-          const todayActsCount = filteredTodayActs.length + inAppTodayCount;
-          const todayWorkoutCals = filteredTodayActs.reduce((s, a) => s + Number(a.calories || a.workout_calories || 0), 0) + inAppTodayCals;
-          const displayKcal = todayWorkoutCals > 0 ? todayWorkoutCals : (g.active_calories || 0);
-          let desiredSub = '';
-          if (todayActsCount > 0) {
-            desiredSub = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${displayKcal} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
-          } else {
-            desiredSub = `Sleep ${sleepNum} (${sleepRating}) • Readiness ${readinessNum} • RHR ${rhrNum} bpm • 0 Workouts Today`;
-          }
-          if (bSub.innerText !== desiredSub) bSub.innerText = desiredSub;
-        }
         const rawGarminActs = (Array.isArray(g.recent_activities) && g.recent_activities.length > 0)
           ? g.recent_activities
           : (Array.isArray(g.today_activities) ? g.today_activities : []);
@@ -2030,6 +1963,17 @@
               const sid = String(a && a.id);
               if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702' || sid === '25109482110') return false;
               if (hasRealOAuthActs && isBridgeAct(a)) return false;
+              const aDatePrefix = String(a.rawDate || a.date || '').slice(0, 10);
+              const aCals = Number(a.calories || a.workout_calories || 0);
+              const isDupOfGarmin = garminActs.some(ga => {
+                if (String(ga.id) === sid) return false;
+                const gaDatePrefix = String(ga.rawDate || ga.date || '').slice(0, 10);
+                const sameDay = (aDatePrefix && gaDatePrefix && aDatePrefix === gaDatePrefix) || (a.isToday && ga.isToday);
+                if (!sameDay) return false;
+                const gaCals = Number(ga.calories || 0);
+                return Math.abs(aCals - gaCals) <= 15 || (a.isToday && ga.isToday);
+              });
+              if (isDupOfGarmin) return false;
               return true;
             });
           }
@@ -2057,6 +2001,64 @@
           } catch(e) {}
           renderHistoryList();
           renderTodayTrainingRecommendations();
+        }
+        if (bSub) {
+          const sleepNum = (g.sleep_score !== undefined) ? g.sleep_score : 94;
+          const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
+          const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
+          const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
+          const completedToday = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
+          let todayActsCount = 0;
+          let displayKcal = g.active_calories || 0;
+          if (completedToday) {
+            todayActsCount = completedToday.sessionCount || 1;
+            displayKcal = completedToday.calories || (g.active_calories || 0);
+          } else {
+            const _now = new Date();
+            const todayIsoDate = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+            const rawTodayActs = (g.today_activities && Array.isArray(g.today_activities)) ? g.today_activities : [];
+            const rawRecentActs = (g.recent_activities && Array.isArray(g.recent_activities)) ? g.recent_activities : [];
+            const combinedActs = [...rawTodayActs];
+            rawRecentActs.forEach(ra => {
+              if (!combinedActs.some(ta => String(ta.id) === String(ra.id))) {
+                combinedActs.push(ra);
+              }
+            });
+            const isBridgeAct = (a) => a && (
+              a.source === 'garmin_via_mnd_bridge' ||
+              String(a.id || '').startsWith('990') ||
+              String(a.id || '').startsWith('9920') ||
+              a.name === 'Active Conditioning' ||
+              a.name === 'Daily Steps & Movement' ||
+              a.name === 'Hybrid Conditioning & Steps'
+            );
+            const hasRealTodayAct = combinedActs.some(a => String(a.date || a.rawDate || '').startsWith(todayIsoDate) && !isBridgeAct(a));
+            const seenTodayCals = new Set();
+            const filteredTodayActs = combinedActs.filter(a => {
+              const actDateStr = String(a.date || a.rawDate || '');
+              if (!actDateStr.startsWith(todayIsoDate)) return false;
+              if (hasRealTodayAct && isBridgeAct(a)) return false;
+              const name = String(a.name || '');
+              if (name.includes('Daily Steps & Movement')) return false;
+              const duration = Number(a.duration_min || a.durationMin || 0);
+              const cals = Number(a.calories || a.workout_calories || 0);
+              if (duration < 10 && cals < 80) return false;
+              const roundedCals = Math.round(cals);
+              if (roundedCals > 0 && seenTodayCals.has(roundedCals)) return false;
+              if (roundedCals > 0) seenTodayCals.add(roundedCals);
+              return true;
+            });
+            todayActsCount = filteredTodayActs.length;
+            const todayWorkoutCals = filteredTodayActs.reduce((s, a) => s + Number(a.calories || a.workout_calories || 0), 0);
+            displayKcal = todayWorkoutCals > 0 ? todayWorkoutCals : (g.active_calories || 0);
+          }
+          let desiredSub = '';
+          if (todayActsCount > 0) {
+            desiredSub = `${todayActsCount} Workout${todayActsCount > 1 ? 's' : ''} Today (${displayKcal} kcal) • Sleep ${sleepNum} • Readiness ${readinessNum}`;
+          } else {
+            desiredSub = `Sleep ${sleepNum} (${sleepRating}) • Readiness ${readinessNum} • RHR ${rhrNum} bpm • 0 Workouts Today`;
+          }
+          if (bSub.innerText !== desiredSub) bSub.innerText = desiredSub;
         }
 
         // 1.1 MyNetDiary Food Ingestion from Live State
