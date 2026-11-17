@@ -870,32 +870,32 @@
           option_c: ['thoracic_openers', 'couch_stretch_flow', 'knee_tke', 'glute_bridge_hold']
         },
         lower_hinge: {
-          option_a: ['barbell_rdl', 'barbell_zercher_squat', 'glute_bridge_hold', 'kb_suitcase_carry', 'deadbug_hold'],
-          option_kb: ['kb_heavy_rdl', 'kb_swings', 'kb_front_rack_squat', 'kb_suitcase_carry', 'deadbug_hold'],
+          option_a: ['barbell_squat', 'barbell_rdl', 'barbell_zercher_squat', 'kb_suitcase_carry', 'deadbug_hold'],
+          option_kb: ['kb_front_rack_squat', 'kb_heavy_rdl', 'kb_swings', 'kb_suitcase_carry', 'deadbug_hold'],
           option_b: ['emom_hybrid_10', 'speed_rope_intervals', 'amrap_hybrid_10', 'for_time_kb_chipper', 'deadbug_hold'],
           option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'deadbug_hold', 'couch_stretch_flow']
         },
         upper_push_pull: {
-          option_a: ['barbell_floor_press', 'barbell_pendlay_row', 'weighted_dips', 'barbell_z_press', 'deadbug_hold'],
+          option_a: ['barbell_bench_press', 'barbell_pendlay_row', 'weighted_dips', 'barbell_z_press', 'deadbug_hold'],
           option_kb: ['kb_clean_and_strict_press', 'kb_goblet_floor_press', 'kb_gorilla_row', 'pushups_renegade', 'kb_suitcase_carry'],
           option_b: ['pushups_renegade', 'narrow_pushups', 'tabata_rope_core', 'amrap_hybrid_10', 'deadbug_hold'],
           option_c: ['zone2_flush', 'thoracic_openers', 'deadbug_hold', 'knee_tke']
         },
         mobility_stretch: {
           option_c: ['thoracic_openers', 'couch_stretch_flow', 'glute_bridge_hold', 'deadbug_hold'],
-          option_a: ['barbell_rdl', 'barbell_floor_press', 'deadbug_hold'],
+          option_a: ['barbell_squat', 'barbell_bench_press', 'deadbug_hold'],
           option_kb: ['kb_swings', 'kb_suitcase_carry', 'deadbug_hold'],
           option_b: ['pushups_renegade', 'speed_rope_intervals', 'deadbug_hold']
         },
         rest_day: {
           option_c: ['thoracic_openers', 'couch_stretch_flow', 'glute_bridge_hold', 'deadbug_hold'],
-          option_a: ['barbell_rdl', 'barbell_floor_press', 'deadbug_hold'],
+          option_a: ['barbell_squat', 'barbell_bench_press', 'deadbug_hold'],
           option_kb: ['kb_swings', 'kb_suitcase_carry', 'deadbug_hold'],
           option_b: ['pushups_renegade', 'speed_rope_intervals', 'deadbug_hold']
         },
         full_body_strength: {
-          option_a: ['barbell_rdl', 'barbell_floor_press', 'weighted_dips', 'barbell_pendlay_row', 'barbell_z_press'],
-          option_kb: ['kb_clean_and_strict_press', 'kb_heavy_rdl', 'kb_goblet_floor_press', 'kb_gorilla_row', 'kb_suitcase_carry'],
+          option_a: ['barbell_squat', 'barbell_bench_press', 'barbell_rdl', 'barbell_pendlay_row', 'barbell_z_press'],
+          option_kb: ['kb_front_rack_squat', 'kb_clean_and_strict_press', 'kb_heavy_rdl', 'kb_gorilla_row', 'kb_suitcase_carry'],
           option_b: ['kb_swings', 'db_press', 'slam_ball_slams', 'pushups_renegade', 'speed_rope_intervals'],
           option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'deadbug_hold']
         }
@@ -1930,9 +1930,9 @@
         focus: "upper",
         durationMin: 45,
         calories: 320,
-        gearLabel: "Barbell & Dip Station",
-        description: "Maximizes mechanical tension to anchor lean mass in a deficit without knee torque.",
-        exerciseIds: ["barbell_rdl", "barbell_floor_press", "weighted_dips", "barbell_pendlay_row", "barbell_z_press"]
+        gearLabel: "Barbell, Squat Rack & Bench",
+        description: "Maximizes compound mechanical tension across squat, bench, hinge, and row to anchor lean mass.",
+        exerciseIds: ["barbell_squat", "barbell_bench_press", "barbell_rdl", "barbell_pendlay_row", "barbell_z_press"]
       },
       {
         id: "bb_squat_press",
@@ -2130,15 +2130,15 @@
 
       if (opt.id === 'bb_upper_hinge' && (f.hinge || f.h_push)) {
         if (!f.knee_dom) {
-          ids = ["barbell_pendlay_row", "barbell_z_press", "barbell_zercher_squat", "kb_suitcase_carry", "deadbug_hold"];
-          note = "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)";
+          ids = ["barbell_squat", "barbell_pendlay_row", "barbell_z_press", "kb_suitcase_carry", "deadbug_hold"];
+          note = "Rotated for 48h muscle recovery (Fresh Squat, Pull, Overhead & Core)";
         } else {
           ids = ["barbell_pendlay_row", "barbell_z_press", "glute_bridge_hold", "kb_suitcase_carry", "deadbug_hold"];
           note = "Rotated for 48h muscle recovery (Fresh Pull, Overhead & Core)";
         }
       } else if (opt.id === 'bb_squat_press' && f.knee_dom) {
-        ids = ["barbell_rdl", "barbell_floor_press", "barbell_pendlay_row", "weighted_dips"];
-        note = "Rotated: Knee extensors rested (Posterior & Push focus)";
+        ids = ["barbell_rdl", "barbell_bench_press", "barbell_pendlay_row", "weighted_dips"];
+        note = "Rotated: Knee extensors rested (Posterior & Bench Press focus)";
       } else {
         ids = opt.exerciseIds ? [...opt.exerciseIds] : [];
         note = null;
@@ -2913,9 +2913,9 @@ function generateWorkoutFromGearAndGoal() {
           }
         };
       } else {
+        const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
+        const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 95, reps: 8 };
         const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
-        const rxPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_floor_press', getAllExercises().find(e => e.id === 'barbell_floor_press')) : { weight: 95, reps: 6 };
-        const rxDips = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('weighted_dips', getAllExercises().find(e => e.id === 'weighted_dips')) : { weight: 'Bodyweight', reps: 12 };
         const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
         const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
 
@@ -2923,22 +2923,22 @@ function generateWorkoutFromGearAndGoal() {
 
         return {
           presetKey: 'option_a',
-          title: 'Option A: Heavy Barbell Strength & Muscle Anchor',
-          subtitle: 'Upper Push Power & Posterior Chain Mechanical Tension',
+          title: 'Option A: Heavy Barbell Squat, Bench & Hinge',
+          subtitle: 'Full-Body Compound Mechanical Tension (Squat Rack & Bench)',
           durationMin: 45,
-          calories: 320,
-          fatigueImpact: 'Controlled CNS (Spares Knees)',
-          equipment: 'Barbell, Weight Plates & Dip Station',
+          calories: 340,
+          fatigueImpact: 'High Mechanical Tension',
+          equipment: 'Barbell, Squat Rack & Bench',
           badge: 'AUTOREGULATION TARGET',
-          summary: `Delivers high mechanical tension to chest and posterior chain with 90s rest intervals, anchoring all ${leanMass} kg of lean mass while protecting nervous system reserves.`,
+          summary: `Delivers heavy compound mechanical tension across Squat, Bench Press, RDL, and Row, anchoring all ${leanMass} kg of lean mass while protecting nervous system reserves.`,
           reasoning: [
             {
               title: 'High Mechanical Tension Required',
-              desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow must deliver high mechanical load to chest, lats, and posterior chain without taxing cardiovascular fatigue reserves.`
+              desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow must deliver high mechanical load to quads, chest, lats, and posterior chain.`
             },
             {
               title: 'Heart Rate & Cardiac EPOC',
-              desc: `Recent work capacity sessions spiked cardiovascular output. Tomorrow's compound strength format utilizes 90-second rest intervals, keeping heart rate lower (~95–110 bpm) while taxing muscular motor units directly.`
+              desc: `Recent work capacity sessions spiked cardiovascular output. Tomorrow's compound strength format utilizes 90–120s rest intervals, keeping heart rate controlled while taxing muscular motor units directly.`
             },
             {
               title: 'Sleep & CNS Priming',
@@ -2950,11 +2950,11 @@ function generateWorkoutFromGearAndGoal() {
             }
           ],
           blueprint: [
+            { name: 'Barbell Back Squat', prescription: `4 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Unrack from squat rack, chest up, knees track over toes, drive through midfoot.' },
+            { name: 'Barbell Flat Bench Press', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: 'Shoulder blades retracted on bench, leg drive, touch lower sternum.' },
             { name: 'Barbell Romanian Deadlift (RDL)', prescription: `4 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Hips back, neutral spine, explosive glute lockout.' },
-            { name: 'Barbell Flat / Floor Press', prescription: `4 × ${rxPress.reps} @ ${fmtLoad(rxPress.weight)} (90s rest)`, cue: 'Controlled eccentric, 45° elbow tuck, explosive press.' },
-            { name: 'Dip Bar Chest & Tricep Dips', prescription: `3 × ${rxDips.reps} @ ${fmtLoad(rxDips.weight)} (75s rest)`, cue: 'Slight forward torso lean, full tricep lockout.' },
             { name: 'Barbell Pendlay Row', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
-            { name: 'Floor Seated Barbell Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Seated with straight legs; strict overhead deltoid power.' }
+            { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Strict overhead deltoid press; core braced tight.' }
           ],
           alternative: {
             presetKey: 'option_c',
