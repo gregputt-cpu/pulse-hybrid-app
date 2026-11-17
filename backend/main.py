@@ -539,6 +539,40 @@ def update_exercise_preferences(payload: ExercisePreferencesPayload):
     save_live_state(state)
     return {"success": True, "exercise_preferences": state["exercise_preferences"]}
 
+class AnnotateActivityPayload(BaseModel):
+    activity_id: Union[str, int]
+    user_text: str
+
+@app.post("/api/annotate_activity")
+def annotate_activity(payload: AnnotateActivityPayload):
+    act_id_str = str(payload.activity_id)
+    text = payload.user_text.strip()
+    try:
+        db.set_kv(f"activity_note_{act_id_str}", text)
+    except Exception as e:
+        logger.warning(f"Could not save activity note to db: {e}")
+    state = load_live_state()
+    garmin = state.setdefault("garmin", {})
+    athlete = state.get("athlete", {"weight_kg": 98.4, "body_fat_pct": 17.1})
+    updated_act = None
+    for lst_key in ("today_activities", "recent_activities"):
+        for a in garmin.get(lst_key, []):
+            if str(a.get("id")) == act_id_str:
+                a["sub_title"] = text
+                a["user_notes"] = text
+                telemetry = {
+                    "duration_min": a.get("duration_min") or 25,
+                    "calories": a.get("calories") or 300,
+                    "avg_hr": a.get("avg_hr") or 130,
+                    "max_hr": a.get("max_hr") or 160,
+                    "aerobic_te": a.get("aerobic_te") or 2.5,
+                    "anaerobic_te": a.get("anaerobic_te") or 1.3
+                }
+                a["benefits"] = benefits_engine.analyze_workout(text, telemetry, athlete)
+                updated_act = a
+    save_live_state(state)
+    return {"success": True, "activity_id": act_id_str, "sub_title": text, "activity": updated_act, "state": state}
+
 # Background Continuous Sync (APScheduler)
 from apscheduler.schedulers.background import BackgroundScheduler
 

@@ -93,3 +93,19 @@ class PhysiologicalBenefitsEngine:
             "metabolic": metabolic,
             "autoregulation": autoregulation
         }
+
+    def analyze_workout(self, text, telemetry=None, athlete=None):
+        telemetry = telemetry or {}
+        if athlete and athlete.get("weight_kg"):
+            self.weight_kg = float(athlete.get("weight_kg"))
+        return self.generate_benefits(
+            activity_name="",
+            sub_title=text or "",
+            duration_min=float(telemetry.get("duration_min") or 25),
+            calories=float(telemetry.get("calories") or 300),
+            avg_hr=float(telemetry.get("avg_hr") or 130),
+            max_hr=float(telemetry.get("max_hr") or 160),
+            aerobic_te=float(telemetry.get("aerobic_te") or 2.5),
+            anaerobic_te=float(telemetry.get("anaerobic_te") or 1.3),
+        )
+

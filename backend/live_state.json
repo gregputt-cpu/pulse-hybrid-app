@@ -30,7 +30,7 @@
       {
         "id": 25107151802,
         "name": "Jump_rope",
-        "sub_title": "Jump Rope",
+        "sub_title": "Jump Rope with 5 sets of 12 KB swings with 24kg KB",
         "date": "2026-11-17 11:13:22",
         "duration_min": 24.6,
         "calories": 361,
@@ -39,8 +39,8 @@
         "aerobic_te": 2.799999952316284,
         "anaerobic_te": 1.2999999523162842,
         "benefits": {
-          "muscles_worked": "Quadriceps (Vastus Medialis/Lateralis), Gluteus Maximus, Calves & Achilles Tendon Complex (Gastrocnemius/Soleus), Hip Flexors (Iliopsoas), Tibialis Anterior",
-          "biomechanics": "High-frequency plyometric impacts generating peak eccentric ground reaction forces of 3.5\u20134.5\u00d7 bodyweight (~349.5\u2013449.3kg per landing at 99.85kg bodyweight). Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
+          "muscles_worked": "Quadriceps (Vastus Medialis/Lateralis), Gluteus Maximus, Calves & Achilles Tendon Complex (Gastrocnemius/Soleus), Hip Flexors (Iliopsoas), Tibialis Anterior, Biceps Femoris & Semitendinosus",
+          "biomechanics": "High-frequency plyometric impacts generating peak eccentric ground reaction forces of 3.5\u20134.5\u00d7 bodyweight (~342.7\u2013440.6kg per landing at 97.9kg bodyweight). Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
           "cardio": "Average HR 137 bpm with peak spike at 161 bpm (85% estimated HRmax). Aerobic TE 2.8 + Anaerobic TE 1.3 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
           "metabolic": "361 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
           "autoregulation": "High eccentric loading on patellar tendons and gastrocnemius complex. Recommendation: Pair next session with horizontal push/pull (bench/dips/rows) and allow knee extensors 24\u201348 hours before heavy axial barbell squats."
@@ -122,7 +122,8 @@
           "z3": 222,
           "z4": 3,
           "z5": 0
-        }
+        },
+        "user_notes": "Jump Rope with 5 sets of 12 KB swings with 24kg KB"
       },
       {
         "id": 25098224763,
@@ -523,7 +524,7 @@
       {
         "id": 25107151802,
         "name": "Jump_rope",
-        "sub_title": "Jump Rope",
+        "sub_title": "Jump Rope with 5 sets of 12 KB swings with 24kg KB",
         "date": "2026-11-17 11:13:22",
         "duration_min": 24.6,
         "calories": 361,
@@ -532,8 +533,8 @@
         "aerobic_te": 2.799999952316284,
         "anaerobic_te": 1.2999999523162842,
         "benefits": {
-          "muscles_worked": "Quadriceps (Vastus Medialis/Lateralis), Gluteus Maximus, Calves & Achilles Tendon Complex (Gastrocnemius/Soleus), Hip Flexors (Iliopsoas), Tibialis Anterior",
-          "biomechanics": "High-frequency plyometric impacts generating peak eccentric ground reaction forces of 3.5\u20134.5\u00d7 bodyweight (~349.5\u2013449.3kg per landing at 99.85kg bodyweight). Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
+          "muscles_worked": "Quadriceps (Vastus Medialis/Lateralis), Gluteus Maximus, Calves & Achilles Tendon Complex (Gastrocnemius/Soleus), Hip Flexors (Iliopsoas), Tibialis Anterior, Biceps Femoris & Semitendinosus",
+          "biomechanics": "High-frequency plyometric impacts generating peak eccentric ground reaction forces of 3.5\u20134.5\u00d7 bodyweight (~342.7\u2013440.6kg per landing at 97.9kg bodyweight). Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
           "cardio": "Average HR 137 bpm with peak spike at 161 bpm (85% estimated HRmax). Aerobic TE 2.8 + Anaerobic TE 1.3 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
           "metabolic": "361 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
           "autoregulation": "High eccentric loading on patellar tendons and gastrocnemius complex. Recommendation: Pair next session with horizontal push/pull (bench/dips/rows) and allow knee extensors 24\u201348 hours before heavy axial barbell squats."
@@ -615,7 +616,8 @@
           "z3": 222,
           "z4": 3,
           "z5": 0
-        }
+        },
+        "user_notes": "Jump Rope with 5 sets of 12 KB swings with 24kg KB"
       }
     ],
     "distance_miles": 3.63,

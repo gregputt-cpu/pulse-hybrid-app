@@ -378,7 +378,16 @@ class GarminSyncService:
             start_time = ra.get('startTimeLocal', '')
 
             existing = existing_map.get(act_id)
-            if existing and existing.get('benefits'):
+            custom_note = (existing.get('user_notes') if existing else None)
+            if not custom_note and db is not None:
+                try:
+                    custom_note = db.get_kv(f"activity_note_{act_id}")
+                except Exception:
+                    custom_note = None
+            if custom_note:
+                sub_title = custom_note
+
+            if existing and existing.get('benefits') and not custom_note:
                 benefits = existing['benefits']
                 if existing.get('sub_title'):
                     sub_title = existing['sub_title']
@@ -481,6 +490,8 @@ class GarminSyncService:
                 "steps": act_steps,
                 "distance_miles": act_dist_miles
             }
+            if custom_note:
+                entry["user_notes"] = custom_note
             if hr_samples:
                 entry["hr_samples"] = hr_samples
             if hr_zones:

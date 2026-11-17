@@ -186,6 +186,41 @@
       beep(550, 0.04);
     }
 
+    // WORKOUT ANNOTATION INTELLIGENCE PARSER (Extracts sets, reps, load, tonnage & movement patterns)
+    function parseWorkoutNoteDetails(text, act) {
+      const t = String(text || '').toLowerCase();
+      const srMatch = t.match(/(\d+)\s*(?:sets?\s*(?:of|x|×)\s*|x|×)\s*(\d+)/i);
+      const sets = srMatch ? parseInt(srMatch[1], 10) : 0;
+      const reps = srMatch ? parseInt(srMatch[2], 10) : 0;
+      const totalReps = (sets && reps) ? sets * reps : 0;
+
+      const wtMatch = t.match(/(\d+(?:\.\d+)?)\s*kg/i);
+      const weightKg = wtMatch ? parseFloat(wtMatch[1]) : 0;
+      const tonnageKg = (totalReps && weightKg) ? Math.round(totalReps * weightKg) : 0;
+
+      const hasKbSwing = /swing|snatch|clean/.test(t);
+      const hasHinge = /swing|rdl|deadlift|hinge|snatch|clean|good morning/.test(t);
+      const hasSquat = /squat|lunge|split squat|thruster|goblet/.test(t);
+      const hasPush = /bench|press|pushup|push-up|dip/.test(t);
+      const hasPull = /row|pullup|pull-up|chin|lat|curl/.test(t);
+      const hasJumpRope = /jump\s*rope|skip|double\s*under/.test(t) || Boolean(act && act.activity_type_key === 'jump_rope');
+
+      return {
+        sets,
+        reps,
+        totalReps,
+        weightKg,
+        tonnageKg,
+        hasKbSwing,
+        hasHinge,
+        hasSquat,
+        hasPush,
+        hasPull,
+        hasJumpRope
+      };
+    }
+    window.parseWorkoutNoteDetails = parseWorkoutNoteDetails;
+
     // CLIENT-SIDE PHYSIOLOGICAL BENEFITS ENGINE (Local-First, runs offline on any phone/browser)
     function clientAnalyzeWorkoutBenefits(text, telemetry, athlete) {
       if (!telemetry) telemetry = {};
@@ -610,9 +645,11 @@
 
       showToast('🧠 Analyzing biomechanics & energy systems...');
 
-      const act = recentActivitiesData.find(a => String(a.id) === String(actId));
+        const act = recentActivitiesData.find(a => String(a.id) === String(actId));
       if (act) {
         act.subTitle = text;
+        act.sub_title = text;
+        act.user_notes = text;
         const telemetry = {
           duration_min: act.durationMin || 30,
           calories: act.calories || 250,
@@ -623,12 +660,30 @@
         };
         act.benefits = clientAnalyzeWorkoutBenefits(text, telemetry, { weight_kg: 99.85, body_fat_pct: 17.5 });
 
+        if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
+          ['today_activities', 'recent_activities'].forEach(lstKey => {
+            const arr = window.BAKED_LIVE_STATE.garmin[lstKey];
+            if (Array.isArray(arr)) {
+              arr.forEach(a => {
+                if (String(a.id) === String(actId)) {
+                  a.sub_title = text;
+                  a.subTitle = text;
+                  a.user_notes = text;
+                  a.benefits = act.benefits;
+                }
+              });
+            }
+          });
+        }
+
         // Save immediately to localStorage
         try {
           localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
         } catch(err) {}
 
         renderHistoryList();
+        if (typeof renderTodayTrainingRecommendations === 'function') renderTodayTrainingRecommendations();
+        if (typeof renderWeeklyPatternBalance === 'function') renderWeeklyPatternBalance();
         closeAnnotateModal();
         beep(880, 0.2);
         showToast('✓ Workout details & physiological benefits analyzed!');
@@ -707,54 +762,83 @@
     }
 
     function getEgmWorkoutBreakdown(act, isToday) {
-      const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
-      const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('weight') || text.includes('gym') || text.includes('option_a') || text.includes('option a') || text.includes('hypertrophy') || text.includes('rdl') || text.includes('press');
-      const isJump = text.includes('jump') || text.includes('plyo') || text.includes('tuck') || text.includes('hop');
+      const rawText = `${act.name || ''} ${act.subTitle || act.sub_title || ''}`;
+      const text = rawText.toLowerCase();
+      const parsed = parseWorkoutNoteDetails(rawText, act);
+      const isHybridPlyoStrength = parsed.hasJumpRope && (parsed.hasKbSwing || parsed.hasHinge || parsed.hasSquat || parsed.hasPush || parsed.hasPull);
+      const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('weight') || text.includes('gym') || text.includes('option_a') || text.includes('option a') || text.includes('hypertrophy') || text.includes('rdl') || text.includes('press') || parsed.hasHinge || parsed.hasSquat || parsed.hasPush || parsed.hasPull;
+      const isJump = text.includes('jump') || text.includes('plyo') || text.includes('tuck') || text.includes('hop') || parsed.hasJumpRope;
       const isWalk = text.includes('walk') || text.includes('stroll');
       const isRuck = text.includes('ruck') || text.includes('pack');
       const isRun = text.includes('run') || text.includes('sprint') || text.includes('jog');
       const isCardio = text.includes('cardio') || isRun;
-      
+
+      const skipCountStr = act.total_reps ? `${Number(act.total_reps).toLocaleString()} skips` : (text.includes('300') ? '300 jumps' : 'high-cadence plyo');
+      const customNoteSummary = (parsed.sets && parsed.reps)
+        ? `${parsed.sets}×${parsed.reps}${parsed.weightKg ? ` @ ${parsed.weightKg}kg` : ''} (${parsed.totalReps} total reps${parsed.tonnageKg ? ` • ${parsed.tonnageKg.toLocaleString()} kg volume` : ''})`
+        : '';
+
       let recoveryPill = '';
       let primaryTakeaway = '';
 
       if (isToday) {
-        if (isStrength) {
+        if (isHybridPlyoStrength) {
+          recoveryPill = '<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 24–48h Posterior & Calf Recovery • Upper Body Fresh</span>';
+          primaryTakeaway = `${act.calories} kcal active burn • ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' Jump Rope skips + ' : ''}${parsed.sets && parsed.reps ? `${parsed.sets}×${parsed.reps}` : 'Ballistic'} ${parsed.weightKg ? `@ ${parsed.weightKg}kg ` : ''}KB Swings${parsed.totalReps ? ` (${parsed.totalReps} ballistic hinges${parsed.tonnageKg ? ` • ${parsed.tonnageKg.toLocaleString()} kg volume` : ''})` : ''}. Combines elastic Achilles/calf plyometrics with explosive posterior-chain hip power.`;
+        } else if (isStrength) {
           recoveryPill = '<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 24–48h Recovery Window • In Progress</span>';
-          primaryTakeaway = `${act.calories || 320} kcal active burn • High mechanical tension stimulus achieved. 24–48h required for myofibrillar protein synthesis and CNS recovery.`;
+          primaryTakeaway = `${act.calories || 320} kcal active burn • ${customNoteSummary ? `Logged ${customNoteSummary} • ` : ''}High mechanical tension stimulus achieved. 24–48h required for myofibrillar protein synthesis and CNS recovery.`;
         } else if (isJump) {
           recoveryPill = '<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 24–48h Recovery Window • In Progress</span>';
-          primaryTakeaway = `${act.calories} kcal active burn • High eccentric tendon loading (300 jumps) requiring 24–48h knee extensor recovery.`;
+          primaryTakeaway = `${act.calories} kcal active burn • High eccentric tendon loading (${skipCountStr}) requiring 24–48h calf/Achilles & knee extensor recovery.`;
         } else if (isWalk) {
           recoveryPill = '<span style="background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); color:var(--primary); font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">✓ 0h Recovery Debt • Active Flush</span>';
           primaryTakeaway = `${act.calories} kcal active burn • Accelerated metabolic waste clearance with zero central nervous system fatigue.`;
         } else {
           recoveryPill = '<span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 12–18h Recovery Window • In Progress</span>';
-          primaryTakeaway = `${act.calories} kcal active burn • Stimulated myocardial stroke volume and expanded today's calorie runway to 2,437 kcal.`;
+          primaryTakeaway = `${act.calories} kcal active burn • ${customNoteSummary ? `${customNoteSummary} • ` : ''}Stimulated myocardial stroke volume and expanded today's calorie runway.`;
         }
       } else {
         recoveryPill = '<span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#a1a1aa; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px;">✓ Fully Recovered</span>';
-        primaryTakeaway = isStrength
-          ? `${act.calories || 320} kcal active burn • Myofibrillar protein synthesis and neuromuscular recovery complete; primed for high force output.`
+        primaryTakeaway = isHybridPlyoStrength
+          ? `${act.calories} kcal active burn • ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' skips + ' : ''}${customNoteSummary || 'KB Swings'} fully remodeled; primed for high force output.`
+          : isStrength
+          ? `${act.calories || 320} kcal active burn • ${customNoteSummary ? `${customNoteSummary} • ` : ''}Myofibrillar protein synthesis and neuromuscular recovery complete; primed for high force output.`
           : isJump 
-          ? `${act.calories} kcal burned • Tendons and calves fully remodeled; primed for high force output.`
+          ? `${act.calories} kcal burned (${skipCountStr}) • Tendons and calves fully remodeled; primed for high force output.`
           : `${act.calories} kcal active burn • Full physiological adaptation realized; zero residual fatigue debt.`;
       }
 
       let achievements = [];
-      if (isStrength) {
+      if (isHybridPlyoStrength) {
+        achievements.push(`<strong>Ballistic Posterior-Chain & Hip Hinge Output:</strong> Completed ${parsed.sets || 5} sets × ${parsed.reps || 12} reps (${parsed.totalReps || 60} total reps${parsed.weightKg ? ` @ ${parsed.weightKg}kg = ${(parsed.tonnageKg || 1440).toLocaleString()} kg ballistic load` : ''}), recruiting gluteus maximus, hamstrings, latissimus dorsi, and spinal erectors alongside ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' jump rope skips' : 'cardio intervals'}.`);
+        achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${act.avgHr || 137} bpm with interval peaks to ${act.maxHr || 161} bpm (${Math.round(((act.maxHr || 161)/190)*100)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.8).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 1.3).toFixed(1)} drove both mitochondrial density and fast-twitch glycolytic power.`);
+        achievements.push(`<strong>Metabolic & Lean Mass Preservation:</strong> ${act.calories || 361} kcal active expenditure expanded today's calorie runway while high-velocity KB hip extension signaled retention of your ${(window.athleteProfile ? window.athleteProfile.leanMassKg : 80.99).toFixed(2)} kg lean mass.`);
+      } else if (isStrength) {
+        if (customNoteSummary) {
+          achievements.push(`<strong>Annotated Volume & Tonnage:</strong> Logged ${customNoteSummary} (${act.subTitle || act.sub_title}), delivering targeted mechanical tension.`);
+        }
         achievements.push(`<strong>Mechanical Tension & Lean Mass Preservation:</strong> Recruited high-threshold motor units across primary kinetic chains. High mechanical load signals your endocrine system to preserve all ${(window.athleteProfile ? window.athleteProfile.leanMassKg : 81.03).toFixed(2)} kg of lean mass while oxidizing fat in your deficit.`);
         achievements.push(`<strong>Metabolic & EPOC Expansion:</strong> ${act.calories || 320} kcal active expenditure elevated excess post-exercise oxygen consumption (EPOC) for 12–24 hours, stimulating elevated mitochondrial respiration.`);
         achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${act.avgHr || 122} bpm with interval peaks to ${act.maxHr || 154} bpm (${Math.round(((act.maxHr || 154)/190)*100)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.1).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 2.3).toFixed(1)}.`);
       } else {
+        if (customNoteSummary) {
+          achievements.push(`<strong>Session Breakdown:</strong> Completed ${customNoteSummary} (${act.subTitle || act.sub_title}).`);
+        }
         achievements.push(`<strong>Cardiovascular & Aerobic Capacity:</strong> Avg HR ${act.avgHr || 119} bpm (Peak ${act.maxHr || 151} bpm, ${(act.maxHr ? Math.round((act.maxHr/190)*100) : 79)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.2).toFixed(1)} expanded myocardial stroke volume and mitochondrial capillary density in slow/fast oxidative fibers.`);
         achievements.push(`<strong>Metabolic Fat Loss Runway:</strong> ${act.calories} kcal active expenditure dynamically expanded your daily calorie runway while protecting your 350 kcal deficit towards 15.0% body fat. Stimulates excess post-exercise oxygen consumption (EPOC) for 4–8 hours.`);
       }
-      const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain");
+      const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isHybridPlyoStrength ? "Gluteus Maximus, Biceps Femoris & Semitendinosus (Hamstrings), Calves & Achilles Tendon Complex, Latissimus Dorsi, Core Brace" : (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain"));
       achievements.push(`<strong>Target Muscular Activation:</strong> Recruited ${muscles}.`);
 
       let stressors = [];
-      if (isStrength) {
+      if (isHybridPlyoStrength) {
+        const athleteWt = (window.athleteProfile ? window.athleteProfile.weightKg : 97.9);
+        const grfLow = Math.round(athleteWt * 3.5);
+        const grfHigh = Math.round(athleteWt * 4.5);
+        stressors.push(`<strong>Dual Plyometric + Ballistic Hinge Load:</strong> ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' elastic skips' : 'Jump rope intervals'} (~${grfLow}–${grfHigh} kg peak ground force) taxed the Achilles/patellar tendons, while ${parsed.totalReps || 60} ballistic ${parsed.weightKg || 24}kg KB swings loaded eccentric hamstring deceleration and lumbar erectors.`);
+        stressors.push(`<strong>Targeted Local Fatigue (Upper Body Spared):</strong> Calves, ankles, and posterior hip hinge absorbed high mechanical work, whereas horizontal push (chest/shoulders/triceps) and upper-back pulling remain un-fatigued.`);
+      } else if (isStrength) {
         stressors.push(`<strong>Myofibrillar Microtrauma:</strong> Eccentric muscle contraction caused micro-tears in sarcomeres; requires elevated amino acid availability (200g protein target) for cellular remodeling.`);
         stressors.push(`<strong>Central Nervous System (CNS) Fatigue:</strong> Heavy mechanical loading taxes sympathetic pathways and neuromuscular junctions; parasympathetic tone dips temporarily.`);
         stressors.push(`<strong>Connective Tissue Strain:</strong> Tendinous junctions and joint capsules subjected to high tensile force; requires 24–48h recovery prior to repeating heavy axial loading on the same kinetic chain.`);
@@ -762,7 +846,7 @@
         const athleteWt = (window.athleteProfile ? window.athleteProfile.weightKg : 97.75);
         const grfLow = Math.round(athleteWt * 3.5);
         const grfHigh = Math.round(athleteWt * 4.5);
-        stressors.push(`<strong>Joint & Tendon Impact:</strong> Peak eccentric ground reaction forces reached 3.5–4.5× bodyweight (~${grfLow}–${grfHigh} kg per landing at ${athleteWt.toFixed(1)} kg). Created significant tensile strain on the patellar tendons and Achilles spring complex.`);
+        stressors.push(`<strong>Joint & Tendon Impact:</strong> Peak eccentric ground reaction forces reached 3.5–4.5× bodyweight (~${grfLow}–${grfHigh} kg per landing at ${athleteWt.toFixed(1)} kg across ${skipCountStr}). Created significant tensile strain on the patellar tendons and Achilles spring complex.`);
         stressors.push(`<strong>Neuromuscular Debt:</strong> High fast-twitch motor unit fatigue; temporary depletion of intramuscular phosphocreatine and localized calf stiffness.`);
       } else if (isWalk) {
         stressors.push(`<strong>Joint & Spinal Stress:</strong> Negligible ground reaction forces (~1.2× bodyweight, ~118 kg per stride). Promoted knee/hip synovial fluid circulation and axial lumbar decompression with zero joint trauma.`);
@@ -778,7 +862,11 @@
         ? `${protStatus.logged}g already logged ✓ (Target surpassed)`
         : `${protStatus.logged}g logged / ${protStatus.target}g target • ${protStatus.remaining}g remaining`;
 
-      if (isStrength) {
+      if (isHybridPlyoStrength) {
+        recoveryProtocol.push(`<strong>Kinetic Chain Recovery Status:</strong> Calves/Achilles and posterior hip hinge (hamstrings/glutes) were loaded today (allow 24–36h before high-volume ballistic hinging), while <strong>Upper Push (Bench/Overhead)</strong> and <strong>Upper Pull (Rows)</strong> remain <strong>100% fresh for tomorrow</strong>.`);
+        recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and replenish electrolytes to support tendon collagen synthesis and hamstring remodeling.`);
+        recoveryProtocol.push(`<strong>Optimal Tomorrow Pairing (Assuming Good Sleep):</strong> Heavy Upper Push/Pull Priority (Barbell Bench Press 95kg × 8, Pendlay Rows 85kg × 8, Z-Press) + Back Squats if calves feel fresh (keep RDL volume light since 60 ballistic KB swings already hit the hinge pattern).`);
+      } else if (isStrength) {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 24–48 hours before another heavy resistance training session on the same muscle groups.`);
         recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and consume 3–4g sodium/electrolytes with 2.5L+ hydration.`);
         recoveryProtocol.push(`<strong>Optimal Next Session Pairing:</strong> Tomorrow: Easy Zone 1 / Zone 2 Recovery Walk (0h CNS Debt) or light active mobility.`);

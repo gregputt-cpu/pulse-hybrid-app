@@ -235,7 +235,7 @@
 
     function restoreActivitiesFromLocalStorage() {
       try {
-        const CURRENT_ACT_VERSION = "v5.21_nov17_dedup";
+        const CURRENT_ACT_VERSION = "v5.22_nov17_notes";
         if (localStorage.getItem('pulse_act_version') !== CURRENT_ACT_VERSION) {
           localStorage.removeItem('pulse_recent_activities');
           localStorage.setItem('pulse_act_version', CURRENT_ACT_VERSION);
@@ -2100,7 +2100,7 @@
         }
         if (actTime && actTime < cutoff48h) return;
 
-        const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
+        const text = `${act.name || ''} ${act.subTitle || act.sub_title || ''}`.toLowerCase();
         const duration = act.durationMin || act.duration_min || 0;
         const steps = act.steps || 0;
 
@@ -2115,6 +2115,12 @@
         ) {
           fatigued.knee_dom = true;
         }
+
+        if (/swing|rdl|deadlift|hinge|snatch|clean/.test(text)) fatigued.hinge = true;
+        if (/bench|floor press|pushup|push-up|dip/.test(text)) fatigued.h_push = true;
+        if (/z-press|overhead|strict press|shoulder press/.test(text)) fatigued.v_push = true;
+        if (/row|pullup|pull-up|chin|lat/.test(text)) fatigued.h_pull = true;
+        if (/squat|lunge|thruster|goblet/.test(text)) fatigued.knee_dom = true;
 
         if (text.includes('strength') || text.includes('weight')) {
           if (text.includes('upper') || text.includes('push')) fatigued.h_push = true;
@@ -2606,9 +2612,24 @@ function generateWorkoutFromGearAndGoal() {
       acts.forEach(a => {
         const dt = new Date(String(a.rawDate || a.date || '').replace(' ', 'T')).getTime();
         if (!isNaN(dt) && (now - dt) <= sevenDaysMs) {
-          const nm = String(a.name || a.sub_title || '').toLowerCase();
-          if (nm.includes('strength')) { counts.Push += 2; counts.Pull += 2; counts.Hinge += 2; }
-          else counts.Conditioning += 2;
+          const nm = String(`${a.name || ''} ${a.subTitle || a.sub_title || ''}`).toLowerCase();
+          if (typeof parseWorkoutNoteDetails === 'function') {
+            const p = parseWorkoutNoteDetails(nm, a);
+            const setsToAdd = p.sets || 3;
+            let matchedPattern = false;
+            if (p.hasHinge) { counts.Hinge += setsToAdd; matchedPattern = true; }
+            if (p.hasSquat) { counts.Squat += setsToAdd; matchedPattern = true; }
+            if (p.hasPush) { counts.Push += setsToAdd; matchedPattern = true; }
+            if (p.hasPull) { counts.Pull += setsToAdd; matchedPattern = true; }
+            if (p.hasJumpRope || !nm.includes('strength')) {
+              counts.Conditioning += 2;
+            } else if (!matchedPattern && nm.includes('strength')) {
+              counts.Push += 2; counts.Pull += 2; counts.Hinge += 2;
+            }
+          } else {
+            if (nm.includes('strength')) { counts.Push += 2; counts.Pull += 2; counts.Hinge += 2; }
+            else counts.Conditioning += 2;
+          }
         }
       });
 
@@ -2797,18 +2818,26 @@ function generateWorkoutFromGearAndGoal() {
     }
 
     // ==================== NEXT-DAY AUTOREGULATION & PREVIEW ENGINE ====================
+    window.tomorrowSleepScenario = window.tomorrowSleepScenario || 'good';
+    window.setTomorrowSleepScenario = function(scen) {
+      window.tomorrowSleepScenario = scen;
+      if (typeof renderTodayTrainingRecommendations === 'function') renderTodayTrainingRecommendations();
+      if (typeof pulseHaptic === 'function') pulseHaptic(15);
+    };
+
     function generateTomorrowRecommendation(completedToday) {
       const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
-      
+      const scen = window.tomorrowSleepScenario || 'good';
+
       let sleepScore = (window.athleteProfile && window.athleteProfile.sleepScore) ? window.athleteProfile.sleepScore : 94;
       let readiness = (window.athleteProfile && window.athleteProfile.readiness) ? window.athleteProfile.readiness : 93;
       let restingHr = (window.athleteProfile && window.athleteProfile.restingHr) ? window.athleteProfile.restingHr : 46;
       let hrvStatus = "Balanced (Optimal Parasympathetic Rebound)";
-      let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 98.2;
-      let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.2;
-      let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
-      let fatToLose = (window.athleteProfile && window.athleteProfile.fatToLoseKg) ? window.athleteProfile.fatToLoseKg : 2.49;
-      let targetWeight = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : 95.71;
+      let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.9;
+      let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1;
+      let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 80.99;
+      let fatToLose = (window.athleteProfile && window.athleteProfile.fatToLoseKg) ? window.athleteProfile.fatToLoseKg : 2.62;
+      let targetWeight = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : 95.28;
 
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
         const g = window.BAKED_LIVE_STATE.garmin;
@@ -2826,59 +2855,210 @@ function generateWorkoutFromGearAndGoal() {
         if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
       }
 
-      const todayTitle = (completedToday && completedToday.title) ? completedToday.title.toLowerCase() : '';
-      const isLowerHeavy = todayTitle.includes('squat') || todayTitle.includes('hinge') || todayTitle.includes('option a') || todayTitle.includes('barbell') || todayTitle.includes('strength');
+      const todayText = `${completedToday?.title || ''} ${(acts && acts[0] && (acts[0].subTitle || acts[0].sub_title)) || ''}`.toLowerCase();
+      const fatigued = getFatiguedPatterns48h();
+      const didSkipAndSwings = /skip|jump/.test(todayText) && /swing|kb|kettlebell/.test(todayText);
+      const isLowerHeavy = todayText.includes('squat') || todayText.includes('option a') || todayText.includes('barbell') || todayText.includes('strength');
 
-      let latestAvgHr = 98;
-      if (acts.length > 0 && acts[0].avgHr) latestAvgHr = acts[0].avgHr;
+      let latestAvgHr = 137;
+      if (acts.length > 0 && (acts[0].avgHr || acts[0].avg_hr)) latestAvgHr = acts[0].avgHr || acts[0].avg_hr;
 
       let tomorrowGear = null;
       try { tomorrowGear = localStorage.getItem('pulse_tomorrow_gear'); } catch(e) {}
       const kbW = (gearConfig && gearConfig.kb && gearConfig.kb.weight) || '24kg';
 
-      if (tomorrowGear === 'kb_heavy') {
-        const lowerFatigued = isLowerHeavy;
+      const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
+      const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 95, reps: 8 };
+      const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
+      const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
+      const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
+      const fmtLoad = (w) => (typeof w === 'number' ? `${w}kg` : `${w}`);
+
+      // SCENARIO 3: POOR SLEEP (<65)
+      if (scen === 'poor') {
+        return {
+          presetKey: 'option_c',
+          title: 'Option C: 20-Min Zone 2 Incline Walk & Thoracic/Hip Mobility Reset',
+          subtitle: 'Cortisol Control, Achilles/Hamstring Flush & Zero CNS Debt',
+          durationMin: 25,
+          calories: 140,
+          estMorningBattery: '<50%',
+          estReadiness: '~55',
+          fatigueImpact: '0h CNS Debt',
+          equipment: 'Bodyweight, Foam Roller & Resistance Band',
+          badge: 'POOR SLEEP CONTINGENCY (<65)',
+          summary: `If tonight's sleep score drops below 65 (Morning Battery <50%, Readiness <58), avoid heavy axial spinal compression. A 20-minute Zone 2 walk + hip/ankle mobility lowers cortisol to protect all ${leanMass} kg of lean mass in your 350 kcal deficit while flushing calf & hamstring soreness from today's Jump Rope + KB Swings.`,
+          reasoning: [
+            {
+              title: 'Cortisol & Lean Mass Protection',
+              desc: `Under poor sleep (<65), heavy barbell loading spikes cortisol and catabolic breakdown in a caloric deficit. Zone 2 locomotion oxidizes pure fat without taxing your sympathetic nervous system.`
+            },
+            {
+              title: 'Achilles & Posterior Chain Flush',
+              desc: `Promotes synovial fluid circulation and gentle blood flow to calves, Achilles tendons, and hamstrings after today's 2,185 skips + 5×12 @ 24kg KB swings.`
+            },
+            {
+              title: 'Autonomic Parasympathetic Reset',
+              desc: `Keeps heart rate strictly under 110 bpm so your Body Battery rebounds for a heavy compound session the following day.`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `Adds ~140 kcal of clean NEAT expenditure while keeping hunger hormones (ghrelin) suppressed at ${scaleWeight} kg (${bodyFatPct}% BF → 15.0% goal).`
+            }
+          ],
+          blueprint: [
+            { name: 'Zone 2 Brisk Walk / Incline Treadmill', prescription: '20 min @ 100–112 bpm', cue: 'Nasal breathing only, relaxed shoulders, smooth heel-to-toe cadence.' },
+            { name: 'Eccentric Calf & Achilles Wall Stretch', prescription: '2 × 45s/side (30s rest)', cue: 'Bent-knee soleus + straight-knee gastrocnemius decompression.' },
+            { name: '90/90 Hip & Hamstring Flossing', prescription: '2 × 10 reps/side', cue: 'Restore posterior hip capsule glide after 60 ballistic KB swings.' },
+            { name: 'Deadbug Isometric Core Reset', prescription: '3 × 30s hold', cue: 'Press lower back flat into floor, slow diaphragmatic exhales.' }
+          ],
+          alternative: {
+            presetKey: 'option_kb',
+            title: 'Option KB: Light Kettlebell Technique (2 Sets Only)',
+            desc: 'If you wake up feeling better than expected, perform 2 light sets of KB Strict Press & Rows at 3–4 RIR.'
+          }
+        };
+      }
+
+      // SCENARIO 2: MODERATE SLEEP (65–79)
+      if (scen === 'moderate') {
         return {
           presetKey: 'option_kb',
-          title: 'Option KB: Heavy Kettlebell Strength',
-          subtitle: lowerFatigued ? 'Upper-Biased Press, Row & Carry (Hinge Volume Reduced)' : 'Press, Hinge, Row & Carry — Full-Body Tension',
+          title: 'Option KB: 28-Min Controlled Upper-Biased Kettlebell Grinds',
+          subtitle: 'Strict Press, Floor Press, Gorilla Rows & Suitcase Carry (No Ballistic Hinging)',
+          durationMin: 28,
+          calories: 280,
+          estMorningBattery: '~65%',
+          estReadiness: '~68',
+          fatigueImpact: 'Moderate CNS',
+          equipment: `Single Heavy Kettlebell (${kbW})`,
+          badge: 'MODERATE SLEEP FORECAST (65–79)',
+          summary: `Assuming moderate sleep (Score 65–79, Morning Battery ~65%, Readiness ~68), skip heavy spinal barbell loading and ballistic swings. Focus on controlled ${kbW} Kettlebell Upper Push/Pull grinds (Strict Press, Floor Press, Rows) which are 100% fresh after today's Jump Rope + 5×12 KB Swings.`,
+          reasoning: [
+            {
+              title: 'Kinetic Chain Rotation (Upper Fresh, Lower Recovering)',
+              desc: `Today's <strong>2,185 skips + 60 ballistic 24kg KB swings (1,440 kg volume)</strong> taxed your calves, Achilles, and hamstrings. Tomorrow's controlled KB grinds target your completely fresh chest, shoulders, lats, and obliques.`
+            },
+            {
+              title: 'Zero Spinal Axial Compression',
+              desc: `With moderate readiness (~68), unilateral kettlebell pressing and rowing stimulate high motor-unit recruitment to protect your ${leanMass} kg lean mass without heavy barbell CNS drain.`
+            },
+            {
+              title: 'Controlled Heart Rate Zone',
+              desc: `75-second rest intervals keep HR in the 110–128 bpm hypertrophy/strength zone rather than adding glycolytic fatigue.`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `Burns ~280 active kcal to widen your nutrition runway at ${scaleWeight} kg (${bodyFatPct}% BF) while preserving upper-body muscle fullness.`
+            }
+          ],
+          blueprint: [
+            { name: 'KB Single-Arm Strict Overhead Press', prescription: `4 × 6/side @ ${kbW} (75s rest)`, cue: 'Brace core and glutes tight; press vertically with zero leg drive.' },
+            { name: 'KB Single-Arm Floor Press', prescription: `4 × 10/side @ ${kbW} (75s rest)`, cue: 'Pause triceps on floor for 1s to eliminate elastic bounce; drive hard.' },
+            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 10/side @ ${kbW} (75s rest)`, cue: 'Hinge lightly, pull bell to hip pocket, 1s lat squeeze at top.' },
+            { name: 'Floor Push-ups (Tempo 3-0-1)', prescription: '3 × 15 @ Bodyweight (60s rest)', cue: '3-second eccentric lowering; full scapular protraction at lockout.' },
+            { name: 'KB Suitcase Anti-Rotation Carry', prescription: `3 × 45s/side @ ${kbW} (60s rest)`, cue: 'Walk tall, ribs stacked over pelvis, resist lateral tilt.' }
+          ],
+          alternative: {
+            presetKey: 'option_c',
+            title: 'Option C: 20-Min Zone 2 Walk & Mobility',
+            desc: 'If calves or hamstrings feel stiff on warm-up, pivot to an easy 20-min outdoor walk.'
+          }
+        };
+      }
+
+      // SCENARIO 1: GOOD SLEEP (80+)
+      if (tomorrowGear === 'kb_heavy') {
+        const lowerFatigued = isLowerHeavy || didSkipAndSwings || fatigued.hinge;
+        return {
+          presetKey: 'option_kb',
+          title: 'Option KB: Heavy Kettlebell Strength (Upper Push/Pull Priority)',
+          subtitle: lowerFatigued ? 'Upper-Biased Press, Floor Press, Row & Carry (Hinge Volume Reduced)' : 'Press, Hinge, Row & Carry — Full-Body Tension',
           durationMin: 40,
           calories: 340,
+          estMorningBattery: '~85%',
+          estReadiness: '~82',
           fatigueImpact: lowerFatigued ? 'Low Posterior Load' : 'Moderate CNS',
           equipment: `Single Heavy Kettlebell (${kbW})`,
-          badge: 'CUSTOM GEAR • HEAVY KB',
-          summary: `No barbell needed. A single ${kbW} bell delivers enough mechanical tension for strength in the 6–10 rep range when each set is taken to 1–2 reps in reserve, using unilateral pressing/rowing to double the effective load per limb.`,
+          badge: 'ASSUMING GOOD SLEEP (80+) • HEAVY KB',
+          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery ~85%), your CNS will be fresh tomorrow. Because today's <strong>2,185 skips + 5×12 @ 24kg KB Swings</strong> loaded your calves and posterior hinge while leaving <strong>Upper Push & Pull 100% fresh</strong>, tomorrow prioritizes heavy unilateral KB Pressing, Floor Pressing, and Rows.`,
           reasoning: [
             {
               title: 'Musculoskeletal Load Management',
               desc: lowerFatigued
-                ? `Your last session loaded the posterior chain. Hamstrings and glutes need <strong>24–48h of remodeling</strong>, so KB RDL volume drops to 3 sets and the session biases toward strict press, floor press and gorilla rows.`
+                ? `Today's 5×12 @ 24kg KB swings + 2,185 skips loaded your posterior chain and calves. Tomorrow biases toward strict press, floor press, and gorilla rows while reducing RDL volume.`
                 : `Posterior chain is recovered. Heavy KB RDLs (4 × 10) plus unilateral press and row cover every major movement pattern without barbell spinal compression.`
             },
             {
               title: 'Heart Rate & Cardiovascular Load',
-              desc: `Recent sessions averaged <strong>${latestAvgHr} bpm</strong>. 75s rest periods keep this session in a strength zone (~105–125 bpm) rather than a conditioning zone, so it won't add aerobic fatigue.`
+              desc: `Recent sessions averaged <strong>${latestAvgHr} bpm</strong>. 75s rest periods keep this session in a strength zone (~105–125 bpm) rather than a conditioning zone.`
             },
             {
-              title: 'Sleep, HRV & Readiness',
-              desc: `Sleep <strong>${sleepScore}</strong>, Readiness <strong>${readiness}</strong>, RHR <strong>${restingHr} bpm</strong> (${hrvStatus}). ${readiness >= 70 ? 'Cleared for heavy sets at 1–2 RIR.' : 'Below 70 — drop one set per exercise and stop each set at 3 RIR.'}`
+              title: 'Projected Morning Readiness (~82)',
+              desc: `With 7.5–8h of restorative sleep tonight, Morning Body Battery projects to <strong>~85%</strong> and Readiness to <strong>~82</strong> — cleared for heavy sets at 1–2 RIR.`
             },
             {
               title: 'Deficit Runway Alignment',
-              desc: `At ${scaleWeight} kg / ${bodyFatPct}% BF with ${fatToLose} kg to reach 15% (${targetWeight} kg), heavy tension is the signal that keeps all ${leanMass} kg of lean mass while in a 350 kcal deficit.`
+              desc: `At ${scaleWeight} kg / ${bodyFatPct}% BF with ${fatToLose} kg to reach 15% (${targetWeight} kg), heavy tension keeps all ${leanMass} kg of lean mass while in a 350 kcal deficit.`
             }
           ],
           blueprint: [
             { name: 'KB Single-Arm Clean & Strict Press', prescription: `4 × 6/side @ ${kbW} (75s)`, cue: 'Clean to rack, strict press, no leg drive; brace and squeeze glutes.' },
-            { name: 'KB Romanian Deadlift', prescription: `${lowerFatigued ? 3 : 4} × 10 @ ${kbW} (75s)`, cue: 'Hips back, bell close to legs, 3s lowering, hard glute lockout.' },
             { name: 'KB Single-Arm Floor Press', prescription: `4 × 10/side @ ${kbW} (75s)`, cue: 'Pause with elbow on floor, press straight up, wrist stacked.' },
-            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 8/side @ ${kbW} (75s)`, cue: 'Flat back, elbow to hip, 1s squeeze at top.' },
+            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 10/side @ ${kbW} (75s)`, cue: 'Flat back, elbow to hip, 1s squeeze at top.' },
+            { name: 'KB Romanian Deadlift (Controlled)', prescription: `${lowerFatigued ? 2 : 4} × 10 @ ${kbW} (75s)`, cue: 'Hips back, bell close to legs, 3s lowering, spare lower back.' },
             { name: 'KB Suitcase Carry / March', prescription: `3 × 45s/side @ ${kbW} (60s)`, cue: 'Tall posture, shoulders level, resist the lean.' }
           ],
           alternative: {
             presetKey: 'option_c',
             title: 'Option C: Incline Cadence Flush & Prehab',
             desc: 'If readiness or sleep drops below 70, swap to Zone 2 walking + prehab.'
+          }
+        };
+      }
+
+      if (didSkipAndSwings) {
+        return {
+          presetKey: 'option_a',
+          title: 'Option A: Upper Push/Pull Priority + Compound Strength',
+          subtitle: 'Heavy Bench Press, Pendlay Rows & Overhead Z-Press (Posterior Hinge Spared)',
+          durationMin: 42,
+          calories: 345,
+          estMorningBattery: '~85%',
+          estReadiness: '~82',
+          fatigueImpact: 'Upper Prime • Hinge Spared',
+          equipment: 'Barbell, Squat Rack & Bench',
+          badge: 'ASSUMING GOOD SLEEP (80+) • OPTIMAL PAIRING',
+          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery recharged to ~85%), your CNS will be fresh tomorrow. Because today's <strong>2,185 skips + 5×12 @ 24kg KB Swings</strong> loaded your calves, Achilles, and ballistic hip hinge while leaving your <strong>Upper Body Push & Pull 100% fresh</strong>, tomorrow is ideal for <strong>Heavy Barbell Bench Press (${fmtLoad(rxBench.weight)} × ${rxBench.reps}) & Pendlay Rows (${fmtLoad(rxRow.weight)} × ${rxRow.reps})</strong>, plus Back Squats if calves/hamstrings feel recovered (or swap RDL volume down to spare the posterior chain).`,
+          reasoning: [
+            {
+              title: '100% Fresh Upper Push & Pull Kinetic Chains',
+              desc: `Today's Jump Rope (2,185 skips) + 5 sets × 12 KB Swings (60 ballistic hinges @ 24kg = 1,440 kg volume) taxed the Achilles tendon complex, gastrocnemius/soleus, and hamstrings. Your <strong>Pectorals, Deltoids, Triceps, and Lats have 0% local fatigue</strong> and are primed for peak barbell loading.`
+            },
+            {
+              title: 'Autoregulated Lower-Body Volume adjustment',
+              desc: `Since 60 ballistic KB swings already delivered potent hip-hinge stimulus today, tomorrow places <strong>Flat Bench Press (${fmtLoad(rxBench.weight)})</strong> and <strong>Pendlay Rows (${fmtLoad(rxRow.weight)})</strong> first, keeps Back Squats optional/controlled, and trims RDL volume to 2 controlled sets so hamstrings don't overreach.`
+            },
+            {
+              title: 'Sleep & CNS Rebound Projection',
+              desc: `Assuming 7.5–8h of quality sleep tonight (Sleep Score ~82+), your Body Battery will rebound from today's ${window.BAKED_LIVE_STATE?.garmin?.body_battery || 40}% back to <strong>~85%</strong> with Readiness <strong>~82</strong> — optimal for high-threshold motor unit recruitment.`
+            },
+            {
+              title: 'Lean Mass Anchor in Deficit',
+              desc: `At <strong>${scaleWeight} kg (${bodyFatPct}% BF)</strong> with <strong>${fatToLose} kg</strong> to reach your 15.0% goal (${targetWeight} kg), heavy upper-body compound tension locks in all <strong>${leanMass} kg of lean muscle</strong>.`
+            }
+          ],
+          blueprint: [
+            { name: 'Barbell Flat Bench Press (Primary Push)', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: '100% fresh chest/triceps — retract scapulae, drive feet into floor, explosive press.' },
+            { name: 'Barbell Pendlay Row (Primary Pull)', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, brace core to protect posterior chain.' },
+            { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (75s rest)`, cue: 'Strict vertical deltoid & triceps press; zero lower-back arch.' },
+            { name: 'Barbell Back Squat (Calf/Ankle Check)', prescription: `3 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Perform 3 crisp sets if calves feel bouncy after 2,185 skips; stop at 2 RIR.' },
+            { name: 'Barbell RDL (Reduced Hinge Volume)', prescription: `2 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Capped at 2 sets since 5×12 24kg KB swings already hit hamstrings today.' }
+          ],
+          alternative: {
+            presetKey: 'option_kb',
+            title: 'Option KB: Heavy 24kg Kettlebell Upper Session',
+            desc: 'If training away from the barbell rack tomorrow, tap Moderate or Change Gear for 24kg KB Strict Press & Rows.'
           }
         };
       }
@@ -2890,34 +3070,36 @@ function generateWorkoutFromGearAndGoal() {
           subtitle: 'Rotational Torso, Kettlebell Dynamics & Dumbbell Floor Density',
           durationMin: 32,
           calories: 385,
+          estMorningBattery: '~85%',
+          estReadiness: '~82',
           fatigueImpact: 'Low CNS Debt (0h)',
           equipment: 'Kettlebells (24–32kg), Dumbbells & Speed Rope',
-          badge: 'AUTOREGULATION TARGET',
-          summary: 'Rotates mechanical stress away from posterior chain prime movers into dynamic core torque and Zone 2–3 intervals, sustaining your 350 kcal daily deficit without joint strain.',
+          badge: 'ASSUMING GOOD SLEEP (80+) • AUTOREGULATED',
+          summary: 'Rotates mechanical stress away from lower prime movers into dynamic core torque and upper-body pushing, sustaining your 350 kcal daily deficit without joint strain.',
           reasoning: [
             {
               title: 'Musculoskeletal & Biomechanical Shield',
-              desc: `Today delivered peak mechanical tension to your posterior chain (glutes, hamstrings, lumbar erectors). These motor units require <strong>24–48 hours for myofibrillar remodeling</strong>. Option B rotates load to rotational core, upper body pushing, and kettlebell dynamics, allowing lower prime movers to repair while keeping daily metabolic burn high.`
+              desc: `Today delivered peak mechanical tension to your lower body. These motor units require <strong>24–48 hours for myofibrillar remodeling</strong>. Option B rotates load to rotational core and upper body pushing.`
             },
             {
               title: 'Heart Rate & Cardiovascular Conditioning',
-              desc: `Your recent workout telemetry logged controlled average HR (${latestAvgHr} bpm). Tomorrow's interval circuit will tap Zone 2–3 conditioning (target 125–138 bpm), driving mitochondrial capillary expansion and lactate buffering without inducing central nervous system exhaustion.`
+              desc: `Your recent workout telemetry logged controlled average HR (${latestAvgHr} bpm). Tomorrow's interval circuit will tap Zone 2–3 conditioning (target 125–138 bpm).`
             },
             {
-              title: 'Wearable Sleep & Autonomic Recovery',
-              desc: `Garmin Sleep Score of <strong>${sleepScore}</strong> and resting HR of <strong>${restingHr} bpm</strong> (${readiness} Readiness) reflect superior parasympathetic rebound. Your autonomic nervous system is fully cleared to handle dynamic work capacity tomorrow.`
+              title: 'Projected Morning Recovery',
+              desc: `Assuming Sleep Score <strong>80+</strong> and Morning Battery <strong>~85%</strong>, your autonomic nervous system is cleared to handle dynamic work capacity tomorrow.`
             },
             {
               title: 'Deficit Runway Alignment',
-              desc: `At <strong>${scaleWeight} kg</strong> and <strong>${bodyFatPct}% body fat</strong>, you are just <strong>${fatToLose} kg</strong> away from 15.0% (${targetWeight} kg target). The ~385 kcal active burn from Option B maintains your 350 kcal daily fat-loss deficit while anchoring all ${leanMass} kg of lean mass.`
+              desc: `At <strong>${scaleWeight} kg</strong> and <strong>${bodyFatPct}% body fat</strong>, you are just <strong>${fatToLose} kg</strong> away from 15.0% (${targetWeight} kg target).`
             }
           ],
           blueprint: [
-            { name: 'Kettlebell Two-Hand Swings', prescription: '4 × 15 @ 24–32kg (60s rest)', cue: 'Violent hip snap, bell floats weightless, glutes contracted.' },
             { name: 'Dumbbell Chest Floor Press', prescription: '4 × 10 @ 2×22kg (75s rest)', cue: 'Pause briefly on floor to eliminate momentum; explosive concentric press.' },
+            { name: 'Kettlebell Single-Arm Gorilla Row', prescription: '4 × 10/side @ 24kg (60s rest)', cue: 'Brace core, drive elbow to hip.' },
             { name: 'Rotational Slam Ball Slams', prescription: '4 × 12 @ 10–15kg (45s rest)', cue: 'Full overhead extension, drive ball into floor with core torque.' },
             { name: 'Floor Push-ups (Tempo 3-0-1)', prescription: '3 × 18 @ Bodyweight (60s rest)', cue: '3-second lowering tempo, screw hands into floor.' },
-            { name: 'Speed Rope Double-Under Ladder', prescription: '6 rounds × 45s work / 15s rest', cue: 'Wrists rotate near hips, light bounce on balls of feet.' }
+            { name: 'Kettlebell Suitcase Carry', prescription: '3 × 45s/side @ 24kg (60s rest)', cue: 'Tall posture, anti-rotation oblique brace.' }
           ],
           alternative: {
             presetKey: 'option_c',
@@ -2925,78 +3107,87 @@ function generateWorkoutFromGearAndGoal() {
             desc: 'If morning readiness or sleep drops below 75, pivot to Zone 2 walking & knee prehab (0h CNS debt).'
           }
         };
-      } else {
-        const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
-        const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 95, reps: 8 };
-        const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
-        const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
-        const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
-
-        const fmtLoad = (w) => (typeof w === 'number' ? `${w}kg` : `${w}`);
-
-        return {
-          presetKey: 'option_a',
-          title: 'Option A: Heavy Barbell Squat, Bench & Hinge',
-          subtitle: 'Full-Body Compound Mechanical Tension (Squat Rack & Bench)',
-          durationMin: 45,
-          calories: 340,
-          fatigueImpact: 'High Mechanical Tension',
-          equipment: 'Barbell, Squat Rack & Bench',
-          badge: 'AUTOREGULATION TARGET',
-          summary: `Delivers heavy compound mechanical tension across Squat, Bench Press, RDL, and Row, anchoring all ${leanMass} kg of lean mass while protecting nervous system reserves.`,
-          reasoning: [
-            {
-              title: 'High Mechanical Tension Required',
-              desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow must deliver high mechanical load to quads, chest, lats, and posterior chain.`
-            },
-            {
-              title: 'Heart Rate & Cardiac EPOC',
-              desc: `Recent work capacity sessions spiked cardiovascular output. Tomorrow's compound strength format utilizes 90–120s rest intervals, keeping heart rate controlled while taxing muscular motor units directly.`
-            },
-            {
-              title: 'Sleep & CNS Priming',
-              desc: `With a <strong>${sleepScore} Sleep Score</strong> and <strong>${restingHr} bpm RHR</strong>, your central nervous system has replenished motor unit firing potential. Heavy compound lifting is cleared.`
-            },
-            {
-              title: 'Deficit Runway Alignment',
-              desc: `Anchors all ${leanMass} kg of lean mass while driving the final ${fatToLose} kg fat loss toward 15.0%.`
-            }
-          ],
-          blueprint: [
-            { name: 'Barbell Back Squat', prescription: `4 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Unrack from squat rack, chest up, knees track over toes, drive through midfoot.' },
-            { name: 'Barbell Flat Bench Press', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: 'Shoulder blades retracted on bench, leg drive, touch lower sternum.' },
-            { name: 'Barbell Romanian Deadlift (RDL)', prescription: `4 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Hips back, neutral spine, explosive glute lockout.' },
-            { name: 'Barbell Pendlay Row', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
-            { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Strict overhead deltoid press; core braced tight.' }
-          ],
-          alternative: {
-            presetKey: 'option_c',
-            title: 'Option C: Active Recovery & Synovial Restoration',
-            desc: 'Light 25-min outdoor recovery walk + banded joint restoration if joints require deload.'
-          }
-        };
       }
+
+      return {
+        presetKey: 'option_a',
+        title: 'Option A: Heavy Barbell Squat, Bench & Hinge',
+        subtitle: 'Full-Body Compound Mechanical Tension (Squat Rack & Bench)',
+        durationMin: 45,
+        calories: 340,
+        estMorningBattery: '~85%',
+        estReadiness: '~82',
+        fatigueImpact: 'High Mechanical Tension',
+        equipment: 'Barbell, Squat Rack & Bench',
+        badge: 'ASSUMING GOOD SLEEP (80+) • TARGET',
+        summary: `Assuming good sleep tonight (Sleep ~82+, Morning Battery ~85%), tomorrow delivers heavy compound mechanical tension across Squat, Bench Press, RDL, and Row, anchoring all ${leanMass} kg of lean mass.`,
+        reasoning: [
+          {
+            title: 'High Mechanical Tension Required',
+            desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow delivers high mechanical load to quads, chest, lats, and posterior chain.`
+          },
+          {
+            title: 'Heart Rate & Cardiac EPOC',
+            desc: `Tomorrow's compound strength format utilizes 90–120s rest intervals, keeping heart rate controlled while taxing muscular motor units directly.`
+          },
+          {
+            title: 'Projected Sleep & CNS Priming',
+            desc: `Assuming an <strong>80+ Sleep Score</strong> and <strong>~85% Morning Battery</strong>, your central nervous system will be primed for heavy compound lifting.`
+          },
+          {
+            title: 'Deficit Runway Alignment',
+            desc: `Anchors all ${leanMass} kg of lean mass while driving the final ${fatToLose} kg fat loss toward 15.0%.`
+          }
+        ],
+        blueprint: [
+          { name: 'Barbell Back Squat', prescription: `4 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Unrack from squat rack, chest up, knees track over toes, drive through midfoot.' },
+          { name: 'Barbell Flat Bench Press', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: 'Shoulder blades retracted on bench, leg drive, touch lower sternum.' },
+          { name: 'Barbell Romanian Deadlift (RDL)', prescription: `4 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Hips back, neutral spine, explosive glute lockout.' },
+          { name: 'Barbell Pendlay Row', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
+          { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Strict overhead deltoid press; core braced tight.' }
+        ],
+        alternative: {
+          presetKey: 'option_c',
+          title: 'Option C: Active Recovery & Synovial Restoration',
+          desc: 'Light 25-min outdoor recovery walk + banded joint restoration if joints require deload.'
+        }
+      };
     }
 
     function renderTomorrowPreviewCard(completedToday) {
       const rec = generateTomorrowRecommendation(completedToday);
+      const scen = window.tomorrowSleepScenario || 'good';
+      const pillStyle = (active, colorHex, bgRgba, borderRgba) => active
+        ? `flex:1; padding:6px 8px; border-radius:7px; font-size:10.5px; font-weight:800; background:${bgRgba}; border:1.5px solid ${borderRgba}; color:${colorHex}; cursor:pointer; text-align:center;`
+        : `flex:1; padding:6px 8px; border-radius:7px; font-size:10.5px; font-weight:700; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:var(--text-muted); cursor:pointer; text-align:center;`;
+
       return `
         <!-- ELEPHANT-GOLDFISH PROTOCOL: TOMORROW'S AUTOREGULATION PREVIEW -->
-        <div class="card" style="padding:16px; margin-top:10px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:14px; position:relative;">
+        <div id="tomorrowForecastCard" class="card" style="padding:16px; margin-top:10px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.28); border-radius:14px; position:relative; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
           
-          <!-- GOLDFISH TIER: TOP BADGE & CLASSIFICATION -->
+          <!-- PROMINENT FORECAST HEADER -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
-                ${rec.badge}
-              </span>
-              <span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
-                Tomorrow's Focus
+              <span style="font-size:11px; font-weight:800; color:#00e5ff; letter-spacing:0.05em; text-transform:uppercase;">
+                🌙 TOMORROW'S TRAINING FORECAST
               </span>
             </div>
-            <span style="font-size:10.5px; font-weight:700; color:var(--text-secondary);">
-              Next Day Autoregulation
+            <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+              ${rec.badge}
             </span>
+          </div>
+
+          <!-- 3-PILL SLEEP ASSUMPTION SELECTOR -->
+          <div style="display:flex; gap:6px; margin-bottom:10px;">
+            <button type="button" onclick="setTomorrowSleepScenario('good')" style="${pillStyle(scen === 'good', '#30d158', 'rgba(48,209,88,0.15)', 'rgba(48,209,88,0.5)')}">
+              🟢 Good Sleep (80+)
+            </button>
+            <button type="button" onclick="setTomorrowSleepScenario('moderate')" style="${pillStyle(scen === 'moderate', '#fbbf24', 'rgba(251,191,36,0.15)', 'rgba(251,191,36,0.5)')}">
+              🟡 Moderate (65–79)
+            </button>
+            <button type="button" onclick="setTomorrowSleepScenario('poor')" style="${pillStyle(scen === 'poor', '#f87171', 'rgba(248,113,113,0.15)', 'rgba(248,113,113,0.5)')}">
+              🔴 Poor (&lt;65)
+            </button>
           </div>
 
           <!-- GOLDFISH TIER: WORKOUT TITLE & SUBTITLE -->
@@ -3013,19 +3204,19 @@ function generateWorkoutFromGearAndGoal() {
             <span style="font-size:11px; font-weight:800; color:var(--primary); white-space:nowrap;">Change Gear ⚙</span>
           </div>
 
-          <!-- GOLDFISH TIER: GLANCEABLE METRIC STRIP (3-SECOND RULE) -->
+          <!-- GOLDFISH TIER: PROJECTED MORNING METRICS STRIP -->
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:10px;">
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
-              <div style="font-size:13px; font-weight:800; color:#fff;">${rec.durationMin}m</div>
-              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Proposed Time</div>
+              <div style="font-size:12.5px; font-weight:800; color:#00e5ff;">${rec.estMorningBattery || '~85%'}</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Est. Morning Battery</div>
             </div>
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
-              <div style="font-size:13px; font-weight:800; color:var(--primary, #30d158);">~${rec.calories}</div>
-              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Target Burn</div>
+              <div style="font-size:12.5px; font-weight:800; color:#10b981;">${rec.estReadiness || '~82'}</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Est. Readiness</div>
             </div>
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
-              <div style="font-size:13px; font-weight:800; color:#10b981;">${rec.fatigueImpact}</div>
-              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Fatigue Impact</div>
+              <div style="font-size:12.5px; font-weight:800; color:var(--primary, #30d158);">~${rec.calories} kcal</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Target Burn (${rec.durationMin}m)</div>
             </div>
           </div>
 
@@ -3075,9 +3266,14 @@ function generateWorkoutFromGearAndGoal() {
 
           <!-- GOLDFISH TIER: PRIMARY ACTION & CONTINGENCY -->
           <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
-            <button class="btn-action-primary" onclick="setTomorrowTargetPlan('${rec.presetKey}')" style="height:40px; font-size:12px; font-weight:800; background:var(--primary, #30d158); color:#000; border-radius:8px; border:none; display:flex; align-items:center; justify-content:center; gap:6px; letter-spacing:0.03em;">
-              LOCK AS TOMORROW'S FOCUS ➔
-            </button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-action-primary" onclick="setTomorrowTargetPlan('${rec.presetKey}')" style="flex:2; min-width:170px; height:40px; font-size:11.5px; font-weight:800; background:var(--primary, #30d158); color:#000; border-radius:8px; border:none; display:flex; align-items:center; justify-content:center; gap:6px; letter-spacing:0.03em; cursor:pointer;">
+                LOCK & PRE-LOAD FOR TOMORROW ➔
+              </button>
+              <button class="btn-action-primary" onclick="loadDailyArchetype('${rec.presetKey}'); switchTab('train');" style="flex:1; min-width:140px; height:40px; font-size:11px; font-weight:700; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.3); color:#00e5ff; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:5px; cursor:pointer;">
+                Preview in Workout Tab ➔
+              </button>
+            </div>
             <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:2px;">
               Contingency: <em>${rec.alternative.title}</em> (${rec.alternative.desc})
             </div>
@@ -3788,7 +3984,6 @@ function generateWorkoutFromGearAndGoal() {
               <div>• CNS Recovery: <strong style="color:${verdict.muscleStatus.cns.includes('Debt') ? '#ef4444' : 'var(--primary)'};">${verdict.muscleStatus.cns}</strong></div>
             </div>
             <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose, ${leanMass} kg lean mass preserved)</div>
-            ${completed && typeof renderTomorrowPreviewCard === 'function' ? `<div style="margin-top:6px;">${renderTomorrowPreviewCard(completed)}</div>` : ''}
             <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700; cursor:pointer;">
                 ⚙ Tailor Equipment
@@ -3929,6 +4124,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
           </div>
 
+          ${typeof renderTomorrowPreviewCard === 'function' ? renderTomorrowPreviewCard(completed) : ''}
           ${elephantAccordionHtml}
         `;
       } else if (completed) {
@@ -3982,7 +4178,7 @@ function generateWorkoutFromGearAndGoal() {
               <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
                 View Logged Sessions (${sessCount}) ➔
               </button>
-              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.3); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+              <button class="btn-action-primary" onclick="document.getElementById('tomorrowForecastCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.3); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
                 Open Tomorrow's Focus ➔
               </button>
             </div>
@@ -3994,6 +4190,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
           </div>
 
+          ${typeof renderTomorrowPreviewCard === 'function' ? renderTomorrowPreviewCard(completed) : ''}
           ${elephantAccordionHtml}
         `;
       } else {
