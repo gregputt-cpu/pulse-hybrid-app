@@ -615,7 +615,7 @@ class MyNetDiarySyncService:
         today_str = target_date_str or date.today().isoformat()
         has_live_garmin_oauth = (
             garmin_state.get('source') == 'garmin_oauth'
-            and state.get('date') == today_str
+            and garmin_state.get('oauth_date') == today_str
         )
 
         # Apply live Garmin bridge metrics from MyNetDiary if present (only when direct Garmin OAuth hasn't already populated today)

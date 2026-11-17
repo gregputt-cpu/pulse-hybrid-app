@@ -315,6 +315,7 @@ class GarminSyncService:
 
         garmin_state = state.setdefault('garmin', {})
         garmin_state['source'] = 'garmin_oauth'
+        garmin_state['oauth_date'] = target_date_str
         if summary.get('totalSteps') is not None:
             garmin_state['steps'] = summary.get('totalSteps')
         if summary.get('restingHeartRate') is not None:
