@@ -633,26 +633,34 @@ class MyNetDiarySyncService:
                 garmin_state['active_minutes'] = garmin_bridge['active_minutes']
             if garmin_bridge.get('sleep_duration') and (not has_live_garmin_oauth or not garmin_state.get('sleep_duration')):
                 garmin_state['sleep_duration'] = garmin_bridge['sleep_duration']
-            # Check manual override for sleep score
+            # Check manual override dates for sleep_score, body_battery, and training_readiness
             is_manual_override = (
                 garmin_state.get('sleep_score_manual_date') == today_str
                 and garmin_state.get('sleep_score') is not None
             )
+            is_bb_manual = (
+                garmin_state.get('body_battery_manual_date') == today_str
+                and garmin_state.get('body_battery') is not None
+            )
+            is_tr_manual = (
+                garmin_state.get('readiness_manual_date') == today_str
+                and garmin_state.get('training_readiness') is not None
+            )
 
-            if is_manual_override:
+            if garmin_state.get('sleep_score') is not None:
                 effective_sleep_score = garmin_state['sleep_score']
-                garmin_state['sleep_score_source'] = "manual_override"
-            elif has_live_garmin_oauth and garmin_state.get('sleep_score') is not None:
-                effective_sleep_score = garmin_state['sleep_score']
-                garmin_state['sleep_score_source'] = "garmin_oauth"
+                if is_manual_override:
+                    garmin_state['sleep_score_source'] = "manual_override"
+                else:
+                    garmin_state['sleep_score_source'] = garmin_state.get('sleep_score_source') or "garmin_oauth"
             else:
                 effective_sleep_score = garmin_bridge.get('sleep_score')
                 if effective_sleep_score is not None:
                     garmin_state['sleep_score'] = effective_sleep_score
                     garmin_state['sleep_score_source'] = "mnd_estimated"
 
-            # Only estimate body battery / readiness from MND when live Garmin OAuth hasn't already provided them today
-            if not (has_live_garmin_oauth and garmin_state.get('body_battery') is not None):
+            # Never overwrite an existing body_battery or training_readiness
+            if garmin_state.get('body_battery') is None and not is_bb_manual:
                 if effective_sleep_score is not None:
                     active_cals_val = garmin_state.get('active_calories') or 0
                     morning_bb = min(100, int(round(effective_sleep_score * 1.05)))
@@ -662,7 +670,7 @@ class MyNetDiarySyncService:
                 elif garmin_bridge.get('body_battery') is not None:
                     garmin_state['body_battery'] = garmin_bridge['body_battery']
 
-            if not (has_live_garmin_oauth and garmin_state.get('training_readiness') is not None):
+            if garmin_state.get('training_readiness') is None and not is_tr_manual:
                 if effective_sleep_score is not None:
                     active_cals_val = garmin_state.get('active_calories') or 0
                     morning_bb = min(100, int(round(effective_sleep_score * 1.05)))

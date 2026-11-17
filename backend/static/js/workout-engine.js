@@ -912,6 +912,12 @@
         } else if (kbSubMode === 'flow_1h') {
           slicedExIds = ['kb_flow_1h_armor_chain', 'kb_flow_1h_viking_warrior', 'kb_flow_1h_dan_john_grind', 'kb_flow_1h_combat_core'];
         }
+      } else if (currentArchetypeKey === 'option_b') {
+        if (focusMode === 'liss_cardio' || focusMode === 'mobility_stretch' || focusMode === 'rest_day') {
+          slicedExIds = ['zone2_flush', 'speed_rope_intervals', 'emom_hybrid_10', 'amrap_hybrid_10', 'for_time_kb_chipper'];
+        } else {
+          slicedExIds = ['emom_hybrid_10', 'amrap_hybrid_10', 'for_time_kb_chipper', 'speed_rope_intervals', 'zone2_flush'];
+        }
       }
 
       const allExercises = getAllExercises();
@@ -1039,7 +1045,7 @@
           gearStatusEl.innerText = kbModeDesc;
         }
         else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
-        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Kettlebells, DB & Slam Ball";
+        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Pick 1 Session (Zone 2, Rope, EMOM, AMRAP)";
         else gearStatusEl.innerText = "Bodyweight & Incline Cadence";
       }
 
@@ -4013,7 +4019,7 @@ function generateWorkoutFromGearAndGoal() {
                 ${verdict.badge}
               </span>
               <span style="font-size:10.5px; color:var(--text-muted);">
-                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness}
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • <span onclick="openBodyBatteryOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Body Battery">Battery ${verdict.bodyBattery}% ✎</span> • <span onclick="openReadinessOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Training Readiness">Readiness ${verdict.readiness} ✎</span>
               </span>
             </div>
 
@@ -4791,6 +4797,35 @@ function viewCompletedWorkoutBreakdown() {
     function renderCurrentExercise() {
       if (activeWorkoutPlan.length === 0) return;
 
+      const isPickOneMenu = (currentArchetypeKey === 'option_b') || (currentArchetypeKey === 'option_kb' && getKbSubMode() !== 'grinds');
+      const stepperHdr = document.getElementById('exerciseStepperHeader');
+      if (stepperHdr) {
+        if (isPickOneMenu) {
+          stepperHdr.style.display = 'block';
+          stepperHdr.innerText = currentArchetypeKey === 'option_b'
+            ? `🎯 Pick 1 Conditioning / Aerobic Session (${activeWorkoutPlan.length} Options):`
+            : `🎯 Pick 1 Standalone 30-Min KB Flow (${activeWorkoutPlan.length} Options):`;
+        } else {
+          stepperHdr.style.display = 'none';
+        }
+      }
+
+      const shortPillLabels = {
+        zone2_flush: '🚶 20m Zone 2',
+        speed_rope_intervals: '🪢 6m Speed Rope',
+        emom_hybrid_10: '⚡ 10m EMOM',
+        amrap_hybrid_10: '🔥 10m AMRAP',
+        for_time_kb_chipper: '🏁 12m Chipper',
+        kb_flow_2h_out_about: '🌊 Out & About (9)',
+        kb_flow_2h_tactical_upper: '💪 Tactical Upper',
+        kb_flow_2h_gladiator_post: '🛡️ Gladiator Hinge',
+        kb_flow_2h_pyramid_1_5: '📐 1-to-5 Pyramid',
+        kb_flow_1h_armor_chain: '⚡ Armor Chain',
+        kb_flow_1h_viking_warrior: '⚔️ Viking Warrior',
+        kb_flow_1h_dan_john_grind: '🏋️ Dan John Grind',
+        kb_flow_1h_combat_core: '🥊 Combat Core'
+      };
+
       const stepperEl = document.getElementById('exerciseStepperPills');
       if (stepperEl) {
         stepperEl.innerHTML = activeWorkoutPlan.map((exItem, idx) => {
@@ -4804,12 +4839,15 @@ function viewCompletedWorkoutBreakdown() {
             }
             if (loggedCount > 0) isDone = true;
           }
-          let stateClass = '';
           let icon = '';
-          if (isActive) stateClass = 'active';
-          else if (isSkipped) { stateClass = 'skipped'; icon = ' ⏭'; }
-          else if (isDone) { stateClass = 'done'; icon = ' ✓'; }
-          return `<button type="button" class="ex-pill-btn ${stateClass}" onclick="jumpToExercise(${idx})" title="${exItem.name}">${idx + 1}${icon}</button>`;
+          if (isSkipped) icon = ' ⏭';
+          else if (isDone) icon = ' ✓';
+
+          const shortName = shortPillLabels[exItem.id] || (`${idx + 1}. ` + String(exItem.name || '').split('(')[0].replace(/^Barbell\s+|^Heavy\s+Kettlebell\s+|^Kettlebell\s+/i, '').trim().slice(0, 14));
+          const bg = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)');
+          const col = isActive ? '#000' : (isDone ? '#10b981' : 'var(--text-secondary)');
+          const bdr = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)');
+          return `<button type="button" onclick="jumpToExercise(${idx})" title="${exItem.name}" style="flex-shrink:0; padding:5px 9px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${shortName}${icon}</button>`;
         }).join('');
       }
 
@@ -4819,7 +4857,9 @@ function viewCompletedWorkoutBreakdown() {
         updateRestDisplay();
       }
 
-      document.getElementById('stepCounter').innerText = `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
+      document.getElementById('stepCounter').innerText = isPickOneMenu
+        ? `Pick 1 • Option ${currentExIdx + 1}/${activeWorkoutPlan.length}`
+        : `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
       document.getElementById('exName').innerText = ex.name;
       
       const familyNames = {
@@ -5482,7 +5522,7 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function openSleepOverridePrompt() {
-      let currentScore = 82;
+      let currentScore = 76;
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.sleep_score !== undefined) {
         currentScore = window.BAKED_LIVE_STATE.garmin.sleep_score;
       } else if (window.athleteProfile && window.athleteProfile.sleepScore !== undefined) {
@@ -5497,15 +5537,20 @@ function viewCompletedWorkoutBreakdown() {
         return;
       }
 
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
       window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
       window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
       window.BAKED_LIVE_STATE.garmin.sleep_score = score;
+      window.BAKED_LIVE_STATE.garmin.sleep_score_manual_date = todayIso;
       if (window.athleteProfile) {
         window.athleteProfile.sleepScore = score;
       }
 
       try {
         localStorage.setItem('pulse_sleep_score_override', String(score));
+        localStorage.setItem('pulse_sleep_score_override_obj', JSON.stringify({ value: score, date: todayIso }));
       } catch(e) {}
 
       const elSleep = document.getElementById('vSleep');
@@ -5521,13 +5566,131 @@ function viewCompletedWorkoutBreakdown() {
       fetch(`${apiBase}/api/telemetry/override`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'sleep_score', value: score, category: 'garmin' })
+        body: JSON.stringify({ sleep_score: score, key: 'sleep_score', value: score, date: todayIso, category: 'garmin' })
       }).catch(() => {});
 
       renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
       showToast(`✓ Sleep Score updated to ${score}`);
       beep(880, 0.08);
     }
+
+    function openBodyBatteryOverridePrompt() {
+      let currentBb = 43;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.body_battery !== undefined) {
+        currentBb = window.BAKED_LIVE_STATE.garmin.body_battery;
+      }
+
+      const input = window.prompt("Enter Garmin Body Battery % (0–100):", currentBb);
+      if (input === null || input.trim() === '') return;
+      const bb = parseInt(input.trim(), 10);
+      if (isNaN(bb) || bb < 0 || bb > 100) {
+        showToast("Invalid Body Battery. Enter a number 0–100.");
+        return;
+      }
+
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.body_battery = bb;
+      window.BAKED_LIVE_STATE.garmin.body_battery_manual_date = todayIso;
+
+      try {
+        localStorage.setItem('pulse_body_battery_override_obj', JSON.stringify({ value: bb, date: todayIso }));
+      } catch(e) {}
+
+      const elBb = document.getElementById('vitalBattery');
+      if (elBb) elBb.innerText = `${bb}%`;
+      const bbRing = document.getElementById('vitalBatteryRing');
+      if (bbRing) {
+        const circ = 157;
+        const offset = (circ * (1 - (bb / 100))).toFixed(1);
+        bbRing.style.strokeDashoffset = offset;
+      }
+      const elBbSub = document.getElementById('vitalBbSub');
+      if (elBbSub) {
+        elBbSub.innerText = bb >= 85 ? 'Fully Charged' : (bb >= 65 ? 'Charged' : (bb >= 35 ? 'Moderate' : 'Low / Drained'));
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body_battery: bb, key: 'body_battery', value: bb, date: todayIso })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
+      showToast(`✓ Body Battery updated to ${bb}%`);
+      beep(880, 0.08);
+    }
+
+    function openReadinessOverridePrompt() {
+      let currentTr = 68;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.training_readiness !== undefined) {
+        currentTr = window.BAKED_LIVE_STATE.garmin.training_readiness;
+      } else if (window.athleteProfile && window.athleteProfile.readiness !== undefined) {
+        currentTr = window.athleteProfile.readiness;
+      }
+
+      const input = window.prompt("Enter Garmin Training Readiness (0–100):", currentTr);
+      if (input === null || input.trim() === '') return;
+      const tr = parseInt(input.trim(), 10);
+      if (isNaN(tr) || tr < 0 || tr > 100) {
+        showToast("Invalid Training Readiness. Enter a number 0–100.");
+        return;
+      }
+
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.training_readiness = tr;
+      window.BAKED_LIVE_STATE.garmin.readiness_manual_date = todayIso;
+      if (window.athleteProfile) {
+        window.athleteProfile.readiness = tr;
+      }
+
+      try {
+        localStorage.setItem('pulse_readiness_override_obj', JSON.stringify({ value: tr, date: todayIso }));
+      } catch(e) {}
+
+      const numEl = document.getElementById('todayDialNum');
+      if (numEl) numEl.innerText = tr;
+      const ringEl = document.getElementById('todayDialRing');
+      if (ringEl) {
+        const circ = 427.26;
+        const offset = (circ * (1 - (tr / 100))).toFixed(1);
+        ringEl.style.strokeDashoffset = offset;
+      }
+      const subEl = document.getElementById('todayDialSub');
+      if (subEl) {
+        subEl.innerText = tr >= 85 ? 'Optimal Readiness' : (tr >= 75 ? 'High Readiness' : (tr >= 60 ? 'Moderate Readiness' : 'Recovery Focus'));
+      }
+      const hdrEl = document.getElementById('hdrReadiness');
+      if (hdrEl) {
+        hdrEl.innerText = `${tr} READY`;
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ training_readiness: tr, key: 'training_readiness', value: tr, date: todayIso })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
+      showToast(`✓ Training Readiness updated to ${tr}`);
+      beep(880, 0.08);
+    }
+
+    window.openSleepOverridePrompt = openSleepOverridePrompt;
+    window.openBodyBatteryOverridePrompt = openBodyBatteryOverridePrompt;
+    window.openReadinessOverridePrompt = openReadinessOverridePrompt;
 
     function prevExercise() {
       if (currentExIdx > 0) {

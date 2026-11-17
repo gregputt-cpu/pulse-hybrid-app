@@ -377,6 +377,11 @@
           showToast('⚠️ Please enter your Garmin password to authenticate.');
           beep(400, 0.15);
         } else if (data.success || data.status === 'success') {
+          if (data.garmin_tokens_json) {
+            try {
+              localStorage.setItem('pulse_garmin_tokens_backup', typeof data.garmin_tokens_json === 'string' ? data.garmin_tokens_json : JSON.stringify(data.garmin_tokens_json));
+            } catch(e) {}
+          }
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
             applyLiveStateToDom(data.state);
@@ -445,6 +450,11 @@
         });
         const data = await res.json();
         if (data.success || data.status === 'success') {
+          if (data.garmin_tokens_json) {
+            try {
+              localStorage.setItem('pulse_garmin_tokens_backup', typeof data.garmin_tokens_json === 'string' ? data.garmin_tokens_json : JSON.stringify(data.garmin_tokens_json));
+            } catch(e) {}
+          }
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
             applyLiveStateToDom(data.state);
@@ -1730,6 +1740,40 @@
 
     function applyLiveStateToDom(state) {
       if (!state) return;
+      if (state.garmin) {
+        try {
+          const _now = new Date();
+          const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+          const bbOverrideRaw = localStorage.getItem('pulse_body_battery_override_obj');
+          if (bbOverrideRaw) {
+            const bbObj = JSON.parse(bbOverrideRaw);
+            if (bbObj && bbObj.date === todayIso && bbObj.value !== undefined) {
+              state.garmin.body_battery = Number(bbObj.value);
+              state.garmin.body_battery_manual_date = todayIso;
+            }
+          }
+          const trOverrideRaw = localStorage.getItem('pulse_readiness_override_obj');
+          if (trOverrideRaw) {
+            const trObj = JSON.parse(trOverrideRaw);
+            if (trObj && trObj.date === todayIso && trObj.value !== undefined) {
+              state.garmin.training_readiness = Number(trObj.value);
+              state.garmin.readiness_manual_date = todayIso;
+            }
+          }
+          const sleepOverrideRaw = localStorage.getItem('pulse_sleep_score_override_obj');
+          if (sleepOverrideRaw) {
+            const sleepObj = JSON.parse(sleepOverrideRaw);
+            if (sleepObj && sleepObj.date === todayIso && sleepObj.value !== undefined) {
+              state.garmin.sleep_score = Number(sleepObj.value);
+              state.garmin.sleep_score_manual_date = todayIso;
+              state.garmin.sleep_score_source = 'manual_override';
+            }
+          }
+          if (state.garmin.sleep_score_source === 'garmin_oauth' && state.date === todayIso) {
+            localStorage.setItem('pulse_garmin_today_backup', JSON.stringify({ date: todayIso, garmin: state.garmin }));
+          }
+        } catch(e) {}
+      }
       window.BAKED_LIVE_STATE = state;
       recordDailyBiometricSnapshot(state);
       renderBiometricSparklines();
@@ -2205,6 +2249,43 @@
           state = window.BAKED_LIVE_STATE;
         }
         if (!state) return;
+
+        try {
+          const _now = new Date();
+          const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+          if (state && state.garmin && (state.garmin.sleep_score_source === 'mnd_estimated' || !state.date || state.date < todayIso) && !window._garminSessionRestored) {
+            const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup');
+            const todayBackupRaw = localStorage.getItem('pulse_garmin_today_backup');
+            let todayGarminBackup = null;
+            if (todayBackupRaw) {
+              try {
+                const parsed = JSON.parse(todayBackupRaw);
+                if (parsed && parsed.date === todayIso && parsed.garmin) {
+                  todayGarminBackup = parsed.garmin;
+                }
+              } catch(e) {}
+            }
+            if (tokenBackup || todayGarminBackup) {
+              window._garminSessionRestored = true;
+              fetch('/api/garmin/restore_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  garmin_tokens_json: tokenBackup || null,
+                  garmin_state: todayGarminBackup,
+                  date: todayIso
+                })
+              })
+                .then(r => r.ok ? r.json() : null)
+                .then(resData => {
+                  if (resData && resData.state) {
+                    applyLiveStateToDom(resData.state);
+                  }
+                })
+                .catch(() => {});
+            }
+          }
+        } catch(e) {}
         
         applyLiveStateToDom(state);
         console.log("✓ Dynamic telemetry successfully synced from live_state.json");

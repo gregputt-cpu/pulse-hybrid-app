@@ -4019,7 +4019,7 @@ function generateWorkoutFromGearAndGoal() {
                 ${verdict.badge}
               </span>
               <span style="font-size:10.5px; color:var(--text-muted);">
-                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness}
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • <span onclick="openBodyBatteryOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Body Battery">Battery ${verdict.bodyBattery}% ✎</span> • <span onclick="openReadinessOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Training Readiness">Readiness ${verdict.readiness} ✎</span>
               </span>
             </div>
 
@@ -5522,7 +5522,7 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function openSleepOverridePrompt() {
-      let currentScore = 82;
+      let currentScore = 76;
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.sleep_score !== undefined) {
         currentScore = window.BAKED_LIVE_STATE.garmin.sleep_score;
       } else if (window.athleteProfile && window.athleteProfile.sleepScore !== undefined) {
@@ -5537,15 +5537,20 @@ function viewCompletedWorkoutBreakdown() {
         return;
       }
 
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
       window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
       window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
       window.BAKED_LIVE_STATE.garmin.sleep_score = score;
+      window.BAKED_LIVE_STATE.garmin.sleep_score_manual_date = todayIso;
       if (window.athleteProfile) {
         window.athleteProfile.sleepScore = score;
       }
 
       try {
         localStorage.setItem('pulse_sleep_score_override', String(score));
+        localStorage.setItem('pulse_sleep_score_override_obj', JSON.stringify({ value: score, date: todayIso }));
       } catch(e) {}
 
       const elSleep = document.getElementById('vSleep');
@@ -5561,13 +5566,131 @@ function viewCompletedWorkoutBreakdown() {
       fetch(`${apiBase}/api/telemetry/override`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'sleep_score', value: score, category: 'garmin' })
+        body: JSON.stringify({ sleep_score: score, key: 'sleep_score', value: score, date: todayIso, category: 'garmin' })
       }).catch(() => {});
 
       renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
       showToast(`✓ Sleep Score updated to ${score}`);
       beep(880, 0.08);
     }
+
+    function openBodyBatteryOverridePrompt() {
+      let currentBb = 43;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.body_battery !== undefined) {
+        currentBb = window.BAKED_LIVE_STATE.garmin.body_battery;
+      }
+
+      const input = window.prompt("Enter Garmin Body Battery % (0–100):", currentBb);
+      if (input === null || input.trim() === '') return;
+      const bb = parseInt(input.trim(), 10);
+      if (isNaN(bb) || bb < 0 || bb > 100) {
+        showToast("Invalid Body Battery. Enter a number 0–100.");
+        return;
+      }
+
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.body_battery = bb;
+      window.BAKED_LIVE_STATE.garmin.body_battery_manual_date = todayIso;
+
+      try {
+        localStorage.setItem('pulse_body_battery_override_obj', JSON.stringify({ value: bb, date: todayIso }));
+      } catch(e) {}
+
+      const elBb = document.getElementById('vitalBattery');
+      if (elBb) elBb.innerText = `${bb}%`;
+      const bbRing = document.getElementById('vitalBatteryRing');
+      if (bbRing) {
+        const circ = 157;
+        const offset = (circ * (1 - (bb / 100))).toFixed(1);
+        bbRing.style.strokeDashoffset = offset;
+      }
+      const elBbSub = document.getElementById('vitalBbSub');
+      if (elBbSub) {
+        elBbSub.innerText = bb >= 85 ? 'Fully Charged' : (bb >= 65 ? 'Charged' : (bb >= 35 ? 'Moderate' : 'Low / Drained'));
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body_battery: bb, key: 'body_battery', value: bb, date: todayIso })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
+      showToast(`✓ Body Battery updated to ${bb}%`);
+      beep(880, 0.08);
+    }
+
+    function openReadinessOverridePrompt() {
+      let currentTr = 68;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.training_readiness !== undefined) {
+        currentTr = window.BAKED_LIVE_STATE.garmin.training_readiness;
+      } else if (window.athleteProfile && window.athleteProfile.readiness !== undefined) {
+        currentTr = window.athleteProfile.readiness;
+      }
+
+      const input = window.prompt("Enter Garmin Training Readiness (0–100):", currentTr);
+      if (input === null || input.trim() === '') return;
+      const tr = parseInt(input.trim(), 10);
+      if (isNaN(tr) || tr < 0 || tr > 100) {
+        showToast("Invalid Training Readiness. Enter a number 0–100.");
+        return;
+      }
+
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.training_readiness = tr;
+      window.BAKED_LIVE_STATE.garmin.readiness_manual_date = todayIso;
+      if (window.athleteProfile) {
+        window.athleteProfile.readiness = tr;
+      }
+
+      try {
+        localStorage.setItem('pulse_readiness_override_obj', JSON.stringify({ value: tr, date: todayIso }));
+      } catch(e) {}
+
+      const numEl = document.getElementById('todayDialNum');
+      if (numEl) numEl.innerText = tr;
+      const ringEl = document.getElementById('todayDialRing');
+      if (ringEl) {
+        const circ = 427.26;
+        const offset = (circ * (1 - (tr / 100))).toFixed(1);
+        ringEl.style.strokeDashoffset = offset;
+      }
+      const subEl = document.getElementById('todayDialSub');
+      if (subEl) {
+        subEl.innerText = tr >= 85 ? 'Optimal Readiness' : (tr >= 75 ? 'High Readiness' : (tr >= 60 ? 'Moderate Readiness' : 'Recovery Focus'));
+      }
+      const hdrEl = document.getElementById('hdrReadiness');
+      if (hdrEl) {
+        hdrEl.innerText = `${tr} READY`;
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ training_readiness: tr, key: 'training_readiness', value: tr, date: todayIso })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
+      showToast(`✓ Training Readiness updated to ${tr}`);
+      beep(880, 0.08);
+    }
+
+    window.openSleepOverridePrompt = openSleepOverridePrompt;
+    window.openBodyBatteryOverridePrompt = openBodyBatteryOverridePrompt;
+    window.openReadinessOverridePrompt = openReadinessOverridePrompt;
 
     function prevExercise() {
       if (currentExIdx > 0) {

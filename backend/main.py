@@ -89,6 +89,9 @@ class TelemetryOverridePayload(BaseModel):
     body_battery: Optional[int] = None
     training_readiness: Optional[int] = None
     date: Optional[str] = None
+    key: Optional[str] = None
+    value: Optional[Union[int, float, str]] = None
+    category: Optional[str] = None
 
 class PrescriptionOverridePayload(BaseModel):
     exercise_id: str
@@ -219,7 +222,8 @@ def sync_garmin(payload: Optional[DatePayload] = None):
             "state": updated,
             "live_state": updated,
             "has_fresh_token": garmin_sync_error is None,
-            "garmin_error": garmin_sync_error
+            "garmin_error": garmin_sync_error,
+            "garmin_tokens_json": garmin_service.export_tokens_json() if garmin_sync_error is None else None
         }
     except Exception as e:
         logger.error(f"Garmin sync error: {e}")
@@ -235,7 +239,40 @@ def submit_garmin_mfa(payload: MfaPayload):
     except Exception as e:
         logger.warning(f"Garmin sync after MFA warning: {e}")
     updated = load_live_state()
-    return {"success": True, "state": updated, "live_state": updated, "has_fresh_token": True}
+    return {
+        "success": True,
+        "state": updated,
+        "live_state": updated,
+        "has_fresh_token": True,
+        "garmin_tokens_json": garmin_service.export_tokens_json()
+    }
+
+class RestoreGarminSessionPayload(BaseModel):
+    garmin_tokens_json: Optional[str] = None
+    garmin_state: Optional[Dict[str, Any]] = None
+    date: Optional[str] = None
+
+@app.post("/api/garmin/restore_session")
+def restore_garmin_session(payload: RestoreGarminSessionPayload):
+    restored_token = False
+    if payload.garmin_tokens_json:
+        if garmin_service._try_load_token_str(payload.garmin_tokens_json):
+            garmin_service._persist_tokens()
+            restored_token = True
+            try:
+                garmin_service.sync_today(payload.date)
+            except Exception as e:
+                logger.warning(f"Garmin sync during session restore notice: {e}")
+    state = load_live_state()
+    if payload.garmin_state and isinstance(payload.garmin_state, dict):
+        garmin = state.setdefault("garmin", {})
+        for k in ("body_battery", "training_readiness", "sleep_score", "sleep_duration", "resting_hr", "hrv_status", "hrv_weekly_avg", "oauth_date", "sleep_score_source", "body_battery_manual_date", "sleep_score_manual_date", "readiness_manual_date"):
+            if payload.garmin_state.get(k) is not None and (not restored_token or garmin.get(k) is None or k.endswith("_manual_date")):
+                garmin[k] = payload.garmin_state[k]
+        if payload.date:
+            state["date"] = payload.date
+        save_live_state(state)
+    return {"success": True, "restored_token": restored_token, "state": load_live_state()}
 
 @app.get("/api/mnd/status")
 def mnd_status():
@@ -397,6 +434,13 @@ def override_telemetry(payload: TelemetryOverridePayload):
 
     target_date = payload.date or state.get("date") or datetime.now().strftime("%Y-%m-%d")
 
+    if payload.key == "sleep_score" and payload.value is not None:
+        payload.sleep_score = int(float(payload.value))
+    elif payload.key == "body_battery" and payload.value is not None:
+        payload.body_battery = int(float(payload.value))
+    elif payload.key == "training_readiness" and payload.value is not None:
+        payload.training_readiness = int(float(payload.value))
+
     if payload.sleep_score is not None:
         garmin["sleep_score"] = payload.sleep_score
         garmin["sleep_score_source"] = "manual_override"
@@ -407,7 +451,9 @@ def override_telemetry(payload: TelemetryOverridePayload):
 
     if payload.body_battery is not None:
         garmin["body_battery"] = payload.body_battery
-    elif payload.sleep_score is not None:
+        garmin["body_battery_manual_date"] = target_date
+        garmin["oauth_date"] = target_date
+    elif payload.sleep_score is not None and garmin.get("body_battery") is None:
         active_cals_val = garmin.get("active_calories") or 0
         morning_bb = min(100, int(round(payload.sleep_score * 1.05)))
         burn_drain = int(round(active_cals_val / 45.0))
@@ -415,10 +461,11 @@ def override_telemetry(payload: TelemetryOverridePayload):
 
     if payload.training_readiness is not None:
         garmin["training_readiness"] = payload.training_readiness
+        garmin["readiness_manual_date"] = target_date
         tr_val = payload.training_readiness
         garmin["readiness_level"] = "OPTIMAL" if tr_val >= 85 else ("HIGH" if tr_val >= 75 else "MODERATE")
         garmin["readiness_feedback"] = "WELL_RECOVERED" if tr_val >= 75 else "MODERATE_LOAD"
-    elif payload.sleep_score is not None:
+    elif payload.sleep_score is not None and garmin.get("training_readiness") is None:
         active_cals_val = garmin.get("active_calories") or 0
         morning_bb = min(100, int(round(payload.sleep_score * 1.05)))
         calc_tr = int(round(payload.sleep_score * 0.65 + morning_bb * 0.38 - min(10, active_cals_val / 150.0)))

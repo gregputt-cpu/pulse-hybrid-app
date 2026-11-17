@@ -113,7 +113,7 @@
             TRAINING READINESS
           </div>
 
-          <div style="position:relative; width:158px; height:158px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, rgba(0, 240, 255, 0.14) 0%, transparent 65%); border-radius:50%;">
+          <div onclick="openReadinessOverridePrompt()" title="Tap to override Training Readiness" style="cursor:pointer; position:relative; width:158px; height:158px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, rgba(0, 240, 255, 0.14) 0%, transparent 65%); border-radius:50%;">
             <svg viewBox="0 0 160 160" style="width:100%; height:100%; transform:rotate(-90deg);">
               <defs>
                 <linearGradient id="readinessGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -127,11 +127,11 @@
               <!-- Subtle tick marks indicator / glow -->
               <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2, 6" />
               <!-- Progress Arc (88% = circumference 427.26, offset = 51.27) -->
-              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="85.5" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
+              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="136.7" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
             </svg>
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">80</div>
-              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">High Readiness</div>
+              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">68</div>
+              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Moderate Readiness</div>
             </div>
           </div>
         </div>
@@ -140,7 +140,7 @@
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
           
           <!-- SLEEP GAUGE (Cyan Accent) -->
-          <div class="glass-metric-col-cyan" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
+          <div class="glass-metric-col-cyan" onclick="openSleepOverridePrompt()" title="Tap to override Sleep Score" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
                 <defs>
@@ -151,18 +151,18 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="28.3" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
+                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="37.7" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">82</span>
+                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">76</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Sleep</div>
-            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 20m</div>
+            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 12m</div>
           </div>
 
           <!-- BODY BATTERY GAUGE (Indigo Accent) -->
-          <div class="glass-metric-col-indigo" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
+          <div class="glass-metric-col-indigo" onclick="openBodyBatteryOverridePrompt()" title="Tap to override Body Battery" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
                 <defs>
@@ -173,14 +173,14 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle id="vitalBatteryRing" cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="44.0" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
+                <circle id="vitalBatteryRing" cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="89.5" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">72%</span>
+                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">43%</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Body Battery</div>
-            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Charged</div>
+            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Moderate</div>
           </div>
 
           <!-- RESTING HEART RATE GAUGE (Coral Accent) -->
@@ -367,6 +367,11 @@
               <button onclick="resetActiveSession()" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:11.5px; padding:1.5px 4px; border-radius:4px; cursor:pointer; white-space:nowrap;" title="Reset active session">↺ Reset</button>
             </div>
           </div>
+
+          <div id="exerciseStepperHeader" style="display:none; font-size:10px; font-weight:800; color:var(--primary); letter-spacing:0.05em; text-transform:uppercase; margin:4px 0 2px; padding:0 2px;">
+            🎯 Pick 1 Standalone Session Below:
+          </div>
+          <div id="exerciseStepperPills" style="display:flex; gap:5px; overflow-x:auto; padding:2px 0 6px; scrollbar-width:none;"></div>
 
           <div class="exercise-box">
             <div class="ex-name-row">
