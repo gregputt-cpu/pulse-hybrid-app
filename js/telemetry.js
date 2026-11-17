@@ -345,12 +345,13 @@
       fetch('/api/renpho/sync').catch(() => {});
 
       try {
+        const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup') || null;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 25000);
         const res = await fetch('/api/garmin/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: pass }),
+          body: JSON.stringify({ email: email, password: pass, garmin_tokens_json: tokenBackup }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -2027,7 +2028,7 @@
           if (Array.isArray(localActs)) {
             localActs = localActs.filter(a => {
               const sid = String(a && a.id);
-              if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702') return false;
+              if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702' || sid === '25109482110') return false;
               if (hasRealOAuthActs && isBridgeAct(a)) return false;
               return true;
             });
@@ -2279,7 +2280,8 @@
         try {
           const _now = new Date();
           const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-          if (state && state.garmin && (state.garmin.sleep_score_source === 'mnd_estimated' || !state.date || state.date < todayIso) && !window._garminSessionRestored) {
+          if (!window._garminSessionRestored) {
+            window._garminSessionRestored = true;
             const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup');
             const todayBackupRaw = localStorage.getItem('pulse_garmin_today_backup');
             let todayGarminBackup = null;
@@ -2291,21 +2293,36 @@
                 }
               } catch(e) {}
             }
-            if (tokenBackup || todayGarminBackup) {
-              window._garminSessionRestored = true;
+            if (tokenBackup) {
               fetch('/api/garmin/restore_session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  garmin_tokens_json: tokenBackup || null,
+                  garmin_tokens_json: tokenBackup,
                   garmin_state: todayGarminBackup,
                   date: todayIso
                 })
               })
                 .then(r => r.ok ? r.json() : null)
                 .then(resData => {
+                  if (resData && resData.garmin_tokens_json) {
+                    try {
+                      localStorage.setItem('pulse_garmin_tokens_backup', typeof resData.garmin_tokens_json === 'string' ? resData.garmin_tokens_json : JSON.stringify(resData.garmin_tokens_json));
+                    } catch(e) {}
+                  }
                   if (resData && resData.state) {
                     applyLiveStateToDom(resData.state);
+                  }
+                })
+                .catch(() => {});
+            } else {
+              fetch('/api/garmin/export_token')
+                .then(r => r.ok ? r.json() : null)
+                .then(d => {
+                  if (d && d.success && d.garmin_tokens_json) {
+                    try {
+                      localStorage.setItem('pulse_garmin_tokens_backup', typeof d.garmin_tokens_json === 'string' ? d.garmin_tokens_json : JSON.stringify(d.garmin_tokens_json));
+                    } catch(e) {}
                   }
                 })
                 .catch(() => {});

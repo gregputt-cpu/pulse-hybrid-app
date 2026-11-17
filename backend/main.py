@@ -75,6 +75,7 @@ class DatePayload(BaseModel):
     date: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
+    garmin_tokens_json: Optional[str] = None
 
 class MfaPayload(BaseModel):
     mfa_code: str
@@ -191,23 +192,34 @@ def sync_garmin(payload: Optional[DatePayload] = None):
     target_date = payload.date if payload else None
     garmin_sync_error = None
     try:
+        if payload and payload.garmin_tokens_json and garmin_service.client is None:
+            garmin_service.restore_token_str(payload.garmin_tokens_json)
         try:
             garmin_service.sync_today(target_date)
         except Exception as gex:
-            if payload and payload.email and payload.password:
-                login_res = garmin_service.login_with_credentials(payload.email, payload.password)
-                if login_res.get("needs_mfa"):
-                    return login_res
-                if not login_res.get("success"):
-                    return {"success": False, "error": login_res.get("error", "Authentication failed")}
+            restored_and_synced = False
+            if payload and payload.garmin_tokens_json:
                 try:
-                    garmin_service.sync_today(target_date)
-                except Exception as gex2:
-                    garmin_sync_error = str(gex2)
-                    logger.warning(f"Direct Garmin OAuth sync notice after login (falling back to MND Garmin bridge): {gex2}")
-            else:
-                garmin_sync_error = str(gex)
-                logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
+                    if garmin_service.restore_token_str(payload.garmin_tokens_json):
+                        garmin_service.sync_today(target_date)
+                        restored_and_synced = True
+                except Exception as rex:
+                    gex = rex
+            if not restored_and_synced:
+                if payload and payload.email and payload.password:
+                    login_res = garmin_service.login_with_credentials(payload.email, payload.password)
+                    if login_res.get("needs_mfa"):
+                        return login_res
+                    if not login_res.get("success"):
+                        return {"success": False, "error": login_res.get("error", "Authentication failed")}
+                    try:
+                        garmin_service.sync_today(target_date)
+                    except Exception as gex2:
+                        garmin_sync_error = str(gex2)
+                        logger.warning(f"Direct Garmin OAuth sync notice after login (falling back to MND Garmin bridge): {gex2}")
+                else:
+                    garmin_sync_error = str(gex)
+                    logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
         try:
             mnd_service.fetch_today_data(target_date)
         except Exception as ex:
@@ -256,8 +268,7 @@ class RestoreGarminSessionPayload(BaseModel):
 def restore_garmin_session(payload: RestoreGarminSessionPayload):
     restored_token = False
     if payload.garmin_tokens_json:
-        if garmin_service._try_load_token_str(payload.garmin_tokens_json):
-            garmin_service._persist_tokens()
+        if garmin_service.restore_token_str(payload.garmin_tokens_json):
             restored_token = True
             try:
                 garmin_service.sync_today(payload.date)
@@ -272,7 +283,12 @@ def restore_garmin_session(payload: RestoreGarminSessionPayload):
         if payload.date:
             state["date"] = payload.date
         save_live_state(state)
-    return {"success": True, "restored_token": restored_token, "state": load_live_state()}
+    return {
+        "success": True,
+        "restored_token": restored_token,
+        "state": load_live_state(),
+        "garmin_tokens_json": garmin_service.export_tokens_json()
+    }
 
 @app.get("/api/mnd/status")
 def mnd_status():

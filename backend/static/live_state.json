@@ -1,61 +1,128 @@
 {
-  "date": "2026-11-17",
+  "last_synced": "2026-11-17T17:21:15.909619",
+  "athlete": {
+    "name": "Greg Putt",
+    "age": 45,
+    "height_cm": 190.0,
+    "weight_kg": 97.9,
+    "body_fat_pct": 17.1,
+    "target_body_fat_pct": 15.0,
+    "lean_mass_kg": 80.99,
+    "muscle_mass_kg": 53.5,
+    "fat_to_lose_kg": 2.62,
+    "target_weight_kg": 95.28
+  },
   "garmin": {
-    "source": "garmin_oauth",
+    "device": "f\u0113nix 8 - 51mm AMOLED",
     "oauth_date": "2026-11-17",
-    "body_battery": 43,
-    "body_battery_manual_date": "2026-11-17",
     "training_readiness": 68,
     "readiness_level": "MODERATE",
-    "readiness_feedback": "MODERATE_LOAD",
+    "readiness_feedback": "GOOD_SLEEP_HISTORY",
     "sleep_score": 76,
-    "sleep_duration": "7h 12m",
-    "sleep_score_source": "garmin_oauth",
-    "resting_hr": 48,
-    "active_calories": 440,
-    "steps": 6904,
-    "distance_miles": 3.63,
-    "today_activities": [
-      {
-        "id": 25109482110,
-        "name": "Jump_rope",
-        "sub_title": "f\u0113nix 8 \u2022 Skipping (2,185 skips \u2022 361 kcal)",
-        "date": "2026-11-17 10:15:00",
-        "duration_min": 24.6,
-        "calories": 361,
-        "avg_hr": 134,
-        "max_hr": 164,
-        "aerobic_te": 2.6,
-        "anaerobic_te": 1.4,
-        "activity_type_key": "jump_rope",
-        "source": "garmin_oauth"
-      }
-    ],
-    "mnd_logged": {
-      "calories": 956,
-      "protein_g": 86,
-      "carbs_g": 131,
-      "fat_g": 13,
-      "fiber_g": 15,
-      "sodium_mg": 566,
-      "water_l": 0.0,
-      "last_pulled": "2026-11-17T12:00:00.000000",
-      "source": "live_mynetdiary_cloud"
-    },
+    "hrv_status": "balanced",
+    "hrv_weekly_avg": 49,
+    "body_battery": 40,
+    "body_battery_manual_date": "2026-11-17",
+    "resting_hr": 49,
+    "active_calories": 361,
+    "steps": 7761,
     "recent_activities": [
       {
-        "id": 25109482110,
+        "id": 25107151802,
         "name": "Jump_rope",
-        "sub_title": "f\u0113nix 8 \u2022 Skipping (2,185 skips \u2022 361 kcal)",
-        "date": "2026-11-17 10:15:00",
+        "sub_title": "Jump Rope",
+        "date": "2026-11-17 11:13:22",
         "duration_min": 24.6,
         "calories": 361,
-        "avg_hr": 134,
-        "max_hr": 164,
-        "aerobic_te": 2.6,
-        "anaerobic_te": 1.4,
+        "avg_hr": 137,
+        "max_hr": 161,
+        "aerobic_te": 2.799999952316284,
+        "anaerobic_te": 1.2999999523162842,
+        "benefits": {
+          "muscles_worked": "Quadriceps (Vastus Medialis/Lateralis), Gluteus Maximus, Calves & Achilles Tendon Complex (Gastrocnemius/Soleus), Hip Flexors (Iliopsoas), Tibialis Anterior",
+          "biomechanics": "High-frequency plyometric impacts generating peak eccentric ground reaction forces of 3.5\u20134.5\u00d7 bodyweight (~349.5\u2013449.3kg per landing at 99.85kg bodyweight). Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
+          "cardio": "Average HR 137 bpm with peak spike at 161 bpm (85% estimated HRmax). Aerobic TE 2.8 + Anaerobic TE 1.3 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "361 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "High eccentric loading on patellar tendons and gastrocnemius complex. Recommendation: Pair next session with horizontal push/pull (bench/dips/rows) and allow knee extensors 24\u201348 hours before heavy axial barbell squats."
+        },
         "activity_type_key": "jump_rope",
-        "source": "garmin_oauth"
+        "total_sets": null,
+        "total_reps": 2185,
+        "steps": null,
+        "distance_miles": null,
+        "hr_samples": [
+          78,
+          77,
+          76,
+          75,
+          101,
+          117,
+          128,
+          132,
+          138,
+          135,
+          128,
+          135,
+          140,
+          144,
+          141,
+          130,
+          119,
+          131,
+          141,
+          147,
+          154,
+          144,
+          127,
+          125,
+          135,
+          136,
+          129,
+          140,
+          148,
+          137,
+          137,
+          139,
+          140,
+          136,
+          131,
+          126,
+          127,
+          122,
+          140,
+          136,
+          135,
+          144,
+          152,
+          152,
+          158,
+          161,
+          154,
+          144,
+          153,
+          147,
+          148,
+          151,
+          144,
+          145,
+          145,
+          132,
+          145,
+          139,
+          141,
+          160,
+          153,
+          151,
+          145,
+          147
+        ],
+        "hr_zones": {
+          "z1": 496,
+          "z2": 680,
+          "z3": 222,
+          "z4": 3,
+          "z5": 0
+        }
       },
       {
         "id": 25098224763,
@@ -84,6 +151,75 @@
         "aerobic_te": 0.4,
         "anaerobic_te": 0.0,
         "activity_type_key": "indoor_cardio"
+      },
+      {
+        "id": 9920261115,
+        "name": "Hybrid Conditioning & Steps",
+        "sub_title": "f\u0113nix 8 \u2022 6,569 steps (3.95 mi)",
+        "date": "2026-11-15 09:30:00",
+        "duration_min": 64.0,
+        "calories": 581,
+        "workout_calories": 581,
+        "distance_miles": 3.95,
+        "steps": 6569,
+        "avg_hr": 128,
+        "max_hr": 162,
+        "aerobic_te": 2.6,
+        "anaerobic_te": 1.2,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 128 bpm with peak spike at 162 bpm (85% estimated HRmax). Aerobic TE 2.6 + Anaerobic TE 1.2 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "581 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        },
+        "source": "garmin_via_mnd_bridge"
+      },
+      {
+        "id": 9920261114,
+        "name": "Hybrid Conditioning & Steps",
+        "sub_title": "f\u0113nix 8 \u2022 14,795 steps (8.52 mi)",
+        "date": "2026-11-14 09:30:00",
+        "duration_min": 116.0,
+        "calories": 912,
+        "workout_calories": 912,
+        "distance_miles": 8.52,
+        "steps": 14795,
+        "avg_hr": 128,
+        "max_hr": 162,
+        "aerobic_te": 4.1,
+        "anaerobic_te": 1.9,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 128 bpm with peak spike at 162 bpm (85% estimated HRmax). Aerobic TE 4.1 + Anaerobic TE 1.9 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "912 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        },
+        "source": "garmin_via_mnd_bridge"
+      },
+      {
+        "id": 9920261113,
+        "name": "Hybrid Conditioning & Steps",
+        "sub_title": "f\u0113nix 8 \u2022 9,021 steps (5.00 mi)",
+        "date": "2026-11-13 09:30:00",
+        "duration_min": 82.0,
+        "calories": 676,
+        "workout_calories": 676,
+        "distance_miles": 5.0,
+        "steps": 9021,
+        "avg_hr": 128,
+        "max_hr": 162,
+        "aerobic_te": 3.1,
+        "anaerobic_te": 1.4,
+        "benefits": {
+          "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
+          "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
+          "cardio": "Average HR 128 bpm with peak spike at 162 bpm (85% estimated HRmax). Aerobic TE 3.1 + Anaerobic TE 1.4 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "676 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
+        },
+        "source": "garmin_via_mnd_bridge"
       },
       {
         "id": 25044212535,
@@ -370,28 +506,363 @@
           "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
         }
       }
-    ]
+    ],
+    "mnd_logged": {
+      "calories": 2300,
+      "protein_g": 216,
+      "carbs_g": 296,
+      "fat_g": 46,
+      "fiber_g": 49,
+      "sodium_mg": 2574,
+      "water_l": 0.0,
+      "last_pulled": "2026-11-17T17:21:15.909657",
+      "source": "live_mynetdiary_cloud"
+    },
+    "sleep_duration": "7h 56m",
+    "today_activities": [
+      {
+        "id": 25107151802,
+        "name": "Jump_rope",
+        "sub_title": "Jump Rope",
+        "date": "2026-11-17 11:13:22",
+        "duration_min": 24.6,
+        "calories": 361,
+        "avg_hr": 137,
+        "max_hr": 161,
+        "aerobic_te": 2.799999952316284,
+        "anaerobic_te": 1.2999999523162842,
+        "benefits": {
+          "muscles_worked": "Quadriceps (Vastus Medialis/Lateralis), Gluteus Maximus, Calves & Achilles Tendon Complex (Gastrocnemius/Soleus), Hip Flexors (Iliopsoas), Tibialis Anterior",
+          "biomechanics": "High-frequency plyometric impacts generating peak eccentric ground reaction forces of 3.5\u20134.5\u00d7 bodyweight (~349.5\u2013449.3kg per landing at 99.85kg bodyweight). Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
+          "cardio": "Average HR 137 bpm with peak spike at 161 bpm (85% estimated HRmax). Aerobic TE 2.8 + Anaerobic TE 1.3 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
+          "metabolic": "361 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
+          "autoregulation": "High eccentric loading on patellar tendons and gastrocnemius complex. Recommendation: Pair next session with horizontal push/pull (bench/dips/rows) and allow knee extensors 24\u201348 hours before heavy axial barbell squats."
+        },
+        "activity_type_key": "jump_rope",
+        "total_sets": null,
+        "total_reps": 2185,
+        "steps": null,
+        "distance_miles": null,
+        "hr_samples": [
+          78,
+          77,
+          76,
+          75,
+          101,
+          117,
+          128,
+          132,
+          138,
+          135,
+          128,
+          135,
+          140,
+          144,
+          141,
+          130,
+          119,
+          131,
+          141,
+          147,
+          154,
+          144,
+          127,
+          125,
+          135,
+          136,
+          129,
+          140,
+          148,
+          137,
+          137,
+          139,
+          140,
+          136,
+          131,
+          126,
+          127,
+          122,
+          140,
+          136,
+          135,
+          144,
+          152,
+          152,
+          158,
+          161,
+          154,
+          144,
+          153,
+          147,
+          148,
+          151,
+          144,
+          145,
+          145,
+          132,
+          145,
+          139,
+          141,
+          160,
+          153,
+          151,
+          145,
+          147
+        ],
+        "hr_zones": {
+          "z1": 496,
+          "z2": 680,
+          "z3": 222,
+          "z4": 3,
+          "z5": 0
+        }
+      }
+    ],
+    "distance_miles": 3.63,
+    "active_minutes": 25,
+    "sleep_score_source": "garmin_oauth",
+    "sleep_score_manual_date": "2026-11-14",
+    "raw_exercise_items": [
+      {
+        "entryNo": 0,
+        "inputString": "Garmin Active calories",
+        "amountInputString": "0 cal",
+        "calories": 0,
+        "notes": "Exercise calories are zero because 2,013 Garmin Total calories (including 361 workout calories) are smaller than 2,161 MyNetDiary Weight Maintenance Calories for 15 hours 41 minutes of the day. Setting Activity Level to Sedentary is recommended.",
+        "energyAmount": "0",
+        "energyUnit": "cal",
+        "day": "2026-11-17",
+        "initialDay": "2026-11-17",
+        "exercise": {
+          "activityId": 1505,
+          "custom": false,
+          "imageId": 1504,
+          "imageSrc": "https://assets.mynetdiary.com/bean/i1504.png",
+          "activityName": "Garmin Active calories",
+          "energies": [
+            {
+              "unit": "calorie",
+              "calories": 1,
+              "recent": false,
+              "amount": "1"
+            },
+            {
+              "unit": "calorie",
+              "calories": 2,
+              "recent": false,
+              "amount": "2"
+            },
+            {
+              "unit": "calorie",
+              "calories": 3,
+              "recent": false,
+              "amount": "3"
+            }
+          ],
+          "defaultEnergyUnit": "calorie",
+          "defaultEnergyCalories": 1
+        }
+      }
+    ],
+    "source": "garmin_oauth"
   },
-  "last_synced": "2026-11-17T12:00:00.000000",
+  "renpho": {
+    "source": "live_mynetdiary_weight",
+    "weight_kg": 97.9,
+    "body_fat_pct": 17.1,
+    "water_pct": 59.9,
+    "muscle_mass_kg": 53.5,
+    "bone_mass_kg": 4.0,
+    "visceral_fat": 10.0,
+    "subcutaneous_fat_pct": 14.4,
+    "bmi": 27.1,
+    "protein_pct": 18.9,
+    "lean_mass_kg": 80.99,
+    "bmr": 2096,
+    "body_age": 46,
+    "target_weight_at_15pct": 95.28,
+    "fat_to_lose_kg": 2.62,
+    "last_synced": "2026-11-17 17:21:15",
+    "raw_id": 6117053386669490048
+  },
+  "nutrition": {
+    "bmr": 2149,
+    "pt_neat": 292,
+    "tdee": 3091,
+    "calorie_target": 2453,
+    "deficit": 350,
+    "protein_target_g": 200,
+    "carbs_target_g": 251,
+    "fat_target_g": 80,
+    "calories_remaining": 153,
+    "protein_remaining": 0,
+    "remaining_calories": 153,
+    "remaining_protein_g": 0,
+    "protein_achieved_pct": 108.0
+  },
+  "strength_prescriptions": {
+    "barbell_squat": {
+      "weight": 100.0,
+      "reps": 8,
+      "e1rm": 126.7,
+      "status": "baseline",
+      "last_logged_weight": 102.5,
+      "last_logged_reps": 8,
+      "last_e1rm": 129.8
+    },
+    "barbell_rdl": {
+      "weight": 70.0,
+      "reps": 8,
+      "e1rm": 88.7,
+      "status": "baseline",
+      "last_logged_weight": 65.0,
+      "last_logged_reps": 8,
+      "last_e1rm": 82.3
+    },
+    "barbell_floor_press": {
+      "weight": 95.0,
+      "reps": 6,
+      "e1rm": 114.0,
+      "status": "baseline"
+    },
+    "pushups": {
+      "reps": 15,
+      "status": "baseline"
+    },
+    "barbell_zercher_squat": {
+      "weight": 75.0,
+      "reps": 10,
+      "e1rm": 100.0,
+      "status": "baseline"
+    },
+    "barbell_pendlay_row": {
+      "weight": 85.0,
+      "reps": 8,
+      "e1rm": 107.7,
+      "status": "baseline"
+    },
+    "barbell_z_press": {
+      "weight": 45.0,
+      "reps": 10,
+      "e1rm": 60.0,
+      "status": "baseline"
+    },
+    "kb_goblet_lunge": {
+      "weight": 32.0,
+      "reps": 20,
+      "status": "baseline"
+    },
+    "kb_swing": {
+      "weight": 32.0,
+      "reps": 15,
+      "status": "baseline"
+    },
+    "slam_ball_slam": {
+      "weight": 15.0,
+      "reps": 12,
+      "status": "baseline"
+    }
+  },
+  "mnd_meals": {
+    "breakfast": {
+      "name": "Breakfast",
+      "time": "6:24",
+      "calories": 2300,
+      "protein": 216,
+      "carbs": 296,
+      "fat": 46,
+      "items": [
+        {
+          "name": "Old Fashioned Jumbo Oats",
+          "cals": 563,
+          "p": 16,
+          "c": 104,
+          "f": 12
+        },
+        {
+          "name": "Snickers Impact Whey Isolate",
+          "cals": 141,
+          "p": 28,
+          "c": 7,
+          "f": 1
+        },
+        {
+          "name": "Protein Cheese Bar",
+          "cals": 284,
+          "p": 41,
+          "c": 4,
+          "f": 12
+        },
+        {
+          "name": "Chicken Tikka Salad",
+          "cals": 486,
+          "p": 42,
+          "c": 64,
+          "f": 11
+        },
+        {
+          "name": "Fat Free Authentic Luxury Greek Yogurt",
+          "cals": 328,
+          "p": 49,
+          "c": 30,
+          "f": 2
+        },
+        {
+          "name": "Raw Protein Flap Jack Chocolate Brownie",
+          "cals": 498,
+          "p": 40,
+          "c": 87,
+          "f": 8
+        }
+      ]
+    },
+    "lunch": {
+      "name": "Lunch",
+      "time": "12:45",
+      "calories": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "items": []
+    },
+    "dinner": {
+      "name": "Dinner",
+      "time": "Pending",
+      "calories": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "items": []
+    },
+    "snacks": {
+      "name": "Snacks & Hydration",
+      "time": "15:15",
+      "calories": 0,
+      "protein": 0,
+      "carbs": 0,
+      "fat": 0,
+      "items": []
+    }
+  },
   "mnd_logged": {
-    "calories": 956,
-    "protein_g": 86,
-    "carbs_g": 131,
-    "fat_g": 13,
-    "fiber_g": 15,
-    "sodium_mg": 566,
+    "calories": 2300,
+    "protein_g": 216,
+    "carbs_g": 296,
+    "fat_g": 46,
+    "fiber_g": 49,
+    "sodium_mg": 2574,
     "water_l": 0.0,
-    "last_pulled": "2026-11-17T12:00:00.000000",
+    "last_pulled": "2026-11-17T17:21:15.909657",
     "source": "live_mynetdiary_cloud"
   },
-  "mnd_meals": [],
-  "nutrition": {
-    "calorie_target": 2511,
-    "calories_remaining": 1555,
-    "remaining_calories": 1555,
-    "protein_target_g": 200,
-    "protein_remaining": 114,
-    "remaining_protein_g": 114,
-    "protein_achieved_pct": 43.0
-  }
+  "injuries": {
+    "lumbar": false,
+    "shoulders": false,
+    "knees": false,
+    "elbows": false,
+    "wrists": false,
+    "ankles": false,
+    "notes": ""
+  },
+  "date": "2026-11-17"
 }

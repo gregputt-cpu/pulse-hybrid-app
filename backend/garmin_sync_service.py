@@ -77,6 +77,21 @@ class GarminSyncService:
             except Exception:
                 return False
 
+    def restore_token_str(self, raw_tok):
+        if not raw_tok:
+            return False
+        if not isinstance(raw_tok, str):
+            try:
+                raw_tok = json.dumps(raw_tok)
+            except Exception:
+                return False
+        client = Garmin()
+        if self._try_load_token_str(client, raw_tok):
+            self.client = client
+            self._persist_tokens(client)
+            return True
+        return False
+
     def get_client(self):
         if not self.client:
             self.client = Garmin()
@@ -187,7 +202,7 @@ class GarminSyncService:
         auth_failed = False
         last_auth_error = None
 
-        AUTH_ERROR_TERMS = ["401", "400", "Unauthorized", "invalid_grant", "OAuth2Token"]
+        AUTH_ERROR_TERMS = ["401", "Unauthorized", "invalid_grant", "OAuth2Token"]
 
         def is_auth_error(exc):
             err_str = str(exc)
@@ -294,7 +309,7 @@ class GarminSyncService:
         # Persist refreshed tokens when direct calls succeed
         if not auth_failed and self.client:
             try:
-                self.client.client.dump(TOKEN_DIR)
+                self._persist_tokens(self.client)
             except Exception:
                 pass
 
