@@ -13,6 +13,139 @@
     let solverProteinTarget = 45;
     let activeRetailStore = 'tesco';
 
+    const DEFAULT_MND_10D_HISTORY = {
+      "window_days": 10,
+      "start_date": "2026-11-08",
+      "end_date": "2026-11-17",
+      "averages_10d": { "calories": 2438, "protein": 254, "carbs": 230, "fat": 63.5, "fiber": 36.3, "sodium": 2381, "sugar_g": 67.3, "sat_fat_g": 18.4 },
+      "averages_7d": { "calories": 2544, "protein": 259, "carbs": 253, "fat": 64.4, "fiber": 39.9, "sodium": 2492, "sugar_g": 74.9, "sat_fat_g": 18.6 },
+      "days": [
+        {
+          "date": "2026-11-08", "calories": 1896, "protein": 223, "carbs": 157, "fat": 44, "sugar_g": 94.6, "sat_fat_g": 16.9, "fiber": 32, "sodium": 1850,
+          "items": [
+            { "name": "Grass Fed 5% Reduced Fat Beef Steak Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Beansprouts", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Tomatoey Lentils", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "0% Fat Authentic Greek Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Freshona Blueberries Freshly Frozen", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Whole Strawberries", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-09", "calories": 2392, "protein": 233, "carbs": 231, "fat": 67, "sugar_g": 34.5, "sat_fat_g": 16.5, "fiber": 33, "sodium": 2100,
+          "items": [
+            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "British Chicken Diced Breast", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Egg Noodles Soft & Tender", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Beansprouts Tender & Crunchy", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Aberdeen Angus Steak Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Sweet Chilli Stir Fry Sauce Medium", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-10", "calories": 2283, "protein": 275, "carbs": 140, "fat": 73, "sugar_g": 19.6, "sat_fat_g": 19.9, "fiber": 19, "sodium": 2420,
+          "items": [
+            { "name": "Egg Protein Pot", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Chicken Salad Lemon & Pepper Mayo Sandwich", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Carrot and Houmous", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "5% Fat Lean British Chicken Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Beansprouts", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "5% Fat Lean Beef Steak Mince", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-11", "calories": 2486, "protein": 249, "carbs": 250, "fat": 61, "sugar_g": 56.3, "sat_fat_g": 18.8, "fiber": 38, "sodium": 1980,
+          "items": [
+            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "0% Fat Authentic Greek Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "British Beef Lean Steak Mince 5% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Mediterranean Style Vegetables", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Ready Set Cook! Protein Noodles", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-12", "calories": 2360, "protein": 218, "carbs": 238, "fat": 70, "sugar_g": 57.9, "sat_fat_g": 20.5, "fiber": 41, "sodium": 2650,
+          "items": [
+            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Protein Cheese Bar", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Hot Smoked Salmon & Potato Salad", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Fat Free Authentic Luxury Greek Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Chicken Tikka Salad", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-13", "calories": 2832, "protein": 247, "carbs": 292, "fat": 84, "sugar_g": 103.1, "sat_fat_g": 22.9, "fiber": 53, "sodium": 2310,
+          "items": [
+            { "name": "Freshona Blueberries Freshly Frozen", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Whole Strawberries", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Korean Style Vegetables & Mixed Rice", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "British Lean Beef Steak Mince 5% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-14", "calories": 2761, "protein": 307, "carbs": 242, "fat": 72, "sugar_g": 114.6, "sat_fat_g": 19.2, "fiber": 36, "sodium": 2890,
+          "items": [
+            { "name": "Chicken Salad Lemon & Pepper Mayo Sandwich", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Carrot and Houmous", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "5% Fat Beef Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Butcher's Choice Cooked Chicken Slices", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Mediterranean-style Vegetables & Giant Cous Cous in a Tomato & Basil Sauce", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Skyr Natural 0% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Frozen at The Peak Of Freshness Blueberries", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-15", "calories": 2568, "protein": 311, "carbs": 200, "fat": 65, "sugar_g": 101.9, "sat_fat_g": 18.4, "fiber": 30, "sodium": 2740,
+          "items": [
+            { "name": "5% Fat Beef Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Butcher's Choice Cooked Chicken Slices", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Beansprouts Tender & Crunchy", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "British Chicken Diced Breast", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Sweet Chilli Stir Fry Sauce Medium", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Customized Egg Noodles", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "0% Fat Authentic Greek Natural Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Whole Strawberries", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-16", "calories": 2500, "protein": 264, "carbs": 255, "fat": 53, "sugar_g": 29.0, "sat_fat_g": 14.9, "fiber": 32, "sodium": 2299,
+          "items": [
+            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "0% Fat Authentic Greek Natural Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Irish Beef Steak Mince 10% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Beef Stock Cube", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Simply Chicken Chipolatas Lightly Seasoned", "cals": 0, "p": 0, "c": 0, "f": 0 },
+            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 }
+          ]
+        },
+        {
+          "date": "2026-11-17", "calories": 2300, "protein": 216, "carbs": 296, "fat": 46, "sugar_g": 61.6, "sat_fat_g": 15.5, "fiber": 49, "sodium": 2574,
+          "items": [
+            { "name": "Old Fashioned Jumbo Oats", "cals": 563, "p": 16, "c": 104, "f": 12 },
+            { "name": "Snickers Impact Whey Isolate", "cals": 141, "p": 28, "c": 7, "f": 1 },
+            { "name": "Protein Cheese Bar", "cals": 284, "p": 41, "c": 4, "f": 12 },
+            { "name": "Chicken Tikka Salad", "cals": 486, "p": 42, "c": 64, "f": 11 },
+            { "name": "Fat Free Authentic Luxury Greek Yogurt", "cals": 328, "p": 49, "c": 30, "f": 2 },
+            { "name": "Raw Protein Flap Jack Chocolate Brownie", "cals": 498, "p": 40, "c": 87, "f": 8 }
+          ]
+        }
+      ]
+    };
+
     // ==================== MYNETDIARY ENGINE STATE & DATA STORE ====================
     let myNetDiaryData = {
       "totals": {
@@ -22,8 +155,11 @@
             "fat": 46,
             "fiber": 49,
             "sodium": 2574,
-            "water": 0.0
+            "water": 0.0,
+            "sugar_g": 61.6,
+            "sat_fat_g": 15.5
       },
+      "history": DEFAULT_MND_10D_HISTORY,
       "meals": {
             "breakfast": {
                   "name": "Breakfast",
@@ -534,6 +670,62 @@
       }[s]));
     }
 
+    window.nutritionAuditWindowMode = window.nutritionAuditWindowMode || '10d';
+
+    window.setNutritionAuditWindow = function(mode) {
+      if (mode === '10d' || mode === '7d' || mode === '1d') {
+        window.nutritionAuditWindowMode = mode;
+        renderMyNetDiaryEngine();
+      }
+    };
+
+    function formatShortAuditDate(isoDate) {
+      if (!isoDate) return '';
+      const parts = String(isoDate).split('-');
+      if (parts.length !== 3) return isoDate;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const mIdx = Math.max(0, Math.min(11, parseInt(parts[1], 10) - 1));
+      return `${months[mIdx]} ${parseInt(parts[2], 10)}`;
+    }
+
+    function getResolvedMndHistory(todayTotals, todayItems) {
+      const bakedHist = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.mnd_history)
+        ? window.BAKED_LIVE_STATE.mnd_history
+        : null;
+      const sourceHist = (myNetDiaryData && myNetDiaryData.history && Array.isArray(myNetDiaryData.history.days) && myNetDiaryData.history.days.length > 0)
+        ? myNetDiaryData.history
+        : (bakedHist && Array.isArray(bakedHist.days) && bakedHist.days.length > 0 ? bakedHist : DEFAULT_MND_10D_HISTORY);
+
+      const days = sourceHist.days.map(d => ({
+        ...d,
+        items: Array.isArray(d.items) ? d.items.slice() : []
+      }));
+
+      const activeDate = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.date)
+        ? window.BAKED_LIVE_STATE.date
+        : (days.length > 0 ? days[days.length - 1].date : '2026-11-17');
+
+      if (todayTotals && todayTotals.calories > 0 && days.length > 0) {
+        const idx = days.findIndex(d => d.date === activeDate);
+        if (idx >= 0) {
+          const prev = days[idx];
+          days[idx] = {
+            ...prev,
+            calories: Number(todayTotals.calories) || prev.calories,
+            protein: Number(todayTotals.protein) || prev.protein,
+            carbs: Number(todayTotals.carbs) || prev.carbs,
+            fat: Number(todayTotals.fat) || prev.fat,
+            fiber: Number(todayTotals.fiber) || prev.fiber,
+            sodium: Number(todayTotals.sodium) || prev.sodium,
+            sugar_g: todayTotals.sugar_g !== undefined ? Number(todayTotals.sugar_g) : (prev.sugar_g || 0),
+            sat_fat_g: todayTotals.sat_fat_g !== undefined ? Number(todayTotals.sat_fat_g) : (prev.sat_fat_g || 0),
+            items: (Array.isArray(todayItems) && todayItems.length > 0) ? todayItems : prev.items
+          };
+        }
+      }
+      return days;
+    }
+
     function renderNutritionQualityAudit(totals, meals, cals, p, c, f, fiber, sodium, water, calTarget, pTarget, cTarget, fTarget) {
       const auditEl = document.getElementById('nutritionQualityAuditCard');
       if (!auditEl) return;
@@ -556,26 +748,356 @@
         }
       });
 
-      if (allItems.length === 0 && cals <= 0) {
-        auditEl.innerHTML = `
-          <div class="card" style="padding:14px; border-radius:12px; background:var(--surface); border:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <strong style="color:#fff; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">🧬 Nutritional Quality &amp; Micronutrient Audit</strong>
-              <span style="font-size:10.5px; color:var(--text-muted); padding:2px 8px; border-radius:999px; background:rgba(255,255,255,0.05);">Awaiting Food Logs</span>
+      const histDays = getResolvedMndHistory(totals, allItems);
+      const mode = (window.nutritionAuditWindowMode === '7d' || window.nutritionAuditWindowMode === '1d')
+        ? window.nutritionAuditWindowMode
+        : '10d';
+
+      const startLabel = histDays.length > 0 ? formatShortAuditDate(histDays[0].date) : 'Nov 8';
+      const endDateStr = histDays.length > 0 ? histDays[histDays.length - 1].date : '2026-11-17';
+      const endLabel = formatShortAuditDate(endDateStr);
+      const endDayNum = endLabel.split(' ')[1] || '17';
+      const startMonth = startLabel.split(' ')[0] || 'Nov';
+      const rangeBadgeLabel = startLabel.split(' ')[0] === endLabel.split(' ')[0]
+        ? `${startLabel}–${endDayNum}`
+        : `${startLabel}–${endLabel}`;
+
+      const pillBtnStyle = (isActive) => isActive
+        ? 'cursor:pointer; font-size:10.5px; font-weight:800; color:#041019; background:linear-gradient(135deg, #00e5ff, #38bdf8); border:1px solid rgba(0,229,255,0.85); padding:5px 10px; border-radius:999px; box-shadow:0 0 12px rgba(0,229,255,0.3); transition:all 0.15s ease;'
+        : 'cursor:pointer; font-size:10.5px; font-weight:700; color:var(--text-secondary); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); padding:5px 10px; border-radius:999px; transition:all 0.15s ease;';
+
+      const switcherHtml = `
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+          <button type="button" onclick="setNutritionAuditWindow('10d')" style="${pillBtnStyle(mode === '10d')}">
+            📊 ${histDays.length}-Day Baseline (${rangeBadgeLabel})
+          </button>
+          <button type="button" onclick="setNutritionAuditWindow('7d')" style="${pillBtnStyle(mode === '7d')}">
+            📅 Last 7 Days
+          </button>
+          <button type="button" onclick="setNutritionAuditWindow('1d')" style="${pillBtnStyle(mode === '1d')}">
+            📍 Today Only (${endLabel})
+          </button>
+        </div>
+      `;
+
+      const safeFTarget = fTarget > 0 ? fTarget : 80;
+
+      // ==================== MULTI-DAY ROLLING ENGINE (10-DAY OR 7-DAY) ====================
+      if (mode !== '1d' && histDays.length > 0) {
+        const windowDays = mode === '7d' ? histDays.slice(-7) : histDays.slice(-10);
+        const nDays = windowDays.length;
+        const winStart = formatShortAuditDate(windowDays[0].date);
+        const winEnd = formatShortAuditDate(windowDays[nDays - 1].date);
+
+        const sumCals = windowDays.reduce((s, d) => s + (Number(d.calories) || 0), 0);
+        const sumP = windowDays.reduce((s, d) => s + (Number(d.protein) || 0), 0);
+        const sumC = windowDays.reduce((s, d) => s + (Number(d.carbs) || 0), 0);
+        const sumF = windowDays.reduce((s, d) => s + (Number(d.fat) || 0), 0);
+        const sumFib = windowDays.reduce((s, d) => s + (Number(d.fiber) || 0), 0);
+        const sumSug = windowDays.reduce((s, d) => s + (Number(d.sugar_g) || 0), 0);
+        const sumSatF = windowDays.reduce((s, d) => s + (Number(d.sat_fat_g) || 0), 0);
+
+        const avgCals = Math.round(sumCals / nDays);
+        const avgP = Math.round(sumP / nDays);
+        const avgC = Math.round(sumC / nDays);
+        const avgF = Number((sumF / nDays).toFixed(1));
+        const avgFib = Number((sumFib / nDays).toFixed(1));
+        const avgSug = Number((sumSug / nDays).toFixed(1));
+        const avgSatF = Number((sumSatF / nDays).toFixed(1));
+
+        // Food group matchers across days
+        const flaxMixRx = /flaxseed|walnut|almond|brazil nut|q10/i;
+        const nutsSeedsBroadRx = /flaxseed|walnut|almond|brazil nut|q10|houmous/i;
+        const oilyFishRx = /salmon|mackerel|sardine|trout|tuna/i;
+        const wholeEggRx = /\begg\b/i;
+        const eggNoodleRx = /egg\s*noodle/i;
+        const berryFruitRx = /blueberr|strawberr|summer fruit|berr|fruit|kiwi|orange|apple|banana/i;
+        const vegSaladRx = /mediterranean|roasting vegetables|beansprouts|carrot|salad|lentil|broccoli|spinach/i;
+        const processedRx = /flap\s*jack|protein bar|cheese bar|\bbar\b|whey|isolate|powder|shake|cookie|brownie|crisp|sweet|candy|chocolate|syrup|sauce|noodle|processed/i;
+
+        const dayHas = (d, fn) => (d.items || []).some(it => fn(String(it.name || '')));
+        const isWholeEggName = (nm) => wholeEggRx.test(nm) && !eggNoodleRx.test(nm);
+
+        const flaxDays = windowDays.filter(d => dayHas(d, nm => flaxMixRx.test(nm)));
+        const noFlaxDays = windowDays.filter(d => !dayHas(d, nm => flaxMixRx.test(nm)));
+        const broadNutDays = windowDays.filter(d => dayHas(d, nm => nutsSeedsBroadRx.test(nm)));
+        const fishDays = windowDays.filter(d => dayHas(d, nm => oilyFishRx.test(nm)));
+        const eggDays = windowDays.filter(d => dayHas(d, isWholeEggName));
+        const berryDays = windowDays.filter(d => dayHas(d, nm => berryFruitRx.test(nm)));
+        const vegDays = windowDays.filter(d => dayHas(d, nm => vegSaladRx.test(nm)));
+
+        // Trailing skipped days for Flax/Nuts and Berries
+        let trailingFlaxSkip = 0;
+        for (let i = windowDays.length - 1; i >= 0; i--) {
+          if (!dayHas(windowDays[i], nm => flaxMixRx.test(nm))) trailingFlaxSkip++;
+          else break;
+        }
+        let trailingBerrySkip = 0;
+        for (let i = windowDays.length - 1; i >= 0; i--) {
+          if (!dayHas(windowDays[i], nm => berryFruitRx.test(nm))) trailingBerrySkip++;
+          else break;
+        }
+
+        const flaxDatesList = flaxDays.map(d => formatShortAuditDate(d.date).replace(`${startMonth} `, '')).join(', ');
+        const flaxAvgFat = flaxDays.length > 0
+          ? Math.round(flaxDays.reduce((s, d) => s + (Number(d.fat) || 0), 0) / flaxDays.length)
+          : 0;
+        const recentSkippedFatVals = noFlaxDays.slice(-2).map(d => Number(d.fat) || 0);
+        const recentLowMin = recentSkippedFatVals.length > 0 ? Math.min(...recentSkippedFatVals) : 46;
+        const recentLowMax = recentSkippedFatVals.length > 0 ? Math.max(...recentSkippedFatVals) : 53;
+
+        // Whole food vs processed calorie share across N days
+        let estProcCals = 0;
+        let barCount = 0;
+        let wheyCount = 0;
+        windowDays.forEach(d => {
+          const items = d.items || [];
+          items.forEach(it => {
+            const nm = String(it.name || '');
+            if (processedRx.test(nm)) {
+              if (/flap\s*jack|cheese bar|protein bar|\bbar\b/i.test(nm)) barCount++;
+              if (/whey|isolate/i.test(nm)) wheyCount++;
+              if (Number(it.cals) > 0) {
+                estProcCals += Number(it.cals);
+              } else if (/flap\s*jack/i.test(nm)) {
+                estProcCals += 498;
+              } else if (/cheese bar/i.test(nm)) {
+                estProcCals += 284;
+              } else if (/whey|isolate/i.test(nm)) {
+                estProcCals += 141;
+              } else if (/sauce|syrup/i.test(nm)) {
+                estProcCals += 80;
+              } else if (/noodle/i.test(nm)) {
+                estProcCals += 300;
+              } else {
+                estProcCals += Math.round((Number(d.calories) || 2400) / Math.max(4, items.length) * 0.65);
+              }
+            }
+          });
+        });
+        const procCalPct = sumCals > 0 ? Math.min(100, Math.round((estProcCals / sumCals) * 100)) : 0;
+        const wholeCalPct = Math.max(0, 100 - procCalPct);
+
+        // Specific veg frequency counts
+        const medVegCount = windowDays.filter(d => dayHas(d, nm => /mediterranean.*roasting|roasting vegetables/i.test(nm))).length;
+        const beansproutCount = windowDays.filter(d => dayHas(d, nm => /beansprout/i.test(nm))).length;
+        const carrotHoumousCount = windowDays.filter(d => dayHas(d, nm => /carrot.*houmous/i.test(nm))).length;
+
+        const fatDeficitAvg = Math.max(0, Number((safeFTarget - avgF).toFixed(1)));
+        const avgFatPct = Math.min(100, Math.round((avgF / safeFTarget) * 100));
+        const satFatSharePct = avgF > 0 ? Math.round((avgSatF / avgF) * 100) : 0;
+        const avgFibPct = Math.min(100, Math.round((avgFib / 35) * 100));
+        const microDaysCount = windowDays.filter(d => dayHas(d, nm => berryFruitRx.test(nm)) || dayHas(d, nm => vegSaladRx.test(nm))).length;
+        const microPct = Math.min(100, Math.round((microDaysCount / nDays) * 100));
+
+        // 1. Healthy Fats & Omega-3s Pillar (Multi-day)
+        const fatBadgeText = avgF < 68
+          ? `⚠️ ${avgF}g/DAY AVG (-${fatDeficitAvg}g vs ${safeFTarget}g)`
+          : `✅ ${avgF}g/DAY AVG (${safeFTarget}g TARGET)`;
+        const fatBadgeColor = avgF < 68 ? '#f59e0b' : '#10b981';
+        const fatBarColor = avgF < 68 ? 'linear-gradient(90deg, #f59e0b, #38bdf8)' : 'linear-gradient(90deg, #10b981, #34d399)';
+        const trailingSkipText = trailingFlaxSkip > 0
+          ? ` (skipped last ${trailingFlaxSkip} day${trailingFlaxSkip > 1 ? 's' : ''}, dropping fat to <strong>${recentLowMin}–${recentLowMax}g</strong> on recent days)`
+          : '';
+        const fatBody = `<strong>Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</strong> logged <strong>${flaxDays.length}/${nDays} days</strong>${flaxDatesList ? ` (${startMonth} ${flaxDatesList})` : ''}${trailingSkipText}. On days with it, fat reaches ~<strong>${flaxAvgFat}g+</strong> (excl. Nov 8 low-cal day, ~70g/day). <strong>Oily Fish:</strong> <strong>${fishDays.length}/${nDays} days</strong> • <strong>Whole Eggs:</strong> <strong>${eggDays.length}/${nDays} days</strong>.`;
+
+        // 2. Whole Food vs Bars Pillar (Multi-day)
+        const procBadgeText = wholeCalPct >= 80
+          ? `✅ ${wholeCalPct}% WHOLE-FOOD BASELINE`
+          : `ℹ️ ${wholeCalPct}% WHOLE FOODS / ${procCalPct}% PACKAGED`;
+        const procBadgeColor = wholeCalPct >= 80 ? '#10b981' : '#38bdf8';
+        const procBarColor = wholeCalPct >= 80 ? 'linear-gradient(90deg, #10b981, #00e5ff)' : 'linear-gradient(90deg, #38bdf8, #00e5ff)';
+        const procBody = `Across ${nDays} days (<strong>${sumCals.toLocaleString()} kcal</strong> total • <strong>${avgCals.toLocaleString()} kcal/day</strong>, <strong>${avgP}g P/day</strong>), whole foods (Oats, 5% Mince, Chicken, 0% Greek Yogurt/Skyr, Veg, Berries, Flax/Nuts) drive <strong>~${wholeCalPct}%</strong> of energy. Bars (${barCount}x) &amp; Whey (${wheyCount}x) are only <strong>~${procCalPct}%</strong> (vs today's single-day spike).`;
+
+        // 3. Micronutrient & Polyphenol Diversity (Multi-day)
+        const vitCBadgeText = microDaysCount >= Math.ceil(nDays * 0.8)
+          ? `✅ VEG ${vegDays.length}/${nDays}d • BERRIES ${berryDays.length}/${nDays}d`
+          : `ℹ️ VEG ${vegDays.length}/${nDays}d • BERRIES ${berryDays.length}/${nDays}d`;
+        const vitCBadgeColor = berryDays.length >= Math.ceil(nDays * 0.5) ? '#10b981' : '#38bdf8';
+        const vitCBarColor = 'linear-gradient(90deg, #38bdf8, #10b981)';
+        const berryGapNote = trailingBerrySkip > 0
+          ? ` (0/${trailingBerrySkip} in last ${trailingBerrySkip} day${trailingBerrySkip > 1 ? 's' : ''})`
+          : '';
+        const vitCBody = `<strong>Veg &amp; Salad:</strong> <strong>${vegDays.length}/${nDays} days</strong> (Med Roasting Veg ${medVegCount}x, Beansprouts ${beansproutCount}x, Carrot &amp; Houmous ${carrotHoumousCount}x). <strong>Berries &amp; Fruit:</strong> <strong>${berryDays.length}/${nDays} days</strong>${berryGapNote}. Great baseline — just keep berries in on busy days for tendon Vitamin C.`;
+
+        // 4. Fiber, Sugar & Saturated Fat (Multi-day)
+        const glyBadgeText = avgFib >= 30
+          ? `✅ ${avgFib}g/DAY FIBER • TOP-TIER GUT`
+          : `⚠️ ${avgFib}g/DAY FIBER`;
+        const glyBadgeColor = avgFib >= 30 ? '#10b981' : '#f59e0b';
+        const glyBarColor = 'linear-gradient(90deg, #10b981, #00e5ff)';
+        const glyBody = `<strong>${avgFib}g fiber/day</strong> crushes the 30–40g gut target! Sugar averages <strong>${avgSug}g/day</strong> (mostly natural lactose from Greek yogurt + berries/700g Med veg). Saturated fat is <strong>${avgSatF}g/day</strong> (<strong>${satFatSharePct}%</strong> of total fat).`;
+
+        // Consistency Strip HTML (Day-by-day fat bars + micronutrient badges)
+        const stripHtml = `
+          <div style="margin-bottom:12px; padding:10px 11px; border-radius:10px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+              <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+                📈 ${nDays}-Day Fat Floor &amp; Micronutrient Consistency (${winStart} → ${winEnd})
+              </span>
+              <span style="font-size:10px; color:var(--text-secondary);">
+                Target: <strong style="color:#10b981;">≥65g/80g</strong> • 🥜 Flax/Nuts • 🫐 Berries • 🥦 Veg • 🐟 Salmon • 🥚 Egg
+              </span>
             </div>
-            <div style="font-size:11.5px; color:var(--text-secondary); margin-top:8px;">Sync MyNetDiary or log meals to audit healthy fats, whole-food density, tendon micronutrients, and glycemic load.</div>
+            <div style="display:grid; grid-template-columns:repeat(${nDays}, minmax(26px, 1fr)); gap:5px; align-items:end; overflow-x:auto; padding-bottom:2px;">
+              ${windowDays.map(d => {
+                const fatVal = Math.round(Number(d.fat) || 0);
+                const barH = Math.max(10, Math.min(46, Math.round((fatVal / 85) * 46)));
+                const isOk = fatVal >= 65;
+                const barBg = isOk ? 'linear-gradient(180deg, #10b981, #059669)' : 'linear-gradient(180deg, #f59e0b, #d97706)';
+                const fatColor = isOk ? '#34d399' : '#fbbf24';
+                const shortD = formatShortAuditDate(d.date).replace(/^[A-Za-z]+\s+/, '');
+                const hasFlax = dayHas(d, nm => flaxMixRx.test(nm));
+                const hasBerry = dayHas(d, nm => berryFruitRx.test(nm));
+                const hasVeg = dayHas(d, nm => vegSaladRx.test(nm));
+                const hasFish = dayHas(d, nm => oilyFishRx.test(nm));
+                const hasEgg = dayHas(d, isWholeEggName);
+                const badges = [
+                  hasFlax ? '🥜' : '',
+                  hasBerry ? '🫐' : '',
+                  hasVeg ? '🥦' : '',
+                  hasFish ? '🐟' : '',
+                  hasEgg ? '🥚' : ''
+                ].filter(Boolean).join('');
+                const isTodayCol = d.date === endDateStr;
+                return `
+                  <div title="${d.date}: ${d.calories} kcal • P:${d.protein}g C:${d.carbs}g F:${fatVal}g • Fib:${d.fiber}g" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px; border-radius:6px; ${isTodayCol ? 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.28);' : ''}">
+                    <span style="font-size:9.5px; font-weight:800; color:${fatColor};">${fatVal}g</span>
+                    <div style="width:100%; max-width:18px; height:48px; display:flex; align-items:flex-end; justify-content:center; background:rgba(255,255,255,0.04); border-radius:4px; overflow:hidden; position:relative;">
+                      <div style="width:100%; height:${barH}px; background:${barBg}; border-radius:3px 3px 0 0;"></div>
+                    </div>
+                    <span style="font-size:9px; font-weight:${isTodayCol ? '800' : '600'}; color:${isTodayCol ? 'var(--primary)' : 'var(--text-muted)'};">${shortD}</span>
+                    <span style="font-size:9px; line-height:1.1; min-height:11px; letter-spacing:-1px; text-align:center;">${badges || '·'}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+
+        // 10-Day vs Today Reality Comparison Strip
+        const todayVsAvgHtml = `
+          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; padding:8px 11px; margin-bottom:12px; border-radius:9px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.18); font-size:11px;">
+            <div>
+              <strong style="color:var(--primary);">${nDays}-Day Avg:</strong>
+              <span style="color:#fff; font-weight:700;">${avgCals.toLocaleString()} kcal</span> •
+              <span style="color:#38bdf8; font-weight:700;">${avgP}g P</span> •
+              <span style="color:#a78bfa; font-weight:700;">${avgC}g C</span> •
+              <span style="color:${avgF < 68 ? '#fbbf24' : '#34d399'}; font-weight:700;">${avgF}g F</span> •
+              <span style="color:#34d399; font-weight:700;">${avgFib}g Fib</span>
+            </div>
+            <div style="color:var(--text-muted);">
+              vs Today (${endLabel}): <strong style="color:#fff;">${cals.toLocaleString()} kcal</strong> • ${p}g P • ${f}g F • ${fiber}g Fib
+            </div>
+          </div>
+        `;
+
+        // 3 Multi-day Recommendations
+        const rec1 = `<strong>1. Lock In Your Flaxseed/Nuts Habit Daily (+${fatDeficitAvg}g/day Fat Gap):</strong> You hit <strong>${flaxDays.length}/${nDays} days</strong> with <code>Cold Milled Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</code>${trailingFlaxSkip > 0 ? ` — just restore it on days like the last ${trailingFlaxSkip} days` : ''}. Making it a daily morning Jumbo Oats non-negotiable adds Selenium, Vitamin E, Magnesium, CoQ10 &amp; ~18g healthy fats, closing your chronic <strong>${avgF}g → ${safeFTarget}g</strong> fat gap.`;
+        const rec2 = `<strong>2. Upgrade Marine Omega-3s &amp; Choline (Oily Fish ${fishDays.length}/${nDays}d • Eggs ${eggDays.length}/${nDays}d):</strong> Plant ALA from flaxseed converts <strong>&lt;10%</strong> to active EPA/DHA. Add <strong>1–2 more oily fish meals/week</strong> (<code>Hot Smoked Salmon</code>, mackerel, sardines) and <strong>2–3 whole eggs</strong> a few mornings/week for choline, Vitamin D &amp; hormone substrate.`;
+        const rec3 = `<strong>3. Keep Whole-Food Density (${wholeCalPct}%) &amp; Daily Berry Routine (${berryDays.length}/${nDays}d):</strong> Your ${nDays}-day baseline is genuinely elite (<strong>${avgFib}g fiber/day</strong>, <strong>${vegDays.length}/${nDays} veg days</strong>, <strong>${avgP}g/day protein</strong>). On days like today when you swap in a <code>Flapjack</code> or skip berries, toss <strong>80g frozen blueberries/strawberries</strong> into your oats/yogurt so tendon Vitamin C never dips.`;
+
+        auditEl.innerHTML = `
+          <div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+              <div style="display:flex; align-items:center; gap:7px;">
+                <span style="font-size:15px;">🧬</span>
+                <strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
+              </div>
+              <span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
+                ${nDays}-Day Whole-Food: ${wholeCalPct}% • Avg Fat: ${avgF}g/${safeFTarget}g
+              </span>
+            </div>
+
+            ${switcherHtml}
+            ${todayVsAvgHtml}
+            ${stripHtml}
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
+              <!-- Pillar 1: Healthy Fats & Omega-3s -->
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Fats, Nuts &amp; Omega-3s</span>
+                  <span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
+                </div>
+                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                  <div style="width:${avgFatPct}%; height:100%; background:${fatBarColor};"></div>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
+              </div>
+
+              <!-- Pillar 2: Whole Food vs. Processed/Bars -->
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
+                  <span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
+                </div>
+                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                  <div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
+              </div>
+
+              <!-- Pillar 3: Vitamin C, Berries & Veg Diversity -->
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Berries, Veg &amp; Collagen</span>
+                  <span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
+                </div>
+                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                  <div style="width:${Math.max(12, microPct)}%; height:100%; background:${vitCBarColor};"></div>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
+              </div>
+
+              <!-- Pillar 4: Fiber, Sugar & Saturated Fat -->
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber, Sugar &amp; Sat Fat</span>
+                  <span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
+                </div>
+                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                  <div style="width:${avgFibPct}%; height:100%; background:${glyBarColor};"></div>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
+              <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
+                🛒 ${nDays}-Day Trend Upgrades for Your Next Shop / Tomorrow
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+                <div>${rec1}</div>
+                <div>${rec2}</div>
+                <div>${rec3}</div>
+              </div>
+            </div>
           </div>
         `;
         return;
       }
 
-      // 1. Healthy Fats, Omega-3 & Hormonal Floor
+      if (allItems.length === 0 && cals <= 0) {
+        auditEl.innerHTML = `
+          <div class="card" style="padding:14px; border-radius:12px; background:var(--surface); border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+              <strong style="color:#fff; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">🧬 Nutritional Quality &amp; Micronutrient Audit</strong>
+              <span style="font-size:10.5px; color:var(--text-muted); padding:2px 8px; border-radius:999px; background:rgba(255,255,255,0.05);">Awaiting Food Logs</span>
+            </div>
+            ${switcherHtml}
+            <div style="font-size:11.5px; color:var(--text-secondary); margin-top:4px;">Sync MyNetDiary or log meals to audit healthy fats, whole-food density, tendon micronutrients, and glycemic load.</div>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Healthy Fats, Omega-3 & Hormonal Floor (Today Only)
       const healthyFatRx = /salmon|mackerel|sardine|trout|anchov|egg|avocado|olive oil|extra virgin|walnut|almond|macadamia|chia|flax|peanut butter|almond butter|cheese|steak|beef/i;
       const ultraLowFatRx = /fat free|0%|isolate|breast/i;
       const fatSources = allItems.filter(it => healthyFatRx.test(it.name)).map(it => it.name);
       const ultraLowFatChoices = allItems.filter(it => ultraLowFatRx.test(it.name)).map(it => it.name);
 
-      const safeFTarget = fTarget > 0 ? fTarget : 80;
       const fatPct = Math.round((f / safeFTarget) * 100);
       const fatCalPct = cals > 0 ? Math.round(((f * 9) / cals) * 100) : 0;
 
@@ -612,7 +1134,6 @@
 
       const procCals = processedItems.reduce((sum, it) => sum + it.cals, 0);
       const procProtein = processedItems.reduce((sum, it) => sum + it.p, 0);
-      const procCarbs = processedItems.reduce((sum, it) => sum + it.c, 0);
       const procCalPct = cals > 0 ? Math.min(100, Math.round((procCals / cals) * 100)) : 0;
       const wholeCalPct = Math.max(0, 100 - procCalPct);
 
@@ -703,7 +1224,7 @@
       const flapjackItem = allItems.find(it => /flap\s*jack|brownie|protein bar/i.test(it.name));
 
       const rec1 = fatDeficit > 0
-        ? `<strong>1. Fix the Fat &amp; Omega-3 Gap (+${fatDeficit}g Fat needed):</strong> ${hasFatFreeYogurt ? 'Swap <code>Fat Free Greek Yogurt</code> for <strong>5% Greek Yogurt</strong>, or add' : 'Add'} <strong>2–3 whole eggs / ½ avocado / 25g walnuts or pumpkin seeds / 1 tbsp extra-virgin olive oil</strong>${hasSalad ? ' to your Chicken Tikka Salad' : ''}, or have <strong>salmon/mackerel</strong> 2x/week for EPA/DHA joint recovery.`
+        ? `<strong>1. Fix the Fat &amp; Omega-3 Gap (+${fatDeficit}g Fat needed):</strong> ${hasFatFreeYogurt ? 'Swap <code>Fat Free Greek Yogurt</code> for <strong>5% Greek Yogurt</strong>, or add' : 'Add'} <strong>2–3 whole eggs / ½ avocado / Cold Milled Flaxseed &amp; Nuts / 1 tbsp extra-virgin olive oil</strong>${hasSalad ? ' to your Chicken Tikka Salad' : ''}, or have <strong>salmon/mackerel</strong> 2x/week for EPA/DHA joint recovery.`
         : `<strong>1. Maintain Omega-3 Lipid Quality:</strong> Fat target is covered (<strong>${f}g</strong>). Prioritize wild <strong>salmon/mackerel</strong>, walnuts, and extra-virgin olive oil to keep inflammation low.`;
 
       const rec2 = vitCPowerItems.length < 2
@@ -718,15 +1239,17 @@
 
       auditEl.innerHTML = `
         <div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
             <div style="display:flex; align-items:center; gap:7px;">
               <span style="font-size:15px;">🧬</span>
               <strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
             </div>
             <span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
-              Whole-Food Score: ${wholeCalPct}% • Fat Floor: ${f}g/${safeFTarget}g
+              Today Whole-Food: ${wholeCalPct}% • Fat Floor: ${f}g/${safeFTarget}g
             </span>
           </div>
+
+          ${switcherHtml}
 
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
             <!-- Pillar 1: Healthy Fats & Omega-3s -->
@@ -991,13 +1514,20 @@
           fat: parseInt(totals.fat !== undefined ? totals.fat : totals.fat_g) || 0,
           fiber: parseInt(totals.fiber !== undefined ? totals.fiber : totals.fiber_g) || 0,
           sodium: parseInt(totals.sodium !== undefined ? totals.sodium : totals.sodium_mg) || 0,
-          water: parseFloat(totals.water !== undefined ? totals.water : totals.water_l) || 0.0
+          water: parseFloat(totals.water !== undefined ? totals.water : totals.water_l) || 0.0,
+          sugar_g: parseFloat(totals.sugar_g !== undefined ? totals.sugar_g : totals.sugar) || 0.0,
+          sat_fat_g: parseFloat(totals.sat_fat_g !== undefined ? totals.sat_fat_g : totals.sat_fat) || 0.0
         };
       }
 
       const meals = data.meals || (raw.state && raw.state.mnd_meals);
       if (meals && typeof meals === 'object') {
         myNetDiaryData.meals = meals;
+      }
+
+      const hist = data.history || raw.history || (raw.state && raw.state.mnd_history);
+      if (hist && Array.isArray(hist.days) && hist.days.length > 0) {
+        myNetDiaryData.history = hist;
       }
 
       saveMndToLocalStorage();
@@ -1293,7 +1823,7 @@
 
     function restoreMndFromLocalStorage() {
       try {
-        const CURRENT_MND_VERSION = "v5.23_nov17_audit";
+        const CURRENT_MND_VERSION = "v5.24_nov17_multiday";
         if (localStorage.getItem('pulse_mnd_version') !== CURRENT_MND_VERSION) {
           localStorage.removeItem('pulse_mnd_data');
           localStorage.setItem('pulse_mnd_version', CURRENT_MND_VERSION);
@@ -1305,6 +1835,11 @@
           const parsed = JSON.parse(raw);
           if (parsed && parsed.totals && parsed.meals) {
             myNetDiaryData = parsed;
+            if (!myNetDiaryData.history || !Array.isArray(myNetDiaryData.history.days) || myNetDiaryData.history.days.length === 0) {
+              myNetDiaryData.history = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.mnd_history)
+                ? window.BAKED_LIVE_STATE.mnd_history
+                : DEFAULT_MND_10D_HISTORY;
+            }
           }
         }
       } catch(e) {}

@@ -517,7 +517,9 @@
       "sodium_mg": 2574,
       "water_l": 0.0,
       "last_pulled": "2026-11-17T17:21:15.909657",
-      "source": "live_mynetdiary_cloud"
+      "source": "live_mynetdiary_cloud",
+      "sugar_g": 61.6,
+      "sat_fat_g": 15.5
     },
     "sleep_duration": "7h 56m",
     "today_activities": [
@@ -855,7 +857,9 @@
     "sodium_mg": 2574,
     "water_l": 0.0,
     "last_pulled": "2026-11-17T17:21:15.909657",
-    "source": "live_mynetdiary_cloud"
+    "source": "live_mynetdiary_cloud",
+    "sugar_g": 61.6,
+    "sat_fat_g": 15.5
   },
   "injuries": {
     "lumbar": false,
@@ -866,5 +870,673 @@
     "ankles": false,
     "notes": ""
   },
-  "date": "2026-11-17"
+  "date": "2026-11-17",
+  "mnd_history": {
+    "window_days": 10,
+    "start_date": "2026-11-08",
+    "end_date": "2026-11-17",
+    "days": [
+      {
+        "date": "2026-11-08",
+        "calories": 1896,
+        "protein": 223,
+        "carbs": 157,
+        "fat": 44,
+        "sugar_g": 94.6,
+        "sat_fat_g": 16.9,
+        "fiber": 32,
+        "sodium": 1850,
+        "items": [
+          {
+            "name": "Grass Fed 5% Reduced Fat Beef Steak Mince",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Beansprouts",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Tomatoey Lentils",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "0% Fat Authentic Greek Yogurt",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Freshona Blueberries Freshly Frozen",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Whole Strawberries",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-09",
+        "calories": 2392,
+        "protein": 233,
+        "carbs": 231,
+        "fat": 67,
+        "sugar_g": 34.5,
+        "sat_fat_g": 16.5,
+        "fiber": 33,
+        "sodium": 2100,
+        "items": [
+          {
+            "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Snickers Impact Whey Isolate",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "British Chicken Diced Breast",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Egg Noodles Soft & Tender",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Beansprouts Tender & Crunchy",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Aberdeen Angus Steak Mince",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Sweet Chilli Stir Fry Sauce Medium",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-10",
+        "calories": 2283,
+        "protein": 275,
+        "carbs": 140,
+        "fat": 73,
+        "sugar_g": 19.6,
+        "sat_fat_g": 19.9,
+        "fiber": 19,
+        "sodium": 2420,
+        "items": [
+          {
+            "name": "Egg Protein Pot",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Chicken Salad Lemon & Pepper Mayo Sandwich",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Carrot and Houmous",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "5% Fat Lean British Chicken Mince",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Beansprouts",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "5% Fat Lean Beef Steak Mince",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-11",
+        "calories": 2486,
+        "protein": 249,
+        "carbs": 250,
+        "fat": 61,
+        "sugar_g": 56.3,
+        "sat_fat_g": 18.8,
+        "fiber": 38,
+        "sodium": 1980,
+        "items": [
+          {
+            "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "0% Fat Authentic Greek Yogurt",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "British Beef Lean Steak Mince 5% Fat",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Mediterranean Style Vegetables",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Ready Set Cook! Protein Noodles",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-12",
+        "calories": 2360,
+        "protein": 218,
+        "carbs": 238,
+        "fat": 70,
+        "sugar_g": 57.9,
+        "sat_fat_g": 20.5,
+        "fiber": 41,
+        "sodium": 2650,
+        "items": [
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Snickers Impact Whey Isolate",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Protein Cheese Bar",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Hot Smoked Salmon & Potato Salad",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Fat Free Authentic Luxury Greek Yogurt",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Chicken Tikka Salad",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-13",
+        "calories": 2832,
+        "protein": 247,
+        "carbs": 292,
+        "fat": 84,
+        "sugar_g": 103.1,
+        "sat_fat_g": 22.9,
+        "fiber": 53,
+        "sodium": 2310,
+        "items": [
+          {
+            "name": "Freshona Blueberries Freshly Frozen",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Whole Strawberries",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Snickers Impact Whey Isolate",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Korean Style Vegetables & Mixed Rice",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "British Lean Beef Steak Mince 5% Fat",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-14",
+        "calories": 2761,
+        "protein": 307,
+        "carbs": 242,
+        "fat": 72,
+        "sugar_g": 114.6,
+        "sat_fat_g": 19.2,
+        "fiber": 36,
+        "sodium": 2890,
+        "items": [
+          {
+            "name": "Chicken Salad Lemon & Pepper Mayo Sandwich",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Carrot and Houmous",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "5% Fat Beef Mince",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Butcher's Choice Cooked Chicken Slices",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Mediterranean-style Vegetables & Giant Cous Cous in a Tomato & Basil Sauce",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Skyr Natural 0% Fat",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Frozen at The Peak Of Freshness Blueberries",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Snickers Impact Whey Isolate",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-15",
+        "calories": 2568,
+        "protein": 311,
+        "carbs": 200,
+        "fat": 65,
+        "sugar_g": 101.9,
+        "sat_fat_g": 18.4,
+        "fiber": 30,
+        "sodium": 2740,
+        "items": [
+          {
+            "name": "5% Fat Beef Mince",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Butcher's Choice Cooked Chicken Slices",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Beansprouts Tender & Crunchy",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "British Chicken Diced Breast",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Sweet Chilli Stir Fry Sauce Medium",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Customized Egg Noodles",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "0% Fat Authentic Greek Natural Yogurt",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Whole Strawberries",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-16",
+        "calories": 2500,
+        "protein": 264,
+        "carbs": 255,
+        "fat": 53,
+        "sugar_g": 29.0,
+        "sat_fat_g": 14.9,
+        "fiber": 32,
+        "sodium": 2299,
+        "items": [
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Snickers Impact Whey Isolate",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "0% Fat Authentic Greek Natural Yogurt",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Irish Beef Steak Mince 10% Fat",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Beef Stock Cube",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Simply Chicken Chipolatas Lightly Seasoned",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          },
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 0,
+            "p": 0,
+            "c": 0,
+            "f": 0
+          }
+        ]
+      },
+      {
+        "date": "2026-11-17",
+        "calories": 2300,
+        "protein": 216,
+        "carbs": 296,
+        "fat": 46,
+        "sugar_g": 61.6,
+        "sat_fat_g": 15.5,
+        "fiber": 49,
+        "sodium": 2574,
+        "items": [
+          {
+            "name": "Old Fashioned Jumbo Oats",
+            "cals": 563,
+            "p": 16,
+            "c": 104,
+            "f": 12
+          },
+          {
+            "name": "Snickers Impact Whey Isolate",
+            "cals": 141,
+            "p": 28,
+            "c": 7,
+            "f": 1
+          },
+          {
+            "name": "Protein Cheese Bar",
+            "cals": 284,
+            "p": 41,
+            "c": 4,
+            "f": 12
+          },
+          {
+            "name": "Chicken Tikka Salad",
+            "cals": 486,
+            "p": 42,
+            "c": 64,
+            "f": 11
+          },
+          {
+            "name": "Fat Free Authentic Luxury Greek Yogurt",
+            "cals": 328,
+            "p": 49,
+            "c": 30,
+            "f": 2
+          },
+          {
+            "name": "Raw Protein Flap Jack Chocolate Brownie",
+            "cals": 498,
+            "p": 40,
+            "c": 87,
+            "f": 8
+          }
+        ]
+      }
+    ],
+    "averages_10d": {
+      "calories": 2438,
+      "protein": 254,
+      "carbs": 230,
+      "fat": 63.5,
+      "fiber": 36.3,
+      "sodium": 2381,
+      "sugar_g": 67.3,
+      "sat_fat_g": 18.4
+    },
+    "averages_7d": {
+      "calories": 2544,
+      "protein": 259,
+      "carbs": 253,
+      "fat": 64.4,
+      "fiber": 39.9,
+      "sodium": 2492,
+      "sugar_g": 74.9,
+      "sat_fat_g": 18.6
+    }
+  }
 }

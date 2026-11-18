@@ -3,7 +3,7 @@ import re
 import json
 import pickle
 import requests
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from benefits_engine import PhysiologicalBenefitsEngine
 
@@ -16,6 +16,7 @@ def uk_now() -> datetime:
 MND_DIR = os.environ.get('MND_TOKEN_DIR', '/tmp/mnd_tokens' if not os.path.exists('/shared/user/.gemini') else '/shared/user/.gemini/mnd_tokens')
 CREDS_FILE = os.path.join(MND_DIR, 'credentials.json')
 COOKIES_FILE = os.path.join(MND_DIR, 'session_cookies.pkl')
+HISTORY_CACHE_FILE = os.path.join(MND_DIR, 'mnd_history_cache.json')
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, 'live_state.json')
@@ -432,6 +433,165 @@ class MyNetDiarySyncService:
             "raw_exercise_items": raw_exercise_items or []
         }
 
+    def _load_history_cache(self):
+        cache = {}
+        if os.path.exists(HISTORY_CACHE_FILE):
+            try:
+                with open(HISTORY_CACHE_FILE, 'r', encoding='utf-8') as f:
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        cache = loaded
+            except Exception as e:
+                print(f"[MNDSync] Warning loading history cache: {e}")
+
+        if os.path.exists(LIVE_STATE_PATH):
+            try:
+                with open(LIVE_STATE_PATH, 'r', encoding='utf-8') as f:
+                    ls = json.load(f)
+                hist_days = (ls.get('mnd_history') or {}).get('days') or []
+                for d in hist_days:
+                    if isinstance(d, dict) and d.get('date') and d['date'] not in cache and (d.get('calories') or 0) > 0:
+                        cache[d['date']] = d
+            except Exception:
+                pass
+        return cache
+
+    def _save_history_cache(self, cache):
+        try:
+            os.makedirs(MND_DIR, exist_ok=True)
+            with open(HISTORY_CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(cache, f, indent=2)
+        except Exception as e:
+            print(f"[MNDSync] Warning saving history cache: {e}")
+
+    def _build_day_summary(self, date_str, totals, meals):
+        return {
+            "date": date_str,
+            "calories": int(totals.get("calories", 0) or 0),
+            "protein": int(totals.get("protein", 0) or 0),
+            "carbs": int(totals.get("carbs", 0) or 0),
+            "fat": int(totals.get("fat", 0) or 0),
+            "fiber": int(totals.get("fiber", 0) or 0),
+            "sodium": int(totals.get("sodium", 0) or 0),
+            "sugar_g": float(totals.get("sugar_g", 0.0) or 0.0),
+            "sat_fat_g": float(totals.get("sat_fat_g", 0.0) or 0.0),
+            "items": [
+                {
+                    "name": it.get("name", ""),
+                    "cals": int(it.get("cals", 0) or 0),
+                    "p": int(it.get("p", 0) or 0),
+                    "c": int(it.get("c", 0) or 0),
+                    "f": int(it.get("f", 0) or 0),
+                }
+                for m in (meals or {}).values()
+                for it in m.get("items", [])
+                if isinstance(it, dict) and it.get("name")
+            ],
+        }
+
+    def _compute_history_averages(self, day_list):
+        if not day_list:
+            return {
+                "calories": 0,
+                "protein": 0,
+                "carbs": 0,
+                "fat": 0.0,
+                "fiber": 0.0,
+                "sodium": 0,
+                "sugar_g": 0.0,
+                "sat_fat_g": 0.0,
+            }
+        n = len(day_list)
+        return {
+            "calories": int(round(sum(d.get("calories", 0) or 0 for d in day_list) / n)),
+            "protein": int(round(sum(d.get("protein", 0) or 0 for d in day_list) / n)),
+            "carbs": int(round(sum(d.get("carbs", 0) or 0 for d in day_list) / n)),
+            "fat": round(sum(d.get("fat", 0) or 0 for d in day_list) / n, 1),
+            "fiber": round(sum(d.get("fiber", 0) or 0 for d in day_list) / n, 1),
+            "sodium": int(round(sum(d.get("sodium", 0) or 0 for d in day_list) / n)),
+            "sugar_g": round(sum(d.get("sugar_g", 0.0) or 0.0 for d in day_list) / n, 1),
+            "sat_fat_g": round(sum(d.get("sat_fat_g", 0.0) or 0.0 for d in day_list) / n, 1),
+        }
+
+    def fetch_multi_day_history(self, end_date_str=None, days=10, skip_refresh_dates=None):
+        if not end_date_str:
+            end_date_str = uk_today_str()
+
+        today_str = uk_today_str()
+        try:
+            today_dt = datetime.strptime(today_str, '%Y-%m-%d').date()
+            yesterday_str = (today_dt - timedelta(days=1)).isoformat()
+            end_dt = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except Exception:
+            end_dt = uk_now().date()
+            end_date_str = end_dt.isoformat()
+            yesterday_str = (end_dt - timedelta(days=1)).isoformat()
+
+        window_dates = [
+            (end_dt - timedelta(days=offset)).isoformat()
+            for offset in range(max(1, int(days)) - 1, -1, -1)
+        ]
+
+        cache = self._load_history_cache()
+        skip_set = set(skip_refresh_dates or [])
+        headers = dict(DEFAULT_HEADERS)
+        headers['Referer'] = 'https://www.mynetdiary.com/daily.do'
+        meals_url = 'https://www.mynetdiary.com/muiGetMeals.do'
+        cache_dirty = False
+
+        for d_str in window_dates:
+            if d_str in skip_set:
+                continue
+            cached_day = cache.get(d_str)
+            is_past_cached = (
+                d_str < today_str
+                and d_str != yesterday_str
+                and isinstance(cached_day, dict)
+                and (cached_day.get('calories') or 0) > 0
+            )
+            if is_past_cached:
+                continue
+
+            try:
+                resp = self.session.get(meals_url, params={'date': d_str}, headers=headers, timeout=8)
+                if resp.status_code != 200:
+                    continue
+                r_json = resp.json()
+                if isinstance(r_json, dict) and r_json.get('needLogon'):
+                    authed, _ = self.ensure_authenticated()
+                    if authed:
+                        resp = self.session.get(meals_url, params={'date': d_str}, headers=headers, timeout=8)
+                        r_json = resp.json()
+                    else:
+                        continue
+                if not r_json or (isinstance(r_json, dict) and r_json.get('needLogon')):
+                    continue
+
+                d_totals, d_meals = self._parse_mnd_response(r_json, {})
+                if d_totals.get('calories', 0) > 0 or d_str not in cache:
+                    cache[d_str] = self._build_day_summary(d_str, d_totals, d_meals)
+                    cache_dirty = True
+            except Exception as e:
+                print(f"[MNDSync] History fetch warning for {d_str}: {e}")
+
+        if cache_dirty:
+            self._save_history_cache(cache)
+
+        logged_days = [
+            cache[d_str]
+            for d_str in window_dates
+            if isinstance(cache.get(d_str), dict) and (cache[d_str].get('calories') or 0) > 0
+        ]
+
+        return {
+            "window_days": len(logged_days),
+            "start_date": logged_days[0]["date"] if logged_days else end_date_str,
+            "end_date": end_date_str,
+            "days": logged_days,
+            "averages_10d": self._compute_history_averages(logged_days),
+            "averages_7d": self._compute_history_averages(logged_days[-7:]),
+        }
+
     def fetch_today_data(self, target_date_str=None):
         if not target_date_str:
             target_date_str = uk_today_str()
@@ -487,8 +647,17 @@ class MyNetDiarySyncService:
         garmin_bridge = self._extract_garmin_bridge_data(dash_data, exercises_by_date, target_date_str, raw_exercise_items)
         totals, meals = self._parse_mnd_response(data, analysis_data)
 
+        history_summary = None
+        try:
+            cache = self._load_history_cache()
+            cache[target_date_str] = self._build_day_summary(target_date_str, totals, meals)
+            self._save_history_cache(cache)
+            history_summary = self.fetch_multi_day_history(target_date_str, days=10, skip_refresh_dates={target_date_str})
+        except Exception as e:
+            print(f"[MNDSync] Warning building multi-day history: {e}")
+
         weight_info = analysis_data.get('weightInfo')
-        state = self._update_live_state(totals, meals, weight_info, garmin_bridge, target_date_str)
+        state = self._update_live_state(totals, meals, weight_info, garmin_bridge, target_date_str, history_summary=history_summary)
 
         return {
             'success': True,
@@ -497,6 +666,7 @@ class MyNetDiarySyncService:
             'meals': meals,
             'garmin_bridge': garmin_bridge,
             'weight_info': weight_info,
+            'history': history_summary,
             'live_state': state
         }
 
@@ -644,7 +814,7 @@ class MyNetDiarySyncService:
 
         return totals, meals
 
-    def _update_live_state(self, totals, meals, weight_info=None, garmin_bridge=None, target_date_str=None):
+    def _update_live_state(self, totals, meals, weight_info=None, garmin_bridge=None, target_date_str=None, history_summary=None):
         state = {}
         if os.path.exists(LIVE_STATE_PATH):
             try:
@@ -799,6 +969,8 @@ class MyNetDiarySyncService:
         garmin_state['mnd_logged'] = dict(mnd_payload)
         state['mnd_logged'] = dict(mnd_payload)
         state['mnd_meals'] = meals
+        if history_summary:
+            state['mnd_history'] = history_summary
 
         # Update Renpho scale weight from weight_info
         today_str = target_date_str or uk_today_str()

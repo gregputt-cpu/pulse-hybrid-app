@@ -2164,13 +2164,22 @@
           myNetDiaryData.totals.fiber = ml.fiber_g || 0;
           myNetDiaryData.totals.sodium = ml.sodium_mg || 0;
           myNetDiaryData.totals.water = ml.water_l || 0;
+          if (ml.sugar_g !== undefined) myNetDiaryData.totals.sugar_g = ml.sugar_g;
+          if (ml.sat_fat_g !== undefined) myNetDiaryData.totals.sat_fat_g = ml.sat_fat_g;
           if (state.mnd_meals) {
             myNetDiaryData.meals = state.mnd_meals;
+          }
+          if (state.mnd_history && Array.isArray(state.mnd_history.days) && state.mnd_history.days.length > 0) {
+            myNetDiaryData.history = state.mnd_history;
           }
           saveMndToLocalStorage();
           renderMyNetDiaryEngine();
           renderTodayTrainingRecommendations();
           renderHistoryList();
+        } else if (state.mnd_history && Array.isArray(state.mnd_history.days) && state.mnd_history.days.length > 0) {
+          myNetDiaryData.history = state.mnd_history;
+          saveMndToLocalStorage();
+          renderMyNetDiaryEngine();
         }
       }
 
