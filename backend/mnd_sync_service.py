@@ -386,24 +386,24 @@ class MyNetDiarySyncService:
                             "benefits": s_benefits,
                             "source": "garmin_via_mnd_bridge"
                         })
-                else:
-                    # Single activity summary card for the day
+                elif d_steps >= 2500 or d_active_mins >= 25:
+                    # Daily movement card only when genuine meaningful movement exists (never on low morning steps/allowance)
                     act_id = int("99" + d_str.replace("-", ""))
-                    act_name = "Hybrid Conditioning & Steps" if d_active_mins >= 60 else "Active Conditioning"
+                    act_name = "Daily Steps & Movement"
                     sub_title = f"fēnix 8 • {d_steps:,} steps ({d_dist_miles:.2f} mi)"
-                    avg_hr = 128 if d_active_mins >= 60 else 118
-                    max_hr = 162 if d_active_mins >= 60 else 148
-                    aerobic_te = round(min(4.2, max(2.1, d_active_cals / 220.0)), 1)
-                    anaerobic_te = round(min(2.4, max(0.4, d_active_cals / 480.0)), 1)
+                    avg_hr = 98 if d_active_mins >= 45 else 92
+                    max_hr = 124 if d_active_mins >= 45 else 118
+                    aerobic_te = round(min(2.4, max(0.8, d_active_cals / 260.0)), 1)
+                    anaerobic_te = 0.0
                     benefits = self.benefits_engine.generate_benefits(
-                        "Cardio", sub_title, d_active_mins or 45.0, d_active_cals, avg_hr, max_hr, aerobic_te, anaerobic_te
+                        "Walking", sub_title, d_active_mins or 35.0, d_active_cals, avg_hr, max_hr, aerobic_te, anaerobic_te
                     )
                     bridged_activities.append({
                         "id": act_id,
                         "name": act_name,
                         "sub_title": sub_title,
                         "date": f"{d_str} 09:30:00",
-                        "duration_min": round(d_active_mins or 45.0, 1),
+                        "duration_min": round(d_active_mins or 35.0, 1),
                         "calories": d_active_cals,
                         "workout_calories": workout_cals if workout_cals > 0 else d_active_cals,
                         "distance_miles": d_dist_miles,
@@ -841,11 +841,11 @@ class MyNetDiarySyncService:
                     garmin_state['steps'] = garmin_bridge['steps']
                 else:
                     garmin_state['steps'] = max(int(garmin_state.get('steps') or 0), int(garmin_bridge['steps'] or 0))
-            if garmin_bridge.get('active_calories') is not None and (not has_live_garmin_oauth or not garmin_state.get('active_calories')):
+            if garmin_bridge.get('active_calories') is not None and (not has_live_garmin_oauth or garmin_state.get('active_calories') is None):
                 garmin_state['active_calories'] = garmin_bridge['active_calories']
-            if garmin_bridge.get('distance_miles') is not None and (not has_live_garmin_oauth or not garmin_state.get('distance_miles')):
+            if garmin_bridge.get('distance_miles') is not None and (not has_live_garmin_oauth or garmin_state.get('distance_miles') is None):
                 garmin_state['distance_miles'] = garmin_bridge['distance_miles']
-            if garmin_bridge.get('active_minutes') is not None and (not has_live_garmin_oauth or not garmin_state.get('active_minutes')):
+            if garmin_bridge.get('active_minutes') is not None and (not has_live_garmin_oauth or garmin_state.get('active_minutes') is None):
                 garmin_state['active_minutes'] = garmin_bridge['active_minutes']
             if garmin_bridge.get('sleep_duration') and (not has_live_garmin_oauth or not garmin_state.get('sleep_duration')):
                 garmin_state['sleep_duration'] = garmin_bridge['sleep_duration']
@@ -906,52 +906,69 @@ class MyNetDiarySyncService:
             if garmin_bridge.get('raw_exercise_items'):
                 garmin_state['raw_exercise_items'] = garmin_bridge['raw_exercise_items']
 
+            def _is_synthetic_bridge(act):
+                if not isinstance(act, dict):
+                    return False
+                aid = str(act.get('id', ''))
+                return act.get('source') == 'garmin_via_mnd_bridge' or aid.startswith(('990', '9920'))
+
             bridged_acts = garmin_bridge.get('bridged_activities', [])
             today_str = target_date_str or uk_today_str()
             today_bridged = [a for a in bridged_acts if str(a.get('date', '')).startswith(today_str)]
 
-            if today_bridged:
-                existing_today = [
-                    a for a in garmin_state.get('today_activities', [])
-                    if str(a.get('date', '')).startswith(today_str) and a.get('source') != 'garmin_via_mnd_bridge'
-                ]
-                if not existing_today:
-                    garmin_state['today_activities'] = today_bridged
-                else:
-                    garmin_state['today_activities'] = existing_today
-            else:
-                # In the else branch, garmin_state['today_activities'] must ONLY keep activities from today_str
+            if has_live_garmin_oauth:
+                # Direct Garmin OAuth is authoritative for today: never inject MND bridge activities and strip any synthetic bridge items
                 garmin_state['today_activities'] = [
                     a for a in garmin_state.get('today_activities', [])
-                    if str(a.get('date', '')).startswith(today_str) and a.get('source') != 'garmin_via_mnd_bridge'
+                    if str(a.get('date', '')).startswith(today_str) and not _is_synthetic_bridge(a)
                 ]
-
-            if bridged_acts:
-                existing_recent = [
+                garmin_state['recent_activities'] = [
                     a for a in garmin_state.get('recent_activities', [])
-                    if a.get('source') != 'garmin_via_mnd_bridge'
+                    if not _is_synthetic_bridge(a)
                 ]
-                existing_today_non_bridge = [
-                    a for a in garmin_state.get('today_activities', [])
-                    if a.get('source') != 'garmin_via_mnd_bridge'
-                ]
-                existing_dates = (
-                    {str(a.get('date', ''))[:10] for a in existing_recent}
-                    | {str(a.get('date', ''))[:10] for a in existing_today_non_bridge}
-                )
-                merged_recent = list(existing_recent)
-                existing_ids = {str(a.get('id')) for a in merged_recent}
-                for ta in existing_today_non_bridge:
-                    if str(ta.get('id')) not in existing_ids:
-                        merged_recent.append(ta)
-                        existing_ids.add(str(ta.get('id')))
-                for ba in bridged_acts:
-                    b_date = str(ba.get('date', ''))[:10]
-                    # Only insert bridged activities for dates where direct OAuth hasn't already provided activities
-                    if b_date not in existing_dates:
-                        merged_recent.append(ba)
-                merged_recent.sort(key=lambda x: str(x.get('date', '')), reverse=True)
-                garmin_state['recent_activities'] = merged_recent
+            else:
+                if today_bridged:
+                    existing_today = [
+                        a for a in garmin_state.get('today_activities', [])
+                        if str(a.get('date', '')).startswith(today_str) and not _is_synthetic_bridge(a)
+                    ]
+                    if not existing_today:
+                        garmin_state['today_activities'] = today_bridged
+                    else:
+                        garmin_state['today_activities'] = existing_today
+                else:
+                    # In the else branch, garmin_state['today_activities'] must ONLY keep activities from today_str
+                    garmin_state['today_activities'] = [
+                        a for a in garmin_state.get('today_activities', [])
+                        if str(a.get('date', '')).startswith(today_str) and not _is_synthetic_bridge(a)
+                    ]
+
+                if bridged_acts:
+                    existing_recent = [
+                        a for a in garmin_state.get('recent_activities', [])
+                        if not _is_synthetic_bridge(a)
+                    ]
+                    existing_today_non_bridge = [
+                        a for a in garmin_state.get('today_activities', [])
+                        if not _is_synthetic_bridge(a)
+                    ]
+                    existing_dates = (
+                        {str(a.get('date', ''))[:10] for a in existing_recent}
+                        | {str(a.get('date', ''))[:10] for a in existing_today_non_bridge}
+                    )
+                    merged_recent = list(existing_recent)
+                    existing_ids = {str(a.get('id')) for a in merged_recent}
+                    for ta in existing_today_non_bridge:
+                        if str(ta.get('id')) not in existing_ids:
+                            merged_recent.append(ta)
+                            existing_ids.add(str(ta.get('id')))
+                    for ba in bridged_acts:
+                        b_date = str(ba.get('date', ''))[:10]
+                        # Only insert bridged activities for dates where direct OAuth hasn't already provided activities
+                        if b_date not in existing_dates:
+                            merged_recent.append(ba)
+                    merged_recent.sort(key=lambda x: str(x.get('date', '')), reverse=True)
+                    garmin_state['recent_activities'] = merged_recent
 
         mnd_payload = {
             'calories': totals['calories'],

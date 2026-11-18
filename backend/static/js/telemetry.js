@@ -1871,6 +1871,21 @@
       // 1. Garmin Telemetry Binding
       if (state.garmin) {
         const g = state.garmin;
+        const _isLowStepSyntheticBridge = (a) => {
+          if (!a) return false;
+          const isBridge = a.source === 'garmin_via_mnd_bridge' || String(a.id || '').startsWith('9920');
+          return isBridge && Number(a.steps || 0) < 500 && a.name === 'Active Conditioning';
+        };
+        if (Array.isArray(g.today_activities)) {
+          g.today_activities = g.today_activities.filter(a => !_isLowStepSyntheticBridge(a));
+        }
+        if (Array.isArray(g.recent_activities)) {
+          g.recent_activities = g.recent_activities.filter(a => !_isLowStepSyntheticBridge(a));
+        }
+        const _todayActsNow = Array.isArray(g.today_activities) ? g.today_activities : [];
+        if (_todayActsNow.length === 0 && Number(g.steps || 0) < 500 && g.source !== 'garmin_oauth') {
+          g.active_calories = 0;
+        }
         if (g.training_readiness !== undefined) {
           const numEl = document.getElementById('todayDialNum');
           if (numEl && String(numEl.innerText).trim() !== String(g.training_readiness)) {
@@ -2011,7 +2026,7 @@
           );
           const hasRealOAuthActs = g.source === 'garmin_oauth' || rawGarminActs.some(a => !isBridgeAct(a));
           const garminActs = rawGarminActs
-            .filter(a => !hasRealOAuthActs || !isBridgeAct(a))
+            .filter(a => !_isLowStepSyntheticBridge(a) && (!hasRealOAuthActs || !isBridgeAct(a)))
             .map((a) => {
               const actDate = a.date;
               const formatted = formatActivityDisplay({ rawDate: actDate, date: actDate, id: a.id });
@@ -2049,7 +2064,8 @@
           if (Array.isArray(localActs)) {
             localActs = localActs.filter(a => {
               const sid = String(a && a.id);
-              if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702' || sid === '25109482110') return false;
+              if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702' || sid === '25109482110' || sid === '9920261118') return false;
+              if (_isLowStepSyntheticBridge(a)) return false;
               if (hasRealOAuthActs && isBridgeAct(a)) return false;
               const aDatePrefix = String(a.rawDate || a.date || '').slice(0, 10);
               const aCals = Number(a.calories || a.workout_calories || 0);
@@ -2123,6 +2139,7 @@
             const hasRealTodayAct = combinedActs.some(a => String(a.date || a.rawDate || '').startsWith(todayIsoDate) && !isBridgeAct(a));
             const seenTodayCals = new Set();
             const filteredTodayActs = combinedActs.filter(a => {
+              if (_isLowStepSyntheticBridge(a)) return false;
               const actDateStr = String(a.date || a.rawDate || '');
               if (!actDateStr.startsWith(todayIsoDate)) return false;
               if (hasRealTodayAct && isBridgeAct(a)) return false;

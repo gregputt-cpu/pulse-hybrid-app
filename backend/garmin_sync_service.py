@@ -219,23 +219,28 @@ class GarminSyncService:
                 last_auth_error = str(e)
             summary = {}
 
-        # 2. Fetch today's activities
+        # 2. Fetch today's & recent activities (last 5 days so recent_activities stays fresh while today_activities only has target_date_str)
+        recent_raw_activities = []
         if not auth_failed:
             try:
+                from datetime import timedelta
+                start_5d = (datetime.strptime(target_date_str, "%Y-%m-%d").date() - timedelta(days=5)).isoformat()
                 try:
-                    raw_activities = client.get_activities_by_date(target_date_str, target_date_str)
+                    fetched_acts = client.get_activities_by_date(start_5d, target_date_str)
                 except Exception as inner_e:
                     if is_auth_error(inner_e):
                         raise inner_e
                     # Fallback to get_activities(0, 15) so get_activities_by_date never fails due to arguments/API quirks
-                    all_acts = client.get_activities(0, 15)
-                    raw_activities = [a for a in all_acts if str(a.get('startTimeLocal', '')).startswith(target_date_str)]
+                    fetched_acts = client.get_activities(0, 15)
+                recent_raw_activities = fetched_acts if isinstance(fetched_acts, list) else []
+                raw_activities = [a for a in recent_raw_activities if str(a.get('startTimeLocal', '')).startswith(target_date_str)]
             except Exception as e:
                 print(f"[GarminSync] Warning fetching activities: {e}")
                 if is_auth_error(e):
                     auth_failed = True
                     last_auth_error = str(e)
                 raw_activities = []
+                recent_raw_activities = []
         else:
             raw_activities = []
 
@@ -502,21 +507,90 @@ class GarminSyncService:
 
             today_activity_list.append(entry)
 
-        if today_activity_list or summary.get('activeKilocalories'):
-            garmin_state['today_activities'] = today_activity_list
-            garmin_state['active_calories'] = today_active_burn or int(round(summary.get('activeKilocalories', 0)))
+        garmin_state['today_activities'] = today_activity_list
+        raw_summary_active = summary.get('activeKilocalories')
+        if today_active_burn > 0:
+            garmin_state['active_calories'] = today_active_burn
+        elif raw_summary_active is not None:
+            garmin_state['active_calories'] = int(round(float(raw_summary_active)))
+        else:
+            garmin_state['active_calories'] = 0
 
-            today_ids = {str(a['id']) for a in today_activity_list}
-            all_activities = list(today_activity_list)
-            for old in existing_activities:
-                old_id = str(old.get('id', ''))
-                old_date = str(old.get('date', ''))
-                if old_id in today_ids:
-                    continue
-                if old.get('source') == 'garmin_via_mnd_bridge' or (old_date.startswith(target_date_str) and old_id.startswith(('990', '9920'))):
-                    continue
-                all_activities.append(old)
-            garmin_state['recent_activities'] = all_activities
+        if summary.get('distanceInMeters') is not None:
+            garmin_state['distance_miles'] = round(float(summary.get('distanceInMeters')) / 1609.344, 2)
+        elif summary.get('totalDistanceMeters') is not None:
+            garmin_state['distance_miles'] = round(float(summary.get('totalDistanceMeters')) / 1609.344, 2)
+        else:
+            garmin_state['distance_miles'] = round(sum(float(a.get('distance_miles') or 0) for a in today_activity_list), 2)
+
+        if summary.get('moderateIntensityMinutes') is not None or summary.get('vigorousIntensityMinutes') is not None:
+            mod_m = float(summary.get('moderateIntensityMinutes') or 0)
+            vig_m = float(summary.get('vigorousIntensityMinutes') or 0)
+            garmin_state['active_minutes'] = int(round(mod_m + vig_m))
+        elif not today_activity_list:
+            garmin_state['active_minutes'] = 0
+
+        # Ensure recent_activities includes real Garmin activities from the 5-day fetch + preserved older real Garmin activities
+        today_ids = {str(a['id']) for a in today_activity_list}
+        all_activities = list(today_activity_list)
+        seen_ids = set(today_ids)
+
+        for ra in recent_raw_activities:
+            r_id = str(ra.get('activityId'))
+            r_start = str(ra.get('startTimeLocal', ''))
+            if not r_id or r_id in seen_ids or r_start.startswith(target_date_str):
+                continue
+            existing = existing_map.get(r_id)
+            if existing:
+                all_activities.append(existing)
+            else:
+                r_type_key = ra.get('activityType', {}).get('typeKey', 'cardio')
+                r_name = ra.get('activityType', {}).get('typeKey', 'Cardio').capitalize()
+                r_sub = ra.get('activityName', r_name)
+                r_cals = round(float(ra.get('calories', 0)))
+                r_dur = round(float(ra.get('duration', 0)) / 60.0, 1)
+                r_avg_hr = round(float(ra.get('averageHR', 0)))
+                r_max_hr = round(float(ra.get('maxHR', 0)))
+                r_aero = float(ra.get('aerobicTrainingEffect', 0.0) or 0.0)
+                r_anaero = float(ra.get('anaerobicTrainingEffect', 0.0) or 0.0)
+                r_steps_raw = ra.get('steps')
+                r_steps = int(round(float(r_steps_raw))) if r_steps_raw is not None and float(r_steps_raw or 0) > 0 else None
+                r_dist_m = float(ra.get('distance', 0) or 0)
+                r_dist_miles = round(r_dist_m / 1609.344, 2) if r_dist_m > 0 else None
+                r_entry = {
+                    "id": int(r_id),
+                    "name": r_name,
+                    "sub_title": r_sub,
+                    "date": r_start,
+                    "duration_min": r_dur,
+                    "calories": r_cals,
+                    "avg_hr": r_avg_hr,
+                    "max_hr": r_max_hr,
+                    "aerobic_te": r_aero,
+                    "anaerobic_te": r_anaero,
+                    "benefits": self.benefits_engine.generate_benefits(
+                        r_name, r_sub, r_dur, r_cals, r_avg_hr, r_max_hr, r_aero, r_anaero
+                    ),
+                    "activity_type_key": r_type_key,
+                    "total_sets": ra.get('totalSets'),
+                    "total_reps": ra.get('totalReps'),
+                    "steps": r_steps,
+                    "distance_miles": r_dist_miles
+                }
+                all_activities.append(r_entry)
+            seen_ids.add(r_id)
+
+        for old in existing_activities:
+            old_id = str(old.get('id', ''))
+            old_date = str(old.get('date', ''))
+            if old_id in seen_ids:
+                continue
+            if old.get('source') == 'garmin_via_mnd_bridge' or old_id.startswith(('990', '9920')):
+                continue
+            all_activities.append(old)
+            seen_ids.add(old_id)
+        all_activities.sort(key=lambda x: str(x.get('date', '')), reverse=True)
+        garmin_state['recent_activities'] = all_activities
 
         nutrition = state.setdefault('nutrition', {})
         baseline_budget = 2092
