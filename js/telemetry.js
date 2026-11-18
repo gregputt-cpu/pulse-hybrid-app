@@ -1879,24 +1879,30 @@
         try {
           const _now = new Date();
           const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-          const bbOverrideRaw = localStorage.getItem('pulse_body_battery_override_obj');
-          if (bbOverrideRaw) {
-            const bbObj = JSON.parse(bbOverrideRaw);
-            if (bbObj && bbObj.date === todayIso && bbObj.value !== undefined) {
-              state.garmin.body_battery = Number(bbObj.value);
-              state.garmin.body_battery_manual_date = todayIso;
+          const isLiveGarminOauthToday = state.garmin.source === 'garmin_oauth' && state.garmin.oauth_date === todayIso;
+          if (!isLiveGarminOauthToday) {
+            const bbOverrideRaw = localStorage.getItem('pulse_body_battery_override_obj');
+            if (bbOverrideRaw) {
+              const bbObj = JSON.parse(bbOverrideRaw);
+              if (bbObj && bbObj.date === todayIso && bbObj.value !== undefined) {
+                state.garmin.body_battery = Number(bbObj.value);
+                state.garmin.body_battery_manual_date = todayIso;
+              }
             }
-          }
-          const trOverrideRaw = localStorage.getItem('pulse_readiness_override_obj');
-          if (trOverrideRaw) {
-            const trObj = JSON.parse(trOverrideRaw);
-            if (trObj && trObj.date === todayIso && trObj.value !== undefined) {
-              state.garmin.training_readiness = Number(trObj.value);
-              state.garmin.readiness_manual_date = todayIso;
+            const trOverrideRaw = localStorage.getItem('pulse_readiness_override_obj');
+            if (trOverrideRaw) {
+              const trObj = JSON.parse(trOverrideRaw);
+              if (trObj && trObj.date === todayIso && trObj.value !== undefined) {
+                state.garmin.training_readiness = Number(trObj.value);
+                state.garmin.readiness_manual_date = todayIso;
+              }
             }
+          } else {
+            localStorage.removeItem('pulse_body_battery_override_obj');
+            localStorage.removeItem('pulse_readiness_override_obj');
           }
           const sleepOverrideRaw = localStorage.getItem('pulse_sleep_score_override_obj');
-          if (sleepOverrideRaw) {
+          if (sleepOverrideRaw && !isLiveGarminOauthToday) {
             const sleepObj = JSON.parse(sleepOverrideRaw);
             if (sleepObj && sleepObj.date === todayIso && sleepObj.value !== undefined) {
               state.garmin.sleep_score = Number(sleepObj.value);
