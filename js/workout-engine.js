@@ -328,7 +328,7 @@
             id: "barbell_floor_press",
             name: "Barbell Flat / Floor Press",
             family: "horizontal_push",
-            targetWeight: 95,
+            targetWeight: 65,
             targetReps: 6,
             setsCount: 4,
             rest: "90s",
@@ -1115,7 +1115,7 @@
         name: "Barbell Flat Bench Press",
         family: "horizontal_push",
         requiredGear: ["barbell", "bench"],
-        getBaseWeight: () => 95,
+        getBaseWeight: () => 65,
         getBaseReps: () => 8,
         rest: "90s",
         cue: "Shoulder blades retracted, leg drive, touch lower sternum.",
@@ -2869,7 +2869,7 @@ function generateWorkoutFromGearAndGoal() {
       const kbW = (gearConfig && gearConfig.kb && gearConfig.kb.weight) || '24kg';
 
       const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
-      const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 95, reps: 8 };
+      const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 65, reps: 8 };
       const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
       const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
       const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
@@ -5973,18 +5973,30 @@ function viewCompletedWorkoutBreakdown() {
       saveActiveSessionToLocalStorage();
       syncSetToBackend(exId, targetW, targetR, loggedW, loggedR);
 
+      const isSevereUnderperf = (loggedR === 0) || (diffR <= -3) || (targetR > 0 && loggedR <= Math.floor(targetR * 0.65)) || (pctDiff <= -20);
+      const deloadW = (!isBodyweight && isSevereUnderperf) ? Math.max(20, Math.round((loggedW * 0.85) / 2.5) * 2.5) : loggedW;
+
       if (diffR < 0 || loggedR === 0) {
         row.classList.remove('logged');
         row.classList.add('missed');
-        tag.innerText = '📉 AUTOREGULATION: UNDER-PERFORMANCE DETECTED';
-        tag.style.color = 'var(--amber)';
-        const nextRepTarget = Math.max(1, loggedR + 1);
-        msg.innerText = loggedR === 0 
-          ? `Set failed (0 reps recorded). Autoregulating: Reducing target intensity for subsequent sets.`
-          : `Prescribed ${targetR} reps, managed ${loggedR}. Autoregulating: Next session holds weight, bridging to ${nextRepTarget} reps before microloading.`;
-        transfer.innerText = `➔ Strength Transfer: Correlated assistance volume adjusted down.`;
-        beep(440, 0.2);
-        speak("Set recorded. Autoregulating volume.");
+        if (isSevereUnderperf && !isBodyweight) {
+          tag.innerText = `📉 AUTOREGULATION: DELOAD TRIGGERED (-15% → ${deloadW}kg)`;
+          tag.style.color = 'var(--amber)';
+          msg.innerText = `Prescribed ${targetR} reps, managed ${loggedR} (${pctDiff}% e1RM). Deloading -15% to ${deloadW}kg × ${targetR} next session to restore bar speed & clean reps.`;
+          transfer.innerText = `➔ Strength Transfer: Submaximal reset restores bar speed and joint stability.`;
+          beep(440, 0.2);
+          speak(`Set recorded. Severe under-performance detected. Deloading next session to ${deloadW} kilograms.`);
+        } else {
+          tag.innerText = '📉 AUTOREGULATION: UNDER-PERFORMANCE DETECTED';
+          tag.style.color = 'var(--amber)';
+          const nextRepTarget = Math.max(1, loggedR + 1);
+          msg.innerText = loggedR === 0
+            ? `Set failed (0 reps recorded). Autoregulating: Reducing target intensity for subsequent sets.`
+            : `Prescribed ${targetR} reps, managed ${loggedR}. Autoregulating: Next session holds weight, bridging to ${nextRepTarget} reps before microloading.`;
+          transfer.innerText = `➔ Strength Transfer: Correlated assistance volume adjusted down.`;
+          beep(440, 0.2);
+          speak("Set recorded. Autoregulating volume.");
+        }
       } else if (diffR === 0) {
         row.classList.remove('missed');
         row.classList.add('logged');
@@ -6032,22 +6044,34 @@ function viewCompletedWorkoutBreakdown() {
 
         let nextW;
         let nextR;
+        let nextStatus = existing.status;
 
         if (isBodyweight) {
           nextW = 'Body';
           const baseR = typeof targetR === 'number' ? targetR : (typeof existing.reps === 'number' ? existing.reps : 10);
           nextR = loggedR + (diffR >= 0 ? 1 : 0);
           if (nextR < baseR && diffR >= 0) nextR = baseR + 1;
+          nextStatus = (diffR >= 0) ? 'progressed' : 'holding';
+        } else if (isSevereUnderperf) {
+          nextW = deloadW;
+          nextR = targetR;
+          nextStatus = 'deloaded';
+        } else if (diffR < 0) {
+          nextW = loggedW;
+          nextR = targetR;
+          nextStatus = 'holding';
         } else {
           const loadInc = (diffR === 0 ? 2.5 : (diffR > 0 ? 2.5 : 0));
           nextW = Math.round((loggedW + loadInc) * 10) / 10;
           nextR = targetR;
+          nextStatus = 'progressed';
         }
 
         const updatedRx = {
           ...existing,
           weight: nextW,
           reps: nextR,
+          status: nextStatus,
           last_logged_weight: loggedW,
           last_logged_reps: loggedR,
           last_e1rm: achievedE1RM,

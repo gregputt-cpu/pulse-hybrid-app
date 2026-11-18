@@ -435,14 +435,25 @@ def sync_set(payload: SetLogPayload):
         db.log_strength_set(payload.exercise_id, w, r, e1rm)
         sp["last_e1rm"] = e1rm
         sp["e1rm"] = e1rm
+        target_r = payload.target_reps or r
+        pct_diff = ((r - target_r) / target_r) if target_r > 0 else 0.0
+        is_severe_underperf = (r == 0) or (target_r - r >= 3) or (target_r > 0 and r <= int(target_r * 0.65)) or (pct_diff <= -0.20)
         if payload.target_reps and r >= payload.target_reps:
             sp["progression_ready"] = True
+            sp["status"] = "progressed"
             sp["weight"] = round(w + (2.5 if w > 0 else 0.0), 1) if w > 0 else w
             sp["reps"] = payload.target_reps if w > 0 else (r + 1)
+        elif is_severe_underperf and w > 0:
+            sp["progression_ready"] = False
+            sp["status"] = "deloaded"
+            deload_w = max(20.0, round((w * 0.85) / 2.5) * 2.5)
+            sp["weight"] = deload_w
+            sp["reps"] = target_r
         else:
             sp["progression_ready"] = False
+            sp["status"] = "holding"
             sp["weight"] = w
-            sp["reps"] = payload.target_reps or r
+            sp["reps"] = target_r
 
     save_live_state(state)
     return {"success": True, "result": sp}

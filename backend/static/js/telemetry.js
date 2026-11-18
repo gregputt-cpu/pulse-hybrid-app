@@ -32,7 +32,8 @@
 
       const isStrength = actName.includes('strength') || actKey.includes('strength') || actSub.includes('strength');
       const isCardio = actName.includes('cardio') || actKey.includes('cardio') || actName.includes('hiit') || actSub.includes('cardio');
-      if (!isStrength && !isCardio) return null;
+      const isExplicitCombatOrCardio = /body\s*combat|combat|cardio|warm-?up|skip|jump\s*rope|hiit|track/i.test(`${actName} ${actSub} ${act.user_notes || ''}`);
+      if (!isStrength && !isCardio && !isExplicitCombatOrCardio) return null;
 
       let actDateStr = '';
       let actTimeMs = 0;
@@ -98,11 +99,23 @@
 
         if (sameDay.length === 0) return null;
 
-        // Prefer a session logged within 2 hours of the Garmin watch activity
+        // Filter by modality FIRST so strength never matches cardio/combat workouts
+        let modalitySameDay = [];
+        if (isStrength && !isExplicitCombatOrCardio) {
+          modalitySameDay = sameDay.filter(s => s._kind === 'session' && s.preset !== 'combat');
+        } else if (isCardio || isExplicitCombatOrCardio) {
+          modalitySameDay = sameDay.filter(s => s._kind === 'conditioning' || s.preset === 'combat');
+        } else {
+          return null;
+        }
+
+        if (modalitySameDay.length === 0) return null;
+
+        // Pick the closest timestamp within 2 hours from modalitySameDay
         if (actTimeMs > 0) {
           let best = null;
           let bestDiff = Infinity;
-          sameDay.forEach(s => {
+          modalitySameDay.forEach(s => {
             const st = new Date(s.date).getTime();
             if (!isNaN(st)) {
               const diff = Math.abs(st - actTimeMs);
@@ -115,16 +128,7 @@
           if (best && bestDiff <= 2 * 3600 * 1000) return best;
         }
 
-        // Otherwise match by modality (strength vs cardio/conditioning)
-        if (isCardio) {
-          const cardioMatch = sameDay.find(s => s._kind === 'conditioning' || s.preset === 'combat');
-          if (cardioMatch) return cardioMatch;
-        }
-        if (isStrength) {
-          const strMatch = sameDay.find(s => s.preset === 'gym' || s._kind === 'session');
-          if (strMatch) return strMatch;
-        }
-        return sameDay[0] || null;
+        return modalitySameDay[0] || null;
       } catch(e) {
         return null;
       }
