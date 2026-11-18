@@ -309,6 +309,97 @@ function generateTeDualGaugesHtml(act) {
   `;
 }
 
+// DECODER FOR GARMIN FĒNIX 8 EXERCISE SETS (milligrams/grams -> kg, TUT & rest intervals)
+function decodeGarminStrengthSets(act) {
+  const rawSets = act && Array.isArray(act.exercise_sets) ? act.exercise_sets : [];
+  if (!rawSets.length) return null;
+
+  const activeSets = [];
+  const restDurations = [];
+
+  for (let i = 0; i < rawSets.length; i++) {
+    const s = rawSets[i];
+    if (!s || typeof s !== 'object') continue;
+    const sType = String(s.set_type || '').toUpperCase();
+    const dur = Math.round(Number(s.duration || 0));
+
+    if (sType === 'REST') {
+      if (dur > 0) restDurations.push(dur);
+      continue;
+    }
+    if (sType !== 'ACTIVE') continue;
+
+    const rawWt = Number(s.weight || 0);
+    const weightKg = rawWt >= 1000
+      ? Math.round((rawWt / 1000) * 10) / 10
+      : (rawWt > 0 ? Math.round(rawWt * 10) / 10 : 0);
+
+    // Look ahead for immediate REST interval following this active set
+    let restAfterSec = 0;
+    if (i + 1 < rawSets.length && rawSets[i + 1] && String(rawSets[i + 1].set_type || '').toUpperCase() === 'REST') {
+      restAfterSec = Math.round(Number(rawSets[i + 1].duration || 0));
+    }
+
+    activeSets.push({
+      setNum: activeSets.length + 1,
+      weightKg,
+      weightLabel: weightKg > 0 ? `${weightKg}kg` : 'Bodyweight',
+      shortWeightLabel: weightKg > 0 ? `${weightKg}kg` : 'BW',
+      durationSec: dur,
+      reps: s.reps != null && Number(s.reps) > 0 ? Number(s.reps) : null,
+      exerciseName: s.exercise_name ? String(s.exercise_name).replace(/_/g, ' ') : '',
+      restAfterSec
+    });
+  }
+
+  if (!activeSets.length) return null;
+
+  const weightedSets = activeSets.filter(s => s.weightKg > 0);
+  const peakWeightKg = weightedSets.length ? Math.max(...weightedSets.map(s => s.weightKg)) : 0;
+  const peakWeightCount = peakWeightKg > 0 ? activeSets.filter(s => s.weightKg === peakWeightKg).length : 0;
+  const avgRestSec = restDurations.length
+    ? Math.round(restDurations.reduce((sum, d) => sum + d, 0) / restDurations.length)
+    : 0;
+  const totalTutSec = activeSets.reduce((sum, s) => sum + s.durationSec, 0);
+
+  // Build concise working weight summary (e.g. 1×20kg warm-up • 6×70kg working sets • 1×BW (203s core hold))
+  const groupOrder = [];
+  const groupMap = {};
+  activeSets.forEach(s => {
+    const key = s.weightKg > 0 ? String(s.weightKg) : 'BW';
+    if (!groupMap[key]) {
+      groupMap[key] = { key, weightKg: s.weightKg, count: 0, totalDur: 0 };
+      groupOrder.push(groupMap[key]);
+    }
+    groupMap[key].count += 1;
+    groupMap[key].totalDur += s.durationSec;
+  });
+
+  const workingSummaryParts = groupOrder.map(g => {
+    if (g.weightKg === 0) {
+      return `${g.count}×BW (${g.totalDur >= 60 ? `${g.totalDur}s core hold` : `${g.totalDur}s`})`;
+    }
+    if (peakWeightKg > 0 && g.weightKg < peakWeightKg) {
+      return `${g.count}×${g.weightKg}kg warm-up`;
+    }
+    if (peakWeightKg > 0 && g.weightKg === peakWeightKg) {
+      return `${g.count}×${g.weightKg}kg working ${g.count === 1 ? 'set' : 'sets'}`;
+    }
+    return `${g.count}×${g.weightKg}kg`;
+  });
+
+  return {
+    activeSets,
+    activeCount: activeSets.length,
+    peakWeightKg,
+    peakWeightCount,
+    avgRestSec,
+    totalTutSec,
+    workingSummary: workingSummaryParts.join(' • ')
+  };
+}
+window.decodeGarminStrengthSets = decodeGarminStrengthSets;
+
 // RENDER COMPLETED WORKOUTS & PHYSIOLOGICAL BENEFITS LIST (EGM OVERHAUL WITH GARMIN CHARTS)
 function renderHistoryList() {
   const box = document.getElementById('trainViewHistory');
@@ -334,6 +425,7 @@ function renderHistoryList() {
 
     const matchedPulse = (typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act) : null;
     let pulseDetailsHtml = '';
+    let pulseLoggedSummaries = [];
     if (matchedPulse) {
       let sessionName = matchedPulse.title || '';
       if (!sessionName) {
@@ -368,6 +460,7 @@ function renderHistoryList() {
         });
 
         const exEntries = Object.values(setsByEx);
+        pulseLoggedSummaries = exEntries.map(e => `${e.name} (${e.sets.join(', ')})`);
         if (exEntries.length > 0) {
           exerciseRows = `
             <div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
@@ -401,6 +494,55 @@ function renderHistoryList() {
             ${garminStats ? `<span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${garminStats}</span>` : ''}
           </div>
           ${exerciseRows}
+        </div>
+      `;
+    }
+
+    const decodedSets = decodeGarminStrengthSets(act);
+    let garminStrengthSetsHtml = '';
+    if (decodedSets) {
+      const peakBadge = decodedSets.peakWeightKg > 0
+        ? `Peak Load ${decodedSets.peakWeightKg}kg (${decodedSets.peakWeightCount} working ${decodedSets.peakWeightCount === 1 ? 'set' : 'sets'})`
+        : 'Bodyweight / Core';
+      const avgRestBadge = decodedSets.avgRestSec > 0 ? ` • Avg Rest ${decodedSets.avgRestSec}s` : '';
+      const pulseCrossRefHtml = pulseLoggedSummaries.length > 0
+        ? `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
+             <strong style="color:#10b981;">🔗 Pulse Rep Cross-Reference:</strong> ${pulseLoggedSummaries.join(' • ')}
+           </div>`
+        : '';
+
+      garminStrengthSetsHtml = `
+        <div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
+          <!-- GOLDFISH STRIP -->
+          <div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
+            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${decodedSets.activeCount} Active Sets • ${peakBadge}${avgRestBadge}</span>
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
+            ${decodedSets.workingSummary}
+          </div>
+          <!-- ELEPHANT ACCORDION -->
+          <details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
+            <summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>🔬 View All ${decodedSets.activeCount} Garmin Watch Sets &amp; Rest Intervals (${decodedSets.totalTutSec}s TUT)</span>
+              <span style="color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
+                ${decodedSets.activeSets.map(s => `
+                  <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : s.weightLabel}</strong>
+                      ${s.reps ? `<span style="color:var(--primary); font-weight:700;">${s.reps} reps</span>` : ''}
+                    </div>
+                    <div style="color:var(--text-muted); margin-top:2px;">
+                      ${s.durationSec}s TUT${s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              ${pulseCrossRefHtml}
+            </div>
+          </details>
         </div>
       `;
     }
@@ -448,6 +590,7 @@ function renderHistoryList() {
       </div>
 
       ${pulseDetailsHtml}
+      ${garminStrengthSetsHtml}
 
       <!-- PRIMARY GLANCEABLE TAKEAWAY -->
       <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">

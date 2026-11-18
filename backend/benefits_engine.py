@@ -20,7 +20,7 @@ class PhysiologicalBenefitsEngine:
         is_squat = any(k in text for k in ['squat', 'leg press', 'lunge', 'quad'])
         is_deadlift = any(k in text for k in ['deadlift', 'rdl', 'hinge', 'hamstring'])
         is_press = any(k in text for k in ['bench', 'press', 'pushup', 'dip', 'overhead'])
-        is_combat = any(k in text for k in ['combat', 'boxing', 'martial', 'mma'])
+        is_combat = any(k in text for k in ['body combat', 'bodycombat', 'les mills', 'muay thai', 'kickbox', 'shadow box', 'combat', 'boxing', 'martial', 'mma', 'karate', 'taekwondo'])
         is_kettlebell = any(k in text for k in ['kettlebell', 'kb', 'swing', 'snatch'])
 
         # 1. Muscles Worked
@@ -28,7 +28,7 @@ class PhysiologicalBenefitsEngine:
         if is_jump or is_squat:
             muscles.extend(["Quadriceps (Vastus Medialis/Lateralis)", "Gluteus Maximus", "Calves & Achilles Tendon Complex (Gastrocnemius/Soleus)", "Hip Flexors (Iliopsoas)", "Tibialis Anterior"])
         if is_combat:
-            muscles.extend(["Deltoids & Rotator Cuff", "Serratus Anterior", "Obliques & Transverse Abdominis", "Core Stabilizers"])
+            muscles.extend(["Anterior Deltoids & Serratus Anterior (Boxer Guard)", "Internal/External Obliques (Rotational Core)", "Hip Flexors & Calves", "Core Stabilizers"])
         if is_walk or is_ruck:
             muscles.extend(["Soleus & Gastrocnemius", "Gluteus Medius", "Postural Spinal Erectors", "Foot Arch Intrinsic Muscles"])
         if is_deadlift or is_kettlebell:
@@ -39,7 +39,11 @@ class PhysiologicalBenefitsEngine:
             muscles = ["Cardiovascular Myocardium", "Slow-Twitch Oxidative Fibers", "Core Stabilizers", "Lower Extremity Postural Chain"]
 
         # 2. Biomechanics
-        if is_jump:
+        if is_combat:
+            biomechanics = ("High-velocity martial arts striking with rapid kinetic-chain force transfer from rear-foot pivot "
+                            "through pelvic rotation to anterior deltoid/serratus punch extension and hip-flexor kick chambers. "
+                            "Drives VO2 stroke volume and lactate clearance with zero axial spinal compression.")
+        elif is_jump:
             min_force = round(self.weight_kg * 3.5, 1)
             max_force = round(self.weight_kg * 4.5, 1)
             biomechanics = (f"High-frequency plyometric impacts generating peak eccentric ground reaction forces of "

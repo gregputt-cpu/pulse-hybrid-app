@@ -2622,7 +2622,12 @@ function generateWorkoutFromGearAndGoal() {
             if (p.hasSquat) { counts.Squat += setsToAdd; matchedPattern = true; }
             if (p.hasPush) { counts.Push += setsToAdd; matchedPattern = true; }
             if (p.hasPull) { counts.Pull += setsToAdd; matchedPattern = true; }
-            if (p.hasJumpRope || !nm.includes('strength')) {
+            if (p.hasBodyCombat) {
+              counts.Conditioning += Math.max(3, setsToAdd);
+              if (p.isCombatUpper) counts.Push += 1;
+              if (p.isCombatLower) counts.Squat += 1;
+              matchedPattern = true;
+            } else if (p.hasJumpRope || !nm.includes('strength')) {
               counts.Conditioning += 2;
             } else if (!matchedPattern && nm.includes('strength')) {
               counts.Push += 2; counts.Pull += 2; counts.Hinge += 2;
@@ -4053,6 +4058,170 @@ function generateWorkoutFromGearAndGoal() {
         </div>
       `;
 
+      function renderIntradayAndEveningCloseoutHtml(v, comp) {
+        let ukHour = 12;
+        try {
+          ukHour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(new Date()));
+        } catch(e) {}
+
+        const morningBb = (v.sleepScore || 93) >= 90
+          ? 100
+          : Math.min(100, Math.round((v.sleepScore || 93) * 1.05));
+        const currBb = Number(v.bodyBattery || 64);
+        const bbDrain = Math.max(1, morningBb - currBb);
+        const activeBurn = Number(v.activeCaloriesToday || (comp ? comp.calories : 0) || 478);
+        const kcalPerBbPt = Math.round((activeBurn / bbDrain) * 10) / 10;
+        const cleanLoad = kcalPerBbPt >= 8 || bbDrain <= 45;
+
+        const mndTotals = (typeof myNetDiaryData !== 'undefined' && myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : {};
+        const remCals = Math.max(0, Math.round((v.baseCalTarget || 2570) - (v.consumedCals || Number(mndTotals.calories || 0) || 0)));
+        const loggedP = Math.round(Number(mndTotals.protein || 0));
+        const remP = Math.max(0, 200 - loggedP);
+        const loggedF = Math.round(Number(mndTotals.fat || 0));
+        const remF = Math.max(0, 75 - loggedF);
+        const estTomorrowReadiness = Math.min(95, Math.round(currBb * 0.45 + 55));
+        const isEvening = ukHour >= 17;
+
+        const goldfishLine = isEvening
+          ? `🌙 EVENING RECOVERY CLOSE-OUT • ${remP}g Protein &amp; ${remF}g Healthy Fat left • Est. Tomorrow Readiness ~${estTomorrowReadiness}`
+          : `🔋 INTRADAY BATTERY PACE: ${morningBb}% ➔ ${currBb}% (-${bbDrain} pts for ${activeBurn} active kcal • ${kcalPerBbPt} kcal/pt)`;
+
+        const statusBadge = isEvening
+          ? `<span style="font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:5px; background:rgba(139,92,246,0.18); border:1px solid rgba(139,92,246,0.4); color:#c4b5fd;">${remCals} kcal runway</span>`
+          : `<span style="font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:5px; background:${cleanLoad ? 'rgba(16,185,129,0.14)' : 'rgba(245,158,11,0.16)'}; border:1px solid ${cleanLoad ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.38)'}; color:${cleanLoad ? '#10b981' : '#fbbf24'};">${cleanLoad ? '✅ Clean Autonomic Load' : '⚠️ Elevated Non-Training Stress'}</span>`;
+
+        return `
+          <div style="margin-top:10px; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.22); border-radius:10px; padding:9px 11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <div style="font-size:10.5px; font-weight:800; color:${isEvening ? '#c4b5fd' : '#38bdf8'}; line-height:1.35;">
+                ${goldfishLine}
+              </div>
+              ${statusBadge}
+            </div>
+            <details style="margin-top:7px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.06); border-radius:7px; overflow:hidden;">
+              <summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>🔬 View Intraday Autonomic Drain &amp; Pre-Sleep Close-Out Protocol</span>
+                <span style="color:var(--text-muted);">▾</span>
+              </summary>
+              <div style="padding:8px 10px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#cbd5e1; line-height:1.45; display:flex; flex-direction:column; gap:5px;">
+                <div>• <strong>Autonomic Drain Efficiency:</strong> <strong>-${bbDrain}%</strong> Body Battery (${morningBb}% ➔ ${currBb}%) vs <strong>${activeBurn} active kcal</strong> + <strong>${Number(v.stepsToday || 0).toLocaleString()} steps</strong> = <strong>${kcalPerBbPt} kcal/pt</strong> (${cleanLoad ? 'High Metabolic Efficiency / Low Non-Training Stress' : 'Elevated sympathetic stress outside training'}).</div>
+                <div>• <strong>Pre-Sleep Macro Close-Out:</strong> <strong>${remP}g protein</strong> (${loggedP}g / 200g) &amp; <strong>${remF}g healthy fat</strong> (${loggedF}g / 75g) remaining within <strong>${remCals} kcal</strong> remaining runway.</div>
+                <div>• <strong>Evening Checklist:</strong> Cut off heavy hydration &amp; screens 90m pre-bed, take magnesium/electrolytes with final protein-rich feed, and target 7.5–8h sleep to rebound Body Battery toward ~${Math.min(100, currBb + 34)}% (est. tomorrow Readiness ~<strong>${estTomorrowReadiness}</strong>).</div>
+              </div>
+            </details>
+          </div>
+        `;
+      }
+
+      function renderWeeklyExecutiveBriefHtml(v, sw, bfPct, tw, ftl, lm, burn7d, avgBurn7d, strSessions7d, wkFatLossG) {
+        const mndHist = (typeof myNetDiaryData !== 'undefined' && myNetDiaryData && myNetDiaryData.history) ? myNetDiaryData.history : {};
+        const avg7d = (mndHist && mndHist.averages_7d)
+          ? mndHist.averages_7d
+          : { calories: 2544, protein: 259, fat: 64.4, fiber: 39.9 };
+
+        let strengthActs = 0, strengthCals = 0;
+        let combatCondActs = 0, combatCondCals = 0;
+        let walkActs = 0, walkCals = 0;
+        let totalDur7d = 0;
+
+        acts7d.forEach(a => {
+          const nm = `${a.name || ''} ${a.subTitle || a.sub_title || ''} ${a.activity_type_key || ''}`.toLowerCase();
+          const c = Number(a.calories || 0);
+          totalDur7d += Number(a.durationMin || a.duration_min || 0);
+          const p = (typeof parseWorkoutNoteDetails === 'function') ? parseWorkoutNoteDetails(nm, a) : {};
+          if (/strength|barbell|lift|gym/i.test(nm) && !p.hasBodyCombat && !p.hasJumpRope) {
+            strengthActs += 1;
+            strengthCals += c;
+          } else if (/walk|stroll|hike|ruck/i.test(nm)) {
+            walkActs += 1;
+            walkCals += c;
+          } else {
+            combatCondActs += 1;
+            combatCondCals += c;
+          }
+        });
+
+        const fatToLoseNum = Number(ftl || 2.16);
+        const wkLossKg = Math.max(0.25, wkFatLossG / 1000);
+        const estWeeks = Math.max(2, Math.round((fatToLoseNum * 1000) / Math.max(250, wkFatLossG)));
+        const cumDeficitKcal = Math.round(fatToLoseNum * 7700);
+        const wholeFoodPct = Math.round(Number(mndHist.whole_food_pct || 86));
+
+        return `
+          <div class="card" style="margin-top:12px; padding:12px 14px; background:#111520; border:1px solid rgba(0,229,255,0.22); border-radius:12px;">
+            <!-- GOLDFISH HEADER STRIP -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:9px;">
+              <div style="font-size:11px; font-weight:800; color:#fff; letter-spacing:0.05em;">
+                📈 7-DAY EXECUTIVE HYBRID BRIEF
+              </div>
+              <span style="font-size:10px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.35); padding:2px 8px; border-radius:5px;">
+                On Pace: ~${wkLossKg.toFixed(2)} kg/wk ➔ 15.0% BF in ~${estWeeks} wks
+              </span>
+            </div>
+
+            <!-- GOLDFISH 4-TILE SCORECARD -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:7px;">
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Scale (Measured)</div>
+                <div style="font-size:12px; font-weight:800; color:#fff; margin-top:2px;">${sw}kg • ${bfPct}% BF</div>
+                <div style="font-size:10px; color:var(--cyan); margin-top:1px;">${fatToLoseNum.toFixed(2)}kg to 15.0%</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">7d Training</div>
+                <div style="font-size:12px; font-weight:800; color:#fff; margin-top:2px;">${strSessions7d}/3 Strength • ${acts7d.length} Total</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">${Math.round(totalDur7d)}m active time</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">7d Active Burn</div>
+                <div style="font-size:12px; font-weight:800; color:var(--primary); margin-top:2px;">${burn7d.toLocaleString()} kcal</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">${avgBurn7d}/d avg</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">7d Nutrition</div>
+                <div style="font-size:11.5px; font-weight:800; color:#c4b5fd; margin-top:2px;">${Math.round(avg7d.protein)}g P • ${Math.round(avg7d.fat)}g F • ${Math.round(avg7d.fiber)}g Fib</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">${Math.round(avg7d.calories).toLocaleString()} kcal/d avg</div>
+              </div>
+            </div>
+
+            <!-- ELEPHANT ACCORDION -->
+            <details style="margin-top:9px; background:#0b0e16; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
+              <summary style="font-size:11px; font-weight:700; color:var(--cyan); padding:8px 11px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>🐘 Expand Full 7-Day Recomp, Modality &amp; Micronutrient Ledger</span>
+                <span style="color:var(--text-muted);">▾</span>
+              </summary>
+              <div style="padding:10px 12px; border-top:1px solid rgba(255,255,255,0.05); font-size:11px; color:#cbd5e1; line-height:1.5; display:flex; flex-direction:column; gap:7px;">
+                <div>
+                  <strong style="color:#fff;">1. Body Composition &amp; Scale Trajectory (Measured Only):</strong>
+                  Scale weight <strong>${sw} kg</strong> • Scale-measured body fat <strong>${bfPct}%</strong> • Lean mass <strong>${lm} kg</strong> • Target weight at 15.0% BF: <strong>${tw} kg</strong> • Remaining fat to lose: <strong>${fatToLoseNum.toFixed(2)} kg</strong> (~<strong>${cumDeficitKcal.toLocaleString()} kcal</strong> cumulative deficit).
+                </div>
+                <div>
+                  <strong style="color:#fff;">2. 7-Day Modality Mix (${acts7d.length} sessions • ${Math.round(totalDur7d)}m):</strong>
+                  Barbell/Strength: <strong>${strengthActs}</strong> sessions (${strengthCals.toLocaleString()} kcal) • Body Combat / Jump Rope / KB Conditioning: <strong>${combatCondActs}</strong> sessions (${combatCondCals.toLocaleString()} kcal) • Walking / Steps: <strong>${walkActs}</strong> sessions (${walkCals.toLocaleString()} kcal).
+                </div>
+                <div>
+                  <strong style="color:#fff;">3. 7-Day Nutrition vs. Targets:</strong>
+                  Protein <strong>${Math.round(avg7d.protein)}g</strong> vs 200g target • Fat <strong>${Number(avg7d.fat).toFixed(1)}g</strong> vs 80g floor (add flaxseed/nuts or oily fish on lower-fat days to protect endocrine recovery) • Fiber <strong>${Number(avg7d.fiber).toFixed(1)}g</strong> vs 35g target • Whole-Food Ratio <strong>~${wholeFoodPct}%</strong>.
+                </div>
+              </div>
+            </details>
+          </div>
+        `;
+      }
+
+      const intradayEveningHtml = renderIntradayAndEveningCloseoutHtml(verdict, completed);
+      const weeklyExecutiveBriefHtml = renderWeeklyExecutiveBriefHtml(
+        verdict,
+        scaleWeight,
+        bodyFatPct,
+        targetWeight,
+        fatToLose,
+        leanMass,
+        totalActiveBurn7d,
+        avgActiveBurn7d,
+        strengthSessions7d,
+        weeklyFatLossEstG
+      );
+
       const sessCount = completed ? (completed.sessionCount || 1) : 0;
       const bonusOptionLabel = sessCount >= 2
         ? (verdict.stepsRemaining >= 2000 ? `Top up ${verdict.stepsRemaining.toLocaleString()} steps (15–20m walk)` : 'Optional 15m core / mobility flush')
@@ -4110,6 +4279,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             ${stepBarHtml}
+            ${intradayEveningHtml}
             ${plateauDualHtml}
 
             <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
@@ -4130,6 +4300,7 @@ function generateWorkoutFromGearAndGoal() {
 
           ${typeof renderTomorrowPreviewCard === 'function' ? renderTomorrowPreviewCard(completed) : ''}
           ${elephantAccordionHtml}
+          ${weeklyExecutiveBriefHtml}
         `;
       } else if (completed) {
         const proteinTarget = (window.BAKED_LIVE_STATE?.nutrition?.protein_target_g) || 200;
@@ -4176,6 +4347,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             ${stepBarHtml}
+            ${intradayEveningHtml}
             ${plateauDualHtml}
 
             <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
@@ -4196,6 +4368,7 @@ function generateWorkoutFromGearAndGoal() {
 
           ${typeof renderTomorrowPreviewCard === 'function' ? renderTomorrowPreviewCard(completed) : ''}
           ${elephantAccordionHtml}
+          ${weeklyExecutiveBriefHtml}
         `;
       } else {
         // NOT completed
@@ -4240,11 +4413,13 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             ${stepBarHtml}
+            ${intradayEveningHtml}
             ${plateauDualHtml}
             ${ctaButtonsHtml}
           </div>
 
           ${elephantAccordionHtml}
+          ${weeklyExecutiveBriefHtml}
         `;
       }
     }

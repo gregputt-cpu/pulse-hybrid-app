@@ -235,6 +235,7 @@
     // WORKOUT ANNOTATION INTELLIGENCE PARSER (Extracts sets, reps, load, tonnage & movement patterns)
     function parseWorkoutNoteDetails(text, act) {
       const t = String(text || '').toLowerCase();
+      const lower = t;
       const srMatch = t.match(/(\d+)\s*(?:sets?\s*(?:of|x|×)\s*|x|×)\s*(\d+)/i);
       const sets = srMatch ? parseInt(srMatch[1], 10) : 0;
       const reps = srMatch ? parseInt(srMatch[2], 10) : 0;
@@ -251,6 +252,11 @@
       const hasPull = /row|pullup|pull-up|chin|lat|curl/.test(t);
       const hasJumpRope = /jump\s*rope|skip|double\s*under/.test(t) || Boolean(act && act.activity_type_key === 'jump_rope');
 
+      const hasBodyCombat = /body\s*combat|les\s*mills|muay\s*thai|kickbox|shadow\s*box|combat\s*track|karate|taekwondo|boxing/i.test(lower);
+      const isCombatWarmup = hasBodyCombat && /warm-?up|track\s*1\b|track\s*2\b/i.test(lower);
+      const isCombatLower = hasBodyCombat && /lower\s*body|kick|muay\s*thai|track\s*4|track\s*6|track\s*7/i.test(lower);
+      const isCombatUpper = hasBodyCombat && /upper\s*body|punch|jab|cross|hook|track\s*3|track\s*5|track\s*8/i.test(lower);
+
       return {
         sets,
         reps,
@@ -262,7 +268,11 @@
         hasSquat,
         hasPush,
         hasPull,
-        hasJumpRope
+        hasJumpRope,
+        hasBodyCombat,
+        isCombatWarmup,
+        isCombatLower,
+        isCombatUpper
       };
     }
     window.parseWorkoutNoteDetails = parseWorkoutNoteDetails;
@@ -812,6 +822,7 @@
       const text = rawText.toLowerCase();
       const parsed = parseWorkoutNoteDetails(rawText, act);
       const isHybridPlyoStrength = parsed.hasJumpRope && (parsed.hasKbSwing || parsed.hasHinge || parsed.hasSquat || parsed.hasPush || parsed.hasPull);
+      const isBodyCombat = parsed.hasBodyCombat;
       const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('weight') || text.includes('gym') || text.includes('option_a') || text.includes('option a') || text.includes('hypertrophy') || text.includes('rdl') || text.includes('press') || parsed.hasHinge || parsed.hasSquat || parsed.hasPush || parsed.hasPull;
       const isJump = text.includes('jump') || text.includes('plyo') || text.includes('tuck') || text.includes('hop') || parsed.hasJumpRope;
       const isWalk = text.includes('walk') || text.includes('stroll');
@@ -828,7 +839,10 @@
       let primaryTakeaway = '';
 
       if (isToday) {
-        if (isHybridPlyoStrength) {
+        if (isBodyCombat) {
+          recoveryPill = '<span style="background:rgba(0,229,255,0.14); border:1px solid rgba(245,158,11,0.45); color:#38bdf8; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">🥊 Body Combat Conditioning • 12–18h Rotational &amp; Guard Recovery</span>';
+          primaryTakeaway = `${act.calories} kcal active burn • High-velocity martial arts striking, rotational core torque &amp; dynamic guard/footwork conditioning (${act.subTitle || act.sub_title}).`;
+        } else if (isHybridPlyoStrength) {
           recoveryPill = '<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px;">⏳ 24–48h Posterior & Calf Recovery • Upper Body Fresh</span>';
           primaryTakeaway = `${act.calories} kcal active burn • ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' Jump Rope skips + ' : ''}${parsed.sets && parsed.reps ? `${parsed.sets}×${parsed.reps}` : 'Ballistic'} ${parsed.weightKg ? `@ ${parsed.weightKg}kg ` : ''}KB Swings${parsed.totalReps ? ` (${parsed.totalReps} ballistic hinges${parsed.tonnageKg ? ` • ${parsed.tonnageKg.toLocaleString()} kg volume` : ''})` : ''}. Combines elastic Achilles/calf plyometrics with explosive posterior-chain hip power.`;
         } else if (isStrength) {
@@ -845,8 +859,12 @@
           primaryTakeaway = `${act.calories} kcal active burn • ${customNoteSummary ? `${customNoteSummary} • ` : ''}Stimulated myocardial stroke volume and expanded today's calorie runway.`;
         }
       } else {
-        recoveryPill = '<span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#a1a1aa; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px;">✓ Fully Recovered</span>';
-        primaryTakeaway = isHybridPlyoStrength
+        recoveryPill = isBodyCombat
+          ? '<span style="background:rgba(0,229,255,0.10); border:1px solid rgba(245,158,11,0.35); color:#38bdf8; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px;">🥊 Body Combat Conditioning • ✓ Recovered</span>'
+          : '<span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#a1a1aa; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px;">✓ Fully Recovered</span>';
+        primaryTakeaway = isBodyCombat
+          ? `${act.calories} kcal active burn • High-velocity martial arts striking, rotational core torque &amp; dynamic guard/footwork conditioning (${act.subTitle || act.sub_title}).`
+          : isHybridPlyoStrength
           ? `${act.calories} kcal active burn • ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' skips + ' : ''}${customNoteSummary || 'KB Swings'} fully remodeled; primed for high force output.`
           : isStrength
           ? `${act.calories || 320} kcal active burn • ${customNoteSummary ? `${customNoteSummary} • ` : ''}Myofibrillar protein synthesis and neuromuscular recovery complete; primed for high force output.`
@@ -856,7 +874,11 @@
       }
 
       let achievements = [];
-      if (isHybridPlyoStrength) {
+      if (isBodyCombat) {
+        achievements.push(`<strong>High-Velocity Striking &amp; Rotational Core Power:</strong> Rapid kinetic-chain force transfer from rear-foot pivot through pelvic rotation to anterior deltoid/serratus punch extension and hip-flexor kick chambers.`);
+        achievements.push(`<strong>Cardiovascular &amp; Glycolytic Conditioning:</strong> Avg HR ${act.avgHr || 118} bpm (Peak ${act.maxHr || 144} bpm). Repeated striking combinations drive VO2 stroke volume and lactate clearance without axial spinal compression.`);
+        achievements.push(`<strong>Target Muscular Activation:</strong> Anterior/Lateral Deltoids (Boxer Guard), Serratus Anterior, External/Internal Obliques, Iliopsoas (Hip Flexors), Gastrocnemius/Soleus (Dynamic Footwork).`);
+      } else if (isHybridPlyoStrength) {
         achievements.push(`<strong>Ballistic Posterior-Chain & Hip Hinge Output:</strong> Completed ${parsed.sets || 5} sets × ${parsed.reps || 12} reps (${parsed.totalReps || 60} total reps${parsed.weightKg ? ` @ ${parsed.weightKg}kg = ${(parsed.tonnageKg || 1440).toLocaleString()} kg ballistic load` : ''}), recruiting gluteus maximus, hamstrings, latissimus dorsi, and spinal erectors alongside ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' jump rope skips' : 'cardio intervals'}.`);
         achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${act.avgHr || 137} bpm with interval peaks to ${act.maxHr || 161} bpm (${Math.round(((act.maxHr || 161)/190)*100)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.8).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 1.3).toFixed(1)} drove both mitochondrial density and fast-twitch glycolytic power.`);
         achievements.push(`<strong>Metabolic & Lean Mass Preservation:</strong> ${act.calories || 361} kcal active expenditure expanded today's calorie runway while high-velocity KB hip extension signaled retention of your ${(window.athleteProfile ? window.athleteProfile.leanMassKg : 80.99).toFixed(2)} kg lean mass.`);
@@ -874,11 +896,16 @@
         achievements.push(`<strong>Cardiovascular & Aerobic Capacity:</strong> Avg HR ${act.avgHr || 119} bpm (Peak ${act.maxHr || 151} bpm, ${(act.maxHr ? Math.round((act.maxHr/190)*100) : 79)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.2).toFixed(1)} expanded myocardial stroke volume and mitochondrial capillary density in slow/fast oxidative fibers.`);
         achievements.push(`<strong>Metabolic Fat Loss Runway:</strong> ${act.calories} kcal active expenditure dynamically expanded your daily calorie runway while protecting your 350 kcal deficit towards 15.0% body fat. Stimulates excess post-exercise oxygen consumption (EPOC) for 4–8 hours.`);
       }
-      const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isHybridPlyoStrength ? "Gluteus Maximus, Biceps Femoris & Semitendinosus (Hamstrings), Calves & Achilles Tendon Complex, Latissimus Dorsi, Core Brace" : (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain"));
-      achievements.push(`<strong>Target Muscular Activation:</strong> Recruited ${muscles}.`);
+      if (!isBodyCombat) {
+        const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isHybridPlyoStrength ? "Gluteus Maximus, Biceps Femoris & Semitendinosus (Hamstrings), Calves & Achilles Tendon Complex, Latissimus Dorsi, Core Brace" : (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain"));
+        achievements.push(`<strong>Target Muscular Activation:</strong> Recruited ${muscles}.`);
+      }
 
       let stressors = [];
-      if (isHybridPlyoStrength) {
+      if (isBodyCombat) {
+        stressors.push(`<strong>Shoulder Guard &amp; Rotational Oblique Endurance:</strong> Sustained isometric guard elevation and high-speed punch retraction create localized anterior deltoid and scapular stabilizer fatigue.`);
+        stressors.push(`<strong>Dynamic Footwork &amp; Hip-Flexor Load:</strong> High-cadence directional agility and kick deceleration load the calves and iliopsoas with low-to-moderate joint shear.`);
+      } else if (isHybridPlyoStrength) {
         const athleteWt = (window.athleteProfile ? window.athleteProfile.weightKg : 97.9);
         const grfLow = Math.round(athleteWt * 3.5);
         const grfHigh = Math.round(athleteWt * 4.5);
@@ -908,7 +935,10 @@
         ? `${protStatus.logged}g already logged ✓ (Target surpassed)`
         : `${protStatus.logged}g logged / ${protStatus.target}g target • ${protStatus.remaining}g remaining`;
 
-      if (isHybridPlyoStrength) {
+      if (isBodyCombat) {
+        recoveryProtocol.push(`<strong>Optimal Strength Pairing:</strong> Because Body Combat uses high-velocity unloaded striking, it pairs ideally as a warm-up or metabolic bookend around heavy low-rep Barbell Strength (` + (isToday ? `like your 70kg Bench &amp; Pendlay Row block today` : `Bench/Squat/Row`) + `).`);
+        recoveryProtocol.push(`<strong>Nutritional &amp; Guard Recovery:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and replenish electrolytes to restore deltoid/oblique endurance.`);
+      } else if (isHybridPlyoStrength) {
         recoveryProtocol.push(`<strong>Kinetic Chain Recovery Status:</strong> Calves/Achilles and posterior hip hinge (hamstrings/glutes) were loaded today (allow 24–36h before high-volume ballistic hinging), while <strong>Upper Push (Bench/Overhead)</strong> and <strong>Upper Pull (Rows)</strong> remain <strong>100% fresh for tomorrow</strong>.`);
         recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and replenish electrolytes to support tendon collagen synthesis and hamstring remodeling.`);
         recoveryProtocol.push(`<strong>Optimal Tomorrow Pairing (Assuming Good Sleep):</strong> Heavy Upper Push/Pull Priority (Barbell Bench Press 95kg × 8, Pendlay Rows 85kg × 8, Z-Press) + Back Squats if calves feel fresh (keep RDL volume light since 60 ballistic KB swings already hit the hinge pattern).`);
