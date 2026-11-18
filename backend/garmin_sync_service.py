@@ -54,11 +54,29 @@ class GarminSyncService:
             client.client.dump(TOKEN_DIR)
         except Exception as e:
             print(f"[GarminSync] Warning dumping tokens to {TOKEN_DIR}: {e}")
-        if db is not None:
+        dumped = None
+        try:
+            dumped = client.client.dumps()
+        except Exception as e:
+            print(f"[GarminSync] Warning serializing tokens: {e}")
+        if dumped:
             try:
-                dumped = client.client.dumps()
-                if dumped:
-                    db.set_kv('garmin_tokens_json', dumped)
+                os.makedirs(TOKEN_DIR, exist_ok=True)
+                with open(os.path.join(TOKEN_DIR, 'garmin_tokens_dump.json'), 'w', encoding='utf-8') as f:
+                    f.write(dumped)
+            except Exception as e:
+                print(f"[GarminSync] Warning writing garmin_tokens_dump.json: {e}")
+            if os.path.exists('/shared/user/.gemini'):
+                try:
+                    backup_dir = '/shared/user/.gemini/pulse_backend'
+                    os.makedirs(backup_dir, exist_ok=True)
+                    with open(os.path.join(backup_dir, 'garmin_tokens.json'), 'w', encoding='utf-8') as f:
+                        f.write(dumped)
+                except Exception as e:
+                    print(f"[GarminSync] Warning writing shared backup tokens: {e}")
+        if db is not None and dumped:
+            try:
+                db.set_kv('garmin_tokens_json', dumped)
             except Exception as e:
                 print(f"[GarminSync] Warning persisting tokens to DB: {e}")
 
@@ -106,7 +124,23 @@ class GarminSyncService:
                 except Exception as e:
                     print(f"[GarminSync] DB token load notice: {e}")
 
-            # 2. Try persistent TOKEN_DIR
+            # 2. Try dumped JSON token files (dumps()/loads() is more reliable across reloads than garth dir)
+            if not loaded:
+                for dump_path in (
+                    os.path.join(TOKEN_DIR, 'garmin_tokens_dump.json'),
+                    '/shared/user/.gemini/pulse_backend/garmin_tokens.json',
+                ):
+                    if os.path.exists(dump_path):
+                        try:
+                            with open(dump_path, 'r', encoding='utf-8') as f:
+                                raw_dump = f.read().strip()
+                            if raw_dump and self._try_load_token_str(self.client, raw_dump):
+                                loaded = True
+                                break
+                        except Exception as e:
+                            print(f"[GarminSync] Token dump load notice ({dump_path}): {e}")
+
+            # 3. Try persistent TOKEN_DIR
             if not loaded:
                 try:
                     self.client.login(tokenstore=TOKEN_DIR)
@@ -114,7 +148,7 @@ class GarminSyncService:
                 except Exception as e:
                     print(f"[GarminSync] Login from tokenstore ({TOKEN_DIR}) error: {e}")
 
-            # 3. Fall back to GARMIN_TOKENS_JSON env var
+            # 4. Fall back to GARMIN_TOKENS_JSON env var
             if not loaded and 'GARMIN_TOKENS_JSON' in os.environ:
                 if self._try_load_token_str(self.client, os.environ['GARMIN_TOKENS_JSON']):
                     loaded = True
@@ -293,24 +327,83 @@ class GarminSyncService:
                     auth_failed = True
                     last_auth_error = str(e)
 
-        # 5. Fetch live Body Battery timeline (more up-to-date than daily summary cache)
+        # 5. Fetch live Body Battery timeline across all 3 Garmin endpoints (picking latest timestamp)
         if not auth_failed:
+            best_bb_ts = -1
+            best_bb_val = None
+
+            def _consider_bb(ts_val, level_val):
+                nonlocal best_bb_ts, best_bb_val
+                if level_val is None:
+                    return
+                try:
+                    lvl = int(round(float(level_val)))
+                    if not (0 <= lvl <= 100):
+                        return
+                    t = int(ts_val) if ts_val is not None else 0
+                    if t >= best_bb_ts:
+                        best_bb_ts = t
+                        best_bb_val = lvl
+                except (ValueError, TypeError):
+                    pass
+
+            # Source A: client.get_body_battery(target_date_str)
             try:
                 bb_data = client.get_body_battery(target_date_str)
-                if isinstance(bb_data, list) and len(bb_data) > 0:
-                    day_bb = bb_data[-1] if isinstance(bb_data[-1], dict) else {}
-                    vals = day_bb.get('bodyBatteryValuesArray') or []
-                    for entry in reversed(vals):
-                        if isinstance(entry, (list, tuple)) and len(entry) >= 2 and entry[1] is not None:
-                            live_body_battery = int(round(float(entry[1])))
-                            break
-                    if live_body_battery is None and day_bb.get('bodyBatteryMostRecentValue') is not None:
-                        live_body_battery = int(round(float(day_bb.get('bodyBatteryMostRecentValue'))))
+                if isinstance(bb_data, list):
+                    for day_bb in bb_data:
+                        if not isinstance(day_bb, dict):
+                            continue
+                        vals = day_bb.get('bodyBatteryValuesArray') or []
+                        for entry in vals:
+                            if isinstance(entry, (list, tuple)):
+                                if len(entry) >= 3 and isinstance(entry[1], str):
+                                    _consider_bb(entry[0], entry[2])
+                                elif len(entry) >= 2:
+                                    _consider_bb(entry[0], entry[1])
+                        if day_bb.get('bodyBatteryMostRecentValue') is not None:
+                            _consider_bb(best_bb_ts + 1 if best_bb_val is None else 0, day_bb.get('bodyBatteryMostRecentValue'))
+                elif isinstance(bb_data, dict):
+                    vals = bb_data.get('bodyBatteryValuesArray') or []
+                    for entry in vals:
+                        if isinstance(entry, (list, tuple)):
+                            if len(entry) >= 3 and isinstance(entry[1], str):
+                                _consider_bb(entry[0], entry[2])
+                            elif len(entry) >= 2:
+                                _consider_bb(entry[0], entry[1])
+                    if bb_data.get('bodyBatteryMostRecentValue') is not None:
+                        _consider_bb(best_bb_ts + 1 if best_bb_val is None else 0, bb_data.get('bodyBatteryMostRecentValue'))
             except Exception as e:
                 print(f"[GarminSync] Warning fetching body battery: {e}")
                 if is_auth_error(e):
                     auth_failed = True
                     last_auth_error = str(e)
+
+            # Source B: client.get_stress_data(target_date_str) (returns intraday [ts, status, level, version])
+            if not auth_failed:
+                try:
+                    stress_data = client.get_stress_data(target_date_str)
+                    if isinstance(stress_data, dict):
+                        for entry in (stress_data.get('bodyBatteryValuesArray') or []):
+                            if isinstance(entry, (list, tuple)):
+                                if len(entry) >= 3 and isinstance(entry[1], str):
+                                    _consider_bb(entry[0], entry[2])
+                                elif len(entry) >= 2:
+                                    _consider_bb(entry[0], entry[1])
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching stress/body battery data: {e}")
+                    if is_auth_error(e):
+                        auth_failed = True
+                        last_auth_error = str(e)
+
+            # Source C: summary.get('bodyBatteryMostRecentValue') fallback/comparison
+            if not auth_failed and isinstance(summary, dict) and summary.get('bodyBatteryMostRecentValue') is not None:
+                summary_bb = summary.get('bodyBatteryMostRecentValue')
+                if best_bb_val is not None and str(summary_bb) != str(best_bb_val):
+                    print(f"[GarminSync] Body Battery sources: timeline={best_bb_val} (ts={best_bb_ts}) vs summary={summary_bb}")
+                _consider_bb(0, summary_bb)
+
+            live_body_battery = best_bb_val
 
         # Persist refreshed tokens when direct calls succeed
         if not auth_failed and self.client:
@@ -325,7 +418,8 @@ class GarminSyncService:
             with open(LIVE_STATE_PATH, 'r', encoding='utf-8') as f:
                 state = json.load(f)
 
-        state['last_synced'] = datetime.now(ZoneInfo("Europe/London")).isoformat()
+        now_london_iso = datetime.now(ZoneInfo("Europe/London")).isoformat()
+        state['last_synced'] = now_london_iso
         state['date'] = target_date_str
 
         # If direct Garmin OAuth failed (401), do not overwrite with empty values; let MND Garmin bridge populate
@@ -337,6 +431,7 @@ class GarminSyncService:
         garmin_state = state.setdefault('garmin', {})
         garmin_state['source'] = 'garmin_oauth'
         garmin_state['oauth_date'] = target_date_str
+        garmin_state['last_synced'] = now_london_iso
         if summary.get('totalSteps') is not None:
             garmin_state['steps'] = summary.get('totalSteps')
         if summary.get('restingHeartRate') is not None:

@@ -142,11 +142,53 @@
     }
     window.renderCompletedWorkouts = renderCompletedWorkouts;
 
+    async function triggerSilentGarminSync() {
+      if (window._silentGarminSyncInFlight) return;
+      window._silentGarminSyncInFlight = true;
+      window._lastDirectGarminSyncMs = Date.now();
+      try {
+        const headerBtn = document.getElementById('btnHeaderSync');
+        const headerSpan = headerBtn ? headerBtn.querySelector('span:last-child') : null;
+        if (headerSpan) headerSpan.innerText = 'Syncing...';
+        const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup') || null;
+        const res = await fetch('/api/garmin/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ garmin_tokens_json: tokenBackup })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.garmin_tokens_json) {
+            try {
+              localStorage.setItem('pulse_garmin_tokens_backup', typeof data.garmin_tokens_json === 'string' ? data.garmin_tokens_json : JSON.stringify(data.garmin_tokens_json));
+            } catch(e) {}
+          }
+          if (data && data.state) {
+            window.BAKED_LIVE_STATE = data.state;
+            applyLiveStateToDom(data.state);
+            renderGarminSyncNotice(data.state);
+          }
+        }
+        if (headerSpan) headerSpan.innerText = 'Synced';
+      } catch (e) {
+        const headerBtn = document.getElementById('btnHeaderSync');
+        const headerSpan = headerBtn ? headerBtn.querySelector('span:last-child') : null;
+        if (headerSpan) headerSpan.innerText = 'Synced';
+      } finally {
+        window._silentGarminSyncInFlight = false;
+      }
+    }
+    window.triggerSilentGarminSync = triggerSilentGarminSync;
+
     function openSyncModal(tab = 'garmin') {
       const modal = document.getElementById('syncModal');
       if (modal) modal.classList.add('open');
       switchSyncTab(tab);
       renderGarminSyncNotice(window.BAKED_LIVE_STATE);
+      loadLiveState();
+      if ((Date.now() - (window._lastDirectGarminSyncMs || 0)) > 60 * 1000) {
+        triggerSilentGarminSync();
+      }
       fetch('/api/garmin/export_token')
         .then(r => r.ok ? r.json() : null)
         .then(d => {
@@ -2542,6 +2584,30 @@
       renderTodayTrainingRecommendations();
       loadLiveState();
       checkMndStatus();
+
+      setTimeout(() => triggerSilentGarminSync(), 1500);
+      setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          triggerSilentGarminSync();
+        } else {
+          loadLiveState();
+        }
+      }, 5 * 60 * 1000);
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          loadLiveState();
+          if (Date.now() - (window._lastDirectGarminSyncMs || 0) > 2 * 60 * 1000) {
+            triggerSilentGarminSync();
+          }
+        }
+      });
+
+      window.addEventListener('focus', () => {
+        if (Date.now() - (window._lastDirectGarminSyncMs || 0) > 2 * 60 * 1000) {
+          triggerSilentGarminSync();
+        }
+      });
 
       // Initialize Expanded Fuel & MyNetDiary Macro Engine
       initMyNetDiaryEngine();

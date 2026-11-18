@@ -602,5 +602,5 @@ def run_scheduled_sync():
         logger.warning(f"[Scheduler] Sync warning: {e}")
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(run_scheduled_sync, "interval", minutes=15)
+scheduler.add_job(run_scheduled_sync, "interval", minutes=5)
 scheduler.start()
