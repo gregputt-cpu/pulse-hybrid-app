@@ -4,7 +4,14 @@ import json
 import pickle
 import requests
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
 from benefits_engine import PhysiologicalBenefitsEngine
+
+def uk_today_str() -> str:
+    return datetime.now(ZoneInfo("Europe/London")).date().isoformat()
+
+def uk_now() -> datetime:
+    return datetime.now(ZoneInfo("Europe/London"))
 
 MND_DIR = os.environ.get('MND_TOKEN_DIR', '/tmp/mnd_tokens' if not os.path.exists('/shared/user/.gemini') else '/shared/user/.gemini/mnd_tokens')
 CREDS_FILE = os.path.join(MND_DIR, 'credentials.json')
@@ -303,7 +310,7 @@ class MyNetDiarySyncService:
                     s_benefits = self.benefits_engine.generate_benefits(
                         "Walking", s_sub, 45.0, step_cals, 92, 118, 0.8, 0.0
                     )
-                    s_time = datetime.now().strftime("%H:%M:%S") if d_str == target_date_str else "17:30:00"
+                    s_time = uk_now().strftime("%H:%M:%S") if d_str == target_date_str else "17:30:00"
                     bridged_activities.append({
                         "id": s_id,
                         "name": "Daily Steps & Movement",
@@ -360,7 +367,7 @@ class MyNetDiarySyncService:
                         s_benefits = self.benefits_engine.generate_benefits(
                             "Walking", s_sub, s_dur, s_cals, 92, 118, 0.8, 0.0
                         )
-                        s_time = datetime.now().strftime("%H:%M:%S") if d_str == target_date_str else "17:30:00"
+                        s_time = uk_now().strftime("%H:%M:%S") if d_str == target_date_str else "17:30:00"
                         bridged_activities.append({
                             "id": s_id,
                             "name": "Daily Steps & Movement",
@@ -427,7 +434,7 @@ class MyNetDiarySyncService:
 
     def fetch_today_data(self, target_date_str=None):
         if not target_date_str:
-            target_date_str = date.today().isoformat()
+            target_date_str = uk_today_str()
 
         meals_url = 'https://www.mynetdiary.com/muiGetMeals.do'
         headers = dict(DEFAULT_HEADERS)
@@ -501,8 +508,32 @@ class MyNetDiarySyncService:
             'fat': 0,
             'fiber': 0,
             'sodium': 0,
-            'water': 0.0
+            'water': 0.0,
+            'sugar_g': 0.0,
+            'sat_fat_g': 0.0
         }
+
+        def _get_nut(fl, *keys):
+            if not isinstance(fl, dict):
+                return 0.0
+            for k in keys:
+                entry = fl.get(k)
+                if isinstance(entry, dict):
+                    raw_val = entry.get('values', {}).get('rawValue')
+                    if raw_val is not None:
+                        try:
+                            return float(raw_val)
+                        except (ValueError, TypeError):
+                            pass
+                elif entry is not None:
+                    try:
+                        return float(entry)
+                    except (ValueError, TypeError):
+                        pass
+            return 0.0
+
+        total_sugar = 0.0
+        total_sat_fat = 0.0
 
         meals = {
             'breakfast': {'name': 'Breakfast', 'time': '07:30', 'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0, 'items': []},
@@ -559,6 +590,18 @@ class MyNetDiarySyncService:
                 sod_val = label.get('sodium', {}).get('values', {}).get('rawValue') or item.get('values', {}).get('307') or 0
                 totals['sodium'] += int(round(float(sod_val)))
 
+                sugar_g = _get_nut(label, "sugars", "sugar", "totalSugars", "269")
+                if sugar_g == 0.0 and isinstance(item.get('values'), dict):
+                    sugar_g = _get_nut(item.get('values'), "269")
+                if sugar_g > 0:
+                    total_sugar += sugar_g
+
+                sat_fat_g = _get_nut(label, "saturatedFat", "satFat", "606")
+                if sat_fat_g == 0.0 and isinstance(item.get('values'), dict):
+                    sat_fat_g = _get_nut(item.get('values'), "606")
+                if sat_fat_g > 0:
+                    total_sat_fat += sat_fat_g
+
                 time_s = item.get('timeString')
                 if time_s:
                     times.append(time_s)
@@ -576,6 +619,9 @@ class MyNetDiarySyncService:
 
             if times:
                 target_meal['time'] = times[0]
+
+        totals['sugar_g'] = round(total_sugar, 1)
+        totals['sat_fat_g'] = round(total_sat_fat, 1)
 
         if isinstance(meals_data, dict):
             apple = meals_data.get('appleData', {})
@@ -609,10 +655,10 @@ class MyNetDiarySyncService:
 
         if target_date_str:
             state['date'] = target_date_str
-        state['last_synced'] = datetime.now().isoformat()
+        state['last_synced'] = uk_now().isoformat()
 
         garmin_state = state.setdefault('garmin', {})
-        today_str = target_date_str or date.today().isoformat()
+        today_str = target_date_str or uk_today_str()
         has_live_garmin_oauth = (
             garmin_state.get('source') == 'garmin_oauth'
             and garmin_state.get('oauth_date') == today_str
@@ -691,7 +737,7 @@ class MyNetDiarySyncService:
                 garmin_state['raw_exercise_items'] = garmin_bridge['raw_exercise_items']
 
             bridged_acts = garmin_bridge.get('bridged_activities', [])
-            today_str = target_date_str or date.today().isoformat()
+            today_str = target_date_str or uk_today_str()
             today_bridged = [a for a in bridged_acts if str(a.get('date', '')).startswith(today_str)]
 
             if today_bridged:
@@ -745,7 +791,9 @@ class MyNetDiarySyncService:
             'fiber_g': totals.get('fiber', 0),
             'sodium_mg': totals.get('sodium', 0),
             'water_l': totals.get('water', 0.0),
-            'last_pulled': datetime.now().isoformat(),
+            'sugar_g': totals.get('sugar_g', 0.0),
+            'sat_fat_g': totals.get('sat_fat_g', 0.0),
+            'last_pulled': uk_now().isoformat(),
             'source': 'live_mynetdiary_cloud'
         }
         garmin_state['mnd_logged'] = dict(mnd_payload)
@@ -753,7 +801,7 @@ class MyNetDiarySyncService:
         state['mnd_meals'] = meals
 
         # Update Renpho scale weight from weight_info
-        today_str = target_date_str or date.today().isoformat()
+        today_str = target_date_str or uk_today_str()
         existing_renpho = state.get('renpho', {})
         existing_date = str(existing_renpho.get('last_synced', ''))[:10]
         is_direct_renpho = existing_renpho.get('source') == 'renpho_direct_cloud'
@@ -818,7 +866,7 @@ class MyNetDiarySyncService:
             renpho['fat_to_lose_kg'] = fat_to_lose
             renpho['target_weight_at_15pct'] = target_wt_15
             renpho['source'] = 'live_mynetdiary_weight'
-            renpho['last_synced'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            renpho['last_synced'] = uk_now().strftime('%Y-%m-%d %H:%M:%S')
 
             athlete = state.setdefault('athlete', {})
             athlete['weight_kg'] = kg

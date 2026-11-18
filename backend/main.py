@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional, Dict, Any, Union, List
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -345,7 +346,7 @@ def manual_renpho_entry(payload: ManualScalePayload):
 
     target_weight_at_15pct = round(lean_mass_kg / (1.0 - 0.15), 2)
     fat_to_lose_kg = round(max(0.0, weight_kg - target_weight_at_15pct), 2)
-    last_synced = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    last_synced = datetime.now(ZoneInfo("Europe/London")).strftime('%Y-%m-%d %H:%M:%S')
 
     renpho_state = state.setdefault("renpho", {})
     renpho_state.update({
@@ -393,7 +394,7 @@ def get_strength_history(days: int = 30):
 @app.post("/api/hydration/add")
 def add_hydration(payload: HydrationPayload):
     try:
-        date_str = payload.date if payload.date else datetime.now().strftime("%Y-%m-%d")
+        date_str = payload.date if payload.date else datetime.now(ZoneInfo("Europe/London")).date().isoformat()
         total_ml = db.add_hydration(date_str, payload.amount_ml)
 
         state = load_live_state()
@@ -458,7 +459,7 @@ def override_telemetry(payload: TelemetryOverridePayload):
     state = load_live_state()
     garmin = state.setdefault("garmin", {})
 
-    target_date = payload.date or state.get("date") or datetime.now().strftime("%Y-%m-%d")
+    target_date = payload.date or state.get("date") or datetime.now(ZoneInfo("Europe/London")).date().isoformat()
 
     if payload.key == "sleep_score" and payload.value is not None:
         payload.sleep_score = int(float(payload.value))

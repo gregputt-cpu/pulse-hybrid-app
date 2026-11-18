@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
 from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnectTooManyRequestsError
 from benefits_engine import PhysiologicalBenefitsEngine
 try:
@@ -186,7 +187,7 @@ class GarminSyncService:
 
     def sync_today(self, target_date_str=None):
         if not target_date_str:
-            target_date_str = date.today().isoformat()
+            target_date_str = datetime.now(ZoneInfo("Europe/London")).date().isoformat()
 
         client = self.get_client()
 
@@ -319,7 +320,7 @@ class GarminSyncService:
             with open(LIVE_STATE_PATH, 'r', encoding='utf-8') as f:
                 state = json.load(f)
 
-        state['last_synced'] = datetime.now().isoformat()
+        state['last_synced'] = datetime.now(ZoneInfo("Europe/London")).isoformat()
         state['date'] = target_date_str
 
         # If direct Garmin OAuth failed (401), do not overwrite with empty values; let MND Garmin bridge populate

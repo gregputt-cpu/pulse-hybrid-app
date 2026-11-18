@@ -16,30 +16,23 @@
     // ==================== MYNETDIARY ENGINE STATE & DATA STORE ====================
     let myNetDiaryData = {
       "totals": {
-            "calories": 2392,
-            "protein": 234,
-            "carbs": 231,
-            "fat": 67,
-            "fiber": 33,
-            "sodium": 1911,
+            "calories": 2300,
+            "protein": 216,
+            "carbs": 296,
+            "fat": 46,
+            "fiber": 49,
+            "sodium": 2574,
             "water": 0.0
       },
       "meals": {
             "breakfast": {
                   "name": "Breakfast",
-                  "time": "6:14",
-                  "calories": 824,
-                  "protein": 49,
-                  "carbs": 115,
-                  "fat": 23,
+                  "time": "6:24",
+                  "calories": 2300,
+                  "protein": 216,
+                  "carbs": 296,
+                  "fat": 46,
                   "items": [
-                        {
-                              "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10",
-                              "cals": 120,
-                              "p": 5,
-                              "c": 4,
-                              "f": 10
-                        },
                         {
                               "name": "Old Fashioned Jumbo Oats",
                               "cals": 563,
@@ -53,6 +46,34 @@
                               "p": 28,
                               "c": 7,
                               "f": 1
+                        },
+                        {
+                              "name": "Protein Cheese Bar",
+                              "cals": 284,
+                              "p": 41,
+                              "c": 4,
+                              "f": 12
+                        },
+                        {
+                              "name": "Chicken Tikka Salad",
+                              "cals": 486,
+                              "p": 42,
+                              "c": 64,
+                              "f": 11
+                        },
+                        {
+                              "name": "Fat Free Authentic Luxury Greek Yogurt",
+                              "cals": 328,
+                              "p": 49,
+                              "c": 30,
+                              "f": 2
+                        },
+                        {
+                              "name": "Raw Protein Flap Jack Chocolate Brownie",
+                              "cals": 498,
+                              "p": 40,
+                              "c": 87,
+                              "f": 8
                         }
                   ]
             },
@@ -67,48 +88,12 @@
             },
             "dinner": {
                   "name": "Dinner",
-                  "time": "15:59",
-                  "calories": 1568,
-                  "protein": 184,
-                  "carbs": 116,
-                  "fat": 44,
-                  "items": [
-                        {
-                              "name": "British Chicken Diced Breast",
-                              "cals": 263,
-                              "p": 54,
-                              "c": 0,
-                              "f": 5
-                        },
-                        {
-                              "name": "Egg Noodles Soft & Tender",
-                              "cals": 368,
-                              "p": 12,
-                              "c": 76,
-                              "f": 4
-                        },
-                        {
-                              "name": "Beansprouts Tender & Crunchy",
-                              "cals": 141,
-                              "p": 8,
-                              "c": 12,
-                              "f": 8
-                        },
-                        {
-                              "name": "Aberdeen Angus Steak Mince",
-                              "cals": 660,
-                              "p": 110,
-                              "c": 0,
-                              "f": 24
-                        },
-                        {
-                              "name": "Sweet Chilli Stir Fry Sauce Medium",
-                              "cals": 136,
-                              "p": 0,
-                              "c": 28,
-                              "f": 3
-                        }
-                  ]
+                  "time": "Pending",
+                  "calories": 0,
+                  "protein": 0,
+                  "carbs": 0,
+                  "fat": 0,
+                  "items": []
             },
             "snacks": {
                   "name": "Snacks & Hydration",
@@ -292,6 +277,23 @@
 
       // 7. Autoregulation Coach Advice
       updateMndCoachAdvice(calsLeft, protLeft, carbsLeft, fatsLeft, totalBudget);
+
+      // 7.5. Nutritional Quality, Micronutrient & Food Gap Audit
+      renderNutritionQualityAudit(
+        myNetDiaryData.totals,
+        myNetDiaryData.meals || {},
+        cals,
+        prot,
+        carbs,
+        fats,
+        myNetDiaryData.totals.fiber || 0,
+        myNetDiaryData.totals.sodium || 0,
+        myNetDiaryData.totals.water || 0,
+        totalBudget,
+        pTarget,
+        cTarget,
+        fTarget
+      );
 
       // 8. Synchronize Runway UI
       dailyLoggedCalories = cals;
@@ -520,6 +522,274 @@
       }
 
       el.innerHTML = advice;
+    }
+
+    function escapeAuditHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[s]));
+    }
+
+    function renderNutritionQualityAudit(totals, meals, cals, p, c, f, fiber, sodium, water, calTarget, pTarget, cTarget, fTarget) {
+      const auditEl = document.getElementById('nutritionQualityAuditCard');
+      if (!auditEl) return;
+
+      const allItems = [];
+      ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(slot => {
+        const slotMeals = meals && meals[slot];
+        if (slotMeals && Array.isArray(slotMeals.items)) {
+          slotMeals.items.forEach(it => {
+            if (it && it.name) {
+              allItems.push({
+                name: String(it.name),
+                cals: Number(it.cals) || 0,
+                p: Number(it.p) || 0,
+                c: Number(it.c) || 0,
+                f: Number(it.f) || 0
+              });
+            }
+          });
+        }
+      });
+
+      if (allItems.length === 0 && cals <= 0) {
+        auditEl.innerHTML = `
+          <div class="card" style="padding:14px; border-radius:12px; background:var(--surface); border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <strong style="color:#fff; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">🧬 Nutritional Quality &amp; Micronutrient Audit</strong>
+              <span style="font-size:10.5px; color:var(--text-muted); padding:2px 8px; border-radius:999px; background:rgba(255,255,255,0.05);">Awaiting Food Logs</span>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-secondary); margin-top:8px;">Sync MyNetDiary or log meals to audit healthy fats, whole-food density, tendon micronutrients, and glycemic load.</div>
+          </div>
+        `;
+        return;
+      }
+
+      // 1. Healthy Fats, Omega-3 & Hormonal Floor
+      const healthyFatRx = /salmon|mackerel|sardine|trout|anchov|egg|avocado|olive oil|extra virgin|walnut|almond|macadamia|chia|flax|peanut butter|almond butter|cheese|steak|beef/i;
+      const ultraLowFatRx = /fat free|0%|isolate|breast/i;
+      const fatSources = allItems.filter(it => healthyFatRx.test(it.name)).map(it => it.name);
+      const ultraLowFatChoices = allItems.filter(it => ultraLowFatRx.test(it.name)).map(it => it.name);
+
+      const safeFTarget = fTarget > 0 ? fTarget : 80;
+      const fatPct = Math.round((f / safeFTarget) * 100);
+      const fatCalPct = cals > 0 ? Math.round(((f * 9) / cals) * 100) : 0;
+
+      let fatBadgeText, fatBadgeColor, fatBarColor, fatBody;
+      if (f < 55) {
+        fatBadgeText = `⚠️ LOW FAT FLOOR (${f}g / ${safeFTarget}g • ${fatCalPct}% kcal)`;
+        fatBadgeColor = '#f59e0b';
+        fatBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
+        const lowFatNote = ultraLowFatChoices.length > 0
+          ? ` Selecting <strong>${escapeAuditHtml(ultraLowFatChoices.slice(0, 2).join(' + '))}</strong> kept dietary fat low.`
+          : '';
+        fatBody = `At 98.4kg, dropping below the <strong>60–65g</strong> fat floor restricts testosterone/endocrine synthesis, joint lubrication, and fat-soluble vitamin (A, D, E, K) absorption.${lowFatNote}`;
+      } else if (f <= safeFTarget + 15) {
+        fatBadgeText = `✅ OPTIMAL LIPID PROFILE (${f}g / ${safeFTarget}g)`;
+        fatBadgeColor = '#10b981';
+        fatBarColor = 'linear-gradient(90deg, #10b981, #34d399)';
+        fatBody = `Dietary fat covers <strong>${fatCalPct}%</strong> of calories (${fatSources.length} lipid source${fatSources.length === 1 ? '' : 's'} detected), supporting endocrine health and joint recovery.`;
+      } else {
+        fatBadgeText = `⚠️ HIGH FAT LOAD (${f}g / ${safeFTarget}g)`;
+        fatBadgeColor = '#f59e0b';
+        fatBarColor = 'linear-gradient(90deg, #f59e0b, #f97316)';
+        fatBody = `Fat intake sits at <strong>${fatCalPct}%</strong> of daily energy (+${f - safeFTarget}g over target). Trim added oils/cheese slightly to protect your caloric deficit.`;
+      }
+
+      // 2. Whole-Food vs. Processed / Bar & Supplement Reliance
+      const processedRx = /flap\s*jack|protein bar|cheese bar|\bbar\b|whey|isolate|powder|shake|cookie|brownie|crisp|sweet|candy|chocolate|syrup|sauce|noodle|processed/i;
+      const wholeFoodGuardRx = /\b(oats|chicken|salad|yogurt|beef|steak|eggs|fruit|veg)\b/i;
+
+      const processedItems = allItems.filter(it => {
+        if (processedRx.test(it.name)) return true;
+        if (wholeFoodGuardRx.test(it.name)) return false;
+        return false;
+      });
+
+      const procCals = processedItems.reduce((sum, it) => sum + it.cals, 0);
+      const procProtein = processedItems.reduce((sum, it) => sum + it.p, 0);
+      const procCarbs = processedItems.reduce((sum, it) => sum + it.c, 0);
+      const procCalPct = cals > 0 ? Math.min(100, Math.round((procCals / cals) * 100)) : 0;
+      const wholeCalPct = Math.max(0, 100 - procCalPct);
+
+      let procBadgeText, procBadgeColor, procBarColor, procBody;
+      const procNamesPreview = processedItems.map(it => `<strong>${escapeAuditHtml(it.name)}</strong>`).join(' + ');
+      const highCarbBar = processedItems.find(it => it.c >= 50);
+      if (procCalPct >= 35) {
+        procBadgeText = `⚠️ ${procCalPct}% PACKAGED / BARS (${procCals} kcal)`;
+        procBadgeColor = '#f59e0b';
+        procBarColor = 'linear-gradient(90deg, #f59e0b, #fb923c)';
+        procBody = `${procNamesPreview} supply <strong>${procCals} kcal</strong> &amp; <strong>${Math.round(procProtein)}g P</strong> today.${highCarbBar ? ` Watch out for maltitol/glucose syrups, emulsifiers &amp; hidden sugars in ${escapeAuditHtml(highCarbBar.name)} (${highCarbBar.c}g carbs in 1 hit).` : ' Watch out for sugar alcohols, emulsifiers &amp; low micronutrient density.'}`;
+      } else if (procCalPct >= 20) {
+        procBadgeText = `ℹ️ ${wholeCalPct}% WHOLE FOODS / ${procCalPct}% SUPPLEMENTS`;
+        procBadgeColor = '#38bdf8';
+        procBarColor = 'linear-gradient(90deg, #38bdf8, #00e5ff)';
+        procBody = `<strong>${wholeCalPct}%</strong> of calories come from whole foods (${processedItems.length} packaged/supplement item${processedItems.length === 1 ? '' : 's'}: ${procCals} kcal, ${Math.round(procProtein)}g P). Solid convenience balance.`;
+      } else {
+        procBadgeText = `✅ ${wholeCalPct}% WHOLE-FOOD DENSITY`;
+        procBadgeColor = '#10b981';
+        procBarColor = 'linear-gradient(90deg, #10b981, #00e5ff)';
+        procBody = `<strong>${wholeCalPct}%</strong> of today's energy comes from minimally processed whole foods (${procCals} kcal from bars/powders), maximizing micronutrient bioavailability.`;
+      }
+
+      // 3. Vitamin C, Collagen & Micronutrient Diversity (Fruit / Veg / Citrus / Berries)
+      const vitCAnyRx = /berr|blueberr|strawberr|raspberr|blackberr|orange|citrus|lemon|lime|kiwi|pepper|capsicum|broccoli|spinach|kale|tomato|apple|banana|mango|pineapple|fruit|veg|greens|salad/i;
+      const vitCPowerRx = /kiwi|berr|blueberr|strawberr|raspberr|blackberr|orange|citrus|pepper|capsicum|broccoli/i;
+      const vitCAnyItems = allItems.filter(it => vitCAnyRx.test(it.name));
+      const vitCPowerItems = allItems.filter(it => vitCPowerRx.test(it.name));
+      const garnishItems = vitCAnyItems.filter(it => !vitCPowerRx.test(it.name));
+
+      const vitCPct = Math.min(100, Math.round((vitCPowerItems.length / 2) * 100));
+      let vitCBadgeText, vitCBadgeColor, vitCBarColor, vitCBody;
+      if (vitCPowerItems.length === 0) {
+        vitCBadgeText = `⚠️ LOW VITAMIN C & POLYPHENOLS`;
+        vitCBadgeColor = '#f59e0b';
+        vitCBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
+        const garnishNote = garnishItems.length > 0
+          ? ` Only garnish/mixed salad logged (${escapeAuditHtml(garnishItems.map(x => x.name).join(', '))}).`
+          : '';
+        vitCBody = `Zero whole fruit, berries, citrus, kiwi, or bell peppers logged today.${garnishNote} Vitamin C (50–200mg) is a mandatory cofactor for pro-collagen synthesis in your Achilles &amp; patellar tendons after skipping (2,185 jumps) and heavy KB swings, and boosts non-heme iron absorption from Jumbo Oats.`;
+      } else if (vitCPowerItems.length === 1) {
+        vitCBadgeText = `ℹ️ MODERATE MICRONUTRIENTS (1 source)`;
+        vitCBadgeColor = '#38bdf8';
+        vitCBarColor = 'linear-gradient(90deg, #38bdf8, #00e5ff)';
+        vitCBody = `1 high-Vitamin-C source logged (<strong>${escapeAuditHtml(vitCPowerItems[0].name)}</strong>). Add a second berry or citrus serving to maximize tendon collagen repair &amp; antioxidant recovery.`;
+      } else {
+        vitCBadgeText = `✅ HIGH VITAMIN C & ANTIOXIDANTS`;
+        vitCBadgeColor = '#10b981';
+        vitCBarColor = 'linear-gradient(90deg, #10b981, #34d399)';
+        vitCBody = `${vitCPowerItems.length} Vitamin-C &amp; polyphenol powerhouses logged (${escapeAuditHtml(vitCPowerItems.map(x => x.name).slice(0, 3).join(', '))}), driving collagen cross-linking and post-training oxidative recovery.`;
+      }
+
+      // 4. Refined Sugar, Glycemic Load & Gut Fiber
+      const loggedSugar = Number(totals && (totals.sugar_g !== undefined ? totals.sugar_g : totals.sugar)) || 0;
+      const sweetCarbRx = /flap\s*jack|brownie|snickers|sweet|chocolate|sugar|honey|syrup|jam|yogurt/i;
+      const estSweetCarbs = allItems
+        .filter(it => sweetCarbRx.test(it.name))
+        .reduce((sum, it) => sum + Math.round(it.c * (/yogurt/i.test(it.name) ? 0.55 : 0.45)), 0);
+      const effectiveSugar = loggedSugar > 0 ? Math.round(loggedSugar) : estSweetCarbs;
+      const sugarLabel = loggedSugar > 0 ? `${effectiveSugar}g logged` : `~${effectiveSugar}g est.`;
+      const maxSingleCarbItem = allItems.reduce((best, it) => (!best || it.c > best.c ? it : best), null);
+      const bigProcessedCarbHit = allItems.find(it => processedRx.test(it.name) && it.c >= 50) || (maxSingleCarbItem && maxSingleCarbItem.c >= 80 && processedRx.test(maxSingleCarbItem.name) ? maxSingleCarbItem : null);
+
+      const fiberPct = Math.min(100, Math.round((fiber / 35) * 100));
+      let glyBadgeText, glyBadgeColor, glyBarColor, glyBody;
+      if (bigProcessedCarbHit) {
+        glyBadgeText = fiber >= 30 ? `⚠️ HIGH-GI HIT • ${fiber}g FIBER` : `⚠️ HIGH GLYCEMIC SPIKE`;
+        glyBadgeColor = '#f59e0b';
+        glyBarColor = 'linear-gradient(90deg, #10b981, #f59e0b)';
+        glyBody = `Gut fiber is strong at <strong>${fiber}g</strong> (vs 30–40g target), but <strong>${escapeAuditHtml(bigProcessedCarbHit.name)}</strong> delivers <strong>${bigProcessedCarbHit.c}g carbs</strong> in a single processed hit (sugar load ${sugarLabel}), driving a sharper insulin/glycemic spike.`;
+      } else if (fiber >= 30) {
+        glyBadgeText = `✅ GUT FIBER ${fiber}g • STEADY GL`;
+        glyBadgeColor = '#10b981';
+        glyBarColor = 'linear-gradient(90deg, #10b981, #00e5ff)';
+        glyBody = `<strong>${fiber}g dietary fiber</strong> hits the 30–40g microbiome target while estimated sugar stays controlled (${sugarLabel}), blunting glycemic spikes.`;
+      } else {
+        glyBadgeText = `⚠️ LOW FIBER (${fiber}g / 30g+)`;
+        glyBadgeColor = '#f59e0b';
+        glyBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
+        glyBody = `Only <strong>${fiber}g fiber</strong> logged so far (sugar ${sugarLabel}). Add oats, chia/flax, berries, or fibrous greens to hit 30–40g for gut motility and satiety.`;
+      }
+
+      // Smart Food Additions & Swaps for Next Shop / Tomorrow
+      const fatDeficit = Math.max(0, 75 - f);
+      const hasFatFreeYogurt = allItems.some(it => /fat free.*yogurt|0%.*yogurt|greek yogurt/i.test(it.name));
+      const hasSalad = allItems.some(it => /salad|tikka/i.test(it.name));
+      const hasOats = allItems.some(it => /oats/i.test(it.name));
+      const flapjackItem = allItems.find(it => /flap\s*jack|brownie|protein bar/i.test(it.name));
+
+      const rec1 = fatDeficit > 0
+        ? `<strong>1. Fix the Fat &amp; Omega-3 Gap (+${fatDeficit}g Fat needed):</strong> ${hasFatFreeYogurt ? 'Swap <code>Fat Free Greek Yogurt</code> for <strong>5% Greek Yogurt</strong>, or add' : 'Add'} <strong>2–3 whole eggs / ½ avocado / 25g walnuts or pumpkin seeds / 1 tbsp extra-virgin olive oil</strong>${hasSalad ? ' to your Chicken Tikka Salad' : ''}, or have <strong>salmon/mackerel</strong> 2x/week for EPA/DHA joint recovery.`
+        : `<strong>1. Maintain Omega-3 Lipid Quality:</strong> Fat target is covered (<strong>${f}g</strong>). Prioritize wild <strong>salmon/mackerel</strong>, walnuts, and extra-virgin olive oil to keep inflammation low.`;
+
+      const rec2 = vitCPowerItems.length < 2
+        ? `<strong>2. Add a Vitamin C &amp; Berry/Citrus Hit for Tendon Collagen:</strong> Add <strong>80g blueberries/strawberries</strong> into your${hasOats ? ' morning <strong>Jumbo Oats</strong> or Greek Yogurt' : ' breakfast'}, or eat <strong>1 kiwi / 1 orange / sliced red bell peppers</strong> with lunch. This directly fuels tendon collagen repair after skipping &amp; kettlebells.`
+        : `<strong>2. Keep Micronutrient Variety High:</strong> Great Vitamin C &amp; polyphenol coverage today — rotate colourful berries, kiwi, and bell peppers to sustain tendon collagen turnover.`;
+
+      const rec3 = flapjackItem
+        ? `<strong>3. Upgrade the Flapjack / Bar Slot (${flapjackItem.c}g C in ${escapeAuditHtml(flapjackItem.name)}):</strong> You got <strong>${Math.round(procProtein)}g</strong> protein (<strong>${procCalPct}%</strong> of calories) from ${processedItems.length} bars/powders today. Keep the <code>Whey Isolate</code> post-workout, but consider swapping <code>${escapeAuditHtml(flapjackItem.name)} (${flapjackItem.cals} kcal, ${flapjackItem.c}g C)</code> for <strong>1 banana + 20g dark chocolate (85%) or 30g mixed nuts + cottage cheese/biltong</strong> to cut emulsifiers and sugar alcohols.`
+        : (processedItems.length >= 2
+          ? `<strong>3. Reduce Supplement &amp; Bar Reliance (${procCalPct}% kcal):</strong> Replace 1 processed bar/powder slot with <strong>cottage cheese, biltong, or whole eggs + fruit</strong> to boost micronutrients and lower emulsifier load.`
+          : `<strong>3. Whole-Food Density Locked In (${wholeCalPct}%):</strong> Minimal reliance on packaged bars today. Keep evening nutrition anchored on lean whole-food protein + fibrous veg.`);
+
+      auditEl.innerHTML = `
+        <div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:7px;">
+              <span style="font-size:15px;">🧬</span>
+              <strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
+            </div>
+            <span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
+              Whole-Food Score: ${wholeCalPct}% • Fat Floor: ${f}g/${safeFTarget}g
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
+            <!-- Pillar 1: Healthy Fats & Omega-3s -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Healthy Fats &amp; Omega-3s</span>
+                <span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
+              </div>
+              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                <div style="width:${Math.min(100, fatPct)}%; height:100%; background:${fatBarColor};"></div>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
+            </div>
+
+            <!-- Pillar 2: Whole Food vs. Processed/Bars -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
+                <span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
+              </div>
+              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                <div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
+            </div>
+
+            <!-- Pillar 3: Vitamin C & Tendon Micronutrients -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Vitamin C &amp; Tendon Repair</span>
+                <span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
+              </div>
+              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                <div style="width:${Math.max(10, vitCPct)}%; height:100%; background:${vitCBarColor};"></div>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
+            </div>
+
+            <!-- Pillar 4: Fiber & Glycemic Load -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber &amp; Glycemic Load</span>
+                <span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
+              </div>
+              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+                <div style="width:${fiberPct}%; height:100%; background:${glyBarColor};"></div>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
+            <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
+              🛒 Smart Food Additions &amp; Swaps for Your Next Shop / Tomorrow
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+              <div>${rec1}</div>
+              <div>${rec2}</div>
+              <div>${rec3}</div>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     // ==================== MYNETDIARY CLOUD AUTOMATION CONTROLLER ====================
@@ -1023,7 +1293,7 @@
 
     function restoreMndFromLocalStorage() {
       try {
-        const CURRENT_MND_VERSION = "v4.7_live_dinner_2392";
+        const CURRENT_MND_VERSION = "v5.23_nov17_audit";
         if (localStorage.getItem('pulse_mnd_version') !== CURRENT_MND_VERSION) {
           localStorage.removeItem('pulse_mnd_data');
           localStorage.setItem('pulse_mnd_version', CURRENT_MND_VERSION);
