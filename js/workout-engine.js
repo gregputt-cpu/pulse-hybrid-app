@@ -836,6 +836,7 @@
     }
 
     let currentArchetypeKey = 'option_a';
+    window._userManualArchetype = false;
     let activeWorkoutPlan = [];
     let currentExIdx = 0;
 
@@ -864,10 +865,10 @@
 
       const exerciseMatrix = {
         liss_cardio: {
-          option_a: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'thoracic_openers', 'deadbug_hold'],
+          option_a: ['barbell_bench_press', 'barbell_pendlay_row', 'deadbug_hold'],
           option_kb: ['kb_swings', 'kb_suitcase_carry', 'zone2_flush', 'deadbug_hold'],
           option_b: ['speed_rope_intervals', 'emom_hybrid_10', 'amrap_hybrid_10', 'zone2_flush'],
-          option_c: ['thoracic_openers', 'couch_stretch_flow', 'knee_tke', 'glute_bridge_hold']
+          option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'thoracic_openers', 'deadbug_hold']
         },
         lower_hinge: {
           option_a: ['barbell_squat', 'barbell_rdl', 'barbell_zercher_squat', 'kb_suitcase_carry', 'deadbug_hold'],
@@ -3683,13 +3684,13 @@ function generateWorkoutFromGearAndGoal() {
         ctaText = '✓ Log Rest Day';
         isRest = true;
       } else if (mode === 'liss_cardio') {
-        archetypeKey = 'option_a';
+        archetypeKey = 'option_c';
         optionId = 'recovery_flush_walk';
         optionLabels = {
-          option_a: '⭐ Zone 2 LISS',
-          option_kb: 'KB Flush',
-          option_b: 'Aerobic Work',
-          option_c: 'Mobility Flow'
+          option_a: 'Option A (BB)',
+          option_kb: 'Option KB',
+          option_b: 'Option B (Work)',
+          option_c: '⭐ Zone 2 Flush'
         };
         badge = '🚶 ZONE 2 LISS RECOMMENDED';
         title = 'Zone 2 Aerobic Engine & Flush';
@@ -3888,6 +3889,9 @@ function generateWorkoutFromGearAndGoal() {
       const verdict = computeTodayWorkoutVerdict();
       if (typeof updateArchetypeStarBadge === 'function') {
         updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
+      }
+      if (!window._userManualArchetype && typeof loadDailyArchetype === 'function' && currentArchetypeKey !== verdict.archetypeKey) {
+        loadDailyArchetype(verdict.archetypeKey);
       }
 
       const completed = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
@@ -4250,6 +4254,7 @@ function generateWorkoutFromGearAndGoal() {
       switchTab('train');
       switchTrainView('prescribed');
       loadDailyArchetype(verdict.archetypeKey);
+      window._userManualArchetype = true;
       updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
       requestWakeLock();
       beep(750, 0.08);

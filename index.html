@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css?v=5.25">
+  <link rel="stylesheet" href="./css/styles.css?v=5.26">
 </head>
 <body>
 
@@ -343,10 +343,10 @@
 
           <!-- ARCHETYPE QUICK SWITCHER -->
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:3px; margin-bottom:6px;">
-            <button id="btnArchetype_option_a" onclick="loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10px; padding:6px 1px; text-align:center;">Option A (BB)</button>
-            <button id="btnArchetype_option_kb" onclick="loadDailyArchetype('option_kb')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option KB</button>
-            <button id="btnArchetype_option_b" onclick="loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option B (Work)</button>
-            <button id="btnArchetype_option_c" onclick="loadDailyArchetype('option_c')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option C (Flush)</button>
+            <button id="btnArchetype_option_a" onclick="window._userManualArchetype = true; loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10px; padding:6px 1px; text-align:center;">Option A (BB)</button>
+            <button id="btnArchetype_option_kb" onclick="window._userManualArchetype = true; loadDailyArchetype('option_kb')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option KB</button>
+            <button id="btnArchetype_option_b" onclick="window._userManualArchetype = true; loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option B (Work)</button>
+            <button id="btnArchetype_option_c" onclick="window._userManualArchetype = true; loadDailyArchetype('option_c')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option C (Flush)</button>
           </div>
 
           <!-- KB SUB-MODE SWITCHER (Shown when Option KB is active) -->
@@ -2130,10 +2130,10 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=5.25"></script>
-  <script src="./js/workout-engine.js?v=5.25"></script>
-  <script src="./js/charts.js?v=5.25"></script>
-  <script src="./js/fuel-engine.js?v=5.25"></script>
-  <script src="./js/telemetry.js?v=5.25"></script>
+  <script src="./js/state.js?v=5.26"></script>
+  <script src="./js/workout-engine.js?v=5.26"></script>
+  <script src="./js/charts.js?v=5.26"></script>
+  <script src="./js/fuel-engine.js?v=5.26"></script>
+  <script src="./js/telemetry.js?v=5.26"></script>
 </body>
 </html>
