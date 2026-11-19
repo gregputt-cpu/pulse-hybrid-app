@@ -37,14 +37,100 @@
             const st = await statusRes.json();
             if (!st.auth_required || st.authenticated) return true;
           }
-          const secret = window.prompt('Enter your Pulse API Access Key to unlock this session:');
-          if (!secret || !secret.trim()) return false;
-          const loginRes = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ secret: secret.trim() })
+          const modal = document.getElementById('pulseAuthModal');
+          const inputEl = document.getElementById('pulseAuthSecretInput');
+          const errEl = document.getElementById('pulseAuthError');
+          const submitBtn = document.getElementById('pulseAuthSubmitBtn');
+          const cancelBtn = document.getElementById('pulseAuthCancelBtn');
+
+          if (!modal || !inputEl || !submitBtn || !cancelBtn) {
+            const secret = window.prompt('Enter your Pulse API Access Key to unlock this session:');
+            if (!secret || !secret.trim()) return false;
+            const loginRes = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ secret: secret.trim() })
+            });
+            return loginRes.ok;
+          }
+
+          return await new Promise((resolve) => {
+            let settled = false;
+            const setErr = (msg) => {
+              if (!errEl) return;
+              if (msg) {
+                errEl.textContent = msg;
+                errEl.style.display = 'block';
+              } else {
+                errEl.textContent = '';
+                errEl.style.display = 'none';
+              }
+            };
+            const cleanup = () => {
+              submitBtn.removeEventListener('click', onSubmit);
+              cancelBtn.removeEventListener('click', onCancel);
+              inputEl.removeEventListener('keydown', onKeyDown);
+            };
+            const finish = (ok) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              submitBtn.disabled = false;
+              cancelBtn.disabled = false;
+              setErr('');
+              modal.classList.remove('open');
+              resolve(ok);
+            };
+            const onCancel = () => finish(false);
+            const onSubmit = async () => {
+              const secret = (inputEl.value || '').trim();
+              if (!secret) {
+                setErr('Please enter your Pulse API Access Key.');
+                inputEl.focus();
+                return;
+              }
+              setErr('');
+              submitBtn.disabled = true;
+              cancelBtn.disabled = true;
+              try {
+                const loginRes = await fetch('/api/auth/login', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ secret })
+                });
+                if (loginRes.ok) {
+                  finish(true);
+                } else {
+                  submitBtn.disabled = false;
+                  cancelBtn.disabled = false;
+                  setErr('Invalid access key — please try again.');
+                  inputEl.value = '';
+                  inputEl.focus();
+                }
+              } catch (err) {
+                submitBtn.disabled = false;
+                cancelBtn.disabled = false;
+                setErr('Connection failed — please try again.');
+                inputEl.focus();
+              }
+            };
+            const onKeyDown = (ev) => {
+              if (ev.key === 'Enter') {
+                ev.preventDefault();
+                onSubmit();
+              }
+            };
+
+            inputEl.value = '';
+            setErr('');
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+            submitBtn.addEventListener('click', onSubmit);
+            cancelBtn.addEventListener('click', onCancel);
+            inputEl.addEventListener('keydown', onKeyDown);
+            modal.classList.add('open');
+            setTimeout(() => inputEl.focus(), 30);
           });
-          return loginRes.ok;
         } catch (e) {
           return false;
         } finally {

@@ -2104,6 +2104,45 @@
       </div>
     </div>
 
+    <!-- TELEMETRY OVERRIDE MODAL -->
+    <div class="modal-overlay" id="telemetryOverrideModal" onclick="if(event.target === this) closeTelemetryOverrideModal()">
+      <div class="modal-card" style="max-width:340px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong id="telemetryOverrideTitle" style="font-size:13px; color:#fff;">✎ Override Metric</strong>
+            <div id="telemetryOverrideSub" style="font-size:11px; color:var(--text-muted);">Enter value (0–100)</div>
+          </div>
+          <span style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;" onclick="closeTelemetryOverrideModal()">✕</span>
+        </div>
+
+        <input type="number" inputmode="numeric" min="0" max="100" step="1" id="telemetryOverrideInput" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:16px; font-weight:700; padding:8px 10px; border-radius:6px; outline:none; box-sizing:border-box;">
+        <div id="telemetryOverrideErr" style="display:none; font-size:11.5px; color:var(--danger, #ef4444); font-weight:600;"></div>
+
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <button type="button" class="btn-action-ghost" style="flex:1; margin:0;" onclick="closeTelemetryOverrideModal()">Cancel</button>
+          <button type="button" class="btn-action-primary" style="flex:2; margin:0;" onclick="submitTelemetryOverrideModal()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PULSE API AUTH MODAL -->
+    <div class="modal-overlay" id="pulseAuthModal">
+      <div class="modal-card" style="max-width:340px;">
+        <div>
+          <strong style="font-size:13px; color:#fff;">🔐 Unlock PULSE Session</strong>
+          <div style="font-size:11px; color:var(--text-muted);">Enter your Pulse API Access Key to connect to cloud telemetry.</div>
+        </div>
+
+        <input type="password" id="pulseAuthSecretInput" autocomplete="current-password" placeholder="Access key..." style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:600; padding:8px 10px; border-radius:6px; outline:none; box-sizing:border-box;">
+        <div id="pulseAuthError" style="display:none; font-size:11.5px; color:var(--danger, #ef4444); font-weight:600;"></div>
+
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <button type="button" id="pulseAuthCancelBtn" class="btn-action-ghost" style="flex:1; margin:0;">Cancel</button>
+          <button type="button" id="pulseAuthSubmitBtn" class="btn-action-primary" style="flex:2; margin:0;">Unlock</button>
+        </div>
+      </div>
+    </div>
+
     <!-- SESSION SUMMARY / PR CELEBRATION MODAL -->
     <div class="modal-overlay" id="sessionSummaryModal" onclick="if(event.target===this) closeSessionSummaryModal()">
       <div class="modal-card" id="sessionSummaryCard" style="max-width:360px;"></div>
@@ -2125,10 +2164,10 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=5.32"></script>
-  <script src="./js/workout-engine.js?v=5.32"></script>
-  <script src="./js/charts.js?v=5.32"></script>
-  <script src="./js/fuel-engine.js?v=5.32"></script>
-  <script src="./js/telemetry.js?v=5.32"></script>
+  <script src="./js/state.js?v=5.33"></script>
+  <script src="./js/workout-engine.js?v=5.33"></script>
+  <script src="./js/charts.js?v=5.33"></script>
+  <script src="./js/fuel-engine.js?v=5.33"></script>
+  <script src="./js/telemetry.js?v=5.33"></script>
 </body>
 </html>

@@ -46,6 +46,7 @@ class GarminSyncService:
         self._sync_lock = threading.Lock()
         self._last_sync_ts = 0.0
         self._cooldown_until = 0.0
+        self._auth_cooldown_until = 0.0
         self._backoff_sec = 60
         self.client = None
         self.pending_login_state = None
@@ -103,6 +104,7 @@ class GarminSyncService:
         client = Garmin()
         if self._try_load_token_str(client, raw_tok):
             self.client = client
+            self._auth_cooldown_until = 0.0
             self._persist_tokens(client)
             return True
         return False
@@ -154,8 +156,14 @@ class GarminSyncService:
 
             try:
                 self.client.display_name = self.client.client.profile.get('displayName')
-            except Exception:
-                pass
+            except Exception as prof_err:
+                err_str = str(prof_err)
+                if any(term in err_str for term in ("401", "Unauthorized", "invalid_grant", "OAuth2Token")):
+                    self.client = None
+                    self._auth_cooldown_until = time.time() + 1800
+                    raise GarminConnectAuthenticationError(
+                        "Garmin OAuth session expired (401) — re-authenticate via Garmin Sync"
+                    ) from prof_err
         return self.client
 
     def export_tokens_json(self):
@@ -197,6 +205,7 @@ class GarminSyncService:
                 return {"needs_mfa": True, "message": "2FA code required"}
             self._persist_tokens(client)
             self.client = client
+            self._auth_cooldown_until = 0.0
             return {"success": True}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -209,6 +218,7 @@ class GarminSyncService:
             client.resume_login(client_state, mfa_code.strip())
             self._persist_tokens(client)
             self.client = client
+            self._auth_cooldown_until = 0.0
             self.pending_login_state = None
             return {"success": True}
         except Exception as e:
@@ -216,6 +226,9 @@ class GarminSyncService:
 
     def sync_today(self, target_date_str=None, force=False):
         now_ts = time.time()
+        if not force and now_ts < self._auth_cooldown_until:
+            print("[GarminSync] OAuth session expired — awaiting re-auth (cooldown active); serving cached state.")
+            return state_store.load_live_state(LIVE_STATE_PATH)
         if now_ts < self._cooldown_until:
             wait_s = int(self._cooldown_until - now_ts)
             print(f"[GarminSync] Rate-limit cooldown active ({wait_s}s remaining); serving cached state.")
@@ -231,6 +244,7 @@ class GarminSyncService:
             self._last_sync_ts = time.time()
             self._backoff_sec = 60
             self._cooldown_until = 0.0
+            self._auth_cooldown_until = 0.0
             return state
         except GarminConnectTooManyRequestsError as rl_err:
             self._backoff_sec = min(3600, max(60, self._backoff_sec * 2))
@@ -579,6 +593,7 @@ class GarminSyncService:
         # If direct Garmin OAuth failed (401), do not overwrite with empty values; let MND Garmin bridge populate
         if auth_failed:
             self.client = None
+            self._auth_cooldown_until = time.time() + 1800
             raise GarminConnectAuthenticationError(f"Direct Garmin OAuth error: {last_auth_error}")
 
         # Snapshot existing activities outside the lock so Garmin HTTP detail calls never hold the file lock
