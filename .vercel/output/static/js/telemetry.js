@@ -2568,6 +2568,7 @@
         navigator.serviceWorker.register('/sw.js').then((reg) => {
           console.log('✓ PULSE PWA Service Worker active');
           if (reg) {
+            window._pulseSwReg = reg;
             reg.update();
             reg.onupdatefound = () => {
               const installing = reg.installing;
@@ -2584,6 +2585,22 @@
           console.log('PWA Service Worker notice:', e.message);
         });
 
+        let lastSwCheckTs = 0;
+        const checkSwUpdate = () => {
+          const nowTs = Date.now();
+          if (nowTs - lastSwCheckTs < 30000) return;
+          lastSwCheckTs = nowTs;
+          if (window._pulseSwReg) {
+            window._pulseSwReg.update().catch(() => {});
+          }
+        };
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkSwUpdate();
+        });
+        window.addEventListener('pageshow', (ev) => {
+          if (ev.persisted) checkSwUpdate();
+        });
+
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (!refreshing) {
@@ -2592,6 +2609,24 @@
           }
         });
       }
+
+      window.forcePulseAppReload = async function() {
+        if (typeof showToast === 'function') {
+          showToast('Checking for latest PULSE update...');
+        }
+        try {
+          if (window._pulseSwReg) {
+            await window._pulseSwReg.update();
+          }
+        } catch (e) {}
+        try {
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          }
+        } catch (e) {}
+        window.location.reload();
+      };
 
       console.log("PULSE Hybrid Athlete OS loaded with MyNetDiary daily macro breakdown, voice coaching, and localStorage persistence.");
     });

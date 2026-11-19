@@ -2078,14 +2078,14 @@
           const sessions = JSON.parse(histRaw);
           if (Array.isArray(sessions)) {
             sessions.forEach(s => {
-              if (!s.date) return;
+              if (!s || !s.date) return;
               const sTime = new Date(s.date).getTime();
               if (isNaN(sTime) || sTime < cutoff48h) return;
 
               // Inspect details (sessionLoggedSets)
               if (s.details && typeof s.details === 'object') {
                 Object.values(s.details).forEach(set => {
-                  const exId = set.exercise_id || '';
+                  const exId = String((set && set.exercise_id) || '');
                   const me = getAllExercises().find(e => e.id === exId);
                   const fam = me ? me.family : '';
                   if (exId.includes('rdl') || exId.includes('swing') || fam === 'hip_hinge') fatigued.hinge = true;
@@ -2109,11 +2109,12 @@
       // 2. Inspect Garmin recentActivitiesData (last 48 hours)
       const acts = (typeof recentActivitiesData !== 'undefined' && Array.isArray(recentActivitiesData)) ? recentActivitiesData : [];
       acts.forEach(act => {
+        if (!act) return;
         let actTime = 0;
         if (act.rawDate) {
-          actTime = new Date(act.rawDate.replace(' ', 'T')).getTime();
+          actTime = new Date(String(act.rawDate).replace(' ', 'T')).getTime();
         } else if (act.date) {
-          actTime = new Date(act.date.replace(' ', 'T')).getTime();
+          actTime = new Date(String(act.date).replace(' ', 'T')).getTime();
         }
         if (isNaN(actTime) || actTime === 0) {
           if (act.isToday || (typeof act.date === 'string' && act.date.toLowerCase().includes('today'))) {
@@ -2666,6 +2667,7 @@ function generateWorkoutFromGearAndGoal() {
 
       const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
       acts.forEach(a => {
+        if (!a) return;
         const dt = new Date(String(a.rawDate || a.date || '').replace(' ', 'T')).getTime();
         if (!isNaN(dt) && (now - dt) <= sevenDaysMs) {
           const nm = String(`${a.name || ''} ${a.subTitle || a.sub_title || ''}`).toLowerCase();
@@ -2765,7 +2767,7 @@ function generateWorkoutFromGearAndGoal() {
           const sessions = JSON.parse(rawSessions);
           if (Array.isArray(sessions) && sessions.length > 0) {
             inAppTodaySessions = sessions.filter(s => {
-              if (!s.date) return false;
+              if (!s || !s.date) return false;
               const d = new Date(s.date);
               return !isNaN(d.getTime()) && d.toDateString() === todayStr;
             });
@@ -2789,6 +2791,7 @@ function generateWorkoutFromGearAndGoal() {
         );
         const hasRealToday = actsToCheck.some(a => !isBridgeAct(a));
         const todayActs = actsToCheck.filter(a => {
+          if (!a) return false;
           if (hasRealToday && isBridgeAct(a)) return false;
           const isRealWorkout = (Number(a.duration_min || a.durationMin || 0) >= 10) || (Number(a.calories || 0) >= 80);
           if (!isRealWorkout) return false;
@@ -2887,7 +2890,7 @@ function generateWorkoutFromGearAndGoal() {
     };
 
     function generateTomorrowRecommendation(completedToday) {
-      const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
+      const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData.filter(Boolean) : [];
       const scen = window.tomorrowSleepScenario || 'good';
 
       let sleepScore = (window.athleteProfile && window.athleteProfile.sleepScore) ? window.athleteProfile.sleepScore : 94;
@@ -2917,16 +2920,16 @@ function generateWorkoutFromGearAndGoal() {
       }
 
       const todayText = `${completedToday?.title || ''} ${(acts && acts[0] && (acts[0].subTitle || acts[0].sub_title)) || ''}`.toLowerCase();
-      const fatigued = getFatiguedPatterns48h();
+      const fatigued = (typeof getFatiguedPatterns48h === 'function') ? getFatiguedPatterns48h() : { hinge: false, h_push: false, h_pull: false, v_push: false, knee_dom: false };
       const didSkipAndSwings = /skip|jump/.test(todayText) && /swing|kb|kettlebell/.test(todayText);
       const isLowerHeavy = todayText.includes('squat') || todayText.includes('option a') || todayText.includes('barbell') || todayText.includes('strength');
 
       let latestAvgHr = 137;
-      if (acts.length > 0 && (acts[0].avgHr || acts[0].avg_hr)) latestAvgHr = acts[0].avgHr || acts[0].avg_hr;
+      if (acts.length > 0 && acts[0] && (acts[0].avgHr || acts[0].avg_hr)) latestAvgHr = acts[0].avgHr || acts[0].avg_hr;
 
       let tomorrowGear = null;
       try { tomorrowGear = localStorage.getItem('pulse_tomorrow_gear'); } catch(e) {}
-      const kbW = (gearConfig && gearConfig.kb && gearConfig.kb.weight) || '24kg';
+      const kbW = (typeof gearConfig !== 'undefined' && gearConfig && gearConfig.kb && gearConfig.kb.weight) || '24kg';
 
       const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
       const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 65, reps: 8 };
@@ -3620,10 +3623,11 @@ function generateWorkoutFromGearAndGoal() {
       let todayLogged = false;
 
       acts.forEach(a => {
+        if (!a) return;
         const dateStr = a.rawDate || a.date || '';
         let actDate = null;
         if (dateStr) {
-          const parsed = new Date(dateStr.replace(' ', 'T'));
+          const parsed = new Date(String(dateStr).replace(' ', 'T'));
           if (!isNaN(parsed.getTime())) {
             actDate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
           }
@@ -3666,7 +3670,7 @@ function generateWorkoutFromGearAndGoal() {
 
       if (activeCaloriesToday === 0 && actDayMap[0]) {
         acts.forEach(a => {
-          if (a.isToday || (a.rawDate && a.rawDate.startsWith(typeof getLocalDateStr === 'function' ? getLocalDateStr(now) : now.toISOString().split('T')[0]))) {
+          if (a && (a.isToday || (a.rawDate && String(a.rawDate).startsWith(typeof getLocalDateStr === 'function' ? getLocalDateStr(now) : now.toISOString().split('T')[0])))) {
             activeCaloriesToday += (a.calories || 0);
           }
         });
@@ -4062,6 +4066,7 @@ function generateWorkoutFromGearAndGoal() {
         ? recentActivitiesData
         : ((window.BAKED_LIVE_STATE?.garmin?.recent_activities) || []);
       const acts7d = allRecentActs.filter(a => {
+        if (!a) return false;
         const rawD = a.rawDate || a.date || '';
         const t = new Date(String(rawD).replace(' ', 'T')).getTime();
         return !isNaN(t) && (now7 - t) <= sevenDaysMs && (now7 - t) >= -86400000;
@@ -4175,6 +4180,7 @@ function generateWorkoutFromGearAndGoal() {
         let totalDur7d = 0;
 
         acts7d.forEach(a => {
+          if (!a) return;
           const nm = `${a.name || ''} ${a.subTitle || a.sub_title || ''} ${a.activity_type_key || ''}`.toLowerCase();
           const c = Number(a.calories || 0);
           totalDur7d += Number(a.durationMin || a.duration_min || 0);

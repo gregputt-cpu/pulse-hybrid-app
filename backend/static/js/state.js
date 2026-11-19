@@ -331,7 +331,10 @@
       window.addEventListener('error', (ev) => {
         console.error('[PULSE Runtime Error]', ev.message || ev.error);
         if (typeof showToast === 'function' && ev.message && !String(ev.message).includes('ResizeObserver')) {
-          showToast('⚠️ Something went wrong — check console or refresh');
+          const src = ev.filename ? String(ev.filename).split('/').pop().split('?')[0] : '';
+          const loc = src && ev.lineno ? ` (${src}:${ev.lineno})` : '';
+          const msg = String(ev.message).replace(/^Uncaught\s+/i, '').slice(0, 90);
+          showToast(`⚠️ ${msg}${loc}`);
         }
       });
       window.addEventListener('unhandledrejection', (ev) => {

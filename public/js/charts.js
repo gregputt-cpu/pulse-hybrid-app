@@ -734,6 +734,26 @@ async function renderRenphoTrendChart() {
     console.warn('[RenphoChart] Fetch failed, using fallback live state:', err);
   }
 
+  // Locate or create #renphoTrendChartContainer
+  let container = document.getElementById('renphoTrendChartContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'renphoTrendChartContainer';
+    const renphoSyncEl = document.getElementById('renphoSyncTime');
+    const renphoCard = renphoSyncEl ? renphoSyncEl.closest('.card') : (document.querySelector('#tab-body .card') || document.querySelector('.card'));
+    if (renphoCard) {
+      renphoCard.appendChild(container);
+    } else {
+      const targetMain = document.getElementById('tab-today') || document.querySelector('main') || document.body;
+      targetMain.appendChild(container);
+    }
+  }
+  if (!container) return;
+
+  container.style.marginTop = '14px';
+  container.style.paddingTop = '12px';
+  container.style.borderTop = '1px solid rgba(255,255,255,0.06)';
+
   if (!records || records.length < 2) {
     const baked = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
     const rState = baked.renpho || baked.athlete || (typeof window !== 'undefined' ? window.athleteProfile : null) || {};
@@ -871,25 +891,6 @@ async function renderRenphoTrendChart() {
   const startDate = points[0].dateLabel || 'D-30';
   const midDate = points[Math.floor(points.length / 2)].dateLabel || 'D-15';
   const endDate = points[points.length - 1].dateLabel || 'Today';
-
-  // Locate or create #renphoTrendChartContainer
-  let container = document.getElementById('renphoTrendChartContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'renphoTrendChartContainer';
-    const renphoSyncEl = document.getElementById('renphoSyncTime');
-    const renphoCard = renphoSyncEl ? renphoSyncEl.closest('.card') : (document.querySelector('#tab-body .card') || document.querySelector('.card'));
-    if (renphoCard) {
-      renphoCard.appendChild(container);
-    } else {
-      const targetMain = document.getElementById('tab-today') || document.querySelector('main') || document.body;
-      targetMain.appendChild(container);
-    }
-  }
-
-  container.style.marginTop = '14px';
-  container.style.paddingTop = '12px';
-  container.style.borderTop = '1px solid rgba(255,255,255,0.06)';
 
   container.innerHTML = `
     <!-- HEADER & VELOCITY DISPLAY -->
