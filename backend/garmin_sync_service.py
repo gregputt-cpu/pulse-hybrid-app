@@ -1,6 +1,6 @@
 import os
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from zoneinfo import ZoneInfo
 from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnectTooManyRequestsError
 from benefits_engine import PhysiologicalBenefitsEngine
@@ -327,83 +327,198 @@ class GarminSyncService:
                     auth_failed = True
                     last_auth_error = str(e)
 
-        # 5. Fetch live Body Battery timeline across all 3 Garmin endpoints (picking latest timestamp)
+        # 5. Fetch live Body Battery timeline across all Garmin endpoints and reconcile with summary
+        body_battery_debug = None
         if not auth_failed:
-            best_bb_ts = -1
-            best_bb_val = None
+            london_tz = ZoneInfo("Europe/London")
 
-            def _consider_bb(ts_val, level_val):
-                nonlocal best_bb_ts, best_bb_val
+            def _parse_bb_int(level_val):
                 if level_val is None:
-                    return
+                    return None
                 try:
                     lvl = int(round(float(level_val)))
-                    if not (0 <= lvl <= 100):
-                        return
-                    t = int(ts_val) if ts_val is not None else 0
-                    if t >= best_bb_ts:
-                        best_bb_ts = t
-                        best_bb_val = lvl
+                    return lvl if 0 <= lvl <= 100 else None
                 except (ValueError, TypeError):
-                    pass
+                    return None
+
+            def _parse_ts_ms(ts_val):
+                if ts_val is None:
+                    return None
+                if isinstance(ts_val, (int, float)):
+                    if ts_val <= 0:
+                        return None
+                    return int(ts_val) if ts_val > 1e12 else int(ts_val * 1000)
+                if isinstance(ts_val, str):
+                    s = ts_val.strip()
+                    if not s:
+                        return None
+                    try:
+                        if s.endswith('Z'):
+                            s = s[:-1] + '+00:00'
+                        dt = datetime.fromisoformat(s)
+                        if dt.tzinfo is None:
+                            dt = dt.replace(tzinfo=timezone.utc)
+                        return int(dt.timestamp() * 1000)
+                    except ValueError:
+                        return None
+                return None
+
+            def _fmt_london_iso(ts_ms):
+                if not ts_ms or ts_ms <= 0:
+                    return None
+                try:
+                    return datetime.fromtimestamp(ts_ms / 1000.0, tz=timezone.utc).astimezone(london_tz).isoformat()
+                except Exception:
+                    return None
+
+            def _extract_latest_bb_array(vals):
+                latest_ts = -1
+                latest_val = None
+                for entry in (vals or []):
+                    if not isinstance(entry, (list, tuple)):
+                        continue
+                    if len(entry) >= 3 and isinstance(entry[1], str):
+                        raw_ts, raw_lvl = entry[0], entry[2]
+                    elif len(entry) >= 2:
+                        raw_ts, raw_lvl = entry[0], entry[1]
+                    else:
+                        continue
+                    lvl = _parse_bb_int(raw_lvl)
+                    if lvl is None:
+                        continue
+                    t_ms = _parse_ts_ms(raw_ts) or 0
+                    if t_ms >= latest_ts:
+                        latest_ts = t_ms
+                        latest_val = lvl
+                return (latest_ts if latest_val is not None else -1), latest_val
 
             # Source A: client.get_body_battery(target_date_str)
+            bb_ep_ts = -1
+            bb_ep_val = None
             try:
                 bb_data = client.get_body_battery(target_date_str)
-                if isinstance(bb_data, list):
-                    for day_bb in bb_data:
-                        if not isinstance(day_bb, dict):
-                            continue
-                        vals = day_bb.get('bodyBatteryValuesArray') or []
-                        for entry in vals:
-                            if isinstance(entry, (list, tuple)):
-                                if len(entry) >= 3 and isinstance(entry[1], str):
-                                    _consider_bb(entry[0], entry[2])
-                                elif len(entry) >= 2:
-                                    _consider_bb(entry[0], entry[1])
-                        if day_bb.get('bodyBatteryMostRecentValue') is not None:
-                            _consider_bb(best_bb_ts + 1 if best_bb_val is None else 0, day_bb.get('bodyBatteryMostRecentValue'))
-                elif isinstance(bb_data, dict):
-                    vals = bb_data.get('bodyBatteryValuesArray') or []
-                    for entry in vals:
-                        if isinstance(entry, (list, tuple)):
-                            if len(entry) >= 3 and isinstance(entry[1], str):
-                                _consider_bb(entry[0], entry[2])
-                            elif len(entry) >= 2:
-                                _consider_bb(entry[0], entry[1])
-                    if bb_data.get('bodyBatteryMostRecentValue') is not None:
-                        _consider_bb(best_bb_ts + 1 if best_bb_val is None else 0, bb_data.get('bodyBatteryMostRecentValue'))
+                bb_items = bb_data if isinstance(bb_data, list) else ([bb_data] if isinstance(bb_data, dict) else [])
+                for day_bb in bb_items:
+                    if not isinstance(day_bb, dict):
+                        continue
+                    arr_ts, arr_val = _extract_latest_bb_array(day_bb.get('bodyBatteryValuesArray'))
+                    if arr_val is not None and arr_ts >= bb_ep_ts:
+                        bb_ep_ts = arr_ts
+                        bb_ep_val = arr_val
+                    recent_val = _parse_bb_int(day_bb.get('bodyBatteryMostRecentValue'))
+                    if recent_val is not None and bb_ep_val is None:
+                        bb_ep_ts = 0
+                        bb_ep_val = recent_val
             except Exception as e:
                 print(f"[GarminSync] Warning fetching body battery: {e}")
                 if is_auth_error(e):
                     auth_failed = True
                     last_auth_error = str(e)
+            bb_ep_time_iso = _fmt_london_iso(bb_ep_ts) if bb_ep_ts > 0 else None
 
             # Source B: client.get_stress_data(target_date_str) (returns intraday [ts, status, level, version])
+            stress_ep_ts = -1
+            stress_ep_val = None
             if not auth_failed:
                 try:
                     stress_data = client.get_stress_data(target_date_str)
                     if isinstance(stress_data, dict):
-                        for entry in (stress_data.get('bodyBatteryValuesArray') or []):
-                            if isinstance(entry, (list, tuple)):
-                                if len(entry) >= 3 and isinstance(entry[1], str):
-                                    _consider_bb(entry[0], entry[2])
-                                elif len(entry) >= 2:
-                                    _consider_bb(entry[0], entry[1])
+                        stress_ep_ts, stress_ep_val = _extract_latest_bb_array(stress_data.get('bodyBatteryValuesArray'))
                 except Exception as e:
                     print(f"[GarminSync] Warning fetching stress/body battery data: {e}")
                     if is_auth_error(e):
                         auth_failed = True
                         last_auth_error = str(e)
+            stress_ep_time_iso = _fmt_london_iso(stress_ep_ts) if stress_ep_ts > 0 else None
 
-            # Source C: summary.get('bodyBatteryMostRecentValue') fallback/comparison
-            if not auth_failed and isinstance(summary, dict) and summary.get('bodyBatteryMostRecentValue') is not None:
-                summary_bb = summary.get('bodyBatteryMostRecentValue')
-                if best_bb_val is not None and str(summary_bb) != str(best_bb_val):
-                    print(f"[GarminSync] Body Battery sources: timeline={best_bb_val} (ts={best_bb_ts}) vs summary={summary_bb}")
-                _consider_bb(0, summary_bb)
+            # Source C (optional): client.get_body_battery_events(target_date_str)
+            bb_events_ts = -1
+            bb_events_val = None
+            bb_events_impact = None
+            if not auth_failed and hasattr(client, 'get_body_battery_events'):
+                try:
+                    events_data = client.get_body_battery_events(target_date_str)
+                    event_items = events_data if isinstance(events_data, list) else ([events_data] if isinstance(events_data, dict) else [])
+                    for ev in event_items:
+                        if not isinstance(ev, dict):
+                            continue
+                        arr_ts, arr_val = _extract_latest_bb_array(ev.get('bodyBatteryValuesArray'))
+                        if arr_val is not None and arr_ts >= bb_events_ts:
+                            bb_events_ts = arr_ts
+                            bb_events_val = arr_val
+                        ev_meta = ev.get('event') if isinstance(ev.get('event'), dict) else ev
+                        if isinstance(ev_meta, dict) and ev_meta.get('bodyBatteryImpact') is not None:
+                            ev_start_ms = _parse_ts_ms(ev_meta.get('startTimestampGmt') or ev_meta.get('eventStartTimeGmt'))
+                            ev_dur_ms = int(ev_meta.get('durationInMilliseconds') or 0)
+                            ev_end_ms = (ev_start_ms + ev_dur_ms) if ev_start_ms else -1
+                            if ev_end_ms >= bb_events_ts:
+                                bb_events_impact = ev_meta.get('bodyBatteryImpact')
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching body battery events: {e}")
+            bb_events_time_iso = _fmt_london_iso(bb_events_ts) if bb_events_ts > 0 else None
 
-            live_body_battery = best_bb_val
+            # Source D: summary Body Battery fields
+            summary_dict = summary if isinstance(summary, dict) else {}
+            summary_bb = _parse_bb_int(summary_dict.get('bodyBatteryMostRecentValue'))
+            summary_last_sync_gmt = summary_dict.get('lastSyncTimestampGMT')
+            summary_sync_ts = _parse_ts_ms(summary_last_sync_gmt)
+
+            # Reconcile timeline sources first (pick newest timestamp)
+            best_ts = -1
+            best_bb_val = None
+            best_source = None
+
+            if bb_ep_val is not None and bb_ep_ts >= best_ts:
+                best_ts = bb_ep_ts
+                best_bb_val = bb_ep_val
+                best_source = 'body_battery_endpoint'
+            if stress_ep_val is not None and (stress_ep_ts > best_ts or best_bb_val is None):
+                best_ts = stress_ep_ts
+                best_bb_val = stress_ep_val
+                best_source = 'stress_endpoint'
+            if bb_events_val is not None and bb_events_ts > best_ts:
+                best_ts = bb_events_ts
+                best_bb_val = bb_events_val
+                best_source = 'body_battery_events'
+
+            # Reconcile against Garmin's authoritative summary.bodyBatteryMostRecentValue
+            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            chosen_source = best_source
+            if summary_bb is not None and (
+                best_bb_val is None
+                or (summary_sync_ts is not None and summary_sync_ts >= best_ts)
+                or (best_ts >= 0 and (now_ms - best_ts) > 10 * 60 * 1000 and summary_bb != best_bb_val)
+            ):
+                live_body_battery = summary_bb
+                chosen_source = 'summary_most_recent'
+            else:
+                live_body_battery = best_bb_val
+
+            body_battery_debug = {
+                "chosen": live_body_battery,
+                "chosen_source": chosen_source,
+                "summary_most_recent": summary_bb,
+                "summary_high": summary_dict.get('bodyBatteryHighestValue'),
+                "summary_low": summary_dict.get('bodyBatteryLowestValue'),
+                "summary_drained": summary_dict.get('bodyBatteryDrainedValue'),
+                "summary_charged": summary_dict.get('bodyBatteryChargedValue'),
+                "summary_at_wake": summary_dict.get('bodyBatteryAtWakeTime'),
+                "summary_last_sync_gmt": summary_last_sync_gmt,
+                "bb_endpoint_val": bb_ep_val,
+                "bb_endpoint_time": bb_ep_time_iso,
+                "stress_endpoint_val": stress_ep_val,
+                "stress_endpoint_time": stress_ep_time_iso,
+            }
+            if bb_events_val is not None or bb_events_impact is not None:
+                body_battery_debug["events_val"] = bb_events_val
+                body_battery_debug["events_time"] = bb_events_time_iso
+                body_battery_debug["events_impact"] = bb_events_impact
+
+            print(
+                f"[GarminSync] Body Battery reconciled: chosen={live_body_battery} ({chosen_source}) | "
+                f"summary={summary_bb} (sync={summary_last_sync_gmt}) | "
+                f"bb_ep={bb_ep_val} ({bb_ep_time_iso}) | stress_ep={stress_ep_val} ({stress_ep_time_iso})"
+            )
 
         # Persist refreshed tokens when direct calls succeed
         if not auth_failed and self.client:
@@ -440,6 +555,8 @@ class GarminSyncService:
             garmin_state['body_battery'] = live_body_battery
         elif summary.get('bodyBatteryMostRecentValue') is not None:
             garmin_state['body_battery'] = summary.get('bodyBatteryMostRecentValue')
+        if body_battery_debug is not None:
+            garmin_state['body_battery_debug'] = body_battery_debug
 
         if sleep_score is not None:
             garmin_state['sleep_score'] = sleep_score
