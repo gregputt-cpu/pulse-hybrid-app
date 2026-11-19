@@ -4799,9 +4799,32 @@ function viewCompletedWorkoutBreakdown() {
         }).join('');
       }
 
-      // Build High-Visibility Flow Movement Chain & Live HUD (top of card)
+      // Build Ultra-Compact Zero-Scroll Flow Movement Grid & Integrated Timer + Live Spotlight Dock
       const flowSteps = Array.isArray(ex.flowSteps) ? ex.flowSteps : [];
-      let flowBoardHtml = '';
+      const bellKg = parseInt(String(ex.targetWeight || '20kg'), 10) || 20;
+      const kbRepsRd = ex.kbRepsPerRound || 45;
+
+      const renderSidePill = (sideBadge) => {
+        if (!sideBadge) return '';
+        const isLeft = sideBadge === 'LEFT';
+        const isRight = sideBadge === 'RIGHT';
+        const shortLabel = isLeft ? '(L)' : (isRight ? '(R)' : sideBadge);
+        const bg = isLeft ? 'rgba(245,158,11,0.18)' : (isRight ? 'rgba(0,229,255,0.18)' : 'rgba(168,85,247,0.18)');
+        const col = isLeft ? '#fbbf24' : (isRight ? '#38bdf8' : '#c084fc');
+        const bdr = isLeft ? 'rgba(245,158,11,0.45)' : (isRight ? 'rgba(0,229,255,0.45)' : 'rgba(168,85,247,0.45)');
+        return `<span style="font-size:9.5px; font-weight:900; padding:1px 4px; border-radius:4px; background:${bg}; border:1px solid ${bdr}; color:${col}; flex-shrink:0;">${shortLabel}</span>`;
+      };
+
+      const hasRoundCounter = (st.format === 'kb_flow' || st.format === 'amrap' || st.format === 'for_time');
+      const roundBtnHtml = hasRoundCounter ? `
+        <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:5px 9px; font-size:11px; font-weight:900; background:var(--primary); color:#000; border:none; border-radius:7px; cursor:pointer; white-space:nowrap;">+1 Rd (${st.amrapRounds})</button>
+        ${st.amrapRounds > 0 ? `<button type="button" onclick="stepInlineRound(-1)" title="Subtract round" style="padding:4px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; cursor:pointer;">−</button>` : ''}
+      ` : '';
+
+      let spotlightLineHtml = '';
+      let flowGridHtml = '';
+      let sumNumericReps = 0;
+
       if (flowSteps.length > 0) {
         const parsedSteps = flowSteps.map(step => parseFlowStepString(step));
         const rawActiveIdx = st.activeFlowStepIdx !== undefined ? st.activeFlowStepIdx : (st.flowStepIdx || 0);
@@ -4810,35 +4833,41 @@ function viewCompletedWorkoutBreakdown() {
         const nextIdx = (currIdx + 1) % flowSteps.length;
         const nextParsed = parsedSteps[nextIdx];
 
-        const sumNumericReps = parsedSteps.reduce((acc, p) => acc + (p.numericReps || 0), 0);
-        const totalRepsRound = ex.repsPerRound || sumNumericReps;
-        const headerSummaryBadge = totalRepsRound > 0
-          ? `${flowSteps.length} Moves • ${totalRepsRound} reps / round`
-          : `${flowSteps.length} moves in chain`;
+        sumNumericReps = parsedSteps.reduce((acc, p) => acc + (p.numericReps || 0), 0);
 
-        const renderSidePill = (sideBadge) => {
-          if (!sideBadge) return '';
-          const isLeft = sideBadge === 'LEFT';
-          const isRight = sideBadge === 'RIGHT';
-          const bg = isLeft ? 'rgba(245,158,11,0.18)' : (isRight ? 'rgba(0,229,255,0.18)' : 'rgba(168,85,247,0.18)');
-          const col = isLeft ? '#fbbf24' : (isRight ? '#38bdf8' : '#c084fc');
-          const bdr = isLeft ? 'rgba(245,158,11,0.45)' : (isRight ? 'rgba(0,229,255,0.45)' : 'rgba(168,85,247,0.45)');
-          return `<span style="font-size:10.5px; font-weight:900; padding:2px 7px; border-radius:5px; background:${bg}; border:1px solid ${bdr}; color:${col}; letter-spacing:0.04em;">${sideBadge}</span>`;
-        };
+        spotlightLineHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; padding-top:5px; border-top:1px solid rgba(0,245,212,0.22);">
+            <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; min-width:0; flex:1;">
+              <span style="font-size:10px; font-weight:900; color:var(--teal, #00f5d4); letter-spacing:0.04em;">NOW (${currIdx + 1}/${flowSteps.length}):</span>
+              <strong style="font-size:13.5px; color:#fff; font-weight:900;">${currParsed.moveName}</strong>
+              ${renderSidePill(currParsed.sideBadge)}
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; background:rgba(0,245,212,0.2); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);">${currParsed.repsBadge}</span>
+              <span style="font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap;">
+                <span style="color:#38bdf8; font-weight:800;">UP NEXT ➔</span> #${nextIdx + 1} ${nextParsed.moveName} (${nextParsed.repsBadge})
+              </span>
+            </div>
+            <button type="button" onclick="advanceInlineCondFlowStep('${ex.id}', 1)" style="padding:4px 9px; font-size:11px; font-weight:800; border-radius:7px; background:rgba(0,245,212,0.18); border:1px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4); cursor:pointer; white-space:nowrap; flex-shrink:0;">
+              Next ➔
+            </button>
+          </div>
+        `;
 
+        const isTwoCol = flowSteps.length > 4;
+        const isOddCount = (flowSteps.length % 2 === 1);
         const ladderRowsHtml = parsedSteps.map((p, idx) => {
           const isCurrent = idx === currIdx;
           const isDone = idx < currIdx;
-          const isLast = idx === flowSteps.length - 1;
+          const isLastOdd = isTwoCol && isOddCount && (idx === flowSteps.length - 1);
+          const spanStyle = isLastOdd ? 'grid-column: span 2;' : '';
           const stepNumBg = isCurrent
-            ? 'background:var(--teal, #00f5d4); color:#041318; border:1px solid var(--teal, #00f5d4); box-shadow:0 0 10px rgba(0,245,212,0.45);'
+            ? 'background:var(--teal, #00f5d4); color:#041318; border:1px solid var(--teal, #00f5d4); box-shadow:0 0 8px rgba(0,245,212,0.45);'
             : (isDone
               ? 'background:rgba(16,185,129,0.22); color:#34d399; border:1px solid rgba(16,185,129,0.45);'
               : 'background:rgba(255,255,255,0.07); color:#94a3b8; border:1px solid rgba(255,255,255,0.14);');
           const rowBg = isCurrent
-            ? 'background:linear-gradient(90deg, rgba(0,245,212,0.18) 0%, rgba(0,229,255,0.07) 100%); border:1.5px solid var(--teal, #00f5d4); box-shadow:0 0 14px rgba(0,245,212,0.16);'
+            ? 'background:linear-gradient(90deg, rgba(0,245,212,0.2) 0%, rgba(0,229,255,0.08) 100%); border:1.5px solid var(--teal, #00f5d4); box-shadow:0 0 10px rgba(0,245,212,0.15);'
             : (isDone
-              ? 'background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.22);'
+              ? 'background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.24);'
               : 'background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1);');
           const repPillStyle = isCurrent
             ? 'background:rgba(0,245,212,0.22); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);'
@@ -4847,63 +4876,40 @@ function viewCompletedWorkoutBreakdown() {
               : 'background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.28); color:#7dd3fc;');
 
           return `
-            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; border-radius:9px; cursor:pointer; text-align:left; transition:all 0.15s ease; ${rowBg}">
-              <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-                <span style="width:23px; height:23px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:900; font-family:'JetBrains Mono',monospace; flex-shrink:0; ${stepNumBg}">${isDone ? '✓' : (idx + 1)}</span>
-                <span style="font-size:14px; font-weight:800; color:#f8fafc; line-height:1.2; word-break:break-word;">${p.moveName}</span>
+            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="${spanStyle} width:100%; display:flex; align-items:center; justify-content:space-between; gap:5px; padding:5px 7px; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.12s ease; min-width:0; ${rowBg}">
+              <div style="display:flex; align-items:center; gap:5px; min-width:0; flex:1;">
+                <span style="width:18px; height:18px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:900; font-family:'JetBrains Mono',monospace; flex-shrink:0; ${stepNumBg}">${isDone ? '✓' : (idx + 1)}</span>
+                <span style="font-size:12.5px; font-weight:800; color:#f8fafc; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.moveName}</span>
                 ${renderSidePill(p.sideBadge)}
               </div>
-              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                <span style="font-size:13.5px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:4px 10px; border-radius:7px; white-space:nowrap; ${repPillStyle}">${p.repsBadge}</span>
-                <span style="font-size:11px; font-weight:800; color:${isLast ? '#38bdf8' : 'rgba(255,255,255,0.35)'};" title="${isLast ? 'Repeat Flow' : 'Flows into next move'}">${isLast ? '🔄' : '↓'}</span>
-              </div>
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 6px; border-radius:5px; white-space:nowrap; flex-shrink:0; ${repPillStyle}">${p.repsBadge}</span>
             </button>
           `;
         }).join('');
 
-        flowBoardHtml = `
-          <div style="display:flex; flex-direction:column; gap:8px; background:rgba(3,12,20,0.75); border:1.5px solid rgba(0,245,212,0.38); border-radius:12px; padding:10px;">
-            <!-- A. 🐠 Goldfish Live Flow Spotlight Bar -->
-            <div style="background:linear-gradient(135deg, rgba(0,245,212,0.16) 0%, rgba(16,185,129,0.12) 100%); border:1.5px solid rgba(0,245,212,0.5); border-radius:10px; padding:10px 11px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-              <div style="flex:1; min-width:170px;">
-                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px;">
-                  <span style="font-size:10px; font-weight:900; letter-spacing:0.08em; color:var(--teal, #00f5d4); text-transform:uppercase;">🐠 CURRENT MOVE (${currIdx + 1}/${flowSteps.length})</span>
-                  <span style="font-size:10px; font-weight:700; color:#94a3b8;">• ${headerSummaryBadge}</span>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <span style="font-size:17px; font-weight:900; color:#ffffff; line-height:1.2;">${currParsed.moveName}</span>
-                  ${renderSidePill(currParsed.sideBadge)}
-                  <span style="font-size:16px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:4px 12px; border-radius:8px; background:rgba(0,245,212,0.18); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);">${currParsed.repsBadge}</span>
-                </div>
-                <div style="font-size:11.5px; font-weight:700; color:#cbd5e1; margin-top:5px;">
-                  <span style="color:#38bdf8; font-weight:800;">UP NEXT ➔</span> #${nextIdx + 1} ${nextParsed.moveName} ${nextParsed.sideBadge ? `(${nextParsed.sideBadge})` : ''} <strong style="color:var(--teal, #00f5d4);">(${nextParsed.repsBadge})</strong>
-                </div>
-              </div>
-              <button type="button" onclick="advanceInlineCondFlowStep('${ex.id}', 1)" style="padding:10px 14px; font-size:12px; font-weight:800; border-radius:10px; background:rgba(0,245,212,0.16); border:1px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4); cursor:pointer; white-space:nowrap; flex-shrink:0;">
-                Next Move ➔
-              </button>
-            </div>
-
-            <!-- B. High-Visibility Numbered Flow Movement Ladder -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:0 2px;">
-              <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">📋 Full Movement Chain (Tap any move to jump)</span>
-              <span style="font-size:10px; font-weight:800; color:var(--teal, #00f5d4);">🔄 Repeat Flow</span>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-              ${ladderRowsHtml}
-            </div>
+        const gridColsCss = isTwoCol ? 'repeat(2, minmax(0, 1fr))' : '1fr';
+        flowGridHtml = `
+          <div style="display:grid; grid-template-columns:${gridColsCss}; gap:4px;">
+            ${ladderRowsHtml}
           </div>
         `;
       }
 
-      let kbFlowExtraHtml = '';
-      if (st.format === 'kb_flow') {
-        const bellKg = parseInt(String(ex.targetWeight || '20kg'), 10) || 20;
-        const kbRepsRd = ex.kbRepsPerRound || 45;
-        const totalRepsRd = ex.repsPerRound || kbRepsRd;
-        const totalTonnage = st.amrapRounds * kbRepsRd * bellKg;
-        const totalReps = st.amrapRounds * totalRepsRd;
+      const totalRepsRd = ex.repsPerRound || sumNumericReps || kbRepsRd;
+      const totalTonnage = (st.format === 'kb_flow') ? (st.amrapRounds * kbRepsRd * bellKg) : 0;
+      const totalReps = st.amrapRounds * totalRepsRd;
 
+      const intermissionBanner = (st.format === 'kb_flow' && st.inIntermission) ? `
+        <div style="background:rgba(56,189,248,0.14); border:1.5px solid rgba(56,189,248,0.5); border-radius:8px; padding:6px 9px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="font-size:11px; font-weight:800; color:#7dd3fc;">
+            ${st.intermissionMode === 'none_rest' ? '🧘 Rest Window (60s) — Shake Out Grip' : `🔁 Intermission: Complete ${st.intermissionMode}`}
+          </div>
+          <button type="button" onclick="finishKbFlowIntermission()" style="padding:4px 9px; font-size:10.5px; font-weight:900; border-radius:6px; border:none; background:#38bdf8; color:#000; cursor:pointer;">✓ Start Next Flow Round</button>
+        </div>
+      ` : '';
+
+      let drawerExtraControlsHtml = '';
+      if (st.format === 'kb_flow') {
         const weightPills = [16, 20, 24, 32].map(w => {
           const active = bellKg === w;
           return `<button type="button" onclick="setKbFlowWeight('${w}kg')" style="padding:3px 8px; font-size:10px; font-weight:800; border-radius:5px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.14)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${w}kg</button>`;
@@ -4920,88 +4926,83 @@ function viewCompletedWorkoutBreakdown() {
         ];
         const intermissionPills = intermissionOpts.map(opt => {
           const active = st.intermissionMode === opt.id;
-          return `<button type="button" onclick="setKbFlowIntermission('${opt.id}')" style="padding:4px 7px; font-size:10px; font-weight:700; border-radius:6px; cursor:pointer; border:1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.12)'}; background:${active ? 'rgba(56,189,248,0.22)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : 'var(--text-muted)'};">${opt.label}</button>`;
+          return `<button type="button" onclick="setKbFlowIntermission('${opt.id}')" style="padding:3px 6px; font-size:10px; font-weight:700; border-radius:5px; cursor:pointer; border:1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.12)'}; background:${active ? 'rgba(56,189,248,0.22)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : 'var(--text-muted)'};">${opt.label}</button>`;
         }).join('');
 
-        const intermissionBanner = st.inIntermission ? `
-          <div style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.45); border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-            <div style="font-size:11px; font-weight:800; color:#7dd3fc;">
-              ${st.intermissionMode === 'none_rest' ? '🧘 Passive Rest Window (60s) — Breathe & Shake Out Grip' : `🔁 Intermission: Complete ${st.intermissionMode}`}
-            </div>
-            <button type="button" onclick="finishKbFlowIntermission()" style="padding:5px 10px; font-size:10.5px; font-weight:800; border-radius:6px; border:none; background:#38bdf8; color:#000; cursor:pointer;">✓ Start Next Flow Round</button>
-          </div>
-        ` : '';
-
-        kbFlowExtraHtml = `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:8px;">
+        drawerExtraControlsHtml = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
             <span style="font-size:10.5px; font-weight:800; color:var(--text-secondary);">🔔 Bell Weight:</span>
             <div style="display:flex; gap:4px;">${weightPills}</div>
           </div>
-
           <div>
-            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Between-Round Intermission (Optional Bodyweight or Rest Only)</div>
+            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Between-Round Intermission:</div>
             <div style="display:flex; flex-wrap:wrap; gap:4px;">${intermissionPills}</div>
-          </div>
-
-          ${intermissionBanner}
-
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px; gap:8px; flex-wrap:wrap;">
-            <div>
-              <div style="font-size:11px; font-weight:800; color:#fff;">Completed: <span style="color:var(--primary);">${st.amrapRounds} Rounds</span></div>
-              <div style="font-size:10px; color:var(--text-muted);">${totalReps.toLocaleString()} total reps • ${totalTonnage.toLocaleString()} kg KB tonnage</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
-              <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:6px 12px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
-            </div>
           </div>
         `;
       }
 
-      const showRoundsCtrl = (st.format === 'amrap' || st.format === 'for_time');
-      const progNote = (fmt.prevRounds !== null && fmt.prevRounds !== undefined)
-        ? `Previous AMRAP benchmark: <strong>${fmt.prevRounds} rounds</strong> (aim for ${fmt.prevRounds + 1}).`
-        : (fmt.prevSec ? `Previous benchmark time: <strong>${formatClockMMSS(fmt.prevSec)}</strong>.` : `Goldfish Timer active • Auto-logs duration & conditioning stimulus.`);
+      const whyText = ex.rationale || ex.why || 'Selected for target metabolic & biomechanical conditioning.';
+      const drawerSummaryText = st.format === 'kb_flow'
+        ? `⚙️ Flow Setup (Bell: ${bellKg}kg • ${Math.round(st.durationSec / 60)}m • Intermission: ${st.intermissionMode === 'none_rest' ? 'Rest 60s' : st.intermissionMode}) & Coaching Cues`
+        : `⚙️ Timer Presets (${st.format.toUpperCase()}) & Coaching Cues`;
+
+      const bottomStatusText = st.format === 'kb_flow'
+        ? `${st.amrapRounds} Rds • ${totalReps.toLocaleString()} reps • ${totalTonnage.toLocaleString()}kg tonnage`
+        : ((st.format === 'amrap' || st.format === 'for_time')
+          ? `${st.amrapRounds} Rds completed • ${totalReps > 0 ? totalReps + ' reps' : 'Auto-logs stimulus'}`
+          : ((fmt.prevRounds !== null && fmt.prevRounds !== undefined)
+            ? `Prev benchmark: ${fmt.prevRounds} rds`
+            : `Goldfish Timer • Auto-logs session`));
 
       container.innerHTML = `
-        <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(0,229,255,0.28); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
-            <span id="inlineTimerPhaseBadge" style="font-size:10.5px; font-weight:800; color:${phaseColor}; letter-spacing:0.04em; text-transform:uppercase;">${phaseLabel}</span>
-            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${st.format.toUpperCase()} MODE</span>
-          </div>
-
-          ${flowBoardHtml}
-
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <div id="inlineTimerDigits" style="font-size:38px; font-weight:800; font-family:var(--font-mono); color:#fff; letter-spacing:-0.03em; line-height:1;">${formatClockMMSS(st.secsLeft)}</div>
-            <div style="display:flex; gap:6px;">
-              <button type="button" onclick="toggleInlineTimer()" style="padding:8px 14px; border-radius:8px; border:none; background:${st.running ? '#f59e0b' : 'var(--primary)'}; color:#000; font-size:12px; font-weight:800; cursor:pointer;">${st.running ? '⏸ Pause' : '▶ Start'}</button>
-              <button type="button" onclick="resetInlineTimer()" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">↺</button>
-              ${(st.format === 'interval' || st.format === 'emom' || st.rounds > 1) ? `<button type="button" onclick="skipInlinePhase()" title="Next round/phase" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">⏭</button>` : ''}
+        <div style="background:rgba(3,12,20,0.78); border:1.5px solid rgba(0,245,212,0.35); border-radius:10px; padding:7px 8px; display:flex; flex-direction:column; gap:6px;">
+          <!-- 1. Integrated Top Control Bar: Timer + Round Logger + Live Flow Spotlight -->
+          <div style="background:linear-gradient(135deg, rgba(0,245,212,0.14) 0%, rgba(16,185,129,0.09) 100%); border:1px solid rgba(0,245,212,0.42); border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:5px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <div id="inlineTimerDigits" style="font-size:24px; font-weight:900; font-family:var(--font-mono); color:#fff; letter-spacing:-0.03em; line-height:1;">${formatClockMMSS(st.secsLeft)}</div>
+                <button type="button" onclick="toggleInlineTimer()" style="padding:5px 10px; border-radius:7px; border:none; background:${st.running ? '#f59e0b' : 'var(--primary)'}; color:#000; font-size:11px; font-weight:900; cursor:pointer;">${st.running ? '⏸' : '▶ Start'}</button>
+                <button type="button" onclick="resetInlineTimer()" title="Reset timer" style="padding:5px 7px; border-radius:7px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:11px; font-weight:800; cursor:pointer;">↺</button>
+                ${(st.format === 'interval' || st.format === 'emom' || st.rounds > 1) ? `<button type="button" onclick="skipInlinePhase()" title="Next phase" style="padding:5px 7px; border-radius:7px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:11px; font-weight:800; cursor:pointer;">⏭</button>` : ''}
+                ${roundBtnHtml}
+              </div>
+              <span id="inlineTimerPhaseBadge" style="font-size:10px; font-weight:800; color:${phaseColor}; letter-spacing:0.03em; text-transform:uppercase;">${phaseLabel}</span>
             </div>
+            ${spotlightLineHtml}
           </div>
 
-          <div style="display:flex; gap:5px; flex-wrap:wrap;">
-            ${presetsHtml}
-          </div>
+          <!-- 2. 2-Column Compact Movement Grid (Zero-Scroll Visibility) -->
+          ${flowGridHtml}
 
-          ${kbFlowExtraHtml}
+          <!-- 3. Active Intermission Banner (Only when between rounds) -->
+          ${intermissionBanner}
 
-          ${showRoundsCtrl ? `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px;">
-              <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">Completed Rounds</span>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
-                <strong style="font-size:14px; color:var(--primary); min-width:24px; text-align:center;">${st.amrapRounds}</strong>
-                <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:5px 10px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
+          <!-- 4. Compact 1-Line Collapsible Setup & Coaching Drawer -->
+          <details style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:7px; padding:5px 8px;">
+            <summary style="font-size:10.5px; font-weight:800; color:#cbd5e1; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+              <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${drawerSummaryText}</span>
+              <span style="font-size:10px; color:var(--primary); flex-shrink:0;">▼</span>
+            </summary>
+            <div style="margin-top:7px; padding-top:7px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:7px; font-size:11px;">
+              <div>
+                <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Duration / Interval Presets:</div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap;">${presetsHtml}</div>
+              </div>
+              ${drawerExtraControlsHtml}
+              <div style="color:#e2e8f0; line-height:1.35;"><strong style="color:var(--primary);">Coaching Cue:</strong> ${ex.cue || ''}</div>
+              <div style="color:var(--text-secondary); line-height:1.35;"><strong>Why Selected:</strong> ${whyText}</div>
+              <div style="display:flex; gap:6px;">
+                <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; flex:1;">⇄ Swap Session</button>
+                <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; flex:1;">✎ Edit Bell / Target</button>
               </div>
             </div>
-          ` : ''}
+          </details>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span style="font-size:10.5px; color:var(--text-muted); flex:1;">${progNote}</span>
-            <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:8px 14px; border-radius:8px; border:none; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.5); color:${isLogged ? '#000' : '#34d399'}; font-size:11.5px; font-weight:800; cursor:pointer;">
-              ${isLogged ? '✓ Flow / Conditioning Logged' : '✓ Complete & Log'}
+          <!-- 5. Compact Bottom Status & Complete Session Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; padding:2px 2px 0;">
+            <span style="font-size:10.5px; font-weight:800; color:#94a3b8;">${bottomStatusText}</span>
+            <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:5px 11px; border-radius:7px; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.55); color:${isLogged ? '#000' : '#34d399'}; font-size:11px; font-weight:900; cursor:pointer; white-space:nowrap;">
+              ${isLogged ? '✓ Session Logged' : '✓ Complete & Log Session'}
             </button>
           </div>
         </div>
@@ -5375,9 +5376,15 @@ function viewCompletedWorkoutBreakdown() {
       if (activeWorkoutPlan.length === 0) return;
 
       const isPickOneMenu = (currentArchetypeKey === 'option_b') || (currentArchetypeKey === 'option_kb' && getKbSubMode() !== 'grinds');
+      const ex = activeWorkoutPlan[currentExIdx];
+      const fmt = getExerciseFormatConfig(ex);
+      const isFlowOrCond = Boolean(fmt && (fmt.isTimed || (fmt.format && fmt.format !== 'strength' && fmt.format !== 'standard_sets')));
+
       const stepperHdr = document.getElementById('exerciseStepperHeader');
       if (stepperHdr) {
-        if (isPickOneMenu) {
+        if (isFlowOrCond) {
+          stepperHdr.style.display = 'none';
+        } else if (isPickOneMenu) {
           stepperHdr.style.display = 'block';
           stepperHdr.innerText = currentArchetypeKey === 'option_b'
             ? `🎯 Pick 1 Conditioning / Aerobic Session (${activeWorkoutPlan.length} Options):`
@@ -5405,6 +5412,7 @@ function viewCompletedWorkoutBreakdown() {
 
       const stepperEl = document.getElementById('exerciseStepperPills');
       if (stepperEl) {
+        stepperEl.style.padding = isFlowOrCond ? '1px 0 4px' : '2px 0 6px';
         stepperEl.innerHTML = activeWorkoutPlan.map((exItem, idx) => {
           const isActive = idx === currentExIdx;
           const isSkipped = !!exItem.skipped;
@@ -5424,11 +5432,10 @@ function viewCompletedWorkoutBreakdown() {
           const bg = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)');
           const col = isActive ? '#000' : (isDone ? '#10b981' : 'var(--text-secondary)');
           const bdr = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)');
-          return `<button type="button" onclick="jumpToExercise(${idx})" title="${exItem.name}" style="flex-shrink:0; padding:5px 9px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${shortName}${icon}</button>`;
+          return `<button type="button" onclick="jumpToExercise(${idx})" title="${exItem.name}" style="flex-shrink:0; padding:4px 8px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${shortName}${icon}</button>`;
         }).join('');
       }
 
-      const ex = activeWorkoutPlan[currentExIdx];
       if (!restTimerInterval) {
         restSecs = parseRestSeconds(ex.rest);
         updateRestDisplay();
@@ -5437,7 +5444,16 @@ function viewCompletedWorkoutBreakdown() {
       document.getElementById('stepCounter').innerText = isPickOneMenu
         ? `Pick 1 • Option ${currentExIdx + 1}/${activeWorkoutPlan.length}`
         : `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
-      document.getElementById('exName').innerText = ex.name;
+      const exNameEl = document.getElementById('exName');
+      if (exNameEl) {
+        exNameEl.innerText = ex.name;
+        exNameEl.style.fontSize = isFlowOrCond ? '15px' : '';
+      }
+      const targetPillEl = document.querySelector('#trainViewPrescribed .ex-target-pill');
+      if (targetPillEl) {
+        targetPillEl.style.marginBottom = isFlowOrCond ? '4px' : '';
+        targetPillEl.style.padding = isFlowOrCond ? '3px 8px' : '';
+      }
       
       const familyNames = {
         hip_hinge: "Hip Hinge (Posterior)",
@@ -5450,8 +5466,6 @@ function viewCompletedWorkoutBreakdown() {
       };
       document.getElementById('movementFamilyTag').innerText = familyNames[ex.family] || "Functional";
 
-      const fmt = getExerciseFormatConfig(ex);
-      const isFlowOrCond = Boolean(fmt && (fmt.isTimed || (fmt.format && fmt.format !== 'strength' && fmt.format !== 'standard_sets')));
       const wLabel = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
       document.getElementById('exTarget').innerText = fmt.isTimed
         ? `Prescribed: ${fmt.label}`
@@ -5461,6 +5475,7 @@ function viewCompletedWorkoutBreakdown() {
       const cueEl = document.getElementById('exCue') || document.getElementById('exerciseCue');
       const whyEl = document.getElementById('exRationale') || document.getElementById('exerciseWhy');
       const actionRowEl = document.getElementById('exActionBtnsRow');
+      const restBarEl = document.querySelector('#trainViewPrescribed .rest-bar-box');
       const whyText = ex.rationale || ex.why || 'Selected for target biomechanical recruitment.';
       const isKbGrindsMode = (currentArchetypeKey === 'option_kb' && typeof getKbSubMode === 'function' && getKbSubMode() === 'grinds');
       const kbQuickSwitchBanner = isKbGrindsMode ? `
@@ -5476,25 +5491,8 @@ function viewCompletedWorkoutBreakdown() {
       if (isFlowOrCond) {
         if (cueEl) cueEl.style.display = 'none';
         if (actionRowEl) actionRowEl.style.display = 'none';
-        if (whyEl) {
-          whyEl.innerHTML = `
-            ${kbQuickSwitchBanner}
-            <details style="margin:2px 0; cursor:pointer;">
-              <summary style="font-size:11px; font-weight:800; color:var(--text-secondary); list-style:none; display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                <span>🐘 Flow Coaching Cue, Rationale &amp; Bell Options</span>
-                <span style="font-size:10px; color:var(--primary);">▼ Details</span>
-              </summary>
-              <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:7px; font-size:11.5px; line-height:1.4;">
-                <div style="color:#e2e8f0;"><strong style="color:var(--primary);">Coaching Cue:</strong> ${ex.cue || ''}</div>
-                <div style="color:var(--text-secondary);"><strong>Why Selected:</strong> ${whyText}</div>
-                <div style="display:flex; gap:6px; margin-top:2px;">
-                  <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:7px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; flex:1;">⇄ Swap Flow</button>
-                  <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:7px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; flex:1;">✎ Edit Bell Weight</button>
-                </div>
-              </div>
-            </details>
-          `;
-        }
+        if (whyEl) whyEl.style.display = 'none';
+        if (restBarEl) restBarEl.style.display = 'none';
       } else {
         if (cueEl) {
           cueEl.style.display = '';
@@ -5502,8 +5500,10 @@ function viewCompletedWorkoutBreakdown() {
         }
         if (actionRowEl) actionRowEl.style.display = 'flex';
         if (whyEl) {
+          whyEl.style.display = '';
           whyEl.innerHTML = `${kbQuickSwitchBanner}<strong>Why Selected:</strong> ${whyText}`;
         }
+        if (restBarEl) restBarEl.style.display = '';
       }
       document.getElementById('autoregBanner').classList.remove('active');
 
