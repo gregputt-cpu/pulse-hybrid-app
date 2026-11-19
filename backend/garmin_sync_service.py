@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import threading
 from datetime import datetime, date, timezone
 from zoneinfo import ZoneInfo
 from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnectTooManyRequestsError
@@ -8,11 +10,13 @@ try:
     import db
 except Exception:
     db = None
+import state_store
 
+_DATA_DIR = state_store.get_data_dir()
 if 'GARMIN_TOKEN_DIR' in os.environ:
     TOKEN_DIR = os.environ['GARMIN_TOKEN_DIR']
-elif os.path.exists('/data'):
-    TOKEN_DIR = '/data/garmin_tokens'
+elif _DATA_DIR:
+    TOKEN_DIR = os.path.join(_DATA_DIR, 'garmin_tokens')
 else:
     TOKEN_DIR = '/shared/user/.gemini/garmin_tokens'
 
@@ -33,16 +37,16 @@ if 'GARMIN_TOKENS_JSON' in os.environ:
         raw_env = raw_env[1:-1].strip()
     os.environ['GARMIN_TOKENS_JSON'] = raw_env
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, 'live_state.json')
-if not os.path.exists(DEFAULT_STATE_PATH):
-    DEFAULT_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
-LIVE_STATE_PATH = os.environ.get('LIVE_STATE_PATH', DEFAULT_STATE_PATH)
+LIVE_STATE_PATH = state_store.get_live_state_path()
 ARTIFACT_LIVE_STATE_PATH = os.environ.get('ARTIFACT_LIVE_STATE_PATH', LIVE_STATE_PATH)
 
 class GarminSyncService:
     def __init__(self):
         self.benefits_engine = PhysiologicalBenefitsEngine()
+        self._sync_lock = threading.Lock()
+        self._last_sync_ts = 0.0
+        self._cooldown_until = 0.0
+        self._backoff_sec = 60
         self.client = None
         self.pending_login_state = None
 
@@ -219,7 +223,33 @@ class GarminSyncService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def sync_today(self, target_date_str=None):
+    def sync_today(self, target_date_str=None, force=False):
+        now_ts = time.time()
+        if now_ts < self._cooldown_until:
+            wait_s = int(self._cooldown_until - now_ts)
+            print(f"[GarminSync] Rate-limit cooldown active ({wait_s}s remaining); serving cached state.")
+            return state_store.load_live_state(LIVE_STATE_PATH)
+        if not force and (now_ts - self._last_sync_ts) < 180:
+            return state_store.load_live_state(LIVE_STATE_PATH)
+
+        if not self._sync_lock.acquire(blocking=False):
+            print("[GarminSync] Sync already in flight; serving cached state.")
+            return state_store.load_live_state(LIVE_STATE_PATH)
+        try:
+            state = self._sync_today_impl(target_date_str=target_date_str)
+            self._last_sync_ts = time.time()
+            self._backoff_sec = 60
+            self._cooldown_until = 0.0
+            return state
+        except GarminConnectTooManyRequestsError as rl_err:
+            self._backoff_sec = min(3600, max(60, self._backoff_sec * 2))
+            self._cooldown_until = time.time() + self._backoff_sec
+            print(f"[GarminSync] 429 Too Many Requests ({rl_err}); backing off for {self._backoff_sec}s.")
+            return state_store.load_live_state(LIVE_STATE_PATH)
+        finally:
+            self._sync_lock.release()
+
+    def _sync_today_impl(self, target_date_str=None):
         if not target_date_str:
             target_date_str = datetime.now(ZoneInfo("Europe/London")).date().isoformat()
 
@@ -233,6 +263,9 @@ class GarminSyncService:
         readiness_level = None
         readiness_feedback = None
         hrv_weekly = None
+        hrv_status = None
+        hrv_last_night = None
+        avg_stress_level = None
         live_body_battery = None
         auth_failed = False
         last_auth_error = None
@@ -240,7 +273,11 @@ class GarminSyncService:
         AUTH_ERROR_TERMS = ["401", "Unauthorized", "invalid_grant", "OAuth2Token"]
 
         def is_auth_error(exc):
+            if isinstance(exc, GarminConnectTooManyRequestsError):
+                raise exc
             err_str = str(exc)
+            if "429" in err_str or "too many requests" in err_str.lower():
+                raise GarminConnectTooManyRequestsError(err_str)
             return any(term in err_str for term in AUTH_ERROR_TERMS)
 
         # 1. Fetch user summary
@@ -282,10 +319,10 @@ class GarminSyncService:
         if not auth_failed:
             try:
                 sleep = client.get_sleep_data(target_date_str)
-                dto = sleep.get('dailySleepDTO', {})
-                scores = dto.get('sleepScores', {})
-                sleep_score = scores.get('overall', {}).get('value')
-                sec = dto.get('sleepTimeSeconds', 0)
+                dto = (sleep or {}).get('dailySleepDTO') or {}
+                scores = dto.get('sleepScores') or {}
+                sleep_score = (scores.get('overall') or {}).get('value')
+                sec = int(dto.get('sleepTimeSeconds') or 0)
                 if sec > 0:
                     hours = sec // 3600
                     mins = (sec % 3600) // 60
@@ -424,12 +461,33 @@ class GarminSyncService:
                     stress_data = client.get_stress_data(target_date_str)
                     if isinstance(stress_data, dict):
                         stress_ep_ts, stress_ep_val = _extract_latest_bb_array(stress_data.get('bodyBatteryValuesArray'))
+                        if stress_data.get('avgStressLevel') is not None:
+                            avg_stress_level = stress_data.get('avgStressLevel')
                 except Exception as e:
                     print(f"[GarminSync] Warning fetching stress/body battery data: {e}")
                     if is_auth_error(e):
                         auth_failed = True
                         last_auth_error = str(e)
             stress_ep_time_iso = _fmt_london_iso(stress_ep_ts) if stress_ep_ts > 0 else None
+
+            # Fetch HRV data (weekly avg, status, last night avg)
+            if not auth_failed and hasattr(client, 'get_hrv_data'):
+                try:
+                    hrv_data = client.get_hrv_data(target_date_str)
+                    if isinstance(hrv_data, dict):
+                        hrv_sum = hrv_data.get('hrvSummary') or {}
+                        if isinstance(hrv_sum, dict):
+                            if hrv_sum.get('weeklyAvg') is not None:
+                                hrv_weekly = hrv_sum.get('weeklyAvg')
+                            if hrv_sum.get('status'):
+                                hrv_status = hrv_sum.get('status')
+                            if hrv_sum.get('lastNightAvg') is not None:
+                                hrv_last_night = hrv_sum.get('lastNightAvg')
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching HRV data: {e}")
+                    if is_auth_error(e):
+                        auth_failed = True
+                        last_auth_error = str(e)
 
             # Source C (optional): client.get_body_battery_events(target_date_str)
             bb_events_ts = -1
@@ -527,75 +585,42 @@ class GarminSyncService:
             except Exception:
                 pass
 
-        # Read current live_state.json
-        state = {}
-        if os.path.exists(LIVE_STATE_PATH):
-            with open(LIVE_STATE_PATH, 'r', encoding='utf-8') as f:
-                state = json.load(f)
-
-        now_london_iso = datetime.now(ZoneInfo("Europe/London")).isoformat()
-        state['last_synced'] = now_london_iso
-        state['date'] = target_date_str
-
         # If direct Garmin OAuth failed (401), do not overwrite with empty values; let MND Garmin bridge populate
         if auth_failed:
             self.client = None
             raise GarminConnectAuthenticationError(f"Direct Garmin OAuth error: {last_auth_error}")
 
-
-        garmin_state = state.setdefault('garmin', {})
-        garmin_state['source'] = 'garmin_oauth'
-        garmin_state['oauth_date'] = target_date_str
-        garmin_state['last_synced'] = now_london_iso
-        if summary.get('totalSteps') is not None:
-            garmin_state['steps'] = summary.get('totalSteps')
-        if summary.get('restingHeartRate') is not None:
-            garmin_state['resting_hr'] = summary.get('restingHeartRate')
-        if live_body_battery is not None:
-            garmin_state['body_battery'] = live_body_battery
-        elif summary.get('bodyBatteryMostRecentValue') is not None:
-            garmin_state['body_battery'] = summary.get('bodyBatteryMostRecentValue')
-        if body_battery_debug is not None:
-            garmin_state['body_battery_debug'] = body_battery_debug
-
-        if sleep_score is not None:
-            garmin_state['sleep_score'] = sleep_score
-        if sleep_duration is not None:
-            garmin_state['sleep_duration'] = sleep_duration
-
-        if readiness_score is not None:
-            garmin_state['training_readiness'] = readiness_score
-        if readiness_level:
-            garmin_state['readiness_level'] = readiness_level
-        if readiness_feedback:
-            garmin_state['readiness_feedback'] = readiness_feedback
-        if hrv_weekly is not None:
-            garmin_state['hrv_weekly_avg'] = hrv_weekly
-
-        existing_activities = garmin_state.get('recent_activities', [])
-        existing_map = {str(a.get('id')): a for a in existing_activities}
+        # Snapshot existing activities outside the lock so Garmin HTTP detail calls never hold the file lock
+        snapshot_state = state_store.load_live_state(LIVE_STATE_PATH)
+        snapshot_activities = snapshot_state.get('garmin', {}).get('recent_activities', [])
+        snapshot_map = {str(a.get('id')): a for a in snapshot_activities}
 
         today_active_burn = 0
         today_activity_list = []
 
         for idx, ra in enumerate(raw_activities):
-            act_id = str(ra.get('activityId'))
-            activity_type_key = ra.get('activityType', {}).get('typeKey', 'cardio')
+            if not isinstance(ra, dict):
+                continue
+            act_id = str(ra.get('activityId') or '')
+            if not act_id:
+                continue
+            act_type = ra.get('activityType') or {}
+            activity_type_key = act_type.get('typeKey') or 'cardio'
             total_sets = ra.get('totalSets')
             total_reps = ra.get('totalReps')
-            act_name = ra.get('activityType', {}).get('typeKey', 'Cardio').capitalize()
-            sub_title = ra.get('activityName', act_name)
-            calories = round(float(ra.get('calories', 0)))
+            act_name = str(act_type.get('typeKey') or 'Cardio').capitalize()
+            sub_title = ra.get('activityName') or act_name
+            calories = round(float(ra.get('calories') or 0))
             today_active_burn += calories
 
-            duration_min = round(float(ra.get('duration', 0)) / 60.0, 1)
-            avg_hr = round(float(ra.get('averageHR', 0)))
-            max_hr = round(float(ra.get('maxHR', 0)))
-            aerobic_te = float(ra.get('aerobicTrainingEffect', 0.0) or 0.0)
-            anaerobic_te = float(ra.get('anaerobicTrainingEffect', 0.0) or 0.0)
-            start_time = ra.get('startTimeLocal', '')
+            duration_min = round(float(ra.get('duration') or 0) / 60.0, 1)
+            avg_hr = round(float(ra.get('averageHR') or 0))
+            max_hr = round(float(ra.get('maxHR') or 0))
+            aerobic_te = float(ra.get('aerobicTrainingEffect') or 0.0)
+            anaerobic_te = float(ra.get('anaerobicTrainingEffect') or 0.0)
+            start_time = ra.get('startTimeLocal') or ''
 
-            existing = existing_map.get(act_id)
+            existing = snapshot_map.get(act_id)
             custom_note = (existing.get('user_notes') if existing else None)
             if not custom_note and db is not None:
                 try:
@@ -719,111 +744,165 @@ class GarminSyncService:
 
             today_activity_list.append(entry)
 
-        garmin_state['today_activities'] = today_activity_list
-        raw_summary_active = summary.get('activeKilocalories')
-        if today_active_burn > 0:
-            garmin_state['active_calories'] = today_active_burn
-        elif raw_summary_active is not None:
-            garmin_state['active_calories'] = int(round(float(raw_summary_active)))
-        else:
-            garmin_state['active_calories'] = 0
+        # Acquire state lock ONLY for the fast in-memory merge + atomic save
+        with state_store.state_lock(LIVE_STATE_PATH):
+            state = state_store.load_live_state(LIVE_STATE_PATH, raise_on_corrupt=True)
 
-        if summary.get('distanceInMeters') is not None:
-            garmin_state['distance_miles'] = round(float(summary.get('distanceInMeters')) / 1609.344, 2)
-        elif summary.get('totalDistanceMeters') is not None:
-            garmin_state['distance_miles'] = round(float(summary.get('totalDistanceMeters')) / 1609.344, 2)
-        else:
-            garmin_state['distance_miles'] = round(sum(float(a.get('distance_miles') or 0) for a in today_activity_list), 2)
+            prev_date = state.get('date')
+            now_london_iso = datetime.now(ZoneInfo("Europe/London")).isoformat()
+            state['last_synced'] = now_london_iso
+            state['date'] = target_date_str
 
-        if summary.get('moderateIntensityMinutes') is not None or summary.get('vigorousIntensityMinutes') is not None:
-            mod_m = float(summary.get('moderateIntensityMinutes') or 0)
-            vig_m = float(summary.get('vigorousIntensityMinutes') or 0)
-            garmin_state['active_minutes'] = int(round(mod_m + vig_m))
-        elif not today_activity_list:
-            garmin_state['active_minutes'] = 0
+            garmin_state = state.setdefault('garmin', {})
+            # Clear stale prior-day daily metrics on day rollover so yesterday's values never leak into today
+            if prev_date and prev_date != target_date_str:
+                for stale_key in (
+                    'sleep_score', 'sleep_duration', 'body_battery',
+                    'training_readiness', 'readiness_level', 'readiness_feedback',
+                    'today_activities', 'active_calories', 'workout_calories',
+                    'steps', 'stress_avg', 'hrv_last_night'
+                ):
+                    garmin_state.pop(stale_key, None)
 
-        # Ensure recent_activities includes real Garmin activities from the 5-day fetch + preserved older real Garmin activities
-        today_ids = {str(a['id']) for a in today_activity_list}
-        all_activities = list(today_activity_list)
-        seen_ids = set(today_ids)
+            garmin_state['source'] = 'garmin_oauth'
+            garmin_state['oauth_date'] = target_date_str
+            garmin_state['last_synced'] = now_london_iso
+            if summary.get('totalSteps') is not None:
+                garmin_state['steps'] = summary.get('totalSteps')
+            if summary.get('restingHeartRate') is not None:
+                garmin_state['resting_hr'] = summary.get('restingHeartRate')
+            if live_body_battery is not None:
+                garmin_state['body_battery'] = live_body_battery
+            elif summary.get('bodyBatteryMostRecentValue') is not None:
+                garmin_state['body_battery'] = summary.get('bodyBatteryMostRecentValue')
+            if body_battery_debug is not None:
+                garmin_state['body_battery_debug'] = body_battery_debug
 
-        for ra in recent_raw_activities:
-            r_id = str(ra.get('activityId'))
-            r_start = str(ra.get('startTimeLocal', ''))
-            if not r_id or r_id in seen_ids or r_start.startswith(target_date_str):
-                continue
-            existing = existing_map.get(r_id)
-            if existing:
-                all_activities.append(existing)
+            if sleep_score is not None:
+                garmin_state['sleep_score'] = sleep_score
+            if sleep_duration is not None:
+                garmin_state['sleep_duration'] = sleep_duration
+
+            if readiness_score is not None:
+                garmin_state['training_readiness'] = readiness_score
+            if readiness_level:
+                garmin_state['readiness_level'] = readiness_level
+            if readiness_feedback:
+                garmin_state['readiness_feedback'] = readiness_feedback
+            if hrv_weekly is not None:
+                garmin_state['hrv_weekly_avg'] = hrv_weekly
+            if hrv_status is not None:
+                garmin_state['hrv_status'] = hrv_status
+            if hrv_last_night is not None:
+                garmin_state['hrv_last_night'] = hrv_last_night
+            if stress_avg is not None:
+                garmin_state['stress_avg'] = stress_avg
+
+            existing_activities = garmin_state.get('recent_activities', [])
+            existing_map = {str(a.get('id')): a for a in existing_activities}
+
+            # Re-apply any user_notes added concurrently while Garmin HTTP calls were in flight
+            for entry in today_activity_list:
+                latest_existing = existing_map.get(str(entry['id']))
+                if latest_existing and latest_existing.get('user_notes') and not entry.get('user_notes'):
+                    entry['user_notes'] = latest_existing['user_notes']
+                    entry['sub_title'] = latest_existing['user_notes']
+
+            garmin_state['today_activities'] = today_activity_list
+            garmin_state['workout_calories'] = today_active_burn
+            raw_summary_active = summary.get('activeKilocalories')
+            summary_active = int(round(float(raw_summary_active))) if raw_summary_active is not None else 0
+            garmin_state['active_calories'] = max(summary_active, today_active_burn)
+
+            if summary.get('distanceInMeters') is not None:
+                garmin_state['distance_miles'] = round(float(summary.get('distanceInMeters')) / 1609.344, 2)
+            elif summary.get('totalDistanceMeters') is not None:
+                garmin_state['distance_miles'] = round(float(summary.get('totalDistanceMeters')) / 1609.344, 2)
             else:
-                r_type_key = ra.get('activityType', {}).get('typeKey', 'cardio')
-                r_name = ra.get('activityType', {}).get('typeKey', 'Cardio').capitalize()
-                r_sub = ra.get('activityName', r_name)
-                r_cals = round(float(ra.get('calories', 0)))
-                r_dur = round(float(ra.get('duration', 0)) / 60.0, 1)
-                r_avg_hr = round(float(ra.get('averageHR', 0)))
-                r_max_hr = round(float(ra.get('maxHR', 0)))
-                r_aero = float(ra.get('aerobicTrainingEffect', 0.0) or 0.0)
-                r_anaero = float(ra.get('anaerobicTrainingEffect', 0.0) or 0.0)
-                r_steps_raw = ra.get('steps')
-                r_steps = int(round(float(r_steps_raw))) if r_steps_raw is not None and float(r_steps_raw or 0) > 0 else None
-                r_dist_m = float(ra.get('distance', 0) or 0)
-                r_dist_miles = round(r_dist_m / 1609.344, 2) if r_dist_m > 0 else None
-                r_entry = {
-                    "id": int(r_id),
-                    "name": r_name,
-                    "sub_title": r_sub,
-                    "date": r_start,
-                    "duration_min": r_dur,
-                    "calories": r_cals,
-                    "avg_hr": r_avg_hr,
-                    "max_hr": r_max_hr,
-                    "aerobic_te": r_aero,
-                    "anaerobic_te": r_anaero,
-                    "benefits": self.benefits_engine.generate_benefits(
-                        r_name, r_sub, r_dur, r_cals, r_avg_hr, r_max_hr, r_aero, r_anaero
-                    ),
-                    "activity_type_key": r_type_key,
-                    "total_sets": ra.get('totalSets'),
-                    "total_reps": ra.get('totalReps'),
-                    "steps": r_steps,
-                    "distance_miles": r_dist_miles
-                }
-                all_activities.append(r_entry)
-            seen_ids.add(r_id)
+                garmin_state['distance_miles'] = round(sum(float(a.get('distance_miles') or 0) for a in today_activity_list), 2)
 
-        for old in existing_activities:
-            old_id = str(old.get('id', ''))
-            old_date = str(old.get('date', ''))
-            if old_id in seen_ids:
-                continue
-            if old.get('source') == 'garmin_via_mnd_bridge' or old_id.startswith(('990', '9920')):
-                continue
-            all_activities.append(old)
-            seen_ids.add(old_id)
-        all_activities.sort(key=lambda x: str(x.get('date', '')), reverse=True)
-        garmin_state['recent_activities'] = all_activities
+            if summary.get('moderateIntensityMinutes') is not None or summary.get('vigorousIntensityMinutes') is not None:
+                mod_m = float(summary.get('moderateIntensityMinutes') or 0)
+                vig_m = float(summary.get('vigorousIntensityMinutes') or 0)
+                garmin_state['active_minutes'] = int(round(mod_m + vig_m))
+            elif not today_activity_list:
+                garmin_state['active_minutes'] = 0
 
-        nutrition = state.setdefault('nutrition', {})
-        baseline_budget = 2092
-        nutrition['calorie_target'] = baseline_budget + garmin_state.get('active_calories', 0)
+            # Ensure recent_activities includes real Garmin activities from the 5-day fetch + preserved older real Garmin activities
+            today_ids = {str(a['id']) for a in today_activity_list}
+            all_activities = list(today_activity_list)
+            seen_ids = set(today_ids)
 
-        mnd_cals = state.get('garmin', {}).get('mnd_logged', {}).get('calories', 0)
-        nutrition['calories_remaining'] = nutrition['calorie_target'] - mnd_cals
-        nutrition['protein_target_g'] = 200
-        mnd_prot = state.get('garmin', {}).get('mnd_logged', {}).get('protein_g', 0)
-        nutrition['protein_remaining'] = max(0, 200 - mnd_prot)
+            for ra in recent_raw_activities:
+                if not isinstance(ra, dict):
+                    continue
+                r_id = str(ra.get('activityId') or '')
+                r_start = str(ra.get('startTimeLocal') or '')
+                if not r_id or r_id in seen_ids or r_start.startswith(target_date_str):
+                    continue
+                existing = existing_map.get(r_id)
+                if existing:
+                    all_activities.append(existing)
+                else:
+                    r_type = ra.get('activityType') or {}
+                    r_type_key = r_type.get('typeKey') or 'cardio'
+                    r_name = str(r_type_key).capitalize()
+                    r_sub = ra.get('activityName') or r_name
+                    r_cals = round(float(ra.get('calories') or 0))
+                    r_dur = round(float(ra.get('duration') or 0) / 60.0, 1)
+                    r_avg_hr = round(float(ra.get('averageHR') or 0))
+                    r_max_hr = round(float(ra.get('maxHR') or 0))
+                    r_aero = float(ra.get('aerobicTrainingEffect') or 0.0)
+                    r_anaero = float(ra.get('anaerobicTrainingEffect') or 0.0)
+                    r_steps_raw = ra.get('steps')
+                    r_steps = int(round(float(r_steps_raw))) if r_steps_raw is not None and float(r_steps_raw or 0) > 0 else None
+                    r_dist_m = float(ra.get('distance') or 0)
+                    r_dist_miles = round(r_dist_m / 1609.344, 2) if r_dist_m > 0 else None
+                    r_entry = {
+                        "id": int(r_id),
+                        "name": r_name,
+                        "sub_title": r_sub,
+                        "date": r_start,
+                        "duration_min": r_dur,
+                        "calories": r_cals,
+                        "avg_hr": r_avg_hr,
+                        "max_hr": r_max_hr,
+                        "aerobic_te": r_aero,
+                        "anaerobic_te": r_anaero,
+                        "benefits": self.benefits_engine.generate_benefits(
+                            r_name, r_sub, r_dur, r_cals, r_avg_hr, r_max_hr, r_aero, r_anaero
+                        ),
+                        "activity_type_key": r_type_key,
+                        "total_sets": ra.get('totalSets'),
+                        "total_reps": ra.get('totalReps'),
+                        "steps": r_steps,
+                        "distance_miles": r_dist_miles
+                    }
+                    all_activities.append(r_entry)
+                seen_ids.add(r_id)
 
-        with open(LIVE_STATE_PATH, 'w', encoding='utf-8') as f:
-            json.dump(state, f, indent=2)
+            for old in existing_activities:
+                old_id = str(old.get('id', ''))
+                if old_id in seen_ids:
+                    continue
+                if old.get('source') == 'garmin_via_mnd_bridge' or old_id.startswith(('990', '9920')):
+                    continue
+                all_activities.append(old)
+                seen_ids.add(old_id)
+            all_activities.sort(key=lambda x: str(x.get('date', '')), reverse=True)
+            garmin_state['recent_activities'] = all_activities
 
-        backend_state_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
-        if backend_state_path != LIVE_STATE_PATH:
-            try:
-                with open(backend_state_path, 'w', encoding='utf-8') as f:
-                    json.dump(state, f, indent=2)
-            except Exception:
-                pass
+            nutrition = state.setdefault('nutrition', {})
+            baseline_budget = 2092
+            nutrition['calorie_target'] = baseline_budget + garmin_state.get('active_calories', 0)
+
+            mnd_cals = state.get('garmin', {}).get('mnd_logged', {}).get('calories', 0)
+            nutrition['calories_remaining'] = nutrition['calorie_target'] - mnd_cals
+            nutrition['protein_target_g'] = 200
+            mnd_prot = state.get('garmin', {}).get('mnd_logged', {}).get('protein_g', 0)
+            nutrition['protein_remaining'] = max(0, 200 - mnd_prot)
+
+            state_store.save_live_state(state, LIVE_STATE_PATH)
 
         self._persist_tokens(client)
         return state

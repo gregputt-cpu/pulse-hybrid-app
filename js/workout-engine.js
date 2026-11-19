@@ -2299,14 +2299,22 @@
       }
       const lbm = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
       const fatKg = Math.max(0, val - lbm);
-      const inpBf = parseFloat(document.getElementById('inputManualBf')?.value);
-      const bfPct = (!isNaN(inpBf) && inpBf > 5 && inpBf < 50) ? inpBf : ((window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : parseFloat(((fatKg / val) * 100).toFixed(1)));
-      const targetWt = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : parseFloat((lbm / 0.85).toFixed(2));
+      const inpBfRaw = document.getElementById('inputManualBf')?.value?.trim();
+      const inpBf = inpBfRaw ? parseFloat(inpBfRaw) : NaN;
+      const bfPct = (!isNaN(inpBf) && inpBf >= 3 && inpBf <= 60)
+        ? parseFloat(inpBf.toFixed(1))
+        : parseFloat(((fatKg / val) * 100).toFixed(1));
+      const newLbm = (!isNaN(inpBf) && inpBf >= 3 && inpBf <= 60)
+        ? parseFloat((val * (1 - bfPct / 100)).toFixed(2))
+        : lbm;
+      const targetWt = parseFloat((newLbm / 0.85).toFixed(2));
       const fatToBurn = parseFloat(Math.max(0, val - targetWt).toFixed(2));
 
       if (window.athleteProfile) {
         window.athleteProfile.weightKg = val;
         window.athleteProfile.bodyFatPct = bfPct;
+        window.athleteProfile.leanMassKg = newLbm;
+        window.athleteProfile.targetWeightKg = targetWt;
         window.athleteProfile.fatToLoseKg = fatToBurn;
       }
 
@@ -2316,9 +2324,9 @@
       const vss = document.getElementById('vitalScaleSub');
       if (vss) vss.innerText = `${bfPct}% BF (-${fatToBurn}kg)`;
       const bsw = document.getElementById('bodyScaleWeight');
-      if (bsw) bsw.innerHTML = `${val.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+      if (bsw) bsw.innerText = val.toFixed(2);
       const bsbf = document.getElementById('bodyScaleBf');
-      if (bsbf) bsbf.innerText = `${bfPct}% Body Fat (Logged Today)`;
+      if (bsbf) bsbf.innerText = `${bfPct}%`;
       const bfb = document.getElementById('bodyFatToBurnNum');
       if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
 
@@ -2526,7 +2534,9 @@ function generateWorkoutFromGearAndGoal() {
         }
         if (athleteInjuries.lumbar && (ex.id === 'barbell_zercher_squat' || ex.id === 'barbell_z_press')) return false;
         if (athleteInjuries.knees && (ex.id === 'kb_goblet_lunge' || ex.id === 'barbell_squat' || ex.id === 'barbell_zercher_squat')) return false;
-        if (athleteInjuries.shoulders && (ex.id === 'dips_chair' || ex.id === 'barbell_z_press')) return false;
+        if (athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) return false;
+        if (athleteInjuries.elbows && (ex.id === 'weighted_dips' || ex.id === 'pullups_weighted' || ex.id === 'barbell_curl' || ex.id === 'tricep_extension')) return false;
+        if (athleteInjuries.wrists && (ex.id === 'pushups_renegade' || ex.id === 'kb_clean_press' || ex.id === 'weighted_dips')) return false;
         return true;
       });
 
@@ -3327,7 +3337,7 @@ function generateWorkoutFromGearAndGoal() {
         return `
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-top:4px; gap:6px; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:5px; flex:1; min-width:140px;">
-              <span style="color:#fff; font-weight:700;">${idx + 1}. ${me.name}</span>
+              <span style="color:#fff; font-weight:700;">${idx + 1}. ${escapeHtml(me.name)}</span>
               ${isSwapped ? '<span style="font-size:9px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--primary); padding:1px 4px; border-radius:3px;">SWAPPED</span>' : ''}
             </div>
             <div style="display:flex; align-items:center; gap:4px;">
@@ -3628,7 +3638,7 @@ function generateWorkoutFromGearAndGoal() {
 
       if (activeCaloriesToday === 0 && actDayMap[0]) {
         acts.forEach(a => {
-          if (a.isToday || (a.rawDate && a.rawDate.startsWith(now.toISOString().split('T')[0]))) {
+          if (a.isToday || (a.rawDate && a.rawDate.startsWith(typeof getLocalDateStr === 'function' ? getLocalDateStr(now) : now.toISOString().split('T')[0]))) {
             activeCaloriesToday += (a.calories || 0);
           }
         });
@@ -4467,6 +4477,7 @@ function generateWorkoutFromGearAndGoal() {
         const targetW = rx.weight;
         const targetR = rx.reps;
         return {
+          ...ex,
           id: ex.id,
           name: ex.name,
           family: ex.family,
@@ -4478,6 +4489,12 @@ function generateWorkoutFromGearAndGoal() {
           rationale: ex.rationale || ""
         };
       });
+      window.activeSessionMeta = {
+        id: opt.id,
+        title: opt.title,
+        preset: opt.preset || currentPreset,
+        goal: opt.goal || currentGoal
+      };
       currentExIdx = 0;
       const badgeEl = document.getElementById('wPlanBadge');
       if (badgeEl) badgeEl.innerText = opt.title.toUpperCase();
@@ -4495,7 +4512,7 @@ function generateWorkoutFromGearAndGoal() {
     }
 
     function toggleWorkoutCompleteManual(isComplete) {
-      const todayIsoDate = new Date().toISOString().split('T')[0];
+      const todayIsoDate = typeof getLocalDateStr === 'function' ? getLocalDateStr() : new Date().toISOString().split('T')[0];
       try {
         if (isComplete) {
           localStorage.setItem('pulse_strength_done_today', 'true');
@@ -5035,9 +5052,8 @@ function viewCompletedWorkoutBreakdown() {
       inlineTimerState.flowStepIdx = 0;
       if (inlineTimerState.format === 'kb_flow') {
         inlineTimerState.inIntermission = true;
-        if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestTimer === 'function') {
-          restSecs = 60;
-          startRestTimer();
+        if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestCountdown === 'function') {
+          startRestCountdown(60, 'Next KB Flow Round');
         }
       }
       const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
@@ -5213,12 +5229,24 @@ function viewCompletedWorkoutBreakdown() {
                 completeInlineConditioning(ex.id);
                 return;
               }
+              const badgeEl = document.getElementById('inlineTimerPhaseBadge');
+              if (badgeEl) {
+                badgeEl.innerText = st.phase === 'rest'
+                  ? `REST • R${st.currentRound}/${st.rounds}`
+                  : `WORK • R${st.currentRound}/${st.rounds}`;
+                badgeEl.style.color = st.phase === 'rest' ? '#f59e0b' : '#22c55e';
+              }
             } else if (st.format === 'emom') {
               if (st.currentRound < st.rounds) {
                 st.currentRound++;
                 st.secsLeft = 60;
                 beep(880, 0.18);
                 speak(`Minute ${st.currentRound}.`);
+                const badgeEl = document.getElementById('inlineTimerPhaseBadge');
+                if (badgeEl) {
+                  badgeEl.innerText = `MIN ${st.currentRound}/${st.rounds}`;
+                  badgeEl.style.color = '#00e5ff';
+                }
               } else {
                 stopInlineTimer();
                 beep(950, 0.3);
@@ -5356,13 +5384,13 @@ function viewCompletedWorkoutBreakdown() {
         </div>
         <button type="button" onclick="closeSessionSummaryModal()" class="btn-action-primary" style="width:100%; margin:0;">✓ Done</button>
       `;
-      modal.classList.add('active');
+      modal.classList.add('open');
     }
     window.openSessionSummaryModal = openSessionSummaryModal;
 
     function closeSessionSummaryModal() {
       const modal = document.getElementById('sessionSummaryModal');
-      if (modal) modal.classList.remove('active');
+      if (modal) modal.classList.remove('open');
     }
     window.closeSessionSummaryModal = closeSessionSummaryModal;
 
@@ -5427,7 +5455,7 @@ function viewCompletedWorkoutBreakdown() {
           const bg = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)');
           const col = isActive ? '#000' : (isDone ? '#10b981' : 'var(--text-secondary)');
           const bdr = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)');
-          return `<button type="button" onclick="jumpToExercise(${idx})" title="${exItem.name}" style="flex-shrink:0; padding:4px 8px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${shortName}${icon}</button>`;
+          return `<button type="button" onclick="jumpToExercise(${idx})" title="${escapeHtml(exItem.name)}" style="flex-shrink:0; padding:4px 8px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${escapeHtml(shortName)}${icon}</button>`;
         }).join('');
       }
 
@@ -5530,9 +5558,9 @@ function viewCompletedWorkoutBreakdown() {
         row.innerHTML = `
           <span class="set-idx">Set ${s}</span>
           <div class="set-inputs">
-            <input type="text" inputmode="decimal" class="set-input-box" value="${displayW}" id="wIn_${currentExIdx}_${s}">
+            <input type="text" inputmode="decimal" class="set-input-box" value="${escapeHtml(displayW)}" id="wIn_${currentExIdx}_${s}">
             <span style="font-size:13px;color:var(--text-muted);">${typeof ex.targetWeight === 'number' ? 'kg' : ''} ×</span>
-            <input type="number" inputmode="numeric" class="set-input-box" value="${displayR}" id="rIn_${currentExIdx}_${s}">
+            <input type="number" inputmode="numeric" class="set-input-box" value="${escapeHtml(displayR)}" id="rIn_${currentExIdx}_${s}">
             <span style="font-size:13px;color:var(--text-muted);">reps</span>
           </div>
           <button class="btn-log-set ${isLogged ? 'done' : ''}" onclick="logSet(this, ${s}, '${ex.id}', ${cleanWeightNum}, ${typeof ex.targetReps === 'number' ? ex.targetReps : 8})">${isLogged ? '✓ Logged' : '✓ Log'}</button>
@@ -5698,7 +5726,7 @@ function viewCompletedWorkoutBreakdown() {
           if (hidden.length > 0) {
             const hiddenNames = hidden.map(hId => {
               const ex = getAllExercises().find(e => e.id === hId);
-              return ex ? ex.name : hId;
+              return escapeHtml(ex ? ex.name : hId);
             }).join(', ');
             hiddenBar.innerHTML = `Hidden (${hidden.length}): ${hiddenNames} • <a href="javascript:void(0)" onclick="unhideAllExercises()" style="color:var(--primary); text-decoration:underline;">Reset hidden</a>`;
           } else {
@@ -5778,7 +5806,7 @@ function viewCompletedWorkoutBreakdown() {
         const hidden = getHiddenExercises();
         const hiddenNames = hidden.map(hId => {
           const ex = getAllExercises().find(e => e.id === hId);
-          return ex ? ex.name : hId;
+          return escapeHtml(ex ? ex.name : hId);
         }).join(', ');
         hiddenBar.innerHTML = `Hidden (${hidden.length}): ${hiddenNames} • <a href="javascript:void(0)" onclick="unhideAllExercises()" style="color:var(--primary); text-decoration:underline;">Reset hidden</a>`;
       }
@@ -5855,14 +5883,14 @@ function viewCompletedWorkoutBreakdown() {
             <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.06); border-radius:8px; gap:8px;">
               <div style="flex:1; min-width:0;">
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span style="font-size:12.5px; font-weight:700; color:#fff;">${ex.name}</span>
+                  <span style="font-size:12.5px; font-weight:700; color:#fff;">${escapeHtml(ex.name)}</span>
                   ${isSamePattern ? '<span style="background:rgba(0,240,255,0.14); border:1px solid rgba(0,240,255,0.3); color:var(--primary); font-size:9.5px; font-weight:800; padding:1px 5px; border-radius:4px; letter-spacing:0.04em;">SAME PATTERN</span>' : ''}
                 </div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-                  ${ex.setsCount || 3} sets × ${targetR} reps @ ${wStr} • Rest: ${ex.rest || '60s'}
+                  ${Number(ex.setsCount) || 3} sets × ${escapeHtml(targetR)} reps @ ${escapeHtml(wStr)} • Rest: ${escapeHtml(ex.rest || '60s')}
                 </div>
               </div>
-              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${ex.id}')">
+              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${escapeHtml(ex.id)}')">
                 ${swapContext.mode === 'add' ? 'Add +' : 'Swap ⇄'}
               </button>
             </div>
@@ -5882,7 +5910,7 @@ function viewCompletedWorkoutBreakdown() {
         createCardHtml = `
           <div style="margin-top:10px; padding:12px; background:rgba(0,240,255,0.04); border:1px dashed rgba(0,240,255,0.35); border-radius:8px;">
             <div style="font-size:12px; font-weight:800; color:var(--primary); margin-bottom:8px;">
-              + Create & Swap "${rawQueryText}"
+              + Create & Swap "${escapeHtml(rawQueryText)}"
             </div>
             <div style="display:flex; flex-direction:column; gap:8px;">
               <div>
@@ -5918,7 +5946,7 @@ function viewCompletedWorkoutBreakdown() {
                 </div>
               </div>
               <div id="customSwapRationalePreview" style="font-size:10.5px; color:#cbd5e1; font-style:italic; padding:6px; background:rgba(255,255,255,0.03); border-radius:6px; line-height:1.35;">
-                ${initialRationale}
+                ${escapeHtml(initialRationale)}
               </div>
               <button type="button" class="btn-action-primary" style="height:32px; font-size:11.5px; font-weight:800; margin-top:2px;" onclick="createAndSwapCustomExercise()">
                 ${swapContext.mode === 'add' ? 'Create & Add +' : 'Create & Swap ⇄'}
@@ -5952,6 +5980,7 @@ function viewCompletedWorkoutBreakdown() {
       }
 
       const newExItem = {
+        ...ex,
         id: ex.id,
         name: ex.name,
         family: ex.family,
@@ -6017,7 +6046,7 @@ function viewCompletedWorkoutBreakdown() {
         rationale: "Custom athlete entry added mid-workout."
       };
 
-      if (swapModalMode === 'swap') {
+      if (typeof swapModalMode !== 'undefined' && swapModalMode === 'swap' && activeWorkoutPlan[currentExIdx]) {
         activeWorkoutPlan[currentExIdx] = newExItem;
         showToast(`Swapped to ${name}`);
       } else {
@@ -6424,8 +6453,8 @@ function viewCompletedWorkoutBreakdown() {
         row.classList.add('logged');
         tag.innerText = '🔥 TARGET EXCEEDED: OVER-PERFORMANCE';
         tag.style.color = 'var(--cyan)';
-        const nextW = loggedW + 5.0;
-        msg.innerText = `Crushed target by +${diffR} reps (${loggedR}/${targetR})! e1RM jumped to ${achievedE1RM}kg. Next session load increased to ${nextW}kg!`;
+        const nextW = loggedW + 2.5;
+        msg.innerText = `Crushed target by +${diffR} reps (${loggedR}/${targetR})! e1RM jumped to ${achievedE1RM}kg. Next session load microloaded +2.5kg ➔ ${nextW}kg!`;
         if (exId.includes('press') || exId.includes('floor')) {
           transfer.innerText = `➔ Strength Transfer: Floor press power scales your unbroken push-up capacity up from 18 to 22 reps!`;
         } else if (exId.includes('rdl')) {
@@ -6500,6 +6529,7 @@ function viewCompletedWorkoutBreakdown() {
 
     function startRestCountdown(seconds, nextCue) {
       clearInterval(restTimerInterval);
+      restTimerInterval = null;
       restSecs = seconds;
       const elCue = document.getElementById('restNextCue');
       if (elCue) elCue.innerText = `Next: ${nextCue}`;
@@ -6526,6 +6556,7 @@ function viewCompletedWorkoutBreakdown() {
           speak("1");
         } else if (restSecs <= 0) {
           clearInterval(restTimerInterval);
+          restTimerInterval = null;
           const pill = document.getElementById('floatingRestPill');
           if (pill) pill.classList.remove('active');
           if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
@@ -6557,6 +6588,7 @@ function viewCompletedWorkoutBreakdown() {
     function skipRest() {
       restSecs = 0;
       clearInterval(restTimerInterval);
+      restTimerInterval = null;
       const pill = document.getElementById('floatingRestPill');
       if (pill) pill.classList.remove('active');
       if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
@@ -6583,11 +6615,13 @@ function viewCompletedWorkoutBreakdown() {
       const totalPlannedSets = activeWorkoutPlan.reduce((acc, ex) => acc + (ex.setsCount || 3), 0) || 15;
       const sessionCalories = Math.max(80, Math.round(setsLoggedCount * 16 + activeWorkoutPlan.length * 10));
 
+      const sessionMeta = window.activeSessionMeta || {};
       const summary = {
         date: new Date().toISOString(),
         date_formatted: new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }),
-        preset: currentPreset,
-        goal: currentGoalKey,
+        title: sessionMeta.title || (document.getElementById('wPlanBadge')?.innerText || '').trim() || 'Hybrid Training Session',
+        preset: sessionMeta.preset || currentPreset,
+        goal: sessionMeta.goal || currentGoalKey,
         exercisesCompleted: activeWorkoutPlan.length,
         setsLogged: setsLoggedCount,
         calories: sessionCalories,
@@ -6720,14 +6754,65 @@ function viewCompletedWorkoutBreakdown() {
               if (tMode === 'skip') {
                 isWorkPhase = !isWorkPhase;
                 if (isWorkPhase) {
-                  tSeconds = 45;
                   tRounds++;
+                  if (tRounds >= 6) {
+                    clearInterval(tInterval);
+                    tInterval = null;
+                    tRunning = false;
+                    tSeconds = 0;
+                    const playIcon = document.getElementById('timerPlayIcon');
+                    const playText = document.getElementById('timerPlayText');
+                    const toggleBtn = document.getElementById('btnTimerToggle');
+                    if (playIcon) playIcon.innerText = '▶';
+                    if (playText) playText.innerText = 'START';
+                    if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+                    const phaseEl = document.getElementById('timerPhase');
+                    if (phaseEl) {
+                      phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
+                      phaseEl.style.color = 'var(--lime)';
+                    }
+                    const rdEl = document.getElementById('roundsDisplay');
+                    if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+                    beep(950, 0.45);
+                    speak("6 rounds complete! Outstanding interval work!");
+                    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+                    showToast('🏆 6-Round Skip Interval Complete!');
+                    updateTimerUI();
+                    return;
+                  }
+                  tSeconds = 45;
                   document.getElementById('timerPhase').innerText = `🟢 WORK INTERVAL ${tRounds + 1} OF 6`;
                   document.getElementById('timerPhase').style.color = 'var(--lime)';
                   beep(880, 0.4);
                   speak(`Work interval round ${tRounds + 1}. Let's go!`);
                   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                 } else {
+                  if (tRounds + 1 >= 6) {
+                    tRounds = 6;
+                    clearInterval(tInterval);
+                    tInterval = null;
+                    tRunning = false;
+                    tSeconds = 0;
+                    const playIcon = document.getElementById('timerPlayIcon');
+                    const playText = document.getElementById('timerPlayText');
+                    const toggleBtn = document.getElementById('btnTimerToggle');
+                    if (playIcon) playIcon.innerText = '▶';
+                    if (playText) playText.innerText = 'START';
+                    if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+                    const phaseEl = document.getElementById('timerPhase');
+                    if (phaseEl) {
+                      phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
+                      phaseEl.style.color = 'var(--lime)';
+                    }
+                    const rdEl = document.getElementById('roundsDisplay');
+                    if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+                    beep(950, 0.45);
+                    speak("6 rounds complete! Outstanding interval work!");
+                    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+                    showToast('🏆 6-Round Skip Interval Complete!');
+                    updateTimerUI();
+                    return;
+                  }
                   tSeconds = 15;
                   document.getElementById('timerPhase').innerText = '🟡 REST INTERVAL (15s)';
                   document.getElementById('timerPhase').style.color = 'var(--amber)';
@@ -6738,6 +6823,7 @@ function viewCompletedWorkoutBreakdown() {
                 document.getElementById('roundsDisplay').innerText = `${tRounds} Rounds Done`;
               } else {
                 clearInterval(tInterval);
+                tInterval = null;
                 tRunning = false;
                 beep(880, 0.5);
                 speak("AMRAP complete! Fantastic work Coach Greg.");
@@ -6751,6 +6837,7 @@ function viewCompletedWorkoutBreakdown() {
       } else {
         tRunning = false;
         clearInterval(tInterval);
+        tInterval = null;
         document.getElementById('timerPlayIcon').innerText = '▶';
         document.getElementById('timerPlayText').innerText = 'RESUME';
         document.getElementById('btnTimerToggle').style.background = 'var(--lime)';
@@ -6762,12 +6849,37 @@ function viewCompletedWorkoutBreakdown() {
     function resetTimer() {
       tRunning = false;
       clearInterval(tInterval);
-      document.getElementById('timerPlayIcon').innerText = '▶';
-      document.getElementById('timerPlayText').innerText = 'START';
-      document.getElementById('btnTimerToggle').style.background = 'var(--lime)';
-      if (tMode === 'skip') tSeconds = 45;
-      else if (tMode === 'amrap') tSeconds = 600;
-      else tSeconds = 0;
+      tInterval = null;
+      tRounds = 0;
+      isWorkPhase = true;
+      const playIcon = document.getElementById('timerPlayIcon');
+      const playText = document.getElementById('timerPlayText');
+      const toggleBtn = document.getElementById('btnTimerToggle');
+      if (playIcon) playIcon.innerText = '▶';
+      if (playText) playText.innerText = 'START';
+      if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+      const rdEl = document.getElementById('roundsDisplay');
+      if (rdEl) rdEl.innerText = '0 Rounds Done';
+      const phaseEl = document.getElementById('timerPhase');
+      if (tMode === 'skip') {
+        tSeconds = 45;
+        if (phaseEl) {
+          phaseEl.innerText = '🟢 WORK INTERVAL 1 OF 6';
+          phaseEl.style.color = 'var(--lime)';
+        }
+      } else if (tMode === 'amrap') {
+        tSeconds = 600;
+        if (phaseEl) {
+          phaseEl.innerText = '🔥 10-MINUTE AMRAP';
+          phaseEl.style.color = 'var(--cyan)';
+        }
+      } else {
+        tSeconds = 0;
+        if (phaseEl) {
+          phaseEl.innerText = '⏱️ STOPWATCH READY';
+          phaseEl.style.color = 'var(--text-muted)';
+        }
+      }
       updateTimerUI();
       beep(450, 0.05);
     }
@@ -6785,8 +6897,105 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function logTimerSession() {
+      const rounds = Math.max(1, parseInt(tRounds, 10) || 1);
+      const modeLabel = (tMode === 'amrap') ? 'AMRAP' : ((tMode === 'skip') ? 'Intervals / Skip' : 'EMOM / Conditioning');
+      let durationMin = 10;
+      if (tMode === 'amrap') {
+        durationMin = Math.max(1, Math.round((600 - (tSeconds || 0)) / 60) || 10);
+      } else if (tMode === 'skip') {
+        durationMin = Math.max(1, Math.round(rounds * 1.5));
+      } else {
+        durationMin = Math.max(1, Math.round((tSeconds || 0) / 60) || Math.max(5, rounds * 2));
+      }
+      const estCalories = Math.max(50, Math.round(durationMin * 10 + rounds * 10));
+      const now = new Date();
+      const isoDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const subTitle = `${modeLabel} • ${rounds} Rounds (${durationMin}m)`;
+
+      // 1. Persist to pulse_conditioning_history
+      try {
+        const condHist = JSON.parse(localStorage.getItem('pulse_conditioning_history') || '[]');
+        condHist.unshift({
+          date: now.toISOString(),
+          mode: tMode,
+          rounds: rounds,
+          duration_min: durationMin,
+          calories: estCalories,
+          sub_title: subTitle
+        });
+        localStorage.setItem('pulse_conditioning_history', JSON.stringify(condHist.slice(0, 50)));
+      } catch(e) {}
+
+      // 2. Update date-scoped pulse_inapp_burn_today
+      try {
+        let existingBurn = 0;
+        const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+        if (rawBurn) {
+          const parsed = JSON.parse(rawBurn);
+          if (parsed && parsed.date === isoDate) existingBurn = Number(parsed.calories !== undefined ? parsed.calories : parsed.kcal) || 0;
+        }
+        localStorage.setItem('pulse_inapp_burn_today', JSON.stringify({
+          date: isoDate,
+          calories: existingBurn + estCalories
+        }));
+      } catch(e) {}
+
+      // 3. Append to recentActivitiesData + localStorage + refresh UI
+      const newActivity = {
+        id: Date.now(),
+        name: 'Conditioning',
+        subTitle: subTitle,
+        sub_title: subTitle,
+        date: `${isoDate} ${now.toTimeString().slice(0, 8)}`,
+        durationMin: durationMin,
+        duration_min: durationMin,
+        calories: estCalories,
+        avgHr: 145,
+        maxHr: 170,
+        aerobicTe: 2.6,
+        anaerobicTe: 1.8,
+        source: 'manual_app_entry'
+      };
+      if (typeof recentActivitiesData !== 'undefined' && Array.isArray(recentActivitiesData)) {
+        recentActivitiesData.unshift(newActivity);
+        try {
+          localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
+        } catch(e) {}
+        if (typeof renderHistoryList === 'function') renderHistoryList();
+      }
+      if (typeof calculateDailyTargets === 'function') calculateDailyTargets();
+
+      // 4. Sync to backend (/api/sync_activity & /api/sync_session)
+      try {
+        fetch('/api/sync_activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Conditioning',
+            sub_title: subTitle,
+            duration_min: durationMin,
+            calories: estCalories,
+            avg_hr: 145,
+            max_hr: 170,
+            aerobic_te: 2.6,
+            anaerobic_te: 1.8
+          })
+        }).catch(() => {});
+        if (typeof syncSessionToBackend === 'function') {
+          syncSessionToBackend({
+            date: now.toISOString(),
+            preset: `timer_${tMode}`,
+            goal: typeof currentGoalKey !== 'undefined' ? currentGoalKey : 'recomp',
+            exercisesCompleted: 1,
+            setsLogged: rounds,
+            calories: estCalories,
+            details: { mode: tMode, rounds: rounds, duration_min: durationMin }
+          });
+        }
+      } catch(e) {}
+
       beep(880, 0.2);
-      showToast(`✓ Logged ${tRounds} rounds conditioning to Garmin calendar!`);
+      showToast(`✓ Logged ${rounds} rounds (${estCalories} kcal) to training history!`);
       switchTab('fuel');
     }
 

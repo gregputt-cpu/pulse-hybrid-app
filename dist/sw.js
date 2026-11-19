@@ -1,14 +1,14 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-hybrid-v5.16';
+const CACHE_NAME = 'pulse-hybrid-v5.33-20261119';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/css/styles.css',
-  '/js/state.js',
-  '/js/workout-engine.js',
-  '/js/charts.js',
-  '/js/fuel-engine.js',
-  '/js/telemetry.js',
+  '/css/styles.css?v=5.32',
+  '/js/state.js?v=5.32',
+  '/js/workout-engine.js?v=5.32',
+  '/js/charts.js?v=5.32',
+  '/js/fuel-engine.js?v=5.32',
+  '/js/telemetry.js?v=5.32',
   '/manifest.json',
   '/icon.svg',
   '/icon-192.png',
@@ -45,7 +45,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => response)
-        .catch(() => caches.match(event.request))
+        .catch(() =>
+          caches.match(event.request).then((cached) =>
+            cached || new Response(
+              JSON.stringify({ success: false, offline: true, error: 'Backend offline' }),
+              { status: 503, headers: { 'Content-Type': 'application/json' } }
+            )
+          )
+        )
     );
     return;
   }
@@ -53,7 +60,7 @@ self.addEventListener('fetch', (event) => {
   // 2. Navigation / HTML / JS / CSS / Icons: Network-first with offline cache fallback (ensures immediate updates on reload)
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json') || url.pathname.endsWith('.svg') || url.pathname.endsWith('.png')) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const copy = networkResponse.clone();
@@ -61,7 +68,7 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match(event.request) || caches.match('/index.html'))
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('/index.html')))
     );
     return;
   }

@@ -2,8 +2,10 @@ import os
 import json
 import sqlite3
 import logging
+import threading
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
+from time_utils import uk_now, uk_timestamp_str
 
 logger = logging.getLogger("pulse-db")
 
@@ -12,14 +14,32 @@ DATA_DIR = os.environ.get(
     "/data" if os.path.exists("/data") else os.path.dirname(os.path.abspath(__file__))
 )
 DB_PATH = os.path.join(DATA_DIR, "pulse.db")
+_INIT_LOCK = threading.Lock()
+_INITIALIZED_DB_PATH: Optional[str] = None
 
 def get_connection() -> sqlite3.Connection:
     os.makedirs(DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=10000")
+    except sqlite3.Error:
+        pass
     return conn
 
-def init_db() -> None:
+def init_db(force: bool = False) -> None:
+    global _INITIALIZED_DB_PATH
+    if not force and _INITIALIZED_DB_PATH == DB_PATH:
+        return
+    with _INIT_LOCK:
+        if not force and _INITIALIZED_DB_PATH == DB_PATH:
+            return
+        _init_db_unlocked()
+        _INITIALIZED_DB_PATH = DB_PATH
+
+def _init_db_unlocked() -> None:
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -59,16 +79,46 @@ def init_db() -> None:
                 updated_at TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS workout_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT,
+                preset TEXT,
+                goal TEXT,
+                exercises_completed INTEGER,
+                sets_logged INTEGER,
+                calories INTEGER,
+                payload_json TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS manual_activities (
+                id TEXT PRIMARY KEY,
+                timestamp TEXT,
+                name TEXT,
+                sub_title TEXT,
+                duration_min REAL,
+                calories INTEGER,
+                avg_hr INTEGER,
+                max_hr INTEGER,
+                payload_json TEXT
+            )
+        """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_renpho_timestamp ON renpho_history(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_strength_timestamp ON strength_logs(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_hydration_date ON hydration_logs(date_str)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_timestamp ON workout_sessions(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_activities_timestamp ON manual_activities(timestamp)")
         conn.commit()
 
-        # Auto-seed from renpho_seed.json if table is empty
+        # Auto-seed from renpho_seed.json if table is empty, or migrate legacy muscle % rows once
         cursor.execute("SELECT COUNT(*) FROM renpho_history")
         count = cursor.fetchone()[0]
-        if count == 0:
-            seed_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renpho_seed.json")
+        cursor.execute("SELECT value FROM kv_store WHERE key = 'migrated_renpho_muscle_kg_v1'")
+        migrated_row = cursor.fetchone()
+        seed_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renpho_seed.json")
+
+        if count == 0 or migrated_row is None:
             if os.path.exists(seed_path):
                 try:
                     with open(seed_path, "r", encoding="utf-8") as f:
@@ -77,6 +127,19 @@ def init_db() -> None:
                         _insert_renpho_records(conn, seed_items)
                 except Exception as e:
                     logger.warning(f"[DB] Failed loading renpho_seed.json: {e}")
+            if migrated_row is None:
+                # Fix any remaining non-seed rows where skeletal muscle % (<65) was stored as muscle_mass_kg
+                cursor.execute("""
+                    UPDATE renpho_history
+                    SET muscle_mass_kg = ROUND(lean_mass_kg - 4.0, 2)
+                    WHERE muscle_mass_kg IS NOT NULL AND muscle_mass_kg < 65
+                      AND lean_mass_kg IS NOT NULL AND lean_mass_kg > 70
+                """)
+                cursor.execute(
+                    "INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('migrated_renpho_muscle_kg_v1', '1', ?)",
+                    (uk_now().isoformat(),),
+                )
+                conn.commit()
 
 def _insert_renpho_records(conn: sqlite3.Connection, items: List[Any]) -> int:
     records = []
@@ -88,22 +151,26 @@ def _insert_renpho_records(conn: sqlite3.Connection, items: List[Any]) -> int:
                 ts = int(ts)
             except (ValueError, TypeError):
                 ts = 0
-            m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{datetime.now().timestamp()}")
+            m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{uk_now().timestamp()}")
 
             if ts:
                 try:
-                    date_str = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+                    date_str = uk_timestamp_str(ts)
                 except Exception:
-                    date_str = str(item.get("date_str") or item.get("localCreatedAt") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    date_str = str(item.get("date_str") or item.get("localCreatedAt") or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
             else:
-                date_str = str(item.get("date_str") or item.get("localCreatedAt") or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                date_str = str(item.get("date_str") or item.get("localCreatedAt") or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
 
             w = item.get("weight_kg") if item.get("weight_kg") is not None else item.get("weight")
             bf = item.get("body_fat_pct") if item.get("body_fat_pct") is not None else item.get("bodyfat")
             lm = item.get("lean_mass_kg") if item.get("lean_mass_kg") is not None else item.get("fatFreeWeight")
-            if lm is None:
-                lm = item.get("sinew")
-            mm = item.get("muscle_mass_kg") if item.get("muscle_mass_kg") is not None else item.get("muscle")
+            bone_val = item.get("bone_mass_kg") if item.get("bone_mass_kg") is not None else item.get("bone")
+            mm = item.get("muscle_mass_kg") if item.get("muscle_mass_kg") is not None else item.get("sinew")
+            if mm is None and lm is not None and bone_val is not None:
+                try:
+                    mm = max(0.0, float(lm) - float(bone_val))
+                except (ValueError, TypeError):
+                    mm = None
             water = item.get("water_pct") if item.get("water_pct") is not None else item.get("water")
 
             weight_kg = round(float(w), 2) if w is not None else None
@@ -120,22 +187,28 @@ def _insert_renpho_records(conn: sqlite3.Connection, items: List[Any]) -> int:
                 ts = int(ts)
             except (ValueError, TypeError):
                 ts = 0
-            m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{datetime.now().timestamp()}")
+            m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{uk_now().timestamp()}")
 
             if ts:
                 try:
-                    date_str = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+                    date_str = uk_timestamp_str(ts)
                 except Exception:
-                    date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
             else:
-                date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
 
             w = getattr(item, "weight_kg", None) if getattr(item, "weight_kg", None) is not None else getattr(item, "weight", None)
             bf = getattr(item, "body_fat_pct", None) if getattr(item, "body_fat_pct", None) is not None else getattr(item, "bodyfat", None)
             lm = getattr(item, "lean_mass_kg", None) if getattr(item, "lean_mass_kg", None) is not None else getattr(item, "fat_free_weight", None)
             if lm is None:
-                lm = getattr(item, "fatFreeWeight", None) or getattr(item, "sinew", None)
-            mm = getattr(item, "muscle_mass_kg", None) if getattr(item, "muscle_mass_kg", None) is not None else getattr(item, "muscle", None)
+                lm = getattr(item, "fatFreeWeight", None)
+            bone_val = getattr(item, "bone_mass_kg", None) if getattr(item, "bone_mass_kg", None) is not None else getattr(item, "bone", None)
+            mm = getattr(item, "muscle_mass_kg", None) if getattr(item, "muscle_mass_kg", None) is not None else getattr(item, "sinew", None)
+            if mm is None and lm is not None and bone_val is not None:
+                try:
+                    mm = max(0.0, float(lm) - float(bone_val))
+                except (ValueError, TypeError):
+                    mm = None
             water = getattr(item, "water_pct", None) if getattr(item, "water_pct", None) is not None else getattr(item, "water", None)
 
             weight_kg = round(float(w), 2) if w is not None else None
@@ -179,7 +252,7 @@ def get_renpho_history(days: int = 90) -> List[Dict[str, Any]]:
     cutoff_ts = None
     query_ts = 0
     if days and days > 0:
-        cutoff_ts = int((datetime.now() - timedelta(days=days)).timestamp())
+        cutoff_ts = int((uk_now() - timedelta(days=days)).timestamp())
         # Fetch an extra 7 days prior to cutoff so rolling averages on edge days are accurate
         query_ts = cutoff_ts - (7 * 86400)
 
@@ -235,7 +308,7 @@ def get_renpho_history(days: int = 90) -> List[Dict[str, Any]]:
 def log_strength_set(exercise_id: str, weight: float, reps: int, e1rm: float, timestamp: Optional[str] = None) -> int:
     init_db()
     if not timestamp:
-        timestamp = datetime.now().isoformat()
+        timestamp = uk_now().isoformat()
     query = """
         INSERT INTO strength_logs (timestamp, exercise_id, weight, reps, e1rm)
         VALUES (?, ?, ?, ?, ?)
@@ -251,7 +324,7 @@ def get_strength_history(days: int = 30) -> Dict[str, List[Dict[str, Any]]]:
     with get_connection() as conn:
         cursor = conn.cursor()
         if days and days > 0:
-            cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+            cutoff = (uk_now() - timedelta(days=days)).isoformat()
             cursor.execute(
                 "SELECT id, timestamp, exercise_id, weight, reps, e1rm FROM strength_logs WHERE timestamp >= ? ORDER BY timestamp ASC",
                 (cutoff,)
@@ -277,7 +350,7 @@ def get_strength_history(days: int = 30) -> Dict[str, List[Dict[str, Any]]]:
 def add_hydration(date_str: str, amount_ml: int, timestamp: Optional[str] = None) -> int:
     init_db()
     if not timestamp:
-        timestamp = datetime.now().isoformat()
+        timestamp = uk_now().isoformat()
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -313,7 +386,7 @@ def set_kv(key: str, value: str) -> None:
             VALUES (?, ?, ?)
             ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
             """,
-            (key, value, datetime.now().isoformat())
+            (key, value, uk_now().isoformat())
         )
         conn.commit()
 
@@ -324,3 +397,55 @@ def get_kv(key: str) -> Optional[str]:
         cursor.execute("SELECT value FROM kv_store WHERE key = ?", (key,))
         row = cursor.fetchone()
         return str(row["value"]) if row and row["value"] is not None else None
+
+def log_workout_session(summary: Dict[str, Any]) -> int:
+    init_db()
+    timestamp = str(summary.get("date") or uk_now().isoformat())
+    preset = str(summary.get("preset") or "")
+    goal = str(summary.get("goal") or "")
+    exercises_completed = int(summary.get("exercisesCompleted") or 0)
+    sets_logged = int(summary.get("setsLogged") or 0)
+    calories = int(summary.get("calories") or 0)
+    payload_json = json.dumps(summary)
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO workout_sessions (timestamp, preset, goal, exercises_completed, sets_logged, calories, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (timestamp, preset, goal, exercises_completed, sets_logged, calories, payload_json),
+        )
+        conn.commit()
+        return cursor.lastrowid
+
+def log_manual_activity(activity: Dict[str, Any]) -> None:
+    init_db()
+    act_id = str(activity.get("id") or int(uk_now().timestamp() * 1000))
+    timestamp = str(activity.get("date") or uk_now().isoformat())
+    name = str(activity.get("name") or "Activity")
+    sub_title = str(activity.get("sub_title") or name)
+    duration_min = float(activity.get("duration_min") or 0.0)
+    calories = int(round(float(activity.get("calories") or 0)))
+    avg_hr = int(round(float(activity.get("avg_hr") or 0)))
+    max_hr = int(round(float(activity.get("max_hr") or 0)))
+    payload_json = json.dumps(activity)
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO manual_activities (id, timestamp, name, sub_title, duration_min, calories, avg_hr, max_hr, payload_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                timestamp=excluded.timestamp,
+                name=excluded.name,
+                sub_title=excluded.sub_title,
+                duration_min=excluded.duration_min,
+                calories=excluded.calories,
+                avg_hr=excluded.avg_hr,
+                max_hr=excluded.max_hr,
+                payload_json=excluded.payload_json
+            """,
+            (act_id, timestamp, name, sub_title, duration_min, calories, avg_hr, max_hr, payload_json),
+        )
+        conn.commit()

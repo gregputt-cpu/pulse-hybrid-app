@@ -235,7 +235,7 @@
 
     function restoreActivitiesFromLocalStorage() {
       try {
-        const CURRENT_ACT_VERSION = "v4.9_nov9_rollover";
+        const CURRENT_ACT_VERSION = "v5.22_nov17_notes";
         if (localStorage.getItem('pulse_act_version') !== CURRENT_ACT_VERSION) {
           localStorage.removeItem('pulse_recent_activities');
           localStorage.setItem('pulse_act_version', CURRENT_ACT_VERSION);
@@ -328,7 +328,7 @@
             id: "barbell_floor_press",
             name: "Barbell Flat / Floor Press",
             family: "horizontal_push",
-            targetWeight: 95,
+            targetWeight: 65,
             targetReps: 6,
             setsCount: 4,
             rest: "90s",
@@ -836,6 +836,7 @@
     }
 
     let currentArchetypeKey = 'option_a';
+    window._userManualArchetype = false;
     let activeWorkoutPlan = [];
     let currentExIdx = 0;
 
@@ -864,10 +865,10 @@
 
       const exerciseMatrix = {
         liss_cardio: {
-          option_a: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'thoracic_openers', 'deadbug_hold'],
+          option_a: ['barbell_bench_press', 'barbell_pendlay_row', 'deadbug_hold'],
           option_kb: ['kb_swings', 'kb_suitcase_carry', 'zone2_flush', 'deadbug_hold'],
           option_b: ['speed_rope_intervals', 'emom_hybrid_10', 'amrap_hybrid_10', 'zone2_flush'],
-          option_c: ['thoracic_openers', 'couch_stretch_flow', 'knee_tke', 'glute_bridge_hold']
+          option_c: ['zone2_flush', 'knee_tke', 'glute_bridge_hold', 'thoracic_openers', 'deadbug_hold']
         },
         lower_hinge: {
           option_a: ['barbell_squat', 'barbell_rdl', 'barbell_zercher_squat', 'kb_suitcase_carry', 'deadbug_hold'],
@@ -911,6 +912,12 @@
           slicedExIds = ['kb_flow_2h_out_about', 'kb_flow_2h_tactical_upper', 'kb_flow_2h_gladiator_post', 'kb_flow_2h_pyramid_1_5'];
         } else if (kbSubMode === 'flow_1h') {
           slicedExIds = ['kb_flow_1h_armor_chain', 'kb_flow_1h_viking_warrior', 'kb_flow_1h_dan_john_grind', 'kb_flow_1h_combat_core'];
+        }
+      } else if (currentArchetypeKey === 'option_b') {
+        if (focusMode === 'liss_cardio' || focusMode === 'mobility_stretch' || focusMode === 'rest_day') {
+          slicedExIds = ['zone2_flush', 'speed_rope_intervals', 'emom_hybrid_10', 'amrap_hybrid_10', 'for_time_kb_chipper'];
+        } else {
+          slicedExIds = ['emom_hybrid_10', 'amrap_hybrid_10', 'for_time_kb_chipper', 'speed_rope_intervals', 'zone2_flush'];
         }
       }
 
@@ -1039,7 +1046,7 @@
           gearStatusEl.innerText = kbModeDesc;
         }
         else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
-        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Kettlebells, DB & Slam Ball";
+        else if (currentArchetypeKey === 'option_b') gearStatusEl.innerText = "Pick 1 Session (Zone 2, Rope, EMOM, AMRAP)";
         else gearStatusEl.innerText = "Bodyweight & Incline Cadence";
       }
 
@@ -1108,7 +1115,7 @@
         name: "Barbell Flat Bench Press",
         family: "horizontal_push",
         requiredGear: ["barbell", "bench"],
-        getBaseWeight: () => 95,
+        getBaseWeight: () => 65,
         getBaseReps: () => 8,
         rest: "90s",
         cue: "Shoulder blades retracted, leg drive, touch lower sternum.",
@@ -1245,6 +1252,10 @@
         getBaseWeight: () => "KB / Rope",
         getBaseReps: () => "10m EMOM",
         rest: "EMOM",
+        flowSteps: [
+          '12 KB Swings (Odd Min)',
+          '10 Push-Ups or 8 Goblet Squats (Even Min)'
+        ],
         cue: "Odd Mins: 15 KB Swings (or 15 Air Squats) • Even Mins: 45s Speed Rope (or High Knees). Rest remainder of each minute.",
         rationale: "Every-Minute-On-the-Minute pacing builds aerobic power and repeatable work capacity while capping systemic CNS fatigue.",
         setsCount: 10,
@@ -1261,6 +1272,12 @@
         getBaseWeight: () => "Body / KB",
         getBaseReps: () => "10:00 AMRAP",
         rest: "Continuous",
+        flowSteps: [
+          '10 KB Swings',
+          '8 Goblet Squats',
+          '6 Push-Ups',
+          '10m Bear Crawl / 20s Plank'
+        ],
         cue: "Cycle cleanly: 10 KB Swings + 10 Push-Ups + 40 Speed Rope Skips. Log each completed round.",
         rationale: "Continuous density benchmark that tracks total rounds completed over time for measurable metabolic progression.",
         setsCount: 1,
@@ -1294,6 +1311,13 @@
         getBaseWeight: () => "KB / Body",
         getBaseReps: () => "3 RFT",
         rest: "For Time",
+        flowSteps: [
+          '30 KB Swings',
+          '25 Goblet Squats',
+          '20 Push-Ups',
+          '15 1H KB Rows (Each Side)',
+          '30 KB Swings'
+        ],
         cue: "3 Rounds For Time (12m cap): 20 KB Swings + 15 Goblet Squats + 60s Speed Rope.",
         rationale: "High-output threshold test measuring total completion time as an objective conditioning benchmark.",
         setsCount: 1,
@@ -2094,7 +2118,7 @@
         }
         if (actTime && actTime < cutoff48h) return;
 
-        const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
+        const text = `${act.name || ''} ${act.subTitle || act.sub_title || ''}`.toLowerCase();
         const duration = act.durationMin || act.duration_min || 0;
         const steps = act.steps || 0;
 
@@ -2109,6 +2133,12 @@
         ) {
           fatigued.knee_dom = true;
         }
+
+        if (/swing|rdl|deadlift|hinge|snatch|clean/.test(text)) fatigued.hinge = true;
+        if (/bench|floor press|pushup|push-up|dip/.test(text)) fatigued.h_push = true;
+        if (/z-press|overhead|strict press|shoulder press/.test(text)) fatigued.v_push = true;
+        if (/row|pullup|pull-up|chin|lat/.test(text)) fatigued.h_pull = true;
+        if (/squat|lunge|thruster|goblet/.test(text)) fatigued.knee_dom = true;
 
         if (text.includes('strength') || text.includes('weight')) {
           if (text.includes('upper') || text.includes('push')) fatigued.h_push = true;
@@ -2269,14 +2299,22 @@
       }
       const lbm = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
       const fatKg = Math.max(0, val - lbm);
-      const inpBf = parseFloat(document.getElementById('inputManualBf')?.value);
-      const bfPct = (!isNaN(inpBf) && inpBf > 5 && inpBf < 50) ? inpBf : ((window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : parseFloat(((fatKg / val) * 100).toFixed(1)));
-      const targetWt = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : parseFloat((lbm / 0.85).toFixed(2));
+      const inpBfRaw = document.getElementById('inputManualBf')?.value?.trim();
+      const inpBf = inpBfRaw ? parseFloat(inpBfRaw) : NaN;
+      const bfPct = (!isNaN(inpBf) && inpBf >= 3 && inpBf <= 60)
+        ? parseFloat(inpBf.toFixed(1))
+        : parseFloat(((fatKg / val) * 100).toFixed(1));
+      const newLbm = (!isNaN(inpBf) && inpBf >= 3 && inpBf <= 60)
+        ? parseFloat((val * (1 - bfPct / 100)).toFixed(2))
+        : lbm;
+      const targetWt = parseFloat((newLbm / 0.85).toFixed(2));
       const fatToBurn = parseFloat(Math.max(0, val - targetWt).toFixed(2));
 
       if (window.athleteProfile) {
         window.athleteProfile.weightKg = val;
         window.athleteProfile.bodyFatPct = bfPct;
+        window.athleteProfile.leanMassKg = newLbm;
+        window.athleteProfile.targetWeightKg = targetWt;
         window.athleteProfile.fatToLoseKg = fatToBurn;
       }
 
@@ -2286,9 +2324,9 @@
       const vss = document.getElementById('vitalScaleSub');
       if (vss) vss.innerText = `${bfPct}% BF (-${fatToBurn}kg)`;
       const bsw = document.getElementById('bodyScaleWeight');
-      if (bsw) bsw.innerHTML = `${val.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+      if (bsw) bsw.innerText = val.toFixed(2);
       const bsbf = document.getElementById('bodyScaleBf');
-      if (bsbf) bsbf.innerText = `${bfPct}% Body Fat (Logged Today)`;
+      if (bsbf) bsbf.innerText = `${bfPct}%`;
       const bfb = document.getElementById('bodyFatToBurnNum');
       if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
 
@@ -2496,7 +2534,9 @@ function generateWorkoutFromGearAndGoal() {
         }
         if (athleteInjuries.lumbar && (ex.id === 'barbell_zercher_squat' || ex.id === 'barbell_z_press')) return false;
         if (athleteInjuries.knees && (ex.id === 'kb_goblet_lunge' || ex.id === 'barbell_squat' || ex.id === 'barbell_zercher_squat')) return false;
-        if (athleteInjuries.shoulders && (ex.id === 'dips_chair' || ex.id === 'barbell_z_press')) return false;
+        if (athleteInjuries.shoulders && (ex.id === 'weighted_dips' || ex.id === 'barbell_z_press')) return false;
+        if (athleteInjuries.elbows && (ex.id === 'weighted_dips' || ex.id === 'pullups_weighted' || ex.id === 'barbell_curl' || ex.id === 'tricep_extension')) return false;
+        if (athleteInjuries.wrists && (ex.id === 'pushups_renegade' || ex.id === 'kb_clean_press' || ex.id === 'weighted_dips')) return false;
         return true;
       });
 
@@ -2600,9 +2640,29 @@ function generateWorkoutFromGearAndGoal() {
       acts.forEach(a => {
         const dt = new Date(String(a.rawDate || a.date || '').replace(' ', 'T')).getTime();
         if (!isNaN(dt) && (now - dt) <= sevenDaysMs) {
-          const nm = String(a.name || a.sub_title || '').toLowerCase();
-          if (nm.includes('strength')) { counts.Push += 2; counts.Pull += 2; counts.Hinge += 2; }
-          else counts.Conditioning += 2;
+          const nm = String(`${a.name || ''} ${a.subTitle || a.sub_title || ''}`).toLowerCase();
+          if (typeof parseWorkoutNoteDetails === 'function') {
+            const p = parseWorkoutNoteDetails(nm, a);
+            const setsToAdd = p.sets || 3;
+            let matchedPattern = false;
+            if (p.hasHinge) { counts.Hinge += setsToAdd; matchedPattern = true; }
+            if (p.hasSquat) { counts.Squat += setsToAdd; matchedPattern = true; }
+            if (p.hasPush) { counts.Push += setsToAdd; matchedPattern = true; }
+            if (p.hasPull) { counts.Pull += setsToAdd; matchedPattern = true; }
+            if (p.hasBodyCombat) {
+              counts.Conditioning += Math.max(3, setsToAdd);
+              if (p.isCombatUpper) counts.Push += 1;
+              if (p.isCombatLower) counts.Squat += 1;
+              matchedPattern = true;
+            } else if (p.hasJumpRope || !nm.includes('strength')) {
+              counts.Conditioning += 2;
+            } else if (!matchedPattern && nm.includes('strength')) {
+              counts.Push += 2; counts.Pull += 2; counts.Hinge += 2;
+            }
+          } else {
+            if (nm.includes('strength')) { counts.Push += 2; counts.Pull += 2; counts.Hinge += 2; }
+            else counts.Conditioning += 2;
+          }
         }
       });
 
@@ -2691,7 +2751,14 @@ function generateWorkoutFromGearAndGoal() {
         : (Array.isArray(recentActivitiesData) ? recentActivitiesData : []);
 
       if (Array.isArray(actsToCheck)) {
-        const isBridgeAct = (a) => a && (a.source === 'garmin_via_mnd_bridge' || String(a.id || '').startsWith('990') || String(a.id || '').startsWith('9920') || String(a.subTitle || a.sub_title || '').startsWith('fēnix 8 •'));
+        const isBridgeAct = (a) => a && (
+          a.source === 'garmin_via_mnd_bridge' ||
+          String(a.id || '').startsWith('990') ||
+          String(a.id || '').startsWith('9920') ||
+          a.name === 'Active Conditioning' ||
+          a.name === 'Daily Steps & Movement' ||
+          a.name === 'Hybrid Conditioning & Steps'
+        );
         const hasRealToday = actsToCheck.some(a => !isBridgeAct(a));
         const todayActs = actsToCheck.filter(a => {
           if (hasRealToday && isBridgeAct(a)) return false;
@@ -2704,7 +2771,7 @@ function generateWorkoutFromGearAndGoal() {
         if (todayActs.length > 0) {
           const totalCalsToday = todayActs.reduce((sum, a) => sum + Number(a.calories || a.workout_calories || 0), 0);
           const totalDurToday = todayActs.reduce((sum, a) => sum + Number(a.durationMin || a.duration_min || 0), 0);
-          const sessionCount = todayActs.length + inAppTodaySessions.length;
+          const sessionCount = todayActs.length;
           const hasFullStrength = todayActs.some(a => {
             const label = `${a.name || ''} ${a.sub_title || ''} ${a.subTitle || ''}`.toLowerCase();
             return (label.includes('strength') || label.includes('barbell') || label.includes('kettlebell')) && Number(a.calories || 0) >= 300;
@@ -2784,18 +2851,26 @@ function generateWorkoutFromGearAndGoal() {
     }
 
     // ==================== NEXT-DAY AUTOREGULATION & PREVIEW ENGINE ====================
+    window.tomorrowSleepScenario = window.tomorrowSleepScenario || 'good';
+    window.setTomorrowSleepScenario = function(scen) {
+      window.tomorrowSleepScenario = scen;
+      if (typeof renderTodayTrainingRecommendations === 'function') renderTodayTrainingRecommendations();
+      if (typeof pulseHaptic === 'function') pulseHaptic(15);
+    };
+
     function generateTomorrowRecommendation(completedToday) {
       const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
-      
+      const scen = window.tomorrowSleepScenario || 'good';
+
       let sleepScore = (window.athleteProfile && window.athleteProfile.sleepScore) ? window.athleteProfile.sleepScore : 94;
       let readiness = (window.athleteProfile && window.athleteProfile.readiness) ? window.athleteProfile.readiness : 93;
       let restingHr = (window.athleteProfile && window.athleteProfile.restingHr) ? window.athleteProfile.restingHr : 46;
       let hrvStatus = "Balanced (Optimal Parasympathetic Rebound)";
-      let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 98.2;
-      let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.2;
-      let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
-      let fatToLose = (window.athleteProfile && window.athleteProfile.fatToLoseKg) ? window.athleteProfile.fatToLoseKg : 2.49;
-      let targetWeight = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : 95.71;
+      let scaleWeight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.9;
+      let bodyFatPct = (window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1;
+      let leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 80.99;
+      let fatToLose = (window.athleteProfile && window.athleteProfile.fatToLoseKg) ? window.athleteProfile.fatToLoseKg : 2.62;
+      let targetWeight = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : 95.28;
 
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
         const g = window.BAKED_LIVE_STATE.garmin;
@@ -2813,59 +2888,210 @@ function generateWorkoutFromGearAndGoal() {
         if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
       }
 
-      const todayTitle = (completedToday && completedToday.title) ? completedToday.title.toLowerCase() : '';
-      const isLowerHeavy = todayTitle.includes('squat') || todayTitle.includes('hinge') || todayTitle.includes('option a') || todayTitle.includes('barbell') || todayTitle.includes('strength');
+      const todayText = `${completedToday?.title || ''} ${(acts && acts[0] && (acts[0].subTitle || acts[0].sub_title)) || ''}`.toLowerCase();
+      const fatigued = getFatiguedPatterns48h();
+      const didSkipAndSwings = /skip|jump/.test(todayText) && /swing|kb|kettlebell/.test(todayText);
+      const isLowerHeavy = todayText.includes('squat') || todayText.includes('option a') || todayText.includes('barbell') || todayText.includes('strength');
 
-      let latestAvgHr = 98;
-      if (acts.length > 0 && acts[0].avgHr) latestAvgHr = acts[0].avgHr;
+      let latestAvgHr = 137;
+      if (acts.length > 0 && (acts[0].avgHr || acts[0].avg_hr)) latestAvgHr = acts[0].avgHr || acts[0].avg_hr;
 
       let tomorrowGear = null;
       try { tomorrowGear = localStorage.getItem('pulse_tomorrow_gear'); } catch(e) {}
       const kbW = (gearConfig && gearConfig.kb && gearConfig.kb.weight) || '24kg';
 
-      if (tomorrowGear === 'kb_heavy') {
-        const lowerFatigued = isLowerHeavy;
+      const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
+      const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 65, reps: 8 };
+      const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
+      const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
+      const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
+      const fmtLoad = (w) => (typeof w === 'number' ? `${w}kg` : `${w}`);
+
+      // SCENARIO 3: POOR SLEEP (<65)
+      if (scen === 'poor') {
+        return {
+          presetKey: 'option_c',
+          title: 'Option C: 20-Min Zone 2 Incline Walk & Thoracic/Hip Mobility Reset',
+          subtitle: 'Cortisol Control, Achilles/Hamstring Flush & Zero CNS Debt',
+          durationMin: 25,
+          calories: 140,
+          estMorningBattery: '<50%',
+          estReadiness: '~55',
+          fatigueImpact: '0h CNS Debt',
+          equipment: 'Bodyweight, Foam Roller & Resistance Band',
+          badge: 'POOR SLEEP CONTINGENCY (<65)',
+          summary: `If tonight's sleep score drops below 65 (Morning Battery <50%, Readiness <58), avoid heavy axial spinal compression. A 20-minute Zone 2 walk + hip/ankle mobility lowers cortisol to protect all ${leanMass} kg of lean mass in your 350 kcal deficit while flushing calf & hamstring soreness from today's Jump Rope + KB Swings.`,
+          reasoning: [
+            {
+              title: 'Cortisol & Lean Mass Protection',
+              desc: `Under poor sleep (<65), heavy barbell loading spikes cortisol and catabolic breakdown in a caloric deficit. Zone 2 locomotion oxidizes pure fat without taxing your sympathetic nervous system.`
+            },
+            {
+              title: 'Achilles & Posterior Chain Flush',
+              desc: `Promotes synovial fluid circulation and gentle blood flow to calves, Achilles tendons, and hamstrings after today's 2,185 skips + 5×12 @ 24kg KB swings.`
+            },
+            {
+              title: 'Autonomic Parasympathetic Reset',
+              desc: `Keeps heart rate strictly under 110 bpm so your Body Battery rebounds for a heavy compound session the following day.`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `Adds ~140 kcal of clean NEAT expenditure while keeping hunger hormones (ghrelin) suppressed at ${scaleWeight} kg (${bodyFatPct}% BF → 15.0% goal).`
+            }
+          ],
+          blueprint: [
+            { name: 'Zone 2 Brisk Walk / Incline Treadmill', prescription: '20 min @ 100–112 bpm', cue: 'Nasal breathing only, relaxed shoulders, smooth heel-to-toe cadence.' },
+            { name: 'Eccentric Calf & Achilles Wall Stretch', prescription: '2 × 45s/side (30s rest)', cue: 'Bent-knee soleus + straight-knee gastrocnemius decompression.' },
+            { name: '90/90 Hip & Hamstring Flossing', prescription: '2 × 10 reps/side', cue: 'Restore posterior hip capsule glide after 60 ballistic KB swings.' },
+            { name: 'Deadbug Isometric Core Reset', prescription: '3 × 30s hold', cue: 'Press lower back flat into floor, slow diaphragmatic exhales.' }
+          ],
+          alternative: {
+            presetKey: 'option_kb',
+            title: 'Option KB: Light Kettlebell Technique (2 Sets Only)',
+            desc: 'If you wake up feeling better than expected, perform 2 light sets of KB Strict Press & Rows at 3–4 RIR.'
+          }
+        };
+      }
+
+      // SCENARIO 2: MODERATE SLEEP (65–79)
+      if (scen === 'moderate') {
         return {
           presetKey: 'option_kb',
-          title: 'Option KB: Heavy Kettlebell Strength',
-          subtitle: lowerFatigued ? 'Upper-Biased Press, Row & Carry (Hinge Volume Reduced)' : 'Press, Hinge, Row & Carry — Full-Body Tension',
+          title: 'Option KB: 28-Min Controlled Upper-Biased Kettlebell Grinds',
+          subtitle: 'Strict Press, Floor Press, Gorilla Rows & Suitcase Carry (No Ballistic Hinging)',
+          durationMin: 28,
+          calories: 280,
+          estMorningBattery: '~65%',
+          estReadiness: '~68',
+          fatigueImpact: 'Moderate CNS',
+          equipment: `Single Heavy Kettlebell (${kbW})`,
+          badge: 'MODERATE SLEEP FORECAST (65–79)',
+          summary: `Assuming moderate sleep (Score 65–79, Morning Battery ~65%, Readiness ~68), skip heavy spinal barbell loading and ballistic swings. Focus on controlled ${kbW} Kettlebell Upper Push/Pull grinds (Strict Press, Floor Press, Rows) which are 100% fresh after today's Jump Rope + 5×12 KB Swings.`,
+          reasoning: [
+            {
+              title: 'Kinetic Chain Rotation (Upper Fresh, Lower Recovering)',
+              desc: `Today's <strong>2,185 skips + 60 ballistic 24kg KB swings (1,440 kg volume)</strong> taxed your calves, Achilles, and hamstrings. Tomorrow's controlled KB grinds target your completely fresh chest, shoulders, lats, and obliques.`
+            },
+            {
+              title: 'Zero Spinal Axial Compression',
+              desc: `With moderate readiness (~68), unilateral kettlebell pressing and rowing stimulate high motor-unit recruitment to protect your ${leanMass} kg lean mass without heavy barbell CNS drain.`
+            },
+            {
+              title: 'Controlled Heart Rate Zone',
+              desc: `75-second rest intervals keep HR in the 110–128 bpm hypertrophy/strength zone rather than adding glycolytic fatigue.`
+            },
+            {
+              title: 'Deficit Runway Alignment',
+              desc: `Burns ~280 active kcal to widen your nutrition runway at ${scaleWeight} kg (${bodyFatPct}% BF) while preserving upper-body muscle fullness.`
+            }
+          ],
+          blueprint: [
+            { name: 'KB Single-Arm Strict Overhead Press', prescription: `4 × 6/side @ ${kbW} (75s rest)`, cue: 'Brace core and glutes tight; press vertically with zero leg drive.' },
+            { name: 'KB Single-Arm Floor Press', prescription: `4 × 10/side @ ${kbW} (75s rest)`, cue: 'Pause triceps on floor for 1s to eliminate elastic bounce; drive hard.' },
+            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 10/side @ ${kbW} (75s rest)`, cue: 'Hinge lightly, pull bell to hip pocket, 1s lat squeeze at top.' },
+            { name: 'Floor Push-ups (Tempo 3-0-1)', prescription: '3 × 15 @ Bodyweight (60s rest)', cue: '3-second eccentric lowering; full scapular protraction at lockout.' },
+            { name: 'KB Suitcase Anti-Rotation Carry', prescription: `3 × 45s/side @ ${kbW} (60s rest)`, cue: 'Walk tall, ribs stacked over pelvis, resist lateral tilt.' }
+          ],
+          alternative: {
+            presetKey: 'option_c',
+            title: 'Option C: 20-Min Zone 2 Walk & Mobility',
+            desc: 'If calves or hamstrings feel stiff on warm-up, pivot to an easy 20-min outdoor walk.'
+          }
+        };
+      }
+
+      // SCENARIO 1: GOOD SLEEP (80+)
+      if (tomorrowGear === 'kb_heavy') {
+        const lowerFatigued = isLowerHeavy || didSkipAndSwings || fatigued.hinge;
+        return {
+          presetKey: 'option_kb',
+          title: 'Option KB: Heavy Kettlebell Strength (Upper Push/Pull Priority)',
+          subtitle: lowerFatigued ? 'Upper-Biased Press, Floor Press, Row & Carry (Hinge Volume Reduced)' : 'Press, Hinge, Row & Carry — Full-Body Tension',
           durationMin: 40,
           calories: 340,
+          estMorningBattery: '~85%',
+          estReadiness: '~82',
           fatigueImpact: lowerFatigued ? 'Low Posterior Load' : 'Moderate CNS',
           equipment: `Single Heavy Kettlebell (${kbW})`,
-          badge: 'CUSTOM GEAR • HEAVY KB',
-          summary: `No barbell needed. A single ${kbW} bell delivers enough mechanical tension for strength in the 6–10 rep range when each set is taken to 1–2 reps in reserve, using unilateral pressing/rowing to double the effective load per limb.`,
+          badge: 'ASSUMING GOOD SLEEP (80+) • HEAVY KB',
+          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery ~85%), your CNS will be fresh tomorrow. Because today's <strong>2,185 skips + 5×12 @ 24kg KB Swings</strong> loaded your calves and posterior hinge while leaving <strong>Upper Push & Pull 100% fresh</strong>, tomorrow prioritizes heavy unilateral KB Pressing, Floor Pressing, and Rows.`,
           reasoning: [
             {
               title: 'Musculoskeletal Load Management',
               desc: lowerFatigued
-                ? `Your last session loaded the posterior chain. Hamstrings and glutes need <strong>24–48h of remodeling</strong>, so KB RDL volume drops to 3 sets and the session biases toward strict press, floor press and gorilla rows.`
+                ? `Today's 5×12 @ 24kg KB swings + 2,185 skips loaded your posterior chain and calves. Tomorrow biases toward strict press, floor press, and gorilla rows while reducing RDL volume.`
                 : `Posterior chain is recovered. Heavy KB RDLs (4 × 10) plus unilateral press and row cover every major movement pattern without barbell spinal compression.`
             },
             {
               title: 'Heart Rate & Cardiovascular Load',
-              desc: `Recent sessions averaged <strong>${latestAvgHr} bpm</strong>. 75s rest periods keep this session in a strength zone (~105–125 bpm) rather than a conditioning zone, so it won't add aerobic fatigue.`
+              desc: `Recent sessions averaged <strong>${latestAvgHr} bpm</strong>. 75s rest periods keep this session in a strength zone (~105–125 bpm) rather than a conditioning zone.`
             },
             {
-              title: 'Sleep, HRV & Readiness',
-              desc: `Sleep <strong>${sleepScore}</strong>, Readiness <strong>${readiness}</strong>, RHR <strong>${restingHr} bpm</strong> (${hrvStatus}). ${readiness >= 70 ? 'Cleared for heavy sets at 1–2 RIR.' : 'Below 70 — drop one set per exercise and stop each set at 3 RIR.'}`
+              title: 'Projected Morning Readiness (~82)',
+              desc: `With 7.5–8h of restorative sleep tonight, Morning Body Battery projects to <strong>~85%</strong> and Readiness to <strong>~82</strong> — cleared for heavy sets at 1–2 RIR.`
             },
             {
               title: 'Deficit Runway Alignment',
-              desc: `At ${scaleWeight} kg / ${bodyFatPct}% BF with ${fatToLose} kg to reach 15% (${targetWeight} kg), heavy tension is the signal that keeps all ${leanMass} kg of lean mass while in a 350 kcal deficit.`
+              desc: `At ${scaleWeight} kg / ${bodyFatPct}% BF with ${fatToLose} kg to reach 15% (${targetWeight} kg), heavy tension keeps all ${leanMass} kg of lean mass while in a 350 kcal deficit.`
             }
           ],
           blueprint: [
             { name: 'KB Single-Arm Clean & Strict Press', prescription: `4 × 6/side @ ${kbW} (75s)`, cue: 'Clean to rack, strict press, no leg drive; brace and squeeze glutes.' },
-            { name: 'KB Romanian Deadlift', prescription: `${lowerFatigued ? 3 : 4} × 10 @ ${kbW} (75s)`, cue: 'Hips back, bell close to legs, 3s lowering, hard glute lockout.' },
             { name: 'KB Single-Arm Floor Press', prescription: `4 × 10/side @ ${kbW} (75s)`, cue: 'Pause with elbow on floor, press straight up, wrist stacked.' },
-            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 8/side @ ${kbW} (75s)`, cue: 'Flat back, elbow to hip, 1s squeeze at top.' },
+            { name: 'KB Gorilla / Single-Arm Row', prescription: `4 × 10/side @ ${kbW} (75s)`, cue: 'Flat back, elbow to hip, 1s squeeze at top.' },
+            { name: 'KB Romanian Deadlift (Controlled)', prescription: `${lowerFatigued ? 2 : 4} × 10 @ ${kbW} (75s)`, cue: 'Hips back, bell close to legs, 3s lowering, spare lower back.' },
             { name: 'KB Suitcase Carry / March', prescription: `3 × 45s/side @ ${kbW} (60s)`, cue: 'Tall posture, shoulders level, resist the lean.' }
           ],
           alternative: {
             presetKey: 'option_c',
             title: 'Option C: Incline Cadence Flush & Prehab',
             desc: 'If readiness or sleep drops below 70, swap to Zone 2 walking + prehab.'
+          }
+        };
+      }
+
+      if (didSkipAndSwings) {
+        return {
+          presetKey: 'option_a',
+          title: 'Option A: Upper Push/Pull Priority + Compound Strength',
+          subtitle: 'Heavy Bench Press, Pendlay Rows & Overhead Z-Press (Posterior Hinge Spared)',
+          durationMin: 42,
+          calories: 345,
+          estMorningBattery: '~85%',
+          estReadiness: '~82',
+          fatigueImpact: 'Upper Prime • Hinge Spared',
+          equipment: 'Barbell, Squat Rack & Bench',
+          badge: 'ASSUMING GOOD SLEEP (80+) • OPTIMAL PAIRING',
+          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery recharged to ~85%), your CNS will be fresh tomorrow. Because today's <strong>2,185 skips + 5×12 @ 24kg KB Swings</strong> loaded your calves, Achilles, and ballistic hip hinge while leaving your <strong>Upper Body Push & Pull 100% fresh</strong>, tomorrow is ideal for <strong>Heavy Barbell Bench Press (${fmtLoad(rxBench.weight)} × ${rxBench.reps}) & Pendlay Rows (${fmtLoad(rxRow.weight)} × ${rxRow.reps})</strong>, plus Back Squats if calves/hamstrings feel recovered (or swap RDL volume down to spare the posterior chain).`,
+          reasoning: [
+            {
+              title: '100% Fresh Upper Push & Pull Kinetic Chains',
+              desc: `Today's Jump Rope (2,185 skips) + 5 sets × 12 KB Swings (60 ballistic hinges @ 24kg = 1,440 kg volume) taxed the Achilles tendon complex, gastrocnemius/soleus, and hamstrings. Your <strong>Pectorals, Deltoids, Triceps, and Lats have 0% local fatigue</strong> and are primed for peak barbell loading.`
+            },
+            {
+              title: 'Autoregulated Lower-Body Volume adjustment',
+              desc: `Since 60 ballistic KB swings already delivered potent hip-hinge stimulus today, tomorrow places <strong>Flat Bench Press (${fmtLoad(rxBench.weight)})</strong> and <strong>Pendlay Rows (${fmtLoad(rxRow.weight)})</strong> first, keeps Back Squats optional/controlled, and trims RDL volume to 2 controlled sets so hamstrings don't overreach.`
+            },
+            {
+              title: 'Sleep & CNS Rebound Projection',
+              desc: `Assuming 7.5–8h of quality sleep tonight (Sleep Score ~82+), your Body Battery will rebound from today's ${window.BAKED_LIVE_STATE?.garmin?.body_battery || 40}% back to <strong>~85%</strong> with Readiness <strong>~82</strong> — optimal for high-threshold motor unit recruitment.`
+            },
+            {
+              title: 'Lean Mass Anchor in Deficit',
+              desc: `At <strong>${scaleWeight} kg (${bodyFatPct}% BF)</strong> with <strong>${fatToLose} kg</strong> to reach your 15.0% goal (${targetWeight} kg), heavy upper-body compound tension locks in all <strong>${leanMass} kg of lean muscle</strong>.`
+            }
+          ],
+          blueprint: [
+            { name: 'Barbell Flat Bench Press (Primary Push)', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: '100% fresh chest/triceps — retract scapulae, drive feet into floor, explosive press.' },
+            { name: 'Barbell Pendlay Row (Primary Pull)', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, brace core to protect posterior chain.' },
+            { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (75s rest)`, cue: 'Strict vertical deltoid & triceps press; zero lower-back arch.' },
+            { name: 'Barbell Back Squat (Calf/Ankle Check)', prescription: `3 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Perform 3 crisp sets if calves feel bouncy after 2,185 skips; stop at 2 RIR.' },
+            { name: 'Barbell RDL (Reduced Hinge Volume)', prescription: `2 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Capped at 2 sets since 5×12 24kg KB swings already hit hamstrings today.' }
+          ],
+          alternative: {
+            presetKey: 'option_kb',
+            title: 'Option KB: Heavy 24kg Kettlebell Upper Session',
+            desc: 'If training away from the barbell rack tomorrow, tap Moderate or Change Gear for 24kg KB Strict Press & Rows.'
           }
         };
       }
@@ -2877,34 +3103,36 @@ function generateWorkoutFromGearAndGoal() {
           subtitle: 'Rotational Torso, Kettlebell Dynamics & Dumbbell Floor Density',
           durationMin: 32,
           calories: 385,
+          estMorningBattery: '~85%',
+          estReadiness: '~82',
           fatigueImpact: 'Low CNS Debt (0h)',
           equipment: 'Kettlebells (24–32kg), Dumbbells & Speed Rope',
-          badge: 'AUTOREGULATION TARGET',
-          summary: 'Rotates mechanical stress away from posterior chain prime movers into dynamic core torque and Zone 2–3 intervals, sustaining your 350 kcal daily deficit without joint strain.',
+          badge: 'ASSUMING GOOD SLEEP (80+) • AUTOREGULATED',
+          summary: 'Rotates mechanical stress away from lower prime movers into dynamic core torque and upper-body pushing, sustaining your 350 kcal daily deficit without joint strain.',
           reasoning: [
             {
               title: 'Musculoskeletal & Biomechanical Shield',
-              desc: `Today delivered peak mechanical tension to your posterior chain (glutes, hamstrings, lumbar erectors). These motor units require <strong>24–48 hours for myofibrillar remodeling</strong>. Option B rotates load to rotational core, upper body pushing, and kettlebell dynamics, allowing lower prime movers to repair while keeping daily metabolic burn high.`
+              desc: `Today delivered peak mechanical tension to your lower body. These motor units require <strong>24–48 hours for myofibrillar remodeling</strong>. Option B rotates load to rotational core and upper body pushing.`
             },
             {
               title: 'Heart Rate & Cardiovascular Conditioning',
-              desc: `Your recent workout telemetry logged controlled average HR (${latestAvgHr} bpm). Tomorrow's interval circuit will tap Zone 2–3 conditioning (target 125–138 bpm), driving mitochondrial capillary expansion and lactate buffering without inducing central nervous system exhaustion.`
+              desc: `Your recent workout telemetry logged controlled average HR (${latestAvgHr} bpm). Tomorrow's interval circuit will tap Zone 2–3 conditioning (target 125–138 bpm).`
             },
             {
-              title: 'Wearable Sleep & Autonomic Recovery',
-              desc: `Garmin Sleep Score of <strong>${sleepScore}</strong> and resting HR of <strong>${restingHr} bpm</strong> (${readiness} Readiness) reflect superior parasympathetic rebound. Your autonomic nervous system is fully cleared to handle dynamic work capacity tomorrow.`
+              title: 'Projected Morning Recovery',
+              desc: `Assuming Sleep Score <strong>80+</strong> and Morning Battery <strong>~85%</strong>, your autonomic nervous system is cleared to handle dynamic work capacity tomorrow.`
             },
             {
               title: 'Deficit Runway Alignment',
-              desc: `At <strong>${scaleWeight} kg</strong> and <strong>${bodyFatPct}% body fat</strong>, you are just <strong>${fatToLose} kg</strong> away from 15.0% (${targetWeight} kg target). The ~385 kcal active burn from Option B maintains your 350 kcal daily fat-loss deficit while anchoring all ${leanMass} kg of lean mass.`
+              desc: `At <strong>${scaleWeight} kg</strong> and <strong>${bodyFatPct}% body fat</strong>, you are just <strong>${fatToLose} kg</strong> away from 15.0% (${targetWeight} kg target).`
             }
           ],
           blueprint: [
-            { name: 'Kettlebell Two-Hand Swings', prescription: '4 × 15 @ 24–32kg (60s rest)', cue: 'Violent hip snap, bell floats weightless, glutes contracted.' },
             { name: 'Dumbbell Chest Floor Press', prescription: '4 × 10 @ 2×22kg (75s rest)', cue: 'Pause briefly on floor to eliminate momentum; explosive concentric press.' },
+            { name: 'Kettlebell Single-Arm Gorilla Row', prescription: '4 × 10/side @ 24kg (60s rest)', cue: 'Brace core, drive elbow to hip.' },
             { name: 'Rotational Slam Ball Slams', prescription: '4 × 12 @ 10–15kg (45s rest)', cue: 'Full overhead extension, drive ball into floor with core torque.' },
             { name: 'Floor Push-ups (Tempo 3-0-1)', prescription: '3 × 18 @ Bodyweight (60s rest)', cue: '3-second lowering tempo, screw hands into floor.' },
-            { name: 'Speed Rope Double-Under Ladder', prescription: '6 rounds × 45s work / 15s rest', cue: 'Wrists rotate near hips, light bounce on balls of feet.' }
+            { name: 'Kettlebell Suitcase Carry', prescription: '3 × 45s/side @ 24kg (60s rest)', cue: 'Tall posture, anti-rotation oblique brace.' }
           ],
           alternative: {
             presetKey: 'option_c',
@@ -2912,78 +3140,87 @@ function generateWorkoutFromGearAndGoal() {
             desc: 'If morning readiness or sleep drops below 75, pivot to Zone 2 walking & knee prehab (0h CNS debt).'
           }
         };
-      } else {
-        const rxSquat = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_squat', getAllExercises().find(e => e.id === 'barbell_squat')) : { weight: 100, reps: 8 };
-        const rxBench = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_bench_press', getAllExercises().find(e => e.id === 'barbell_bench_press')) : { weight: 95, reps: 8 };
-        const rxRdl = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_rdl', getAllExercises().find(e => e.id === 'barbell_rdl')) : { weight: 70, reps: 8 };
-        const rxRow = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_pendlay_row', getAllExercises().find(e => e.id === 'barbell_pendlay_row')) : { weight: 85, reps: 8 };
-        const rxZPress = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('barbell_z_press', getAllExercises().find(e => e.id === 'barbell_z_press')) : { weight: 45, reps: 10 };
-
-        const fmtLoad = (w) => (typeof w === 'number' ? `${w}kg` : `${w}`);
-
-        return {
-          presetKey: 'option_a',
-          title: 'Option A: Heavy Barbell Squat, Bench & Hinge',
-          subtitle: 'Full-Body Compound Mechanical Tension (Squat Rack & Bench)',
-          durationMin: 45,
-          calories: 340,
-          fatigueImpact: 'High Mechanical Tension',
-          equipment: 'Barbell, Squat Rack & Bench',
-          badge: 'AUTOREGULATION TARGET',
-          summary: `Delivers heavy compound mechanical tension across Squat, Bench Press, RDL, and Row, anchoring all ${leanMass} kg of lean mass while protecting nervous system reserves.`,
-          reasoning: [
-            {
-              title: 'High Mechanical Tension Required',
-              desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow must deliver high mechanical load to quads, chest, lats, and posterior chain.`
-            },
-            {
-              title: 'Heart Rate & Cardiac EPOC',
-              desc: `Recent work capacity sessions spiked cardiovascular output. Tomorrow's compound strength format utilizes 90–120s rest intervals, keeping heart rate controlled while taxing muscular motor units directly.`
-            },
-            {
-              title: 'Sleep & CNS Priming',
-              desc: `With a <strong>${sleepScore} Sleep Score</strong> and <strong>${restingHr} bpm RHR</strong>, your central nervous system has replenished motor unit firing potential. Heavy compound lifting is cleared.`
-            },
-            {
-              title: 'Deficit Runway Alignment',
-              desc: `Anchors all ${leanMass} kg of lean mass while driving the final ${fatToLose} kg fat loss toward 15.0%.`
-            }
-          ],
-          blueprint: [
-            { name: 'Barbell Back Squat', prescription: `4 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Unrack from squat rack, chest up, knees track over toes, drive through midfoot.' },
-            { name: 'Barbell Flat Bench Press', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: 'Shoulder blades retracted on bench, leg drive, touch lower sternum.' },
-            { name: 'Barbell Romanian Deadlift (RDL)', prescription: `4 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Hips back, neutral spine, explosive glute lockout.' },
-            { name: 'Barbell Pendlay Row', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
-            { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Strict overhead deltoid press; core braced tight.' }
-          ],
-          alternative: {
-            presetKey: 'option_c',
-            title: 'Option C: Active Recovery & Synovial Restoration',
-            desc: 'Light 25-min outdoor recovery walk + banded joint restoration if joints require deload.'
-          }
-        };
       }
+
+      return {
+        presetKey: 'option_a',
+        title: 'Option A: Heavy Barbell Squat, Bench & Hinge',
+        subtitle: 'Full-Body Compound Mechanical Tension (Squat Rack & Bench)',
+        durationMin: 45,
+        calories: 340,
+        estMorningBattery: '~85%',
+        estReadiness: '~82',
+        fatigueImpact: 'High Mechanical Tension',
+        equipment: 'Barbell, Squat Rack & Bench',
+        badge: 'ASSUMING GOOD SLEEP (80+) • TARGET',
+        summary: `Assuming good sleep tonight (Sleep ~82+, Morning Battery ~85%), tomorrow delivers heavy compound mechanical tension across Squat, Bench Press, RDL, and Row, anchoring all ${leanMass} kg of lean mass.`,
+        reasoning: [
+          {
+            title: 'High Mechanical Tension Required',
+            desc: `To protect all <strong>${leanMass} kg</strong> of muscle in your 350 kcal deficit, tomorrow delivers high mechanical load to quads, chest, lats, and posterior chain.`
+          },
+          {
+            title: 'Heart Rate & Cardiac EPOC',
+            desc: `Tomorrow's compound strength format utilizes 90–120s rest intervals, keeping heart rate controlled while taxing muscular motor units directly.`
+          },
+          {
+            title: 'Projected Sleep & CNS Priming',
+            desc: `Assuming an <strong>80+ Sleep Score</strong> and <strong>~85% Morning Battery</strong>, your central nervous system will be primed for heavy compound lifting.`
+          },
+          {
+            title: 'Deficit Runway Alignment',
+            desc: `Anchors all ${leanMass} kg of lean mass while driving the final ${fatToLose} kg fat loss toward 15.0%.`
+          }
+        ],
+        blueprint: [
+          { name: 'Barbell Back Squat', prescription: `4 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Unrack from squat rack, chest up, knees track over toes, drive through midfoot.' },
+          { name: 'Barbell Flat Bench Press', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: 'Shoulder blades retracted on bench, leg drive, touch lower sternum.' },
+          { name: 'Barbell Romanian Deadlift (RDL)', prescription: `4 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Hips back, neutral spine, explosive glute lockout.' },
+          { name: 'Barbell Pendlay Row', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, strict horizontal torso.' },
+          { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (60s rest)`, cue: 'Strict overhead deltoid press; core braced tight.' }
+        ],
+        alternative: {
+          presetKey: 'option_c',
+          title: 'Option C: Active Recovery & Synovial Restoration',
+          desc: 'Light 25-min outdoor recovery walk + banded joint restoration if joints require deload.'
+        }
+      };
     }
 
     function renderTomorrowPreviewCard(completedToday) {
       const rec = generateTomorrowRecommendation(completedToday);
+      const scen = window.tomorrowSleepScenario || 'good';
+      const pillStyle = (active, colorHex, bgRgba, borderRgba) => active
+        ? `flex:1; padding:6px 8px; border-radius:7px; font-size:10.5px; font-weight:800; background:${bgRgba}; border:1.5px solid ${borderRgba}; color:${colorHex}; cursor:pointer; text-align:center;`
+        : `flex:1; padding:6px 8px; border-radius:7px; font-size:10.5px; font-weight:700; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); color:var(--text-muted); cursor:pointer; text-align:center;`;
+
       return `
         <!-- ELEPHANT-GOLDFISH PROTOCOL: TOMORROW'S AUTOREGULATION PREVIEW -->
-        <div class="card" style="padding:16px; margin-top:10px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.08); border-radius:14px; position:relative;">
+        <div id="tomorrowForecastCard" class="card" style="padding:16px; margin-top:10px; margin-bottom:12px; background:var(--surface-card, #14161e); border:1px solid rgba(0,229,255,0.28); border-radius:14px; position:relative; box-shadow:0 4px 20px rgba(0,0,0,0.35);">
           
-          <!-- GOLDFISH TIER: TOP BADGE & CLASSIFICATION -->
+          <!-- PROMINENT FORECAST HEADER -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:10px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
-                ${rec.badge}
-              </span>
-              <span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
-                Tomorrow's Focus
+              <span style="font-size:11px; font-weight:800; color:#00e5ff; letter-spacing:0.05em; text-transform:uppercase;">
+                🌙 TOMORROW'S TRAINING FORECAST
               </span>
             </div>
-            <span style="font-size:10.5px; font-weight:700; color:var(--text-secondary);">
-              Next Day Autoregulation
+            <span style="background:var(--primary-dim, rgba(48,209,88,0.12)); border:1px solid rgba(48,209,88,0.3); color:var(--primary, #30d158); font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;">
+              ${rec.badge}
             </span>
+          </div>
+
+          <!-- 3-PILL SLEEP ASSUMPTION SELECTOR -->
+          <div style="display:flex; gap:6px; margin-bottom:10px;">
+            <button type="button" onclick="setTomorrowSleepScenario('good')" style="${pillStyle(scen === 'good', '#30d158', 'rgba(48,209,88,0.15)', 'rgba(48,209,88,0.5)')}">
+              🟢 Good Sleep (80+)
+            </button>
+            <button type="button" onclick="setTomorrowSleepScenario('moderate')" style="${pillStyle(scen === 'moderate', '#fbbf24', 'rgba(251,191,36,0.15)', 'rgba(251,191,36,0.5)')}">
+              🟡 Moderate (65–79)
+            </button>
+            <button type="button" onclick="setTomorrowSleepScenario('poor')" style="${pillStyle(scen === 'poor', '#f87171', 'rgba(248,113,113,0.15)', 'rgba(248,113,113,0.5)')}">
+              🔴 Poor (&lt;65)
+            </button>
           </div>
 
           <!-- GOLDFISH TIER: WORKOUT TITLE & SUBTITLE -->
@@ -3000,19 +3237,19 @@ function generateWorkoutFromGearAndGoal() {
             <span style="font-size:11px; font-weight:800; color:var(--primary); white-space:nowrap;">Change Gear ⚙</span>
           </div>
 
-          <!-- GOLDFISH TIER: GLANCEABLE METRIC STRIP (3-SECOND RULE) -->
+          <!-- GOLDFISH TIER: PROJECTED MORNING METRICS STRIP -->
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:10px;">
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
-              <div style="font-size:13px; font-weight:800; color:#fff;">${rec.durationMin}m</div>
-              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Proposed Time</div>
+              <div style="font-size:12.5px; font-weight:800; color:#00e5ff;">${rec.estMorningBattery || '~85%'}</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Est. Morning Battery</div>
             </div>
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
-              <div style="font-size:13px; font-weight:800; color:var(--primary, #30d158);">~${rec.calories}</div>
-              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Target Burn</div>
+              <div style="font-size:12.5px; font-weight:800; color:#10b981;">${rec.estReadiness || '~82'}</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Est. Readiness</div>
             </div>
             <div style="background:#1a1d26; border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:7px 4px; text-align:center;">
-              <div style="font-size:13px; font-weight:800; color:#10b981;">${rec.fatigueImpact}</div>
-              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Fatigue Impact</div>
+              <div style="font-size:12.5px; font-weight:800; color:var(--primary, #30d158);">~${rec.calories} kcal</div>
+              <div style="font-size:9px; font-weight:600; color:var(--text-muted); text-transform:uppercase;">Target Burn (${rec.durationMin}m)</div>
             </div>
           </div>
 
@@ -3062,9 +3299,14 @@ function generateWorkoutFromGearAndGoal() {
 
           <!-- GOLDFISH TIER: PRIMARY ACTION & CONTINGENCY -->
           <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
-            <button class="btn-action-primary" onclick="setTomorrowTargetPlan('${rec.presetKey}')" style="height:40px; font-size:12px; font-weight:800; background:var(--primary, #30d158); color:#000; border-radius:8px; border:none; display:flex; align-items:center; justify-content:center; gap:6px; letter-spacing:0.03em;">
-              LOCK AS TOMORROW'S FOCUS ➔
-            </button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-action-primary" onclick="setTomorrowTargetPlan('${rec.presetKey}')" style="flex:2; min-width:170px; height:40px; font-size:11.5px; font-weight:800; background:var(--primary, #30d158); color:#000; border-radius:8px; border:none; display:flex; align-items:center; justify-content:center; gap:6px; letter-spacing:0.03em; cursor:pointer;">
+                LOCK & PRE-LOAD FOR TOMORROW ➔
+              </button>
+              <button class="btn-action-primary" onclick="loadDailyArchetype('${rec.presetKey}'); switchTab('train');" style="flex:1; min-width:140px; height:40px; font-size:11px; font-weight:700; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.3); color:#00e5ff; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:5px; cursor:pointer;">
+                Preview in Workout Tab ➔
+              </button>
+            </div>
             <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:2px;">
               Contingency: <em>${rec.alternative.title}</em> (${rec.alternative.desc})
             </div>
@@ -3095,7 +3337,7 @@ function generateWorkoutFromGearAndGoal() {
         return `
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11.5px; margin-top:4px; gap:6px; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:5px; flex:1; min-width:140px;">
-              <span style="color:#fff; font-weight:700;">${idx + 1}. ${me.name}</span>
+              <span style="color:#fff; font-weight:700;">${idx + 1}. ${escapeHtml(me.name)}</span>
               ${isSwapped ? '<span style="font-size:9px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--primary); padding:1px 4px; border-radius:3px;">SWAPPED</span>' : ''}
             </div>
             <div style="display:flex; align-items:center; gap:4px;">
@@ -3396,7 +3638,7 @@ function generateWorkoutFromGearAndGoal() {
 
       if (activeCaloriesToday === 0 && actDayMap[0]) {
         acts.forEach(a => {
-          if (a.isToday || (a.rawDate && a.rawDate.startsWith(now.toISOString().split('T')[0]))) {
+          if (a.isToday || (a.rawDate && a.rawDate.startsWith(typeof getLocalDateStr === 'function' ? getLocalDateStr(now) : now.toISOString().split('T')[0]))) {
             activeCaloriesToday += (a.calories || 0);
           }
         });
@@ -3474,13 +3716,13 @@ function generateWorkoutFromGearAndGoal() {
         ctaText = '✓ Log Rest Day';
         isRest = true;
       } else if (mode === 'liss_cardio') {
-        archetypeKey = 'option_a';
+        archetypeKey = 'option_c';
         optionId = 'recovery_flush_walk';
         optionLabels = {
-          option_a: '⭐ Zone 2 LISS',
-          option_kb: 'KB Flush',
-          option_b: 'Aerobic Work',
-          option_c: 'Mobility Flow'
+          option_a: 'Option A (BB)',
+          option_kb: 'Option KB',
+          option_b: 'Option B (Work)',
+          option_c: '⭐ Zone 2 Flush'
         };
         badge = '🚶 ZONE 2 LISS RECOMMENDED';
         title = 'Zone 2 Aerobic Engine & Flush';
@@ -3680,6 +3922,9 @@ function generateWorkoutFromGearAndGoal() {
       if (typeof updateArchetypeStarBadge === 'function') {
         updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
       }
+      if (!window._userManualArchetype && typeof loadDailyArchetype === 'function' && currentArchetypeKey !== verdict.archetypeKey) {
+        loadDailyArchetype(verdict.archetypeKey);
+      }
 
       const completed = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
 
@@ -3775,7 +4020,6 @@ function generateWorkoutFromGearAndGoal() {
               <div>• CNS Recovery: <strong style="color:${verdict.muscleStatus.cns.includes('Debt') ? '#ef4444' : 'var(--primary)'};">${verdict.muscleStatus.cns}</strong></div>
             </div>
             <div>• <strong>Body Recomp Target:</strong> Current ${scaleWeight} kg (${bodyFatPct}% BF) ➔ Goal ${targetWeight} kg (15.0% BF, ${fatToLose} kg fat to lose, ${leanMass} kg lean mass preserved)</div>
-            ${completed && typeof renderTomorrowPreviewCard === 'function' ? `<div style="margin-top:6px;">${renderTomorrowPreviewCard(completed)}</div>` : ''}
             <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="header-pill-btn" onclick="openEquipmentModal('today')" style="padding:4px 10px; font-size:10.5px; background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.3); color:var(--primary); font-weight:700; cursor:pointer;">
                 ⚙ Tailor Equipment
@@ -3841,6 +4085,170 @@ function generateWorkoutFromGearAndGoal() {
         </div>
       `;
 
+      function renderIntradayAndEveningCloseoutHtml(v, comp) {
+        let ukHour = 12;
+        try {
+          ukHour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', hour12: false }).format(new Date()));
+        } catch(e) {}
+
+        const morningBb = (v.sleepScore || 93) >= 90
+          ? 100
+          : Math.min(100, Math.round((v.sleepScore || 93) * 1.05));
+        const currBb = Number(v.bodyBattery || 64);
+        const bbDrain = Math.max(1, morningBb - currBb);
+        const activeBurn = Number(v.activeCaloriesToday || (comp ? comp.calories : 0) || 478);
+        const kcalPerBbPt = Math.round((activeBurn / bbDrain) * 10) / 10;
+        const cleanLoad = kcalPerBbPt >= 8 || bbDrain <= 45;
+
+        const mndTotals = (typeof myNetDiaryData !== 'undefined' && myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : {};
+        const remCals = Math.max(0, Math.round((v.baseCalTarget || 2570) - (v.consumedCals || Number(mndTotals.calories || 0) || 0)));
+        const loggedP = Math.round(Number(mndTotals.protein || 0));
+        const remP = Math.max(0, 200 - loggedP);
+        const loggedF = Math.round(Number(mndTotals.fat || 0));
+        const remF = Math.max(0, 75 - loggedF);
+        const estTomorrowReadiness = Math.min(95, Math.round(currBb * 0.45 + 55));
+        const isEvening = ukHour >= 17;
+
+        const goldfishLine = isEvening
+          ? `🌙 EVENING RECOVERY CLOSE-OUT • ${remP}g Protein &amp; ${remF}g Healthy Fat left • Est. Tomorrow Readiness ~${estTomorrowReadiness}`
+          : `🔋 INTRADAY BATTERY PACE: ${morningBb}% ➔ ${currBb}% (-${bbDrain} pts for ${activeBurn} active kcal • ${kcalPerBbPt} kcal/pt)`;
+
+        const statusBadge = isEvening
+          ? `<span style="font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:5px; background:rgba(139,92,246,0.18); border:1px solid rgba(139,92,246,0.4); color:#c4b5fd;">${remCals} kcal runway</span>`
+          : `<span style="font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:5px; background:${cleanLoad ? 'rgba(16,185,129,0.14)' : 'rgba(245,158,11,0.16)'}; border:1px solid ${cleanLoad ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.38)'}; color:${cleanLoad ? '#10b981' : '#fbbf24'};">${cleanLoad ? '✅ Clean Autonomic Load' : '⚠️ Elevated Non-Training Stress'}</span>`;
+
+        return `
+          <div style="margin-top:10px; background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.22); border-radius:10px; padding:9px 11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <div style="font-size:10.5px; font-weight:800; color:${isEvening ? '#c4b5fd' : '#38bdf8'}; line-height:1.35;">
+                ${goldfishLine}
+              </div>
+              ${statusBadge}
+            </div>
+            <details style="margin-top:7px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.06); border-radius:7px; overflow:hidden;">
+              <summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>🔬 View Intraday Autonomic Drain &amp; Pre-Sleep Close-Out Protocol</span>
+                <span style="color:var(--text-muted);">▾</span>
+              </summary>
+              <div style="padding:8px 10px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#cbd5e1; line-height:1.45; display:flex; flex-direction:column; gap:5px;">
+                <div>• <strong>Autonomic Drain Efficiency:</strong> <strong>-${bbDrain}%</strong> Body Battery (${morningBb}% ➔ ${currBb}%) vs <strong>${activeBurn} active kcal</strong> + <strong>${Number(v.stepsToday || 0).toLocaleString()} steps</strong> = <strong>${kcalPerBbPt} kcal/pt</strong> (${cleanLoad ? 'High Metabolic Efficiency / Low Non-Training Stress' : 'Elevated sympathetic stress outside training'}).</div>
+                <div>• <strong>Pre-Sleep Macro Close-Out:</strong> <strong>${remP}g protein</strong> (${loggedP}g / 200g) &amp; <strong>${remF}g healthy fat</strong> (${loggedF}g / 75g) remaining within <strong>${remCals} kcal</strong> remaining runway.</div>
+                <div>• <strong>Evening Checklist:</strong> Cut off heavy hydration &amp; screens 90m pre-bed, take magnesium/electrolytes with final protein-rich feed, and target 7.5–8h sleep to rebound Body Battery toward ~${Math.min(100, currBb + 34)}% (est. tomorrow Readiness ~<strong>${estTomorrowReadiness}</strong>).</div>
+              </div>
+            </details>
+          </div>
+        `;
+      }
+
+      function renderWeeklyExecutiveBriefHtml(v, sw, bfPct, tw, ftl, lm, burn7d, avgBurn7d, strSessions7d, wkFatLossG) {
+        const mndHist = (typeof myNetDiaryData !== 'undefined' && myNetDiaryData && myNetDiaryData.history) ? myNetDiaryData.history : {};
+        const avg7d = (mndHist && mndHist.averages_7d)
+          ? mndHist.averages_7d
+          : { calories: 2544, protein: 259, fat: 64.4, fiber: 39.9 };
+
+        let strengthActs = 0, strengthCals = 0;
+        let combatCondActs = 0, combatCondCals = 0;
+        let walkActs = 0, walkCals = 0;
+        let totalDur7d = 0;
+
+        acts7d.forEach(a => {
+          const nm = `${a.name || ''} ${a.subTitle || a.sub_title || ''} ${a.activity_type_key || ''}`.toLowerCase();
+          const c = Number(a.calories || 0);
+          totalDur7d += Number(a.durationMin || a.duration_min || 0);
+          const p = (typeof parseWorkoutNoteDetails === 'function') ? parseWorkoutNoteDetails(nm, a) : {};
+          if (/strength|barbell|lift|gym/i.test(nm) && !p.hasBodyCombat && !p.hasJumpRope) {
+            strengthActs += 1;
+            strengthCals += c;
+          } else if (/walk|stroll|hike|ruck/i.test(nm)) {
+            walkActs += 1;
+            walkCals += c;
+          } else {
+            combatCondActs += 1;
+            combatCondCals += c;
+          }
+        });
+
+        const fatToLoseNum = Number(ftl || 2.16);
+        const wkLossKg = Math.max(0.25, wkFatLossG / 1000);
+        const estWeeks = Math.max(2, Math.round((fatToLoseNum * 1000) / Math.max(250, wkFatLossG)));
+        const cumDeficitKcal = Math.round(fatToLoseNum * 7700);
+        const wholeFoodPct = Math.round(Number(mndHist.whole_food_pct || 86));
+
+        return `
+          <div class="card" style="margin-top:12px; padding:12px 14px; background:#111520; border:1px solid rgba(0,229,255,0.22); border-radius:12px;">
+            <!-- GOLDFISH HEADER STRIP -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:9px;">
+              <div style="font-size:11px; font-weight:800; color:#fff; letter-spacing:0.05em;">
+                📈 7-DAY EXECUTIVE HYBRID BRIEF
+              </div>
+              <span style="font-size:10px; font-weight:800; color:#10b981; background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.35); padding:2px 8px; border-radius:5px;">
+                On Pace: ~${wkLossKg.toFixed(2)} kg/wk ➔ 15.0% BF in ~${estWeeks} wks
+              </span>
+            </div>
+
+            <!-- GOLDFISH 4-TILE SCORECARD -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:7px;">
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Scale (Measured)</div>
+                <div style="font-size:12px; font-weight:800; color:#fff; margin-top:2px;">${sw}kg • ${bfPct}% BF</div>
+                <div style="font-size:10px; color:var(--cyan); margin-top:1px;">${fatToLoseNum.toFixed(2)}kg to 15.0%</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">7d Training</div>
+                <div style="font-size:12px; font-weight:800; color:#fff; margin-top:2px;">${strSessions7d}/3 Strength • ${acts7d.length} Total</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">${Math.round(totalDur7d)}m active time</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">7d Active Burn</div>
+                <div style="font-size:12px; font-weight:800; color:var(--primary); margin-top:2px;">${burn7d.toLocaleString()} kcal</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">${avgBurn7d}/d avg</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:7px 9px;">
+                <div style="font-size:9.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">7d Nutrition</div>
+                <div style="font-size:11.5px; font-weight:800; color:#c4b5fd; margin-top:2px;">${Math.round(avg7d.protein)}g P • ${Math.round(avg7d.fat)}g F • ${Math.round(avg7d.fiber)}g Fib</div>
+                <div style="font-size:10px; color:var(--text-muted); margin-top:1px;">${Math.round(avg7d.calories).toLocaleString()} kcal/d avg</div>
+              </div>
+            </div>
+
+            <!-- ELEPHANT ACCORDION -->
+            <details style="margin-top:9px; background:#0b0e16; border:1px solid rgba(255,255,255,0.06); border-radius:8px; overflow:hidden;">
+              <summary style="font-size:11px; font-weight:700; color:var(--cyan); padding:8px 11px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <span>🐘 Expand Full 7-Day Recomp, Modality &amp; Micronutrient Ledger</span>
+                <span style="color:var(--text-muted);">▾</span>
+              </summary>
+              <div style="padding:10px 12px; border-top:1px solid rgba(255,255,255,0.05); font-size:11px; color:#cbd5e1; line-height:1.5; display:flex; flex-direction:column; gap:7px;">
+                <div>
+                  <strong style="color:#fff;">1. Body Composition &amp; Scale Trajectory (Measured Only):</strong>
+                  Scale weight <strong>${sw} kg</strong> • Scale-measured body fat <strong>${bfPct}%</strong> • Lean mass <strong>${lm} kg</strong> • Target weight at 15.0% BF: <strong>${tw} kg</strong> • Remaining fat to lose: <strong>${fatToLoseNum.toFixed(2)} kg</strong> (~<strong>${cumDeficitKcal.toLocaleString()} kcal</strong> cumulative deficit).
+                </div>
+                <div>
+                  <strong style="color:#fff;">2. 7-Day Modality Mix (${acts7d.length} sessions • ${Math.round(totalDur7d)}m):</strong>
+                  Barbell/Strength: <strong>${strengthActs}</strong> sessions (${strengthCals.toLocaleString()} kcal) • Body Combat / Jump Rope / KB Conditioning: <strong>${combatCondActs}</strong> sessions (${combatCondCals.toLocaleString()} kcal) • Walking / Steps: <strong>${walkActs}</strong> sessions (${walkCals.toLocaleString()} kcal).
+                </div>
+                <div>
+                  <strong style="color:#fff;">3. 7-Day Nutrition vs. Targets:</strong>
+                  Protein <strong>${Math.round(avg7d.protein)}g</strong> vs 200g target • Fat <strong>${Number(avg7d.fat).toFixed(1)}g</strong> vs 80g floor (add flaxseed/nuts or oily fish on lower-fat days to protect endocrine recovery) • Fiber <strong>${Number(avg7d.fiber).toFixed(1)}g</strong> vs 35g target • Whole-Food Ratio <strong>~${wholeFoodPct}%</strong>.
+                </div>
+              </div>
+            </details>
+          </div>
+        `;
+      }
+
+      const intradayEveningHtml = renderIntradayAndEveningCloseoutHtml(verdict, completed);
+      const weeklyExecutiveBriefHtml = renderWeeklyExecutiveBriefHtml(
+        verdict,
+        scaleWeight,
+        bodyFatPct,
+        targetWeight,
+        fatToLose,
+        leanMass,
+        totalActiveBurn7d,
+        avgActiveBurn7d,
+        strengthSessions7d,
+        weeklyFatLossEstG
+      );
+
       const sessCount = completed ? (completed.sessionCount || 1) : 0;
       const bonusOptionLabel = sessCount >= 2
         ? (verdict.stepsRemaining >= 2000 ? `Top up ${verdict.stepsRemaining.toLocaleString()} steps (15–20m walk)` : 'Optional 15m core / mobility flush')
@@ -3898,6 +4306,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             ${stepBarHtml}
+            ${intradayEveningHtml}
             ${plateauDualHtml}
 
             <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
@@ -3916,7 +4325,9 @@ function generateWorkoutFromGearAndGoal() {
             </div>
           </div>
 
+          ${typeof renderTomorrowPreviewCard === 'function' ? renderTomorrowPreviewCard(completed) : ''}
           ${elephantAccordionHtml}
+          ${weeklyExecutiveBriefHtml}
         `;
       } else if (completed) {
         const proteinTarget = (window.BAKED_LIVE_STATE?.nutrition?.protein_target_g) || 200;
@@ -3963,13 +4374,14 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             ${stepBarHtml}
+            ${intradayEveningHtml}
             ${plateauDualHtml}
 
             <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
               <button class="btn-action-primary" onclick="viewCompletedWorkoutBreakdown()" style="flex:1; min-width:160px; height:42px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
                 View Logged Sessions (${sessCount}) ➔
               </button>
-              <button class="btn-action-primary" onclick="openWorkoutTabFromVerdict()" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.3); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+              <button class="btn-action-primary" onclick="document.getElementById('tomorrowForecastCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });" style="flex:1; min-width:180px; height:42px; font-size:12px; font-weight:700; background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.3); color:var(--primary); display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
                 Open Tomorrow's Focus ➔
               </button>
             </div>
@@ -3981,7 +4393,9 @@ function generateWorkoutFromGearAndGoal() {
             </div>
           </div>
 
+          ${typeof renderTomorrowPreviewCard === 'function' ? renderTomorrowPreviewCard(completed) : ''}
           ${elephantAccordionHtml}
+          ${weeklyExecutiveBriefHtml}
         `;
       } else {
         // NOT completed
@@ -4013,7 +4427,7 @@ function generateWorkoutFromGearAndGoal() {
                 ${verdict.badge}
               </span>
               <span style="font-size:10.5px; color:var(--text-muted);">
-                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • Battery ${verdict.bodyBattery}% • Readiness ${verdict.readiness}
+                <span onclick="openSleepOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Sleep Score">Sleep ${verdict.sleepScore} ✎</span> • <span onclick="openBodyBatteryOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Body Battery">Battery ${verdict.bodyBattery}% ✎</span> • <span onclick="openReadinessOverridePrompt()" style="cursor:pointer; text-decoration:underline dotted; color:var(--text-secondary);" title="Tap to override Training Readiness">Readiness ${verdict.readiness} ✎</span>
               </span>
             </div>
 
@@ -4026,11 +4440,13 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             ${stepBarHtml}
+            ${intradayEveningHtml}
             ${plateauDualHtml}
             ${ctaButtonsHtml}
           </div>
 
           ${elephantAccordionHtml}
+          ${weeklyExecutiveBriefHtml}
         `;
       }
     }
@@ -4040,6 +4456,7 @@ function generateWorkoutFromGearAndGoal() {
       switchTab('train');
       switchTrainView('prescribed');
       loadDailyArchetype(verdict.archetypeKey);
+      window._userManualArchetype = true;
       updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
       requestWakeLock();
       beep(750, 0.08);
@@ -4060,6 +4477,7 @@ function generateWorkoutFromGearAndGoal() {
         const targetW = rx.weight;
         const targetR = rx.reps;
         return {
+          ...ex,
           id: ex.id,
           name: ex.name,
           family: ex.family,
@@ -4071,6 +4489,12 @@ function generateWorkoutFromGearAndGoal() {
           rationale: ex.rationale || ""
         };
       });
+      window.activeSessionMeta = {
+        id: opt.id,
+        title: opt.title,
+        preset: opt.preset || currentPreset,
+        goal: opt.goal || currentGoal
+      };
       currentExIdx = 0;
       const badgeEl = document.getElementById('wPlanBadge');
       if (badgeEl) badgeEl.innerText = opt.title.toUpperCase();
@@ -4088,7 +4512,7 @@ function generateWorkoutFromGearAndGoal() {
     }
 
     function toggleWorkoutCompleteManual(isComplete) {
-      const todayIsoDate = new Date().toISOString().split('T')[0];
+      const todayIsoDate = typeof getLocalDateStr === 'function' ? getLocalDateStr() : new Date().toISOString().split('T')[0];
       try {
         if (isComplete) {
           localStorage.setItem('pulse_strength_done_today', 'true');
@@ -4228,6 +4652,7 @@ function viewCompletedWorkoutBreakdown() {
         intermissionMode: savedIntermission,
         inIntermission: false,
         flowStepIdx: 0,
+        activeFlowStepIdx: 0,
         running: false,
         intervalId: null
       };
@@ -4239,6 +4664,82 @@ function viewCompletedWorkoutBreakdown() {
       const r = s % 60;
       return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
     }
+
+    function parseFlowStepString(rawStep) {
+      const str = String(rawStep || '').trim();
+      const match = str.match(/^(\d+(?:-\d+)+|\d+s|\d+m|\d+)\s+(.+)$/i);
+      if (match) {
+        const rawQty = match[1];
+        let restName = match[2].trim();
+        let repsBadge = '';
+        let numericReps = 0;
+
+        if (rawQty.includes('-')) {
+          const parts = rawQty.split('-').map(n => parseInt(n, 10)).filter(n => !isNaN(n));
+          repsBadge = parts.length >= 2 ? `${parts[0]}→${parts[parts.length - 1]} LADDER` : `${rawQty} REPS`;
+          numericReps = parts.reduce((acc, v) => acc + v, 0);
+        } else if (/s$/i.test(rawQty)) {
+          repsBadge = rawQty.toUpperCase();
+        } else if (/m$/i.test(rawQty)) {
+          repsBadge = rawQty;
+        } else {
+          repsBadge = `× ${rawQty}`;
+          numericReps = parseInt(rawQty, 10) || 0;
+        }
+
+        let sideBadge = '';
+        const sideMatch = restName.match(/\s*\((L|R|Left|Right|Each Side|Odd Min|Even Min)\)\s*$/i);
+        if (sideMatch) {
+          const token = sideMatch[1].toUpperCase();
+          if (token === 'L' || token === 'LEFT') sideBadge = 'LEFT';
+          else if (token === 'R' || token === 'RIGHT') sideBadge = 'RIGHT';
+          else sideBadge = token;
+          restName = restName.slice(0, sideMatch.index).trim();
+        }
+
+        return { repsBadge, moveName: restName, sideBadge, numericReps, rawStep: str };
+      }
+
+      return { repsBadge: 'FLOW', moveName: str, sideBadge: '', numericReps: 0, rawStep: str };
+    }
+    window.parseFlowStepString = parseFlowStepString;
+
+    function setInlineCondFlowStep(exId, idx) {
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      const flowSteps = (ex && Array.isArray(ex.flowSteps)) ? ex.flowSteps : [];
+      const totalSteps = flowSteps.length || 1;
+      const nextIdx = ((idx % totalSteps) + totalSteps) % totalSteps;
+      inlineTimerState.activeFlowStepIdx = nextIdx;
+      inlineTimerState.flowStepIdx = nextIdx;
+      if (ex) renderCurrentExercise();
+      if (flowSteps[nextIdx]) {
+        const parsed = parseFlowStepString(flowSteps[nextIdx]);
+        speak(`Move ${nextIdx + 1}: ${flowSteps[nextIdx].replace(/\(L\)/gi, 'Left').replace(/\(R\)/gi, 'Right')}`);
+      }
+      beep(580, 0.04);
+    }
+    window.setInlineCondFlowStep = setInlineCondFlowStep;
+
+    function advanceInlineCondFlowStep(exId, delta) {
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      const flowSteps = (ex && Array.isArray(ex.flowSteps)) ? ex.flowSteps : [];
+      const totalSteps = flowSteps.length;
+      if (!totalSteps) return;
+      const cur = inlineTimerState.activeFlowStepIdx !== undefined
+        ? inlineTimerState.activeFlowStepIdx
+        : (inlineTimerState.flowStepIdx || 0);
+      const nextIdx = ((cur + (delta || 1)) % totalSteps + totalSteps) % totalSteps;
+      inlineTimerState.activeFlowStepIdx = nextIdx;
+      inlineTimerState.flowStepIdx = nextIdx;
+      renderCurrentExercise();
+      const rawStep = flowSteps[nextIdx];
+      if (rawStep) {
+        speak(`Move ${nextIdx + 1}: ${rawStep.replace(/\(L\)/gi, 'Left').replace(/\(R\)/gi, 'Right')}`);
+      }
+      if (typeof pulseHaptic === 'function') pulseHaptic([15]);
+      beep(660, 0.05);
+    }
+    window.advanceInlineCondFlowStep = advanceInlineCondFlowStep;
 
     function renderInlineConditioningPlayer(ex, fmt) {
       const container = document.getElementById('setRows');
@@ -4315,23 +4816,115 @@ function viewCompletedWorkoutBreakdown() {
         }).join('');
       }
 
-      let kbFlowExtraHtml = '';
-      if (st.format === 'kb_flow') {
-        const steps = Array.isArray(ex.flowSteps) ? ex.flowSteps : [];
-        const bellKg = parseInt(String(ex.targetWeight || '20kg'), 10) || 20;
-        const kbRepsRd = ex.kbRepsPerRound || 45;
-        const totalRepsRd = ex.repsPerRound || kbRepsRd;
-        const totalTonnage = st.amrapRounds * kbRepsRd * bellKg;
-        const totalReps = st.amrapRounds * totalRepsRd;
+      // Build Ultra-Compact Zero-Scroll Flow Movement Grid & Integrated Timer + Live Spotlight Dock
+      const flowSteps = Array.isArray(ex.flowSteps) ? ex.flowSteps : [];
+      const bellKg = parseInt(String(ex.targetWeight || '20kg'), 10) || 20;
+      const kbRepsRd = ex.kbRepsPerRound || 45;
 
+      const renderSidePill = (sideBadge) => {
+        if (!sideBadge) return '';
+        const isLeft = sideBadge === 'LEFT';
+        const isRight = sideBadge === 'RIGHT';
+        const shortLabel = isLeft ? '(L)' : (isRight ? '(R)' : sideBadge);
+        const bg = isLeft ? 'rgba(245,158,11,0.18)' : (isRight ? 'rgba(0,229,255,0.18)' : 'rgba(168,85,247,0.18)');
+        const col = isLeft ? '#fbbf24' : (isRight ? '#38bdf8' : '#c084fc');
+        const bdr = isLeft ? 'rgba(245,158,11,0.45)' : (isRight ? 'rgba(0,229,255,0.45)' : 'rgba(168,85,247,0.45)');
+        return `<span style="font-size:9.5px; font-weight:900; padding:1px 4px; border-radius:4px; background:${bg}; border:1px solid ${bdr}; color:${col}; flex-shrink:0;">${shortLabel}</span>`;
+      };
+
+      const hasRoundCounter = (st.format === 'kb_flow' || st.format === 'amrap' || st.format === 'for_time');
+      const roundBtnHtml = hasRoundCounter ? `
+        <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:5px 9px; font-size:11px; font-weight:900; background:var(--primary); color:#000; border:none; border-radius:7px; cursor:pointer; white-space:nowrap;">+1 Rd (${st.amrapRounds})</button>
+        ${st.amrapRounds > 0 ? `<button type="button" onclick="stepInlineRound(-1)" title="Subtract round" style="padding:4px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; cursor:pointer;">−</button>` : ''}
+      ` : '';
+
+      let spotlightLineHtml = '';
+      let flowGridHtml = '';
+      let sumNumericReps = 0;
+
+      if (flowSteps.length > 0) {
+        const parsedSteps = flowSteps.map(step => parseFlowStepString(step));
+        const rawActiveIdx = st.activeFlowStepIdx !== undefined ? st.activeFlowStepIdx : (st.flowStepIdx || 0);
+        const currIdx = ((rawActiveIdx % flowSteps.length) + flowSteps.length) % flowSteps.length;
+        const currParsed = parsedSteps[currIdx];
+        const nextIdx = (currIdx + 1) % flowSteps.length;
+        const nextParsed = parsedSteps[nextIdx];
+
+        sumNumericReps = parsedSteps.reduce((acc, p) => acc + (p.numericReps || 0), 0);
+
+        spotlightLineHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; padding-top:5px; border-top:1px solid rgba(0,245,212,0.22);">
+            <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; min-width:0; flex:1;">
+              <span style="font-size:10px; font-weight:900; color:var(--teal, #00f5d4); letter-spacing:0.04em;">NOW (${currIdx + 1}/${flowSteps.length}):</span>
+              <strong style="font-size:13.5px; color:#fff; font-weight:900;">${currParsed.moveName}</strong>
+              ${renderSidePill(currParsed.sideBadge)}
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; background:rgba(0,245,212,0.2); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);">${currParsed.repsBadge}</span>
+              <span style="font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap;">
+                <span style="color:#38bdf8; font-weight:800;">UP NEXT ➔</span> #${nextIdx + 1} ${nextParsed.moveName} (${nextParsed.repsBadge})
+              </span>
+            </div>
+            <button type="button" onclick="advanceInlineCondFlowStep('${ex.id}', 1)" style="padding:4px 9px; font-size:11px; font-weight:800; border-radius:7px; background:rgba(0,245,212,0.18); border:1px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4); cursor:pointer; white-space:nowrap; flex-shrink:0;">
+              Next ➔
+            </button>
+          </div>
+        `;
+
+        const ladderRowsHtml = parsedSteps.map((p, idx) => {
+          const isCurrent = idx === currIdx;
+          const isDone = idx < currIdx;
+          const stepNumBg = isCurrent
+            ? 'background:var(--teal, #00f5d4); color:#041318; border:1px solid var(--teal, #00f5d4); box-shadow:0 0 8px rgba(0,245,212,0.45);'
+            : (isDone
+              ? 'background:rgba(16,185,129,0.22); color:#34d399; border:1px solid rgba(16,185,129,0.45);'
+              : 'background:rgba(255,255,255,0.07); color:#94a3b8; border:1px solid rgba(255,255,255,0.14);');
+          const rowBg = isCurrent
+            ? 'background:linear-gradient(90deg, rgba(0,245,212,0.2) 0%, rgba(0,229,255,0.08) 100%); border:1.5px solid var(--teal, #00f5d4); box-shadow:0 0 10px rgba(0,245,212,0.15);'
+            : (isDone
+              ? 'background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.24);'
+              : 'background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1);');
+          const repPillStyle = isCurrent
+            ? 'background:rgba(0,245,212,0.22); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);'
+            : (isDone
+              ? 'background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#6ee7b7;'
+              : 'background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.28); color:#7dd3fc;');
+
+          return `
+            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 9px; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.12s ease; min-width:0; ${rowBg}">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0; flex:1;">
+                <span style="width:18px; height:18px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:900; font-family:'JetBrains Mono',monospace; flex-shrink:0; ${stepNumBg}">${isDone ? '✓' : (idx + 1)}</span>
+                <span style="font-size:13px; font-weight:800; color:#f8fafc; line-height:1.2;">${p.moveName}</span>
+                ${renderSidePill(p.sideBadge)}
+              </div>
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; white-space:nowrap; flex-shrink:0; ${repPillStyle}">${p.repsBadge}</span>
+            </button>
+          `;
+        }).join('');
+
+        flowGridHtml = `
+          <div style="display:grid; grid-template-columns:1fr; gap:4px;">
+            ${ladderRowsHtml}
+          </div>
+        `;
+      }
+
+      const totalRepsRd = ex.repsPerRound || sumNumericReps || kbRepsRd;
+      const totalTonnage = (st.format === 'kb_flow') ? (st.amrapRounds * kbRepsRd * bellKg) : 0;
+      const totalReps = st.amrapRounds * totalRepsRd;
+
+      const intermissionBanner = (st.format === 'kb_flow' && st.inIntermission) ? `
+        <div style="background:rgba(56,189,248,0.14); border:1.5px solid rgba(56,189,248,0.5); border-radius:8px; padding:6px 9px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="font-size:11px; font-weight:800; color:#7dd3fc;">
+            ${st.intermissionMode === 'none_rest' ? '🧘 Rest Window (60s) — Shake Out Grip' : `🔁 Intermission: Complete ${st.intermissionMode}`}
+          </div>
+          <button type="button" onclick="finishKbFlowIntermission()" style="padding:4px 9px; font-size:10.5px; font-weight:900; border-radius:6px; border:none; background:#38bdf8; color:#000; cursor:pointer;">✓ Start Next Flow Round</button>
+        </div>
+      ` : '';
+
+      let drawerExtraControlsHtml = '';
+      if (st.format === 'kb_flow') {
         const weightPills = [16, 20, 24, 32].map(w => {
           const active = bellKg === w;
           return `<button type="button" onclick="setKbFlowWeight('${w}kg')" style="padding:3px 8px; font-size:10px; font-weight:800; border-radius:5px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.14)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${w}kg</button>`;
-        }).join('');
-
-        const stepsHtml = steps.map((s, idx) => {
-          const active = idx === (st.flowStepIdx || 0);
-          return `<button type="button" onclick="toggleKbFlowStep(${idx})" style="padding:4px 7px; font-size:10.5px; font-weight:700; border-radius:6px; cursor:pointer; text-align:left; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(0,229,255,0.16)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : '#cbd5e1'};">${idx + 1}. ${s}</button>`;
         }).join('');
 
         const intermissionOpts = [
@@ -4345,91 +4938,83 @@ function viewCompletedWorkoutBreakdown() {
         ];
         const intermissionPills = intermissionOpts.map(opt => {
           const active = st.intermissionMode === opt.id;
-          return `<button type="button" onclick="setKbFlowIntermission('${opt.id}')" style="padding:4px 7px; font-size:10px; font-weight:700; border-radius:6px; cursor:pointer; border:1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.12)'}; background:${active ? 'rgba(56,189,248,0.22)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : 'var(--text-muted)'};">${opt.label}</button>`;
+          return `<button type="button" onclick="setKbFlowIntermission('${opt.id}')" style="padding:3px 6px; font-size:10px; font-weight:700; border-radius:5px; cursor:pointer; border:1px solid ${active ? '#38bdf8' : 'rgba(255,255,255,0.12)'}; background:${active ? 'rgba(56,189,248,0.22)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : 'var(--text-muted)'};">${opt.label}</button>`;
         }).join('');
 
-        const intermissionBanner = st.inIntermission ? `
-          <div style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.45); border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-            <div style="font-size:11px; font-weight:800; color:#7dd3fc;">
-              ${st.intermissionMode === 'none_rest' ? '🧘 Passive Rest Window (60s) — Breathe & Shake Out Grip' : `🔁 Intermission: Complete ${st.intermissionMode}`}
-            </div>
-            <button type="button" onclick="finishKbFlowIntermission()" style="padding:5px 10px; font-size:10.5px; font-weight:800; border-radius:6px; border:none; background:#38bdf8; color:#000; cursor:pointer;">✓ Start Next Flow Round</button>
-          </div>
-        ` : '';
-
-        kbFlowExtraHtml = `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:8px;">
+        drawerExtraControlsHtml = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
             <span style="font-size:10.5px; font-weight:800; color:var(--text-secondary);">🔔 Bell Weight:</span>
             <div style="display:flex; gap:4px;">${weightPills}</div>
           </div>
-
           <div>
-            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Flow Sequence (${steps.length} moves • ${totalRepsRd} reps/rd • Tap step to mark spot)</div>
-            <div style="display:flex; flex-wrap:wrap; gap:4px;">${stepsHtml}</div>
-          </div>
-
-          <div>
-            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Between-Round Intermission (Optional Bodyweight or Rest Only)</div>
+            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Between-Round Intermission:</div>
             <div style="display:flex; flex-wrap:wrap; gap:4px;">${intermissionPills}</div>
-          </div>
-
-          ${intermissionBanner}
-
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px; gap:8px; flex-wrap:wrap;">
-            <div>
-              <div style="font-size:11px; font-weight:800; color:#fff;">Completed: <span style="color:var(--primary);">${st.amrapRounds} Rounds</span></div>
-              <div style="font-size:10px; color:var(--text-muted);">${totalReps.toLocaleString()} total reps • ${totalTonnage.toLocaleString()} kg KB tonnage</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
-              <button type="button" onclick="completeKbFlowRound()" style="padding:6px 12px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
-            </div>
           </div>
         `;
       }
 
-      const showRoundsCtrl = (st.format === 'amrap' || st.format === 'for_time');
-      const progNote = (fmt.prevRounds !== null && fmt.prevRounds !== undefined)
-        ? `Previous AMRAP benchmark: <strong>${fmt.prevRounds} rounds</strong> (aim for ${fmt.prevRounds + 1}).`
-        : (fmt.prevSec ? `Previous benchmark time: <strong>${formatClockMMSS(fmt.prevSec)}</strong>.` : `Goldfish Timer active • Auto-logs duration & conditioning stimulus.`);
+      const whyText = ex.rationale || ex.why || 'Selected for target metabolic & biomechanical conditioning.';
+      const drawerSummaryText = st.format === 'kb_flow'
+        ? `⚙️ Flow Setup (Bell: ${bellKg}kg • ${Math.round(st.durationSec / 60)}m • Intermission: ${st.intermissionMode === 'none_rest' ? 'Rest 60s' : st.intermissionMode}) & Coaching Cues`
+        : `⚙️ Timer Presets (${st.format.toUpperCase()}) & Coaching Cues`;
+
+      const bottomStatusText = st.format === 'kb_flow'
+        ? `${st.amrapRounds} Rds • ${totalReps.toLocaleString()} reps • ${totalTonnage.toLocaleString()}kg tonnage`
+        : ((st.format === 'amrap' || st.format === 'for_time')
+          ? `${st.amrapRounds} Rds completed • ${totalReps > 0 ? totalReps + ' reps' : 'Auto-logs stimulus'}`
+          : ((fmt.prevRounds !== null && fmt.prevRounds !== undefined)
+            ? `Prev benchmark: ${fmt.prevRounds} rds`
+            : `Goldfish Timer • Auto-logs session`));
 
       container.innerHTML = `
-        <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(0,229,255,0.28); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
-            <span id="inlineTimerPhaseBadge" style="font-size:10.5px; font-weight:800; color:${phaseColor}; letter-spacing:0.04em; text-transform:uppercase;">${phaseLabel}</span>
-            <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${st.format.toUpperCase()} MODE</span>
-          </div>
-
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-            <div id="inlineTimerDigits" style="font-size:38px; font-weight:800; font-family:var(--font-mono); color:#fff; letter-spacing:-0.03em; line-height:1;">${formatClockMMSS(st.secsLeft)}</div>
-            <div style="display:flex; gap:6px;">
-              <button type="button" onclick="toggleInlineTimer()" style="padding:8px 14px; border-radius:8px; border:none; background:${st.running ? '#f59e0b' : 'var(--primary)'}; color:#000; font-size:12px; font-weight:800; cursor:pointer;">${st.running ? '⏸ Pause' : '▶ Start'}</button>
-              <button type="button" onclick="resetInlineTimer()" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">↺</button>
-              ${(st.format === 'interval' || st.format === 'emom' || st.rounds > 1) ? `<button type="button" onclick="skipInlinePhase()" title="Next round/phase" style="padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">⏭</button>` : ''}
+        <div style="background:rgba(3,12,20,0.78); border:1.5px solid rgba(0,245,212,0.35); border-radius:10px; padding:7px 8px; display:flex; flex-direction:column; gap:6px;">
+          <!-- 1. Integrated Top Control Bar: Timer + Round Logger + Live Flow Spotlight -->
+          <div style="background:linear-gradient(135deg, rgba(0,245,212,0.14) 0%, rgba(16,185,129,0.09) 100%); border:1px solid rgba(0,245,212,0.42); border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:5px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <div id="inlineTimerDigits" style="font-size:24px; font-weight:900; font-family:var(--font-mono); color:#fff; letter-spacing:-0.03em; line-height:1;">${formatClockMMSS(st.secsLeft)}</div>
+                <button type="button" onclick="toggleInlineTimer()" style="padding:5px 10px; border-radius:7px; border:none; background:${st.running ? '#f59e0b' : 'var(--primary)'}; color:#000; font-size:11px; font-weight:900; cursor:pointer;">${st.running ? '⏸' : '▶ Start'}</button>
+                <button type="button" onclick="resetInlineTimer()" title="Reset timer" style="padding:5px 7px; border-radius:7px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:11px; font-weight:800; cursor:pointer;">↺</button>
+                ${(st.format === 'interval' || st.format === 'emom' || st.rounds > 1) ? `<button type="button" onclick="skipInlinePhase()" title="Next phase" style="padding:5px 7px; border-radius:7px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#fff; font-size:11px; font-weight:800; cursor:pointer;">⏭</button>` : ''}
+                ${roundBtnHtml}
+              </div>
+              <span id="inlineTimerPhaseBadge" style="font-size:10px; font-weight:800; color:${phaseColor}; letter-spacing:0.03em; text-transform:uppercase;">${phaseLabel}</span>
             </div>
+            ${spotlightLineHtml}
           </div>
 
-          <div style="display:flex; gap:5px; flex-wrap:wrap;">
-            ${presetsHtml}
-          </div>
+          <!-- 2. 2-Column Compact Movement Grid (Zero-Scroll Visibility) -->
+          ${flowGridHtml}
 
-          ${kbFlowExtraHtml}
+          <!-- 3. Active Intermission Banner (Only when between rounds) -->
+          ${intermissionBanner}
 
-          ${showRoundsCtrl ? `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:7px 10px; border-radius:8px;">
-              <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">Completed Rounds</span>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
-                <strong style="font-size:14px; color:var(--primary); min-width:24px; text-align:center;">${st.amrapRounds}</strong>
-                <button type="button" onclick="stepInlineRound(1)" style="width:28px; height:28px; border-radius:6px; border:none; background:var(--primary); color:#000; font-weight:800; cursor:pointer;">+</button>
+          <!-- 4. Compact 1-Line Collapsible Setup & Coaching Drawer -->
+          <details style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.09); border-radius:7px; padding:5px 8px;">
+            <summary style="font-size:10.5px; font-weight:800; color:#cbd5e1; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+              <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${drawerSummaryText}</span>
+              <span style="font-size:10px; color:var(--primary); flex-shrink:0;">▼</span>
+            </summary>
+            <div style="margin-top:7px; padding-top:7px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:7px; font-size:11px;">
+              <div>
+                <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Duration / Interval Presets:</div>
+                <div style="display:flex; gap:4px; flex-wrap:wrap;">${presetsHtml}</div>
+              </div>
+              ${drawerExtraControlsHtml}
+              <div style="color:#e2e8f0; line-height:1.35;"><strong style="color:var(--primary);">Coaching Cue:</strong> ${ex.cue || ''}</div>
+              <div style="color:var(--text-secondary); line-height:1.35;"><strong>Why Selected:</strong> ${whyText}</div>
+              <div style="display:flex; gap:6px;">
+                <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; flex:1;">⇄ Swap Session</button>
+                <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; flex:1;">✎ Edit Bell / Target</button>
               </div>
             </div>
-          ` : ''}
+          </details>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span style="font-size:10.5px; color:var(--text-muted); flex:1;">${progNote}</span>
-            <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:8px 14px; border-radius:8px; border:none; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.5); color:${isLogged ? '#000' : '#34d399'}; font-size:11.5px; font-weight:800; cursor:pointer;">
-              ${isLogged ? '✓ Flow / Conditioning Logged' : '✓ Complete & Log'}
+          <!-- 5. Compact Bottom Status & Complete Session Bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; padding:2px 2px 0;">
+            <span style="font-size:10.5px; font-weight:800; color:#94a3b8;">${bottomStatusText}</span>
+            <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:5px 11px; border-radius:7px; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.55); color:${isLogged ? '#000' : '#34d399'}; font-size:11px; font-weight:900; cursor:pointer; white-space:nowrap;">
+              ${isLogged ? '✓ Session Logged' : '✓ Complete & Log Session'}
             </button>
           </div>
         </div>
@@ -4457,30 +5042,35 @@ function viewCompletedWorkoutBreakdown() {
     window.setKbFlowIntermission = setKbFlowIntermission;
 
     function toggleKbFlowStep(idx) {
-      inlineTimerState.flowStepIdx = idx;
-      const ex = activeWorkoutPlan[currentExIdx];
-      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
-      beep(540, 0.03);
+      setInlineCondFlowStep(inlineTimerState.exId, idx);
     }
     window.toggleKbFlowStep = toggleKbFlowStep;
 
-    function completeKbFlowRound() {
+    function logInlineCondRound(exId) {
       inlineTimerState.amrapRounds = (inlineTimerState.amrapRounds || 0) + 1;
+      inlineTimerState.activeFlowStepIdx = 0;
       inlineTimerState.flowStepIdx = 0;
-      inlineTimerState.inIntermission = true;
-      const ex = activeWorkoutPlan[currentExIdx];
-      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
-      if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestTimer === 'function') {
-        restSecs = 60;
-        startRestTimer();
+      if (inlineTimerState.format === 'kb_flow') {
+        inlineTimerState.inIntermission = true;
+        if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestCountdown === 'function') {
+          startRestCountdown(60, 'Next KB Flow Round');
+        }
       }
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
       if (typeof pulseHaptic === 'function') pulseHaptic([20, 35, 20]);
       beep(880, 0.12);
+    }
+    window.logInlineCondRound = logInlineCondRound;
+
+    function completeKbFlowRound() {
+      logInlineCondRound(inlineTimerState.exId);
     }
     window.completeKbFlowRound = completeKbFlowRound;
 
     function finishKbFlowIntermission() {
       inlineTimerState.inIntermission = false;
+      inlineTimerState.activeFlowStepIdx = 0;
       inlineTimerState.flowStepIdx = 0;
       const ex = activeWorkoutPlan[currentExIdx];
       if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
@@ -4529,6 +5119,10 @@ function viewCompletedWorkoutBreakdown() {
 
     function stepInlineRound(delta) {
       inlineTimerState.amrapRounds = Math.max(0, inlineTimerState.amrapRounds + delta);
+      if (delta > 0) {
+        inlineTimerState.activeFlowStepIdx = 0;
+        inlineTimerState.flowStepIdx = 0;
+      }
       const ex = activeWorkoutPlan[currentExIdx];
       if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
       beep(780, 0.05);
@@ -4540,10 +5134,11 @@ function viewCompletedWorkoutBreakdown() {
       if (!ex) return;
       inlineTimerState.currentRound = 1;
       inlineTimerState.elapsedSec = 0;
+      inlineTimerState.activeFlowStepIdx = 0;
+      inlineTimerState.flowStepIdx = 0;
       if (inlineTimerState.format === 'amrap' || inlineTimerState.format === 'kb_flow') {
         inlineTimerState.secsLeft = inlineTimerState.durationSec;
         inlineTimerState.inIntermission = false;
-        inlineTimerState.flowStepIdx = 0;
       } else if (inlineTimerState.format === 'for_time') {
         inlineTimerState.secsLeft = 0;
       } else {
@@ -4634,12 +5229,24 @@ function viewCompletedWorkoutBreakdown() {
                 completeInlineConditioning(ex.id);
                 return;
               }
+              const badgeEl = document.getElementById('inlineTimerPhaseBadge');
+              if (badgeEl) {
+                badgeEl.innerText = st.phase === 'rest'
+                  ? `REST • R${st.currentRound}/${st.rounds}`
+                  : `WORK • R${st.currentRound}/${st.rounds}`;
+                badgeEl.style.color = st.phase === 'rest' ? '#f59e0b' : '#22c55e';
+              }
             } else if (st.format === 'emom') {
               if (st.currentRound < st.rounds) {
                 st.currentRound++;
                 st.secsLeft = 60;
                 beep(880, 0.18);
                 speak(`Minute ${st.currentRound}.`);
+                const badgeEl = document.getElementById('inlineTimerPhaseBadge');
+                if (badgeEl) {
+                  badgeEl.innerText = `MIN ${st.currentRound}/${st.rounds}`;
+                  badgeEl.style.color = '#00e5ff';
+                }
               } else {
                 stopInlineTimer();
                 beep(950, 0.3);
@@ -4777,13 +5384,13 @@ function viewCompletedWorkoutBreakdown() {
         </div>
         <button type="button" onclick="closeSessionSummaryModal()" class="btn-action-primary" style="width:100%; margin:0;">✓ Done</button>
       `;
-      modal.classList.add('active');
+      modal.classList.add('open');
     }
     window.openSessionSummaryModal = openSessionSummaryModal;
 
     function closeSessionSummaryModal() {
       const modal = document.getElementById('sessionSummaryModal');
-      if (modal) modal.classList.remove('active');
+      if (modal) modal.classList.remove('open');
     }
     window.closeSessionSummaryModal = closeSessionSummaryModal;
 
@@ -4791,8 +5398,44 @@ function viewCompletedWorkoutBreakdown() {
     function renderCurrentExercise() {
       if (activeWorkoutPlan.length === 0) return;
 
+      const isPickOneMenu = (currentArchetypeKey === 'option_b') || (currentArchetypeKey === 'option_kb' && getKbSubMode() !== 'grinds');
+      const ex = activeWorkoutPlan[currentExIdx];
+      const fmt = getExerciseFormatConfig(ex);
+      const isFlowOrCond = Boolean(fmt && (fmt.isTimed || (fmt.format && fmt.format !== 'strength' && fmt.format !== 'standard_sets')));
+
+      const stepperHdr = document.getElementById('exerciseStepperHeader');
+      if (stepperHdr) {
+        if (isFlowOrCond) {
+          stepperHdr.style.display = 'none';
+        } else if (isPickOneMenu) {
+          stepperHdr.style.display = 'block';
+          stepperHdr.innerText = currentArchetypeKey === 'option_b'
+            ? `🎯 Pick 1 Conditioning / Aerobic Session (${activeWorkoutPlan.length} Options):`
+            : `🎯 Pick 1 Standalone 30-Min KB Flow (${activeWorkoutPlan.length} Options):`;
+        } else {
+          stepperHdr.style.display = 'none';
+        }
+      }
+
+      const shortPillLabels = {
+        zone2_flush: '🚶 20m Zone 2',
+        speed_rope_intervals: '🪢 6m Speed Rope',
+        emom_hybrid_10: '⚡ 10m EMOM',
+        amrap_hybrid_10: '🔥 10m AMRAP',
+        for_time_kb_chipper: '🏁 12m Chipper',
+        kb_flow_2h_out_about: '🌊 Out & About (9)',
+        kb_flow_2h_tactical_upper: '💪 Tactical Upper',
+        kb_flow_2h_gladiator_post: '🛡️ Gladiator Hinge',
+        kb_flow_2h_pyramid_1_5: '📐 1-to-5 Pyramid',
+        kb_flow_1h_armor_chain: '⚡ Armor Chain',
+        kb_flow_1h_viking_warrior: '⚔️ Viking Warrior',
+        kb_flow_1h_dan_john_grind: '🏋️ Dan John Grind',
+        kb_flow_1h_combat_core: '🥊 Combat Core'
+      };
+
       const stepperEl = document.getElementById('exerciseStepperPills');
       if (stepperEl) {
+        stepperEl.style.padding = isFlowOrCond ? '1px 0 4px' : '2px 0 6px';
         stepperEl.innerHTML = activeWorkoutPlan.map((exItem, idx) => {
           const isActive = idx === currentExIdx;
           const isSkipped = !!exItem.skipped;
@@ -4804,23 +5447,36 @@ function viewCompletedWorkoutBreakdown() {
             }
             if (loggedCount > 0) isDone = true;
           }
-          let stateClass = '';
           let icon = '';
-          if (isActive) stateClass = 'active';
-          else if (isSkipped) { stateClass = 'skipped'; icon = ' ⏭'; }
-          else if (isDone) { stateClass = 'done'; icon = ' ✓'; }
-          return `<button type="button" class="ex-pill-btn ${stateClass}" onclick="jumpToExercise(${idx})" title="${exItem.name}">${idx + 1}${icon}</button>`;
+          if (isSkipped) icon = ' ⏭';
+          else if (isDone) icon = ' ✓';
+
+          const shortName = shortPillLabels[exItem.id] || (`${idx + 1}. ` + String(exItem.name || '').split('(')[0].replace(/^Barbell\s+|^Heavy\s+Kettlebell\s+|^Kettlebell\s+/i, '').trim().slice(0, 14));
+          const bg = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)');
+          const col = isActive ? '#000' : (isDone ? '#10b981' : 'var(--text-secondary)');
+          const bdr = isActive ? 'var(--primary)' : (isDone ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.12)');
+          return `<button type="button" onclick="jumpToExercise(${idx})" title="${escapeHtml(exItem.name)}" style="flex-shrink:0; padding:4px 8px; font-size:10.5px; font-weight:800; border-radius:7px; border:1px solid ${bdr}; background:${bg}; color:${col}; cursor:pointer; white-space:nowrap;">${escapeHtml(shortName)}${icon}</button>`;
         }).join('');
       }
 
-      const ex = activeWorkoutPlan[currentExIdx];
       if (!restTimerInterval) {
         restSecs = parseRestSeconds(ex.rest);
         updateRestDisplay();
       }
 
-      document.getElementById('stepCounter').innerText = `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
-      document.getElementById('exName').innerText = ex.name;
+      document.getElementById('stepCounter').innerText = isPickOneMenu
+        ? `Pick 1 • Option ${currentExIdx + 1}/${activeWorkoutPlan.length}`
+        : `Exercise ${currentExIdx + 1} of ${activeWorkoutPlan.length}`;
+      const exNameEl = document.getElementById('exName');
+      if (exNameEl) {
+        exNameEl.innerText = ex.name;
+        exNameEl.style.fontSize = isFlowOrCond ? '15px' : '';
+      }
+      const targetPillEl = document.querySelector('#trainViewPrescribed .ex-target-pill');
+      if (targetPillEl) {
+        targetPillEl.style.marginBottom = isFlowOrCond ? '4px' : '';
+        targetPillEl.style.padding = isFlowOrCond ? '3px 8px' : '';
+      }
       
       const familyNames = {
         hip_hinge: "Hip Hinge (Posterior)",
@@ -4833,17 +5489,50 @@ function viewCompletedWorkoutBreakdown() {
       };
       document.getElementById('movementFamilyTag').innerText = familyNames[ex.family] || "Functional";
 
-      const fmt = getExerciseFormatConfig(ex);
       const wLabel = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
       document.getElementById('exTarget').innerText = fmt.isTimed
         ? `Prescribed: ${fmt.label}`
         : `Prescribed: ${ex.setsCount} Sets × ${ex.targetReps} Reps @ ${wLabel}`;
       document.getElementById('exRestTarget').innerText = fmt.isTimed ? `Format: ${fmt.format.toUpperCase()}` : `Rest: ${ex.rest}`;
-      document.getElementById('exCue').innerText = `Cue: ${ex.cue}`;
-      document.getElementById('exRationale').innerHTML = `<strong>Why Selected:</strong> ${ex.rationale || 'Selected for target biomechanical recruitment.'}`;
+
+      const cueEl = document.getElementById('exCue') || document.getElementById('exerciseCue');
+      const whyEl = document.getElementById('exRationale') || document.getElementById('exerciseWhy');
+      const actionRowEl = document.getElementById('exActionBtnsRow');
+      const restBarEl = document.querySelector('#trainViewPrescribed .rest-bar-box');
+      const whyText = ex.rationale || ex.why || 'Selected for target biomechanical recruitment.';
+      const isKbGrindsMode = (currentArchetypeKey === 'option_kb' && typeof getKbSubMode === 'function' && getKbSubMode() === 'grinds');
+      const kbQuickSwitchBanner = isKbGrindsMode ? `
+        <div style="margin-bottom:6px; padding:6px 9px; border-radius:8px; background:rgba(0,245,212,0.08); border:1px solid rgba(0,245,212,0.3); display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; font-size:11px; color:#cbd5e1;">
+          <span>Looking for a continuous KB Flow chain?</span>
+          <span style="display:inline-flex; gap:5px;">
+            <button type="button" onclick="setKbSubMode('flow_2h')" style="padding:3px 8px; font-size:10.5px; font-weight:800; border-radius:6px; border:1px solid var(--teal, #00f5d4); background:rgba(0,245,212,0.16); color:var(--teal, #00f5d4); cursor:pointer;">🌊 Switch to 2H Flow</button>
+            <button type="button" onclick="setKbSubMode('flow_1h')" style="padding:3px 8px; font-size:10.5px; font-weight:800; border-radius:6px; border:1px solid #38bdf8; background:rgba(56,189,248,0.16); color:#7dd3fc; cursor:pointer;">🔥 Switch to 1H Flow</button>
+          </span>
+        </div>
+      ` : '';
+
+      if (isFlowOrCond) {
+        if (cueEl) cueEl.style.display = 'none';
+        if (actionRowEl) actionRowEl.style.display = 'none';
+        if (whyEl) whyEl.style.display = 'none';
+        if (restBarEl) restBarEl.style.display = 'none';
+      } else {
+        if (cueEl) {
+          cueEl.style.display = '';
+          cueEl.innerText = `Cue: ${ex.cue}`;
+        }
+        if (actionRowEl) actionRowEl.style.display = 'flex';
+        if (whyEl) {
+          whyEl.style.display = '';
+          whyEl.innerHTML = `${kbQuickSwitchBanner}<strong>Why Selected:</strong> ${whyText}`;
+        }
+        if (restBarEl) restBarEl.style.display = '';
+      }
       document.getElementById('autoregBanner').classList.remove('active');
 
       const setRowsContainer = document.getElementById('setRows');
+      setRowsContainer.style.maxHeight = 'none';
+      setRowsContainer.style.overflowY = 'visible';
       setRowsContainer.innerHTML = '';
 
       if (fmt.isTimed) {
@@ -4869,9 +5558,9 @@ function viewCompletedWorkoutBreakdown() {
         row.innerHTML = `
           <span class="set-idx">Set ${s}</span>
           <div class="set-inputs">
-            <input type="text" inputmode="decimal" class="set-input-box" value="${displayW}" id="wIn_${currentExIdx}_${s}">
+            <input type="text" inputmode="decimal" class="set-input-box" value="${escapeHtml(displayW)}" id="wIn_${currentExIdx}_${s}">
             <span style="font-size:13px;color:var(--text-muted);">${typeof ex.targetWeight === 'number' ? 'kg' : ''} ×</span>
-            <input type="number" inputmode="numeric" class="set-input-box" value="${displayR}" id="rIn_${currentExIdx}_${s}">
+            <input type="number" inputmode="numeric" class="set-input-box" value="${escapeHtml(displayR)}" id="rIn_${currentExIdx}_${s}">
             <span style="font-size:13px;color:var(--text-muted);">reps</span>
           </div>
           <button class="btn-log-set ${isLogged ? 'done' : ''}" onclick="logSet(this, ${s}, '${ex.id}', ${cleanWeightNum}, ${typeof ex.targetReps === 'number' ? ex.targetReps : 8})">${isLogged ? '✓ Logged' : '✓ Log'}</button>
@@ -5037,7 +5726,7 @@ function viewCompletedWorkoutBreakdown() {
           if (hidden.length > 0) {
             const hiddenNames = hidden.map(hId => {
               const ex = getAllExercises().find(e => e.id === hId);
-              return ex ? ex.name : hId;
+              return escapeHtml(ex ? ex.name : hId);
             }).join(', ');
             hiddenBar.innerHTML = `Hidden (${hidden.length}): ${hiddenNames} • <a href="javascript:void(0)" onclick="unhideAllExercises()" style="color:var(--primary); text-decoration:underline;">Reset hidden</a>`;
           } else {
@@ -5117,7 +5806,7 @@ function viewCompletedWorkoutBreakdown() {
         const hidden = getHiddenExercises();
         const hiddenNames = hidden.map(hId => {
           const ex = getAllExercises().find(e => e.id === hId);
-          return ex ? ex.name : hId;
+          return escapeHtml(ex ? ex.name : hId);
         }).join(', ');
         hiddenBar.innerHTML = `Hidden (${hidden.length}): ${hiddenNames} • <a href="javascript:void(0)" onclick="unhideAllExercises()" style="color:var(--primary); text-decoration:underline;">Reset hidden</a>`;
       }
@@ -5194,14 +5883,14 @@ function viewCompletedWorkoutBreakdown() {
             <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--surface-card, #14161e); border:1px solid rgba(255,255,255,0.06); border-radius:8px; gap:8px;">
               <div style="flex:1; min-width:0;">
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span style="font-size:12.5px; font-weight:700; color:#fff;">${ex.name}</span>
+                  <span style="font-size:12.5px; font-weight:700; color:#fff;">${escapeHtml(ex.name)}</span>
                   ${isSamePattern ? '<span style="background:rgba(0,240,255,0.14); border:1px solid rgba(0,240,255,0.3); color:var(--primary); font-size:9.5px; font-weight:800; padding:1px 5px; border-radius:4px; letter-spacing:0.04em;">SAME PATTERN</span>' : ''}
                 </div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-                  ${ex.setsCount || 3} sets × ${targetR} reps @ ${wStr} • Rest: ${ex.rest || '60s'}
+                  ${Number(ex.setsCount) || 3} sets × ${escapeHtml(targetR)} reps @ ${escapeHtml(wStr)} • Rest: ${escapeHtml(ex.rest || '60s')}
                 </div>
               </div>
-              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${ex.id}')">
+              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${escapeHtml(ex.id)}')">
                 ${swapContext.mode === 'add' ? 'Add +' : 'Swap ⇄'}
               </button>
             </div>
@@ -5221,7 +5910,7 @@ function viewCompletedWorkoutBreakdown() {
         createCardHtml = `
           <div style="margin-top:10px; padding:12px; background:rgba(0,240,255,0.04); border:1px dashed rgba(0,240,255,0.35); border-radius:8px;">
             <div style="font-size:12px; font-weight:800; color:var(--primary); margin-bottom:8px;">
-              + Create & Swap "${rawQueryText}"
+              + Create & Swap "${escapeHtml(rawQueryText)}"
             </div>
             <div style="display:flex; flex-direction:column; gap:8px;">
               <div>
@@ -5257,7 +5946,7 @@ function viewCompletedWorkoutBreakdown() {
                 </div>
               </div>
               <div id="customSwapRationalePreview" style="font-size:10.5px; color:#cbd5e1; font-style:italic; padding:6px; background:rgba(255,255,255,0.03); border-radius:6px; line-height:1.35;">
-                ${initialRationale}
+                ${escapeHtml(initialRationale)}
               </div>
               <button type="button" class="btn-action-primary" style="height:32px; font-size:11.5px; font-weight:800; margin-top:2px;" onclick="createAndSwapCustomExercise()">
                 ${swapContext.mode === 'add' ? 'Create & Add +' : 'Create & Swap ⇄'}
@@ -5291,6 +5980,7 @@ function viewCompletedWorkoutBreakdown() {
       }
 
       const newExItem = {
+        ...ex,
         id: ex.id,
         name: ex.name,
         family: ex.family,
@@ -5356,7 +6046,7 @@ function viewCompletedWorkoutBreakdown() {
         rationale: "Custom athlete entry added mid-workout."
       };
 
-      if (swapModalMode === 'swap') {
+      if (typeof swapModalMode !== 'undefined' && swapModalMode === 'swap' && activeWorkoutPlan[currentExIdx]) {
         activeWorkoutPlan[currentExIdx] = newExItem;
         showToast(`Swapped to ${name}`);
       } else {
@@ -5482,7 +6172,7 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function openSleepOverridePrompt() {
-      let currentScore = 82;
+      let currentScore = 76;
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.sleep_score !== undefined) {
         currentScore = window.BAKED_LIVE_STATE.garmin.sleep_score;
       } else if (window.athleteProfile && window.athleteProfile.sleepScore !== undefined) {
@@ -5497,15 +6187,20 @@ function viewCompletedWorkoutBreakdown() {
         return;
       }
 
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
       window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
       window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
       window.BAKED_LIVE_STATE.garmin.sleep_score = score;
+      window.BAKED_LIVE_STATE.garmin.sleep_score_manual_date = todayIso;
       if (window.athleteProfile) {
         window.athleteProfile.sleepScore = score;
       }
 
       try {
         localStorage.setItem('pulse_sleep_score_override', String(score));
+        localStorage.setItem('pulse_sleep_score_override_obj', JSON.stringify({ value: score, date: todayIso }));
       } catch(e) {}
 
       const elSleep = document.getElementById('vSleep');
@@ -5521,13 +6216,131 @@ function viewCompletedWorkoutBreakdown() {
       fetch(`${apiBase}/api/telemetry/override`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'sleep_score', value: score, category: 'garmin' })
+        body: JSON.stringify({ sleep_score: score, key: 'sleep_score', value: score, date: todayIso, category: 'garmin' })
       }).catch(() => {});
 
       renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
       showToast(`✓ Sleep Score updated to ${score}`);
       beep(880, 0.08);
     }
+
+    function openBodyBatteryOverridePrompt() {
+      let currentBb = 43;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.body_battery !== undefined) {
+        currentBb = window.BAKED_LIVE_STATE.garmin.body_battery;
+      }
+
+      const input = window.prompt("Enter Garmin Body Battery % (0–100):", currentBb);
+      if (input === null || input.trim() === '') return;
+      const bb = parseInt(input.trim(), 10);
+      if (isNaN(bb) || bb < 0 || bb > 100) {
+        showToast("Invalid Body Battery. Enter a number 0–100.");
+        return;
+      }
+
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.body_battery = bb;
+      window.BAKED_LIVE_STATE.garmin.body_battery_manual_date = todayIso;
+
+      try {
+        localStorage.setItem('pulse_body_battery_override_obj', JSON.stringify({ value: bb, date: todayIso }));
+      } catch(e) {}
+
+      const elBb = document.getElementById('vitalBattery');
+      if (elBb) elBb.innerText = `${bb}%`;
+      const bbRing = document.getElementById('vitalBatteryRing');
+      if (bbRing) {
+        const circ = 157;
+        const offset = (circ * (1 - (bb / 100))).toFixed(1);
+        bbRing.style.strokeDashoffset = offset;
+      }
+      const elBbSub = document.getElementById('vitalBbSub');
+      if (elBbSub) {
+        elBbSub.innerText = bb >= 85 ? 'Fully Charged' : (bb >= 65 ? 'Charged' : (bb >= 35 ? 'Moderate' : 'Low / Drained'));
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body_battery: bb, key: 'body_battery', value: bb, date: todayIso })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
+      showToast(`✓ Body Battery updated to ${bb}%`);
+      beep(880, 0.08);
+    }
+
+    function openReadinessOverridePrompt() {
+      let currentTr = 68;
+      if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.training_readiness !== undefined) {
+        currentTr = window.BAKED_LIVE_STATE.garmin.training_readiness;
+      } else if (window.athleteProfile && window.athleteProfile.readiness !== undefined) {
+        currentTr = window.athleteProfile.readiness;
+      }
+
+      const input = window.prompt("Enter Garmin Training Readiness (0–100):", currentTr);
+      if (input === null || input.trim() === '') return;
+      const tr = parseInt(input.trim(), 10);
+      if (isNaN(tr) || tr < 0 || tr > 100) {
+        showToast("Invalid Training Readiness. Enter a number 0–100.");
+        return;
+      }
+
+      const _now = new Date();
+      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.training_readiness = tr;
+      window.BAKED_LIVE_STATE.garmin.readiness_manual_date = todayIso;
+      if (window.athleteProfile) {
+        window.athleteProfile.readiness = tr;
+      }
+
+      try {
+        localStorage.setItem('pulse_readiness_override_obj', JSON.stringify({ value: tr, date: todayIso }));
+      } catch(e) {}
+
+      const numEl = document.getElementById('todayDialNum');
+      if (numEl) numEl.innerText = tr;
+      const ringEl = document.getElementById('todayDialRing');
+      if (ringEl) {
+        const circ = 427.26;
+        const offset = (circ * (1 - (tr / 100))).toFixed(1);
+        ringEl.style.strokeDashoffset = offset;
+      }
+      const subEl = document.getElementById('todayDialSub');
+      if (subEl) {
+        subEl.innerText = tr >= 85 ? 'Optimal Readiness' : (tr >= 75 ? 'High Readiness' : (tr >= 60 ? 'Moderate Readiness' : 'Recovery Focus'));
+      }
+      const hdrEl = document.getElementById('hdrReadiness');
+      if (hdrEl) {
+        hdrEl.innerText = `${tr} READY`;
+      }
+
+      const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
+      fetch(`${apiBase}/api/telemetry/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ training_readiness: tr, key: 'training_readiness', value: tr, date: todayIso })
+      }).catch(() => {});
+
+      renderTodayTrainingRecommendations();
+      if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
+      showToast(`✓ Training Readiness updated to ${tr}`);
+      beep(880, 0.08);
+    }
+
+    window.openSleepOverridePrompt = openSleepOverridePrompt;
+    window.openBodyBatteryOverridePrompt = openBodyBatteryOverridePrompt;
+    window.openReadinessOverridePrompt = openReadinessOverridePrompt;
 
     function prevExercise() {
       if (currentExIdx > 0) {
@@ -5601,18 +6414,30 @@ function viewCompletedWorkoutBreakdown() {
       saveActiveSessionToLocalStorage();
       syncSetToBackend(exId, targetW, targetR, loggedW, loggedR);
 
+      const isSevereUnderperf = (loggedR === 0) || (diffR <= -3) || (targetR > 0 && loggedR <= Math.floor(targetR * 0.65)) || (pctDiff <= -20);
+      const deloadW = (!isBodyweight && isSevereUnderperf) ? Math.max(20, Math.round((loggedW * 0.85) / 2.5) * 2.5) : loggedW;
+
       if (diffR < 0 || loggedR === 0) {
         row.classList.remove('logged');
         row.classList.add('missed');
-        tag.innerText = '📉 AUTOREGULATION: UNDER-PERFORMANCE DETECTED';
-        tag.style.color = 'var(--amber)';
-        const nextRepTarget = Math.max(1, loggedR + 1);
-        msg.innerText = loggedR === 0 
-          ? `Set failed (0 reps recorded). Autoregulating: Reducing target intensity for subsequent sets.`
-          : `Prescribed ${targetR} reps, managed ${loggedR}. Autoregulating: Next session holds weight, bridging to ${nextRepTarget} reps before microloading.`;
-        transfer.innerText = `➔ Strength Transfer: Correlated assistance volume adjusted down.`;
-        beep(440, 0.2);
-        speak("Set recorded. Autoregulating volume.");
+        if (isSevereUnderperf && !isBodyweight) {
+          tag.innerText = `📉 AUTOREGULATION: DELOAD TRIGGERED (-15% → ${deloadW}kg)`;
+          tag.style.color = 'var(--amber)';
+          msg.innerText = `Prescribed ${targetR} reps, managed ${loggedR} (${pctDiff}% e1RM). Deloading -15% to ${deloadW}kg × ${targetR} next session to restore bar speed & clean reps.`;
+          transfer.innerText = `➔ Strength Transfer: Submaximal reset restores bar speed and joint stability.`;
+          beep(440, 0.2);
+          speak(`Set recorded. Severe under-performance detected. Deloading next session to ${deloadW} kilograms.`);
+        } else {
+          tag.innerText = '📉 AUTOREGULATION: UNDER-PERFORMANCE DETECTED';
+          tag.style.color = 'var(--amber)';
+          const nextRepTarget = Math.max(1, loggedR + 1);
+          msg.innerText = loggedR === 0
+            ? `Set failed (0 reps recorded). Autoregulating: Reducing target intensity for subsequent sets.`
+            : `Prescribed ${targetR} reps, managed ${loggedR}. Autoregulating: Next session holds weight, bridging to ${nextRepTarget} reps before microloading.`;
+          transfer.innerText = `➔ Strength Transfer: Correlated assistance volume adjusted down.`;
+          beep(440, 0.2);
+          speak("Set recorded. Autoregulating volume.");
+        }
       } else if (diffR === 0) {
         row.classList.remove('missed');
         row.classList.add('logged');
@@ -5628,8 +6453,8 @@ function viewCompletedWorkoutBreakdown() {
         row.classList.add('logged');
         tag.innerText = '🔥 TARGET EXCEEDED: OVER-PERFORMANCE';
         tag.style.color = 'var(--cyan)';
-        const nextW = loggedW + 5.0;
-        msg.innerText = `Crushed target by +${diffR} reps (${loggedR}/${targetR})! e1RM jumped to ${achievedE1RM}kg. Next session load increased to ${nextW}kg!`;
+        const nextW = loggedW + 2.5;
+        msg.innerText = `Crushed target by +${diffR} reps (${loggedR}/${targetR})! e1RM jumped to ${achievedE1RM}kg. Next session load microloaded +2.5kg ➔ ${nextW}kg!`;
         if (exId.includes('press') || exId.includes('floor')) {
           transfer.innerText = `➔ Strength Transfer: Floor press power scales your unbroken push-up capacity up from 18 to 22 reps!`;
         } else if (exId.includes('rdl')) {
@@ -5660,22 +6485,34 @@ function viewCompletedWorkoutBreakdown() {
 
         let nextW;
         let nextR;
+        let nextStatus = existing.status;
 
         if (isBodyweight) {
           nextW = 'Body';
           const baseR = typeof targetR === 'number' ? targetR : (typeof existing.reps === 'number' ? existing.reps : 10);
           nextR = loggedR + (diffR >= 0 ? 1 : 0);
           if (nextR < baseR && diffR >= 0) nextR = baseR + 1;
+          nextStatus = (diffR >= 0) ? 'progressed' : 'holding';
+        } else if (isSevereUnderperf) {
+          nextW = deloadW;
+          nextR = targetR;
+          nextStatus = 'deloaded';
+        } else if (diffR < 0) {
+          nextW = loggedW;
+          nextR = targetR;
+          nextStatus = 'holding';
         } else {
           const loadInc = (diffR === 0 ? 2.5 : (diffR > 0 ? 2.5 : 0));
           nextW = Math.round((loggedW + loadInc) * 10) / 10;
           nextR = targetR;
+          nextStatus = 'progressed';
         }
 
         const updatedRx = {
           ...existing,
           weight: nextW,
           reps: nextR,
+          status: nextStatus,
           last_logged_weight: loggedW,
           last_logged_reps: loggedR,
           last_e1rm: achievedE1RM,
@@ -5692,6 +6529,7 @@ function viewCompletedWorkoutBreakdown() {
 
     function startRestCountdown(seconds, nextCue) {
       clearInterval(restTimerInterval);
+      restTimerInterval = null;
       restSecs = seconds;
       const elCue = document.getElementById('restNextCue');
       if (elCue) elCue.innerText = `Next: ${nextCue}`;
@@ -5718,6 +6556,7 @@ function viewCompletedWorkoutBreakdown() {
           speak("1");
         } else if (restSecs <= 0) {
           clearInterval(restTimerInterval);
+          restTimerInterval = null;
           const pill = document.getElementById('floatingRestPill');
           if (pill) pill.classList.remove('active');
           if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
@@ -5749,6 +6588,7 @@ function viewCompletedWorkoutBreakdown() {
     function skipRest() {
       restSecs = 0;
       clearInterval(restTimerInterval);
+      restTimerInterval = null;
       const pill = document.getElementById('floatingRestPill');
       if (pill) pill.classList.remove('active');
       if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
@@ -5775,11 +6615,13 @@ function viewCompletedWorkoutBreakdown() {
       const totalPlannedSets = activeWorkoutPlan.reduce((acc, ex) => acc + (ex.setsCount || 3), 0) || 15;
       const sessionCalories = Math.max(80, Math.round(setsLoggedCount * 16 + activeWorkoutPlan.length * 10));
 
+      const sessionMeta = window.activeSessionMeta || {};
       const summary = {
         date: new Date().toISOString(),
         date_formatted: new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }),
-        preset: currentPreset,
-        goal: currentGoalKey,
+        title: sessionMeta.title || (document.getElementById('wPlanBadge')?.innerText || '').trim() || 'Hybrid Training Session',
+        preset: sessionMeta.preset || currentPreset,
+        goal: sessionMeta.goal || currentGoalKey,
         exercisesCompleted: activeWorkoutPlan.length,
         setsLogged: setsLoggedCount,
         calories: sessionCalories,
@@ -5912,14 +6754,65 @@ function viewCompletedWorkoutBreakdown() {
               if (tMode === 'skip') {
                 isWorkPhase = !isWorkPhase;
                 if (isWorkPhase) {
-                  tSeconds = 45;
                   tRounds++;
+                  if (tRounds >= 6) {
+                    clearInterval(tInterval);
+                    tInterval = null;
+                    tRunning = false;
+                    tSeconds = 0;
+                    const playIcon = document.getElementById('timerPlayIcon');
+                    const playText = document.getElementById('timerPlayText');
+                    const toggleBtn = document.getElementById('btnTimerToggle');
+                    if (playIcon) playIcon.innerText = '▶';
+                    if (playText) playText.innerText = 'START';
+                    if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+                    const phaseEl = document.getElementById('timerPhase');
+                    if (phaseEl) {
+                      phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
+                      phaseEl.style.color = 'var(--lime)';
+                    }
+                    const rdEl = document.getElementById('roundsDisplay');
+                    if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+                    beep(950, 0.45);
+                    speak("6 rounds complete! Outstanding interval work!");
+                    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+                    showToast('🏆 6-Round Skip Interval Complete!');
+                    updateTimerUI();
+                    return;
+                  }
+                  tSeconds = 45;
                   document.getElementById('timerPhase').innerText = `🟢 WORK INTERVAL ${tRounds + 1} OF 6`;
                   document.getElementById('timerPhase').style.color = 'var(--lime)';
                   beep(880, 0.4);
                   speak(`Work interval round ${tRounds + 1}. Let's go!`);
                   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                 } else {
+                  if (tRounds + 1 >= 6) {
+                    tRounds = 6;
+                    clearInterval(tInterval);
+                    tInterval = null;
+                    tRunning = false;
+                    tSeconds = 0;
+                    const playIcon = document.getElementById('timerPlayIcon');
+                    const playText = document.getElementById('timerPlayText');
+                    const toggleBtn = document.getElementById('btnTimerToggle');
+                    if (playIcon) playIcon.innerText = '▶';
+                    if (playText) playText.innerText = 'START';
+                    if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+                    const phaseEl = document.getElementById('timerPhase');
+                    if (phaseEl) {
+                      phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
+                      phaseEl.style.color = 'var(--lime)';
+                    }
+                    const rdEl = document.getElementById('roundsDisplay');
+                    if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+                    beep(950, 0.45);
+                    speak("6 rounds complete! Outstanding interval work!");
+                    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+                    showToast('🏆 6-Round Skip Interval Complete!');
+                    updateTimerUI();
+                    return;
+                  }
                   tSeconds = 15;
                   document.getElementById('timerPhase').innerText = '🟡 REST INTERVAL (15s)';
                   document.getElementById('timerPhase').style.color = 'var(--amber)';
@@ -5930,6 +6823,7 @@ function viewCompletedWorkoutBreakdown() {
                 document.getElementById('roundsDisplay').innerText = `${tRounds} Rounds Done`;
               } else {
                 clearInterval(tInterval);
+                tInterval = null;
                 tRunning = false;
                 beep(880, 0.5);
                 speak("AMRAP complete! Fantastic work Coach Greg.");
@@ -5943,6 +6837,7 @@ function viewCompletedWorkoutBreakdown() {
       } else {
         tRunning = false;
         clearInterval(tInterval);
+        tInterval = null;
         document.getElementById('timerPlayIcon').innerText = '▶';
         document.getElementById('timerPlayText').innerText = 'RESUME';
         document.getElementById('btnTimerToggle').style.background = 'var(--lime)';
@@ -5954,12 +6849,37 @@ function viewCompletedWorkoutBreakdown() {
     function resetTimer() {
       tRunning = false;
       clearInterval(tInterval);
-      document.getElementById('timerPlayIcon').innerText = '▶';
-      document.getElementById('timerPlayText').innerText = 'START';
-      document.getElementById('btnTimerToggle').style.background = 'var(--lime)';
-      if (tMode === 'skip') tSeconds = 45;
-      else if (tMode === 'amrap') tSeconds = 600;
-      else tSeconds = 0;
+      tInterval = null;
+      tRounds = 0;
+      isWorkPhase = true;
+      const playIcon = document.getElementById('timerPlayIcon');
+      const playText = document.getElementById('timerPlayText');
+      const toggleBtn = document.getElementById('btnTimerToggle');
+      if (playIcon) playIcon.innerText = '▶';
+      if (playText) playText.innerText = 'START';
+      if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+      const rdEl = document.getElementById('roundsDisplay');
+      if (rdEl) rdEl.innerText = '0 Rounds Done';
+      const phaseEl = document.getElementById('timerPhase');
+      if (tMode === 'skip') {
+        tSeconds = 45;
+        if (phaseEl) {
+          phaseEl.innerText = '🟢 WORK INTERVAL 1 OF 6';
+          phaseEl.style.color = 'var(--lime)';
+        }
+      } else if (tMode === 'amrap') {
+        tSeconds = 600;
+        if (phaseEl) {
+          phaseEl.innerText = '🔥 10-MINUTE AMRAP';
+          phaseEl.style.color = 'var(--cyan)';
+        }
+      } else {
+        tSeconds = 0;
+        if (phaseEl) {
+          phaseEl.innerText = '⏱️ STOPWATCH READY';
+          phaseEl.style.color = 'var(--text-muted)';
+        }
+      }
       updateTimerUI();
       beep(450, 0.05);
     }
@@ -5977,8 +6897,105 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function logTimerSession() {
+      const rounds = Math.max(1, parseInt(tRounds, 10) || 1);
+      const modeLabel = (tMode === 'amrap') ? 'AMRAP' : ((tMode === 'skip') ? 'Intervals / Skip' : 'EMOM / Conditioning');
+      let durationMin = 10;
+      if (tMode === 'amrap') {
+        durationMin = Math.max(1, Math.round((600 - (tSeconds || 0)) / 60) || 10);
+      } else if (tMode === 'skip') {
+        durationMin = Math.max(1, Math.round(rounds * 1.5));
+      } else {
+        durationMin = Math.max(1, Math.round((tSeconds || 0) / 60) || Math.max(5, rounds * 2));
+      }
+      const estCalories = Math.max(50, Math.round(durationMin * 10 + rounds * 10));
+      const now = new Date();
+      const isoDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const subTitle = `${modeLabel} • ${rounds} Rounds (${durationMin}m)`;
+
+      // 1. Persist to pulse_conditioning_history
+      try {
+        const condHist = JSON.parse(localStorage.getItem('pulse_conditioning_history') || '[]');
+        condHist.unshift({
+          date: now.toISOString(),
+          mode: tMode,
+          rounds: rounds,
+          duration_min: durationMin,
+          calories: estCalories,
+          sub_title: subTitle
+        });
+        localStorage.setItem('pulse_conditioning_history', JSON.stringify(condHist.slice(0, 50)));
+      } catch(e) {}
+
+      // 2. Update date-scoped pulse_inapp_burn_today
+      try {
+        let existingBurn = 0;
+        const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+        if (rawBurn) {
+          const parsed = JSON.parse(rawBurn);
+          if (parsed && parsed.date === isoDate) existingBurn = Number(parsed.calories !== undefined ? parsed.calories : parsed.kcal) || 0;
+        }
+        localStorage.setItem('pulse_inapp_burn_today', JSON.stringify({
+          date: isoDate,
+          calories: existingBurn + estCalories
+        }));
+      } catch(e) {}
+
+      // 3. Append to recentActivitiesData + localStorage + refresh UI
+      const newActivity = {
+        id: Date.now(),
+        name: 'Conditioning',
+        subTitle: subTitle,
+        sub_title: subTitle,
+        date: `${isoDate} ${now.toTimeString().slice(0, 8)}`,
+        durationMin: durationMin,
+        duration_min: durationMin,
+        calories: estCalories,
+        avgHr: 145,
+        maxHr: 170,
+        aerobicTe: 2.6,
+        anaerobicTe: 1.8,
+        source: 'manual_app_entry'
+      };
+      if (typeof recentActivitiesData !== 'undefined' && Array.isArray(recentActivitiesData)) {
+        recentActivitiesData.unshift(newActivity);
+        try {
+          localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
+        } catch(e) {}
+        if (typeof renderHistoryList === 'function') renderHistoryList();
+      }
+      if (typeof calculateDailyTargets === 'function') calculateDailyTargets();
+
+      // 4. Sync to backend (/api/sync_activity & /api/sync_session)
+      try {
+        fetch('/api/sync_activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Conditioning',
+            sub_title: subTitle,
+            duration_min: durationMin,
+            calories: estCalories,
+            avg_hr: 145,
+            max_hr: 170,
+            aerobic_te: 2.6,
+            anaerobic_te: 1.8
+          })
+        }).catch(() => {});
+        if (typeof syncSessionToBackend === 'function') {
+          syncSessionToBackend({
+            date: now.toISOString(),
+            preset: `timer_${tMode}`,
+            goal: typeof currentGoalKey !== 'undefined' ? currentGoalKey : 'recomp',
+            exercisesCompleted: 1,
+            setsLogged: rounds,
+            calories: estCalories,
+            details: { mode: tMode, rounds: rounds, duration_min: durationMin }
+          });
+        }
+      } catch(e) {}
+
       beep(880, 0.2);
-      showToast(`✓ Logged ${tRounds} rounds conditioning to Garmin calendar!`);
+      showToast(`✓ Logged ${rounds} rounds (${estCalories} kcal) to training history!`);
       switchTab('fuel');
     }
 

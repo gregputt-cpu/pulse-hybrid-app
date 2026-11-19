@@ -10,6 +10,51 @@
       sleepScore: 76,
       readiness: 68
     };
+
+    // Security utilities: HTML escaping (XSS mitigation) & legacy token cleanup
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    window.escapeHtml = escapeHtml;
+
+    try {
+      localStorage.removeItem('pulse_garmin_tokens_backup');
+    } catch (e) {}
+
+    window._pulseAuthPromptInFlight = null;
+    async function ensurePulseApiAuth() {
+      if (window._pulseAuthPromptInFlight) return window._pulseAuthPromptInFlight;
+      window._pulseAuthPromptInFlight = (async () => {
+        try {
+          const statusRes = await fetch('/api/auth/status', { cache: 'no-store' });
+          if (statusRes.ok) {
+            const st = await statusRes.json();
+            if (!st.auth_required || st.authenticated) return true;
+          }
+          const secret = window.prompt('Enter your Pulse API Access Key to unlock this session:');
+          if (!secret || !secret.trim()) return false;
+          const loginRes = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret: secret.trim() })
+          });
+          return loginRes.ok;
+        } catch (e) {
+          return false;
+        } finally {
+          window._pulseAuthPromptInFlight = null;
+        }
+      })();
+      return window._pulseAuthPromptInFlight;
+    }
+    window.ensurePulseApiAuth = ensurePulseApiAuth;
+
     window.userInteracted = false;
     document.addEventListener('pointerdown', () => { window.userInteracted = true; }, { once: true });
     let globalAudioCtx = null;
@@ -55,6 +100,50 @@
       }
     }
     window.pulseHaptic = pulseHaptic;
+
+    // CANONICAL ACTIVE BURN ACCESSORS (Replaces broken #vitalBurn DOM scraping)
+    function getTodayInAppBurn(garminOverride) {
+      let inAppBurn = 0;
+      try {
+        const now = new Date();
+        const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
+        if (rawBurn) {
+          const parsed = JSON.parse(rawBurn);
+          if (parsed && parsed.date === todayIso) {
+            inAppBurn = Number(parsed.calories !== undefined ? parsed.calories : parsed.kcal) || 0;
+          }
+        }
+      } catch(e) {}
+
+      // Prevent double-counting if Garmin OAuth already measured a Strength activity today
+      try {
+        const g = garminOverride || (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) || null;
+        if (g && g.source === 'garmin_oauth') {
+          const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
+          const hasGarminStrength = todayActs.some(a => {
+            const name = (a.name || '').toLowerCase();
+            const key = (a.activity_type_key || '').toLowerCase();
+            return name.includes('strength') || key.includes('strength');
+          });
+          if (hasGarminStrength) inAppBurn = 0;
+        }
+      } catch(e) {}
+      return Math.max(0, Math.round(inAppBurn));
+    }
+
+    function getTodayActiveBurn(stateOverride) {
+      const st = stateOverride || (typeof window !== 'undefined' ? window.BAKED_LIVE_STATE : null) || {};
+      const g = st.garmin || null;
+      const baseGarminBurn = (g && g.active_calories !== undefined && g.active_calories !== null)
+        ? (Number(g.active_calories) || 0)
+        : 0;
+      return Math.max(0, Math.round(baseGarminBurn + getTodayInAppBurn(g)));
+    }
+    if (typeof window !== 'undefined') {
+      window.getTodayInAppBurn = getTodayInAppBurn;
+      window.getTodayActiveBurn = getTodayActiveBurn;
+    }
 
     // SCREEN WAKE LOCK API (Prevents phone sleeping during active intervals/rest)
     let screenWakeLock = null;
@@ -144,13 +233,19 @@
       } catch(e) {}
     }
 
+    function getLocalDateStr(dateObj = new Date()) {
+      const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    window.getLocalDateStr = getLocalDateStr;
+
     // ==================== LOCAL STORAGE SESSION PERSISTENCE ====================
     let sessionLoggedSets = {};
 
     function saveActiveSessionToLocalStorage() {
       try {
         const payload = {
-          date: new Date().toISOString().split('T')[0],
+          date: getLocalDateStr(),
           preset: currentPreset,
           goal: currentGoalKey,
           currentExIdx: currentExIdx,
@@ -169,7 +264,7 @@
         const raw = localStorage.getItem('pulse_active_session');
         if (!raw) return false;
         const session = JSON.parse(raw);
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateStr();
         if (session.date === todayStr && session.sets && Object.keys(session.sets).length > 0) {
           sessionLoggedSets = session.sets;
           if (session.currentExIdx !== undefined) currentExIdx = session.currentExIdx;
@@ -283,7 +378,7 @@
         clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
-          if (data.status === 'success' && data.result) {
+          if ((data.success || data.status === 'success') && data.result) {
             const syncBadge = document.getElementById('saveStatusIndicator');
             if (syncBadge) syncBadge.innerText = '✓ Synced to Engine';
             console.log('✓ Synced set to StrengthAutoregulationEngine:', data.result);

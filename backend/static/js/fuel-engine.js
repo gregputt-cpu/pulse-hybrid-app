@@ -250,48 +250,8 @@
     }
 
     function renderMyNetDiaryEngine() {
-      // 1. Resolve Dynamic Daily Calorie Target
-      let inAppBurn = 0;
-      try {
-        const _now = new Date();
-        const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
-        const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
-        if (rawBurn) {
-          const parsed = JSON.parse(rawBurn);
-          if (parsed && parsed.date === _todayIso) {
-            inAppBurn = Number(parsed.calories) || 0;
-          }
-        }
-      } catch(e) {}
-
-      // Prevent double-counting pulse_inapp_burn_today if Garmin OAuth already measured Strength activity
-      try {
-        const g = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) ? window.BAKED_LIVE_STATE.garmin : null;
-        if (g && g.source === 'garmin_oauth') {
-          const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
-          const hasGarminStrength = todayActs.some(a => {
-            const name = (a.name || '').toLowerCase();
-            const key = (a.activity_type_key || '').toLowerCase();
-            return name.includes('strength') || key.includes('strength');
-          });
-          if (hasGarminStrength) {
-            inAppBurn = 0;
-          }
-        }
-      } catch(e) {}
-
-      const baseGarminBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
-        ? Number(window.BAKED_LIVE_STATE.garmin.active_calories)
-        : 623;
-
-      let activeBurn = baseGarminBurn + inAppBurn;
-      const burnEl = document.getElementById('vitalBurn');
-      if (burnEl) {
-        const parsedBurn = parseInt(burnEl.innerText);
-        if (!isNaN(parsedBurn) && parsedBurn >= 0) {
-          activeBurn = parsedBurn;
-        }
-      }
+      // 1. Resolve Dynamic Daily Calorie Target via canonical state accessor
+      const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
       const totalBudget = 2092 + activeBurn;
       athleteDailyBudget = totalBudget;
 
@@ -438,14 +398,7 @@
     }
 
     function updateRunwayUI() {
-      const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && window.BAKED_LIVE_STATE.garmin.active_calories !== undefined)
-        ? Number(window.BAKED_LIVE_STATE.garmin.active_calories)
-        : 623;
-      if (burnEl) {
-        const parsed = parseInt(burnEl.innerText);
-        if (!isNaN(parsed) && parsed >= 0) activeBurn = parsed;
-      }
+      const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
       const totalBudget = 2092 + activeBurn;
       athleteDailyBudget = totalBudget;
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
@@ -581,11 +534,11 @@
         if (hasItems) {
           itemsHtml = meal.items.map((item, itemIdx) => `
             <div class="mnd-item-row" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:12px;">
-              <span style="color:#FFFFFF; font-weight:500;">${item.name}</span>
+              <span style="color:#FFFFFF; font-weight:500;">${escapeHtml(item.name)}</span>
               <div style="display:flex; align-items:center; gap:8px;">
-                <span style="color:var(--text-muted); font-size:11px;">${item.cals} kcal</span>
-                <span style="color:var(--primary); font-weight:700; font-size:11px;">${item.p}g P</span>
-                <span style="color:var(--text-muted); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:3px;" title="Remove food item" onclick="event.stopPropagation(); deleteMndMealItem('${mKey}', ${itemIdx})">✕</span>
+                <span style="color:var(--text-muted); font-size:11px;">${Number(item.cals) || 0} kcal</span>
+                <span style="color:var(--primary); font-weight:700; font-size:11px;">${Number(item.p) || 0}g P</span>
+                <span style="color:var(--text-muted); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:3px;" title="Remove food item" onclick="event.stopPropagation(); deleteMndMealItem('${escapeHtml(mKey)}', ${itemIdx})">✕</span>
               </div>
             </div>
           `).join('');
@@ -604,12 +557,12 @@
           <div class="meal-card-header" onclick="toggleMealAccordion(this)">
             <div style="display:flex; align-items:center; gap:7px;">
               <span class="accordion-chevron" style="transform:${chevronRot}; font-size:10px;">▼</span>
-              <strong style="color:#fff; font-size:12.5px; font-weight:700;">${meal.name}</strong>
-              <span style="font-size:11px; color:var(--text-muted);">${meal.time ? '• ' + meal.time : ''}</span>
+              <strong style="color:#fff; font-size:12.5px; font-weight:700;">${escapeHtml(meal.name)}</strong>
+              <span style="font-size:11px; color:var(--text-muted);">${meal.time ? '• ' + escapeHtml(meal.time) : ''}</span>
             </div>
             <div style="display:flex; gap:5px; align-items:center;">
-              <span class="macro-pill" style="color:var(--primary); font-weight:700; background:rgba(0,229,255,0.12); padding:2px 6px; border-radius:4px; font-size:11px;">${meal.protein}g P</span>
-              <span class="macro-pill" style="color:#fff; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-size:11px;">${meal.calories} kcal</span>
+              <span class="macro-pill" style="color:var(--primary); font-weight:700; background:rgba(0,229,255,0.12); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.protein) || 0}g P</span>
+              <span class="macro-pill" style="color:#fff; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.calories) || 0} kcal</span>
             </div>
           </div>
           <div class="meal-card-body" style="display:${isInitiallyOpen};">
@@ -1328,8 +1281,8 @@
       if (msg) msg.innerHTML = '';
 
       const loginUser = document.getElementById('mndLoginUser');
-      const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
-      if (loginUser && !loginUser.value) {
+      const savedUser = localStorage.getItem('pulse_mnd_user') || '';
+      if (loginUser && !loginUser.value && savedUser) {
         loginUser.value = savedUser;
       }
 
@@ -1371,7 +1324,7 @@
           badge.style.border = '1px solid rgba(0,229,255,0.4)';
         }
         if (panelText) {
-          panelText.innerHTML = `🟢 Connected as <strong style="color:var(--primary);">${userLabel}</strong> • ${calsStr} kcal Synced`;
+          panelText.innerHTML = `🟢 Connected as <strong style="color:var(--primary);">${escapeHtml(userLabel)}</strong> • ${escapeHtml(calsStr)} kcal Synced`;
         }
       } else {
         if (badge) {
@@ -1387,13 +1340,13 @@
     }
 
     async function checkMndStatus() {
-      const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
+      const savedUser = localStorage.getItem('pulse_mnd_user') || '';
       const loginUser = document.getElementById('mndLoginUser');
       if (loginUser && savedUser && !loginUser.value) {
         loginUser.value = savedUser;
       }
 
-      updateMndStatusBadgesUI(savedUser || 'GREG.PUTT', Boolean(savedUser));
+      updateMndStatusBadgesUI(savedUser, Boolean(savedUser));
 
       try {
         const controller = new AbortController();
@@ -1404,9 +1357,9 @@
         const data = await res.json();
 
         if (data.configured || data.has_cached_session) {
-          const u = data.username || savedUser || 'greg.putt@gmail.com';
-          localStorage.setItem('pulse_mnd_user', u);
-          updateMndStatusBadgesUI(u, true);
+          const u = data.username || savedUser || '';
+          if (u) localStorage.setItem('pulse_mnd_user', u);
+          updateMndStatusBadgesUI(u, Boolean(u));
           if (loginUser && u) loginUser.value = u;
         }
       } catch(e) {
@@ -1415,7 +1368,7 @@
     }
 
     async function submitMndLogin() {
-      const user = document.getElementById('mndLoginUser')?.value.trim() || 'greg.putt@gmail.com';
+      const user = document.getElementById('mndLoginUser')?.value.trim() || '';
       const pass = document.getElementById('mndLoginPass')?.value.trim();
       const msg = document.getElementById('mndConnectMsg');
       const btn = document.getElementById('btnSubmitMndLogin');
@@ -1466,7 +1419,7 @@
           showToast(`✓ MyNetDiary Connected as ${data.username || user}!`);
         } else {
           const err = data.message || data.error || 'Verify MyNetDiary email/password.';
-          if (msg) msg.innerHTML = `<span style="color:var(--amber); font-weight:700;">⚠️ ${err}</span>`;
+          if (msg) msg.innerHTML = `<span style="color:var(--amber); font-weight:700;">⚠️ ${escapeHtml(err)}</span>`;
           showToast(`⚠️ ${err}`);
           beep(400, 0.2);
         }
@@ -1532,8 +1485,8 @@
 
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
-      const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
-      updateMndStatusBadgesUI(savedUser, true);
+      const savedUser = localStorage.getItem('pulse_mnd_user') || '';
+      updateMndStatusBadgesUI(savedUser, Boolean(savedUser));
     }
 
     async function triggerMndAutoPull() {
@@ -1549,7 +1502,7 @@
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
         const res = await fetch('/api/mnd/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1559,7 +1512,7 @@
         clearTimeout(timeoutId);
 
         if (!res.ok || res.status === 404) {
-          throw new Error('Cloud backend offline');
+          throw new Error(`Cloud backend returned HTTP ${res.status}`);
         }
 
         const data = await res.json();
@@ -1569,10 +1522,10 @@
           if (syncMod) syncMod.classList.remove('open');
           initMyNetDiaryEngine();
           openMndSyncModal();
-          showToast('✓ Today\'s Synced Log Loaded • Tap "☁️ Cloud Account" to link live login');
-          beep(720, 0.12);
+          showToast('⚠️ MyNetDiary login required — tap "☁️ Cloud Account" to reconnect');
+          beep(480, 0.14);
         } else if (data.status === 'success' || data.success) {
-          const payload = data.totals ? data : (data.data || data.sync_data || data);
+          const payload = data.totals ? data : (data.mnd || data.data || data.sync_data || data);
           applyMndSyncData(payload);
           checkMndStatus();
           closeSyncModal();
@@ -1587,21 +1540,20 @@
           const syncMod = document.getElementById('syncModal');
           if (syncMod) syncMod.classList.remove('open');
           openMndSyncModal();
-          showToast(`✓ Loaded Synced Totals (${myNetDiaryData.totals.calories} kcal • ${myNetDiaryData.totals.protein}g P)`);
+          showToast(`⚠️ MyNetDiary sync incomplete: ${data.error || data.message || 'using cached totals'}`);
+          beep(440, 0.14);
         }
       } catch(e) {
-        // Fallback: re-synchronize local/master MyNetDiary data
+        // Fallback: keep local cached log visible, but surface an honest warning
         const syncMod = document.getElementById('syncModal');
         if (syncMod) syncMod.classList.remove('open');
         initMyNetDiaryEngine();
         renderMyNetDiaryEngine();
-        const savedUser = localStorage.getItem('pulse_mnd_user') || 'greg.putt@gmail.com';
-        updateMndStatusBadgesUI(savedUser, true);
-        beep(880, 0.2);
-        const cals = myNetDiaryData.totals.calories || 824;
-        const prot = myNetDiaryData.totals.protein || 49;
-        speak(`MyNetDiary synchronized. ${cals} calories and ${prot} grams protein active.`);
-        showToast(`✓ Synced from MyNetDiary: ${cals.toLocaleString()} kcal • ${prot}g P`);
+        const savedUser = localStorage.getItem('pulse_mnd_user') || '';
+        updateMndStatusBadgesUI(savedUser, Boolean(savedUser));
+        beep(400, 0.16);
+        const reason = e && e.name === 'AbortError' ? 'timed out' : 'offline';
+        showToast(`⚠️ MyNetDiary sync ${reason} — showing cached log`);
       } finally {
         if (btnHdr) {
           btnHdr.disabled = false;
@@ -1653,6 +1605,27 @@
       beep(450, 0.05);
     }
 
+    function syncManualMndToBackend() {
+      try {
+        fetch('/api/mnd/manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            totals: myNetDiaryData.totals || {},
+            meals: myNetDiaryData.meals || {},
+            date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined)
+          })
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.success && data.state) {
+              window.BAKED_LIVE_STATE = data.state;
+            }
+          })
+          .catch(() => {});
+      } catch (e) {}
+    }
+
     function saveMndSyncTotals() {
       const cals = parseInt(document.getElementById('mndInputCals')?.value) || 0;
       const prot = parseInt(document.getElementById('mndInputProtein')?.value) || 0;
@@ -1673,6 +1646,7 @@
       };
 
       saveMndToLocalStorage();
+      syncManualMndToBackend();
       renderMyNetDiaryEngine();
       closeMndSyncModal();
 
@@ -1688,13 +1662,27 @@
         return;
       }
 
-      const calsMatch = txt.match(/(?:cals?|calories?|energy)\s*[:=]?\s*([0-9,]+)/i);
-      const protMatch = txt.match(/(?:protein|prot|p)\s*[:=]?\s*([0-9,]+)\s*g?/i);
-      const carbsMatch = txt.match(/(?:carbs?|carbohydrates?|c)\s*[:=]?\s*([0-9,]+)\s*g?/i);
-      const fatMatch = txt.match(/(?:fats?|fat|f)\s*[:=]?\s*([0-9,]+)\s*g?/i);
-      const fiberMatch = txt.match(/(?:fiber|fibre)\s*[:=]?\s*([0-9,]+)\s*g?/i);
-      const sodiumMatch = txt.match(/(?:sodium|salt)\s*[:=]?\s*([0-9,]+)\s*(?:mg)?/i);
-      const waterMatch = txt.match(/(?:water|fluid)\s*[:=]?\s*([0-9.]+)\s*(?:l|litres?)?/i);
+      const calsMatch =
+        txt.match(/([0-9,]+)\s*(?:k?cals?|calories?)\b/i) ||
+        txt.match(/\b(?:cals?|calories?|energy)\s*[:=]?\s*([0-9,]+)/i);
+      const protMatch =
+        txt.match(/([0-9,]+)\s*g?\s*(?:protein|prot|p)\b/i) ||
+        txt.match(/\b(?:protein|prot|p)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const carbsMatch =
+        txt.match(/([0-9,]+)\s*g?\s*(?:carbs?|carbohydrates?|c)\b/i) ||
+        txt.match(/\b(?:carbs?|carbohydrates?|c)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const fatMatch =
+        txt.match(/([0-9,]+)\s*g?\s*(?:fats?|fat|f)\b/i) ||
+        txt.match(/\b(?:fats?|fat|f)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const fiberMatch =
+        txt.match(/([0-9,]+)\s*g?\s*(?:fiber|fibre)\b/i) ||
+        txt.match(/\b(?:fiber|fibre)\s*[:=]?\s*([0-9,]+)\s*g?/i);
+      const sodiumMatch =
+        txt.match(/([0-9,]+)\s*(?:mg)?\s*(?:sodium|salt)\b/i) ||
+        txt.match(/\b(?:sodium|salt)\s*[:=]?\s*([0-9,]+)\s*(?:mg)?/i);
+      const waterMatch =
+        txt.match(/([0-9.]+)\s*(?:l|litres?)\s*(?:water|fluid)?\b/i) ||
+        txt.match(/\b(?:water|fluid)\s*[:=]?\s*([0-9.]+)\s*(?:l|litres?)?/i);
 
       let found = 0;
       if (calsMatch) {
@@ -1782,6 +1770,7 @@
       myNetDiaryData.totals.fat += fat;
 
       saveMndToLocalStorage();
+      syncManualMndToBackend();
       renderMyNetDiaryEngine();
       closeMndLogModal();
 
@@ -1808,6 +1797,7 @@
       meal.items.splice(itemIdx, 1);
 
       saveMndToLocalStorage();
+      syncManualMndToBackend();
       renderMyNetDiaryEngine();
 
       beep(500, 0.05);
@@ -1913,8 +1903,9 @@
 
       if (cals <= 0 && prot <= 0) return;
 
-      const carbs = 0;
-      const fat = Math.max(0, Math.round((cals - prot * 4) / 9));
+      const remCals = Math.max(0, cals - prot * 4);
+      const carbs = Math.max(0, Math.round((remCals * 0.65) / 4));
+      const fat = Math.max(0, Math.round((remCals * 0.35) / 9));
 
       if (!myNetDiaryData.meals) myNetDiaryData.meals = {};
       if (!myNetDiaryData.meals.snacks) {
@@ -1954,6 +1945,7 @@
       myNetDiaryData.totals.fat = (myNetDiaryData.totals.fat || 0) + fat;
 
       saveMndToLocalStorage();
+      syncManualMndToBackend();
       renderMyNetDiaryEngine();
       closeQuickLogModal();
 

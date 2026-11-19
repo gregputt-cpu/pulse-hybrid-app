@@ -1,5 +1,5 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-hybrid-v5.32-20261119';
+const CACHE_NAME = 'pulse-hybrid-v5.33-20261119';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -45,7 +45,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => response)
-        .catch(() => caches.match(event.request))
+        .catch(() =>
+          caches.match(event.request).then((cached) =>
+            cached || new Response(
+              JSON.stringify({ success: false, offline: true, error: 'Backend offline' }),
+              { status: 503, headers: { 'Content-Type': 'application/json' } }
+            )
+          )
+        )
     );
     return;
   }
@@ -61,7 +68,7 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match(event.request) || caches.match('/index.html'))
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('/index.html')))
     );
     return;
   }

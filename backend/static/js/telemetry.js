@@ -1,27 +1,5 @@
     let garminMfaState = null;
 
-    async function copyGarminPermanentToken() {
-      try {
-        showToast('Exporting Garmin permanent token...');
-        const res = await fetch('/api/garmin/export_token');
-        if (!res.ok) throw new Error('API request failed');
-        const data = await res.json();
-        if (data.success && data.garmin_tokens_json) {
-          const tokenText = typeof data.garmin_tokens_json === 'string'
-            ? data.garmin_tokens_json
-            : JSON.stringify(data.garmin_tokens_json);
-          await navigator.clipboard.writeText(tokenText);
-          showToast('✓ Permanent Garmin token copied! Paste into Railway GARMIN_TOKENS_JSON.');
-          beep(880, 0.15);
-        } else {
-          showToast(`⚠️ ${data.error || 'Garmin not authenticated yet'}`);
-        }
-      } catch(e) {
-        showToast('⚠️ Could not copy token. Please ensure clipboard permission.');
-      }
-    }
-    window.copyGarminPermanentToken = copyGarminPermanentToken;
-
     function getMatchedPulseSessionForGarmin(act) {
       if (!act) return null;
       const actName = (act.name || '').toLowerCase();
@@ -66,20 +44,21 @@
         const condRaw = localStorage.getItem('pulse_conditioning_history');
         if (condRaw) {
           const condHist = JSON.parse(condRaw);
-          if (Array.isArray(condHist)) {
-            condHist.forEach(c => {
-              if (c && c.date) {
-                candidates.push({
-                  date: c.date,
-                  title: `${c.name || 'Conditioning'} (${(c.format || 'interval').toUpperCase()} • ${c.roundsCompleted || c.rounds || 1} rds)`,
-                  preset: 'combat',
-                  setsLogged: c.roundsCompleted || c.rounds || 1,
-                  conditioningDrill: c,
-                  _kind: 'conditioning'
-                });
-              }
-            });
-          }
+          const condArr = Array.isArray(condHist)
+            ? condHist
+            : (condHist && typeof condHist === 'object' ? Object.values(condHist) : []);
+          condArr.forEach(c => {
+            if (c && c.date) {
+              candidates.push({
+                date: c.date,
+                title: `${c.name || 'Conditioning'} (${(c.format || 'interval').toUpperCase()} • ${c.roundsCompleted || c.rounds || 1} rds)`,
+                preset: 'combat',
+                setsLogged: c.roundsCompleted || c.rounds || 1,
+                conditioningDrill: c,
+                _kind: 'conditioning'
+              });
+            }
+          });
         }
         if (candidates.length === 0) return null;
 
@@ -150,19 +129,13 @@
         const headerBtn = document.getElementById('btnHeaderSync');
         const headerSpan = headerBtn ? headerBtn.querySelector('span:last-child') : null;
         if (headerSpan) headerSpan.innerText = 'Syncing...';
-        const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup') || null;
         const res = await fetch('/api/garmin/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ garmin_tokens_json: tokenBackup })
+          body: JSON.stringify({})
         });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.garmin_tokens_json) {
-            try {
-              localStorage.setItem('pulse_garmin_tokens_backup', typeof data.garmin_tokens_json === 'string' ? data.garmin_tokens_json : JSON.stringify(data.garmin_tokens_json));
-            } catch(e) {}
-          }
           if (data && data.state) {
             window.BAKED_LIVE_STATE = data.state;
             applyLiveStateToDom(data.state);
@@ -189,15 +162,6 @@
       if ((Date.now() - (window._lastDirectGarminSyncMs || 0)) > 60 * 1000) {
         triggerSilentGarminSync();
       }
-      fetch('/api/garmin/export_token')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (d && d.success && d.garmin_tokens_json) {
-            const exportBox = document.getElementById('garminTokenExportBox');
-            if (exportBox) exportBox.style.display = 'flex';
-          }
-        })
-        .catch(() => {});
       beep(600, 0.05);
     }
 
@@ -425,7 +389,7 @@
 
     async function triggerGarminCloudSync() {
       const btn = document.getElementById('btnTriggerGarminSync');
-      const email = document.getElementById('garminEmailInput')?.value.trim() || 'greg.putt@gmail.com';
+      const email = document.getElementById('garminEmailInput')?.value.trim() || '';
       const pass = document.getElementById('garminPassInput')?.value.trim() || '';
       if (btn) {
         btn.disabled = true;
@@ -433,16 +397,15 @@
       }
 
       // Best-effort Renpho cloud sync so clicking Sync always pulls latest weigh-in
-      fetch('/api/renpho/sync').catch(() => {});
+      fetch('/api/renpho/sync', { method: 'POST' }).catch(() => {});
 
       try {
-        const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup') || null;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 25000);
         const res = await fetch('/api/garmin/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: pass, garmin_tokens_json: tokenBackup }),
+          body: JSON.stringify({ email: email, password: pass }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
@@ -450,9 +413,8 @@
         if (!res.ok || res.status === 404) {
           await loadLiveState();
           renderGarminSyncNotice(window.BAKED_LIVE_STATE);
-          showToast('✓ Synced with Railway Cloud & Local Cache');
-          beep(880, 0.1);
-          closeSyncModal();
+          showToast(`⚠️ Garmin cloud sync failed (HTTP ${res.status}) — showing cached telemetry`);
+          beep(400, 0.14);
           return;
         }
 
@@ -469,11 +431,6 @@
           showToast('⚠️ Please enter your Garmin password to authenticate.');
           beep(400, 0.15);
         } else if (data.success || data.status === 'success') {
-          if (data.garmin_tokens_json) {
-            try {
-              localStorage.setItem('pulse_garmin_tokens_backup', typeof data.garmin_tokens_json === 'string' ? data.garmin_tokens_json : JSON.stringify(data.garmin_tokens_json));
-            } catch(e) {}
-          }
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
             applyLiveStateToDom(data.state);
@@ -496,8 +453,6 @@
             if (passEl) passEl.value = '';
             const mfaEl = document.getElementById('garminMfaInput');
             if (mfaEl) mfaEl.value = '';
-            const exportBox = document.getElementById('garminTokenExportBox');
-            if (exportBox) exportBox.style.display = 'flex';
             closeSyncModal();
             beep(880, 0.15);
             showToast('✓ Garmin, Renpho & MyNetDiary Synced Live!');
@@ -507,8 +462,8 @@
           renderGarminSyncNotice(window.BAKED_LIVE_STATE);
           const notice = document.getElementById('garminStatusNotice');
           if (notice) notice.style.display = 'flex';
-          showToast('⚡ Cloud backend offline. Loaded today\'s biometrics from local master!');
-          beep(720, 0.1);
+          showToast(`⚠️ Cloud backend error (${data.message || data.error || 'offline'}) — showing cached telemetry`);
+          beep(420, 0.14);
         } else {
           showToast(`⚠️ Sync notice: ${data.error || data.message || 'Unable to connect'}`);
         }
@@ -517,7 +472,9 @@
         renderGarminSyncNotice(window.BAKED_LIVE_STATE);
         const notice = document.getElementById('garminStatusNotice');
         if (notice) notice.style.display = 'flex';
-        showToast('✓ Today\'s Garmin workout is already loaded!');
+        const reason = e && e.name === 'AbortError' ? 'timed out' : 'offline';
+        showToast(`⚠️ Garmin sync ${reason} — showing cached telemetry`);
+        beep(400, 0.14);
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -542,11 +499,6 @@
         });
         const data = await res.json();
         if (data.success || data.status === 'success') {
-          if (data.garmin_tokens_json) {
-            try {
-              localStorage.setItem('pulse_garmin_tokens_backup', typeof data.garmin_tokens_json === 'string' ? data.garmin_tokens_json : JSON.stringify(data.garmin_tokens_json));
-            } catch(e) {}
-          }
           if (data.state) {
             window.BAKED_LIVE_STATE = data.state;
             applyLiveStateToDom(data.state);
@@ -559,8 +511,6 @@
           if (mfaBox) mfaBox.style.display = 'none';
           await loadLiveState();
           renderGarminSyncNotice(window.BAKED_LIVE_STATE);
-          const exportBox = document.getElementById('garminTokenExportBox');
-          if (exportBox) exportBox.style.display = 'flex';
           closeSyncModal();
           beep(880, 0.2);
           showToast('✓ Garmin Authenticated & Synced Permanently!');
@@ -619,19 +569,16 @@
 
       renderHistoryList();
 
-      const burnEl = document.getElementById('vitalBurn');
-      let curBurn = 355;
-      if (burnEl) {
-        curBurn = parseInt(burnEl.innerText) || 355;
-        const newBurn = curBurn + cal;
-        burnEl.innerHTML = `${newBurn} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small>`;
-      }
+      window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+      window.BAKED_LIVE_STATE.garmin = window.BAKED_LIVE_STATE.garmin || {};
+      window.BAKED_LIVE_STATE.garmin.active_calories = (Number(window.BAKED_LIVE_STATE.garmin.active_calories) || 0) + cal;
+      const newBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : window.BAKED_LIVE_STATE.garmin.active_calories;
       const fuelBurn = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
-      if (fuelBurn) fuelBurn.innerHTML = `${curBurn + cal} <small style="font-size:13px;">kcal</small>`;
+      if (fuelBurn) fuelBurn.innerHTML = `${newBurn} <small style="font-size:13px;">kcal</small>`;
 
-      const curTarget = 2092 + (curBurn + cal);
+      const curTarget = 2092 + newBurn;
       const ftEl = document.getElementById('fuelTargetNum');
-      if (ftEl) ftEl.innerHTML = `${curTarget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${curBurn + cal} kcal</small>`;
+      if (ftEl) ftEl.innerHTML = `${curTarget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${newBurn} kcal</small>`;
       const fbEl = document.getElementById('fuelBudgetNum');
       if (fbEl) fbEl.innerText = curTarget;
 
@@ -1331,16 +1278,11 @@
 
       const activeJoints = ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'].filter(k => athleteInjuries[k]);
       if (activeJoints.length === 0) {
-        if (text.length > 3) {
-          activeJoints.push('knees');
-          athleteInjuries.knees = true;
-          const btn = document.getElementById('inj_btn_knees');
-          if (btn) btn.classList.add('active');
-        } else {
-          showToast('⚠️ Please describe your symptoms or select a joint above');
-          beep(300, 0.1);
-          return;
-        }
+        showToast(text.length > 0
+          ? '⚠️ Joint not recognized from notes — tap the affected joint chip above'
+          : '⚠️ Please describe your symptoms or select a joint above');
+        beep(300, 0.1);
+        return;
       }
 
       renderInjuryRules();
@@ -1570,9 +1512,7 @@
       document.getElementById('todayGoalTitle').innerText = goal.title;
       document.getElementById('todayGoalSub').innerText = goal.sub;
 
-      const burnEl = document.getElementById('vitalBurn');
-      let activeBurn = 649;
-      if (burnEl) activeBurn = parseInt(burnEl.innerText) || 649;
+      const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
       const dynamicTarget = goal.calories + activeBurn;
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${dynamicTarget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
@@ -1588,7 +1528,8 @@
       if (fsd) fsd.innerText = goal.strategyDesc;
 
       document.querySelectorAll('.goal-option-card').forEach(c => c.classList.remove('selected'));
-      document.getElementById(`opt_${goalKey}`).classList.add('selected');
+      const optEl = document.getElementById(`opt_${goalKey}`);
+      if (optEl) optEl.classList.add('selected');
 
       closeGoalModal();
       generateWorkoutFromGearAndGoal();
@@ -1773,7 +1714,7 @@
       try {
         const g = state.garmin || {};
         const r = state.renpho || {};
-        const dateStr = state.date || new Date().toISOString().split('T')[0];
+        const dateStr = state.date || (typeof getLocalDateStr === 'function' ? getLocalDateStr() : new Date().toISOString().split('T')[0]);
         const raw = localStorage.getItem('pulse_daily_biometrics_history');
         const list = raw ? JSON.parse(raw) : [];
         const entry = {
@@ -2037,40 +1978,9 @@
           }
         }
         if (g.active_calories !== undefined) {
-          let inAppBurn = 0;
-          try {
-            const _now = new Date();
-            const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
-            const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
-            if (rawBurn) {
-              const parsed = JSON.parse(rawBurn);
-              if (parsed && parsed.date === _todayIso) {
-                inAppBurn = Number(parsed.calories) || 0;
-              }
-            }
-          } catch(e) {}
-
-          // Prevent double-counting pulse_inapp_burn_today if Garmin OAuth already measured Strength activity
-          try {
-            if (g.source === 'garmin_oauth') {
-              const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
-              const hasGarminStrength = todayActs.some(a => {
-                const name = (a.name || '').toLowerCase();
-                const key = (a.activity_type_key || '').toLowerCase();
-                return name.includes('strength') || key.includes('strength');
-              });
-              if (hasGarminStrength) {
-                inAppBurn = 0;
-              }
-            }
-          } catch(e) {}
-
-          const totalActiveBurn = Number(g.active_calories) + inAppBurn;
-          const el1 = document.getElementById('vitalBurn');
-          if (el1) {
-            const desiredHtml = `${totalActiveBurn} <small style="font-size:12.5px;font-weight:400;color:var(--text-muted);">kcal</small>`;
-            if (el1.innerHTML !== desiredHtml) el1.innerHTML = desiredHtml;
-          }
+          const totalActiveBurn = (typeof getTodayActiveBurn === 'function')
+            ? getTodayActiveBurn({ garmin: g })
+            : (Number(g.active_calories) || 0);
           const el2 = document.getElementById('vitalBurnSub');
           if (el2) {
             const desiredText = `fēnix 8 • ${g.steps || 105} Steps`;
@@ -2157,7 +2067,11 @@
                 const sameDay = (aDatePrefix && gaDatePrefix && aDatePrefix === gaDatePrefix) || (a.isToday && ga.isToday);
                 if (!sameDay) return false;
                 const gaCals = Number(ga.calories || 0);
-                return Math.abs(aCals - gaCals) <= 15 || (a.isToday && ga.isToday);
+                const calsClose = aCals > 0 && gaCals > 0 && Math.abs(aCals - gaCals) <= 15;
+                if (!calsClose) return false;
+                const aName = String(a.name || a.activity_type_key || '').toLowerCase();
+                const gaName = String(ga.name || ga.activity_type_key || '').toLowerCase();
+                return !aName || !gaName || aName.includes(gaName) || gaName.includes(aName) || Math.abs(aCals - gaCals) <= 5;
               });
               if (isDupOfGarmin) return false;
               return true;
@@ -2247,14 +2161,19 @@
           }
           if (bSub.innerText !== desiredSub) bSub.innerText = desiredSub;
         }
+      }
 
-        // 1.1 MyNetDiary Food Ingestion from Live State
+      // 1.1 MyNetDiary Food Ingestion from Live State (independent of state.garmin)
+      {
+        const gMnd = state.garmin && state.garmin.mnd_logged ? state.garmin.mnd_logged : null;
         let ml = state.mnd_logged;
-        if (g && g.mnd_logged) {
-          if (!ml || (g.mnd_logged.last_pulled && (!ml.last_pulled || new Date(g.mnd_logged.last_pulled) >= new Date(ml.last_pulled)))) {
-            ml = g.mnd_logged;
+        if (gMnd) {
+          if (!ml || (gMnd.last_pulled && (!ml.last_pulled || new Date(gMnd.last_pulled) >= new Date(ml.last_pulled)))) {
+            ml = gMnd;
           }
         }
+        const mndHist = state.mnd_history || (state.garmin && state.garmin.mnd_history) || null;
+        const mndMeals = state.mnd_meals || (state.garmin && state.garmin.mnd_meals) || null;
         if (ml) {
           myNetDiaryData.totals.calories = ml.calories || 0;
           myNetDiaryData.totals.protein = ml.protein_g || 0;
@@ -2263,20 +2182,30 @@
           myNetDiaryData.totals.fiber = ml.fiber_g || 0;
           myNetDiaryData.totals.sodium = ml.sodium_mg || 0;
           myNetDiaryData.totals.water = ml.water_l || 0;
+          const hydVal = Number(ml.water_l || 0).toFixed(1);
+          const fibVal = Math.round(Number(ml.fiber_g || 0));
+          const todayHydEl = document.getElementById('todayHydrationVal');
+          if (todayHydEl) todayHydEl.innerText = `${hydVal}L`;
+          const mndWaterEl = document.getElementById('mndWaterVal');
+          if (mndWaterEl) mndWaterEl.innerText = `${hydVal}L`;
+          const mndFiberEl = document.getElementById('mndFiberVal');
+          if (mndFiberEl) mndFiberEl.innerText = `${fibVal}g`;
+          const fuelHydSum = document.getElementById('fuelHydrationSummary');
+          if (fuelHydSum) fuelHydSum.innerText = `${hydVal}L Water • ${fibVal}g Fiber`;
           if (ml.sugar_g !== undefined) myNetDiaryData.totals.sugar_g = ml.sugar_g;
           if (ml.sat_fat_g !== undefined) myNetDiaryData.totals.sat_fat_g = ml.sat_fat_g;
-          if (state.mnd_meals) {
-            myNetDiaryData.meals = state.mnd_meals;
+          if (mndMeals) {
+            myNetDiaryData.meals = mndMeals;
           }
-          if (state.mnd_history && Array.isArray(state.mnd_history.days) && state.mnd_history.days.length > 0) {
-            myNetDiaryData.history = state.mnd_history;
+          if (mndHist && Array.isArray(mndHist.days) && mndHist.days.length > 0) {
+            myNetDiaryData.history = mndHist;
           }
           saveMndToLocalStorage();
           renderMyNetDiaryEngine();
           renderTodayTrainingRecommendations();
           renderHistoryList();
-        } else if (state.mnd_history && Array.isArray(state.mnd_history.days) && state.mnd_history.days.length > 0) {
-          myNetDiaryData.history = state.mnd_history;
+        } else if (mndHist && Array.isArray(mndHist.days) && mndHist.days.length > 0) {
+          myNetDiaryData.history = mndHist;
           saveMndToLocalStorage();
           renderMyNetDiaryEngine();
         }
@@ -2379,43 +2308,8 @@
       // 3. Nutrition Targets
       if (state.nutrition) {
         const n = state.nutrition;
-        let inAppBurn = 0;
-        try {
-          const _now = new Date();
-          const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
-          const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
-          if (rawBurn) {
-            const parsed = JSON.parse(rawBurn);
-            if (parsed && parsed.date === _todayIso) {
-              inAppBurn = Number(parsed.calories) || 0;
-            }
-          }
-        } catch(e) {}
-
-        // Prevent double-counting pulse_inapp_burn_today if Garmin OAuth already measured Strength activity
-        try {
-          const gState = state.garmin || (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin);
-          if (gState && gState.source === 'garmin_oauth') {
-            const todayActs = Array.isArray(gState.today_activities) ? gState.today_activities : [];
-            const hasGarminStrength = todayActs.some(a => {
-              const name = (a.name || '').toLowerCase();
-              const key = (a.activity_type_key || '').toLowerCase();
-              return name.includes('strength') || key.includes('strength');
-            });
-            if (hasGarminStrength) {
-              inAppBurn = 0;
-            }
-          }
-        } catch(e) {}
-
-        let activeBurn = 649;
-        const burnEl = document.getElementById('vitalBurn');
-        if (burnEl) {
-          const parsed = parseInt(burnEl.innerText);
-          if (!isNaN(parsed) && parsed > 0) activeBurn = parsed;
-        } else if (state.garmin && state.garmin.active_calories !== undefined) {
-          activeBurn = Number(state.garmin.active_calories) + inAppBurn;
-        }
+        const inAppBurn = (typeof getTodayInAppBurn === 'function') ? getTodayInAppBurn(state.garmin) : 0;
+        const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn(state) : inAppBurn;
 
         const calorieTarget = (n.calorie_target || 2092) + inAppBurn;
         if (n.calorie_target) {
@@ -2458,8 +2352,14 @@
         try {
           const ctrl = new AbortController();
           const tid = setTimeout(() => ctrl.abort(), 10000);
-          const res = await fetch('/api/live_state', { signal: ctrl.signal, cache: 'no-store' });
+          let res = await fetch('/api/live_state', { signal: ctrl.signal, cache: 'no-store' });
           clearTimeout(tid);
+          if (res.status === 401 && typeof window.ensurePulseApiAuth === 'function') {
+            const authed = await window.ensurePulseApiAuth();
+            if (authed) {
+              res = await fetch('/api/live_state', { cache: 'no-store' });
+            }
+          }
           if (res.ok) state = await res.json();
         } catch(apiErr) {}
 
@@ -2480,7 +2380,6 @@
           const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
           if (!window._garminSessionRestored) {
             window._garminSessionRestored = true;
-            const tokenBackup = localStorage.getItem('pulse_garmin_tokens_backup');
             const todayBackupRaw = localStorage.getItem('pulse_garmin_today_backup');
             let todayGarminBackup = null;
             if (todayBackupRaw) {
@@ -2491,36 +2390,19 @@
                 }
               } catch(e) {}
             }
-            if (tokenBackup) {
+            if (todayGarminBackup) {
               fetch('/api/garmin/restore_session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  garmin_tokens_json: tokenBackup,
                   garmin_state: todayGarminBackup,
                   date: todayIso
                 })
               })
                 .then(r => r.ok ? r.json() : null)
                 .then(resData => {
-                  if (resData && resData.garmin_tokens_json) {
-                    try {
-                      localStorage.setItem('pulse_garmin_tokens_backup', typeof resData.garmin_tokens_json === 'string' ? resData.garmin_tokens_json : JSON.stringify(resData.garmin_tokens_json));
-                    } catch(e) {}
-                  }
                   if (resData && resData.state) {
                     applyLiveStateToDom(resData.state);
-                  }
-                })
-                .catch(() => {});
-            } else {
-              fetch('/api/garmin/export_token')
-                .then(r => r.ok ? r.json() : null)
-                .then(d => {
-                  if (d && d.success && d.garmin_tokens_json) {
-                    try {
-                      localStorage.setItem('pulse_garmin_tokens_backup', typeof d.garmin_tokens_json === 'string' ? d.garmin_tokens_json : JSON.stringify(d.garmin_tokens_json));
-                    } catch(e) {}
                   }
                 })
                 .catch(() => {});
@@ -2557,7 +2439,7 @@
 
           if (!isToday) {
             window._renphoAutoSynced = true;
-            fetch('/api/renpho/sync')
+            fetch('/api/renpho/sync', { method: 'POST' })
               .then(res => res.ok ? res.json() : null)
               .then(data => {
                 if (data && data.renpho && data.renpho.last_synced) {
@@ -2621,27 +2503,23 @@
       loadLiveState();
       checkMndStatus();
 
-      setTimeout(() => triggerSilentGarminSync(), 1500);
+      // Backend APScheduler handles upstream Garmin sync; frontend polls read-only /api/live_state
       setInterval(() => {
         if (document.visibilityState === 'visible') {
-          triggerSilentGarminSync();
-        } else {
           loadLiveState();
         }
-      }, 5 * 60 * 1000);
+      }, 2 * 60 * 1000);
 
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
           loadLiveState();
-          if (Date.now() - (window._lastDirectGarminSyncMs || 0) > 2 * 60 * 1000) {
-            triggerSilentGarminSync();
-          }
         }
       });
 
       window.addEventListener('focus', () => {
-        if (Date.now() - (window._lastDirectGarminSyncMs || 0) > 2 * 60 * 1000) {
-          triggerSilentGarminSync();
+        if (Date.now() - (window._lastLiveStatePollMs || 0) > 60 * 1000) {
+          window._lastLiveStatePollMs = Date.now();
+          loadLiveState();
         }
       });
 

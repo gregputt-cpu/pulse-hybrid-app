@@ -264,8 +264,10 @@ function generateZoneBarsHtml(act) {
 }
 
 function generateTeDualGaugesHtml(act) {
-  const aero = Number(act.aerobicTe || 2.2);
-  const anaero = Number(act.anaerobicTe || 1.5);
+  const rawAero = act.aerobicTe ?? act.aerobic_te;
+  const rawAnaero = act.anaerobicTe ?? act.anaerobic_te;
+  const aero = (rawAero !== undefined && rawAero !== null && !Number.isNaN(Number(rawAero))) ? Number(rawAero) : 0;
+  const anaero = (rawAnaero !== undefined && rawAnaero !== null && !Number.isNaN(Number(rawAnaero))) ? Number(rawAnaero) : 0;
 
   const getTeFeedback = (score, isAnaero) => {
     if (score >= 4.5) return { label: "Overreaching", desc: isAnaero ? "High neuromuscular & PCr fatigue" : "Heavy aerobic strain requiring 48h rest", color: "#ef4444" };
@@ -309,6 +311,97 @@ function generateTeDualGaugesHtml(act) {
   `;
 }
 
+// DECODER FOR GARMIN FĒNIX 8 EXERCISE SETS (milligrams/grams -> kg, TUT & rest intervals)
+function decodeGarminStrengthSets(act) {
+  const rawSets = act && Array.isArray(act.exercise_sets) ? act.exercise_sets : [];
+  if (!rawSets.length) return null;
+
+  const activeSets = [];
+  const restDurations = [];
+
+  for (let i = 0; i < rawSets.length; i++) {
+    const s = rawSets[i];
+    if (!s || typeof s !== 'object') continue;
+    const sType = String(s.set_type || '').toUpperCase();
+    const dur = Math.round(Number(s.duration || 0));
+
+    if (sType === 'REST') {
+      if (dur > 0) restDurations.push(dur);
+      continue;
+    }
+    if (sType !== 'ACTIVE') continue;
+
+    const rawWt = Number(s.weight || 0);
+    const weightKg = rawWt >= 1000
+      ? Math.round((rawWt / 1000) * 10) / 10
+      : (rawWt > 0 ? Math.round(rawWt * 10) / 10 : 0);
+
+    // Look ahead for immediate REST interval following this active set
+    let restAfterSec = 0;
+    if (i + 1 < rawSets.length && rawSets[i + 1] && String(rawSets[i + 1].set_type || '').toUpperCase() === 'REST') {
+      restAfterSec = Math.round(Number(rawSets[i + 1].duration || 0));
+    }
+
+    activeSets.push({
+      setNum: activeSets.length + 1,
+      weightKg,
+      weightLabel: weightKg > 0 ? `${weightKg}kg` : 'Bodyweight',
+      shortWeightLabel: weightKg > 0 ? `${weightKg}kg` : 'BW',
+      durationSec: dur,
+      reps: s.reps != null && Number(s.reps) > 0 ? Number(s.reps) : null,
+      exerciseName: s.exercise_name ? String(s.exercise_name).replace(/_/g, ' ') : '',
+      restAfterSec
+    });
+  }
+
+  if (!activeSets.length) return null;
+
+  const weightedSets = activeSets.filter(s => s.weightKg > 0);
+  const peakWeightKg = weightedSets.length ? Math.max(...weightedSets.map(s => s.weightKg)) : 0;
+  const peakWeightCount = peakWeightKg > 0 ? activeSets.filter(s => s.weightKg === peakWeightKg).length : 0;
+  const avgRestSec = restDurations.length
+    ? Math.round(restDurations.reduce((sum, d) => sum + d, 0) / restDurations.length)
+    : 0;
+  const totalTutSec = activeSets.reduce((sum, s) => sum + s.durationSec, 0);
+
+  // Build concise working weight summary (e.g. 1×20kg warm-up • 6×70kg working sets • 1×BW (203s core hold))
+  const groupOrder = [];
+  const groupMap = {};
+  activeSets.forEach(s => {
+    const key = s.weightKg > 0 ? String(s.weightKg) : 'BW';
+    if (!groupMap[key]) {
+      groupMap[key] = { key, weightKg: s.weightKg, count: 0, totalDur: 0 };
+      groupOrder.push(groupMap[key]);
+    }
+    groupMap[key].count += 1;
+    groupMap[key].totalDur += s.durationSec;
+  });
+
+  const workingSummaryParts = groupOrder.map(g => {
+    if (g.weightKg === 0) {
+      return `${g.count}×BW (${g.totalDur >= 60 ? `${g.totalDur}s core hold` : `${g.totalDur}s`})`;
+    }
+    if (peakWeightKg > 0 && g.weightKg < peakWeightKg) {
+      return `${g.count}×${g.weightKg}kg warm-up`;
+    }
+    if (peakWeightKg > 0 && g.weightKg === peakWeightKg) {
+      return `${g.count}×${g.weightKg}kg working ${g.count === 1 ? 'set' : 'sets'}`;
+    }
+    return `${g.count}×${g.weightKg}kg`;
+  });
+
+  return {
+    activeSets,
+    activeCount: activeSets.length,
+    peakWeightKg,
+    peakWeightCount,
+    avgRestSec,
+    totalTutSec,
+    workingSummary: workingSummaryParts.join(' • ')
+  };
+}
+window.decodeGarminStrengthSets = decodeGarminStrengthSets;
+
 // RENDER COMPLETED WORKOUTS & PHYSIOLOGICAL BENEFITS LIST (EGM OVERHAUL WITH GARMIN CHARTS)
 function renderHistoryList() {
   const box = document.getElementById('trainViewHistory');
@@ -334,6 +427,7 @@ function renderHistoryList() {
 
     const matchedPulse = (typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act) : null;
     let pulseDetailsHtml = '';
+    let pulseLoggedSummaries = [];
     if (matchedPulse) {
       let sessionName = matchedPulse.title || '';
       if (!sessionName) {
@@ -368,6 +462,7 @@ function renderHistoryList() {
         });
 
         const exEntries = Object.values(setsByEx);
+        pulseLoggedSummaries = exEntries.map(e => `${e.name} (${e.sets.join(', ')})`);
         if (exEntries.length > 0) {
           exerciseRows = `
             <div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
@@ -405,14 +500,68 @@ function renderHistoryList() {
       `;
     }
 
+    const decodedSets = decodeGarminStrengthSets(act);
+    let garminStrengthSetsHtml = '';
+    if (decodedSets) {
+      const peakBadge = decodedSets.peakWeightKg > 0
+        ? `Peak Load ${decodedSets.peakWeightKg}kg (${decodedSets.peakWeightCount} working ${decodedSets.peakWeightCount === 1 ? 'set' : 'sets'})`
+        : 'Bodyweight / Core';
+      const avgRestBadge = decodedSets.avgRestSec > 0 ? ` • Avg Rest ${decodedSets.avgRestSec}s` : '';
+      const pulseCrossRefHtml = pulseLoggedSummaries.length > 0
+        ? `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
+             <strong style="color:#10b981;">🔗 Pulse Rep Cross-Reference:</strong> ${pulseLoggedSummaries.join(' • ')}
+           </div>`
+        : '';
+
+      garminStrengthSetsHtml = `
+        <div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
+          <!-- GOLDFISH STRIP -->
+          <div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
+            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${decodedSets.activeCount} Active Sets • ${peakBadge}${avgRestBadge}</span>
+          </div>
+          <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
+            ${decodedSets.workingSummary}
+          </div>
+          <!-- ELEPHANT ACCORDION -->
+          <details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
+            <summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+              <span>🔬 View All ${decodedSets.activeCount} Garmin Watch Sets &amp; Rest Intervals (${decodedSets.totalTutSec}s TUT)</span>
+              <span style="color:var(--text-muted);">▾</span>
+            </summary>
+            <div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
+                ${decodedSets.activeSets.map(s => `
+                  <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : s.weightLabel}</strong>
+                      ${s.reps ? `<span style="color:var(--primary); font-weight:700;">${s.reps} reps</span>` : ''}
+                    </div>
+                    <div style="color:var(--text-muted); margin-top:2px;">
+                      ${s.durationSec}s TUT${s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+              ${pulseCrossRefHtml}
+            </div>
+          </details>
+        </div>
+      `;
+    }
+
     const rawTitle = act.subTitle || act.sub_title || act.name || 'Workout';
     const isGenericGarminTitle = /^(cardio|indoor_cardio|strength|strength_training)$/i.test(String(rawTitle).trim());
     const displayTitle = (isGenericGarminTitle && matchedPulse && matchedPulse.title)
       ? `${matchedPulse.title} (Garmin ${rawTitle})`
       : rawTitle;
 
+    const normDurationMin = act.durationMin ?? act.duration_min ?? 0;
+    const normAvgHr = act.avgHr ?? act.avg_hr ?? null;
+    const normMaxHr = act.maxHr ?? act.max_hr ?? null;
+    const normAeroTe = Number(act.aerobicTe ?? act.aerobic_te ?? 0);
+    const normAnaeroTe = Number(act.anaerobicTe ?? act.anaerobic_te ?? 0);
     const isWalkOrRunAct = /walk|run|ruck|hike/i.test(`${act.name || ''} ${rawTitle} ${act.activity_type_key || ''}`);
-    const estSteps = act.steps ? Number(act.steps) : (isWalkOrRunAct && act.durationMin ? Math.round(Number(act.durationMin) * 91.5) : 0);
+    const estSteps = act.steps ? Number(act.steps) : (isWalkOrRunAct && normDurationMin ? Math.round(Number(normDurationMin) * 91.5) : 0);
     const estMiles = act.distance_miles ? Number(act.distance_miles) : (estSteps > 0 ? Number((estSteps / 1810).toFixed(2)) : 0);
     const actStepPillHtml = (isWalkOrRunAct && estSteps > 0)
       ? `<span>•</span><span style="color:var(--cyan); font-weight:700;">👣 ${estSteps.toLocaleString()} activity steps${estMiles > 0 ? ` (${estMiles} mi)` : ''}</span>`
@@ -435,9 +584,9 @@ function renderHistoryList() {
           <div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
             <span>${displayDate}</span>
             <span>•</span>
-            <span>⏱ ${act.durationMin} min</span>
+            <span>⏱ ${normDurationMin} min</span>
             <span>•</span>
-            <span style="color:var(--primary); font-weight:800;">🔥 ${act.calories} kcal</span>
+            <span style="color:var(--primary); font-weight:800;">🔥 ${act.calories || 0} kcal</span>
             ${actStepPillHtml}
           </div>
         </div>
@@ -448,6 +597,7 @@ function renderHistoryList() {
       </div>
 
       ${pulseDetailsHtml}
+      ${garminStrengthSetsHtml}
 
       <!-- PRIMARY GLANCEABLE TAKEAWAY -->
       <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
@@ -457,19 +607,19 @@ function renderHistoryList() {
       <!-- 4-METRIC BIOMETRIC GRID -->
       <div class="history-stats-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 4px; text-align:center;">
         <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:var(--primary);">${act.calories}</div>
+          <div class="hstat-num" style="font-size:13px; font-weight:800; color:var(--primary);">${act.calories || 0}</div>
           <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Active Burn</div>
         </div>
         <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#fff;">${act.avgHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
+          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#fff;">${normAvgHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
           <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Avg HR</div>
         </div>
         <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#38bdf8;">${act.maxHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
+          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#38bdf8;">${normMaxHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
           <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Peak HR</div>
         </div>
         <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#a78bfa;">${Number(act.aerobicTe || 0).toFixed(1)} / ${Number(act.anaerobicTe || 0).toFixed(1)}</div>
+          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#a78bfa;">${normAeroTe.toFixed(1)} / ${normAnaeroTe.toFixed(1)}</div>
           <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Aerobic/Anaer</div>
         </div>
       </div>
@@ -601,7 +751,7 @@ async function renderRenphoTrendChart() {
       const dayWt = Number((curWeight + (i * 0.03)).toFixed(2));
       records.push({
         timestamp: Math.floor(d.getTime() / 1000),
-        date_str: d.toISOString().slice(0, 10),
+        date_str: (typeof getLocalDateStr === 'function' ? getLocalDateStr(d) : d.toISOString().slice(0, 10)),
         weight_kg: dayWt,
         body_fat_pct: dayBf,
         lean_mass_kg: dayLm
@@ -935,17 +1085,27 @@ async function renderStrengthProgressionChart() {
 
   let cardsHtml = '';
 
+  const _parseNum = (val, fallback) => {
+    if (typeof val === 'number' && Number.isFinite(val)) return val;
+    if (typeof val === 'string') {
+      const m = val.match(/-?\d+(?:\.\d+)?/);
+      if (m) return Number(m[0]);
+    }
+    const n = Number(val);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  };
+
   for (const lift of COMPOUND_LIFTS) {
     const sp = prescriptions[lift.key] || {};
     const historyLogs = strengthHistory[lift.key] || [];
 
-    const prescribedWeight = Number(sp.weight || lift.defaultWeight);
-    const prescribedReps = Number(sp.reps || lift.defaultReps);
-    const baselineE1rm = Number(sp.e1rm || lift.defaultE1rm);
+    const prescribedWeight = _parseNum(sp.weight, lift.defaultWeight);
+    const prescribedReps = _parseNum(sp.reps, lift.defaultReps);
+    const baselineE1rm = _parseNum(sp.e1rm, lift.defaultE1rm);
 
-    const lastLoggedWeight = Number(sp.last_logged_weight || (historyLogs.length ? historyLogs[historyLogs.length - 1].weight : prescribedWeight));
-    const lastLoggedReps = Number(sp.last_logged_reps || (historyLogs.length ? historyLogs[historyLogs.length - 1].reps : prescribedReps));
-    const lastE1rm = Number(sp.last_e1rm || (historyLogs.length ? historyLogs[historyLogs.length - 1].e1rm : baselineE1rm));
+    const lastLoggedWeight = _parseNum(sp.last_logged_weight ?? (historyLogs.length ? historyLogs[historyLogs.length - 1].weight : prescribedWeight), prescribedWeight);
+    const lastLoggedReps = _parseNum(sp.last_logged_reps ?? (historyLogs.length ? historyLogs[historyLogs.length - 1].reps : prescribedReps), prescribedReps);
+    const lastE1rm = _parseNum(sp.last_e1rm ?? (historyLogs.length ? historyLogs[historyLogs.length - 1].e1rm : baselineE1rm), baselineE1rm);
 
     const isProgReady = Boolean(
       sp.progression_ready === true ||
@@ -1093,44 +1253,41 @@ if (typeof window !== 'undefined') {
   window.renderStrengthProgressionChart = renderStrengthProgressionChart;
 }
 
+let _pulseChartsInitInFlight = false;
 function initPulseCharts() {
+  if (_pulseChartsInitInFlight) return;
+  _pulseChartsInitInFlight = true;
   try {
-    if (typeof renderHistoryList === 'function' && document.getElementById('trainViewHistory')) {
-      renderHistoryList();
+    try {
+      if (typeof renderHistoryList === 'function' && document.getElementById('trainViewHistory')) {
+        renderHistoryList();
+      }
+    } catch (e) {
+      console.warn('[PulseCharts] renderHistoryList init warning:', e);
     }
-  } catch (e) {
-    console.warn('[PulseCharts] renderHistoryList init warning:', e);
-  }
-  try {
-    if (typeof renderRenphoTrendChart === 'function') {
-      renderRenphoTrendChart();
+    try {
+      if (typeof renderRenphoTrendChart === 'function') {
+        renderRenphoTrendChart();
+      }
+    } catch (e) {
+      console.warn('[PulseCharts] renderRenphoTrendChart init warning:', e);
     }
-  } catch (e) {
-    console.warn('[PulseCharts] renderRenphoTrendChart init warning:', e);
-  }
-  try {
-    if (typeof renderStrengthProgressionChart === 'function') {
-      renderStrengthProgressionChart();
+    try {
+      if (typeof renderStrengthProgressionChart === 'function') {
+        renderStrengthProgressionChart();
+      }
+    } catch (e) {
+      console.warn('[PulseCharts] renderStrengthProgressionChart init warning:', e);
     }
-  } catch (e) {
-    console.warn('[PulseCharts] renderStrengthProgressionChart init warning:', e);
+  } finally {
+    _pulseChartsInitInFlight = false;
   }
 }
 
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      initPulseCharts();
-      setTimeout(initPulseCharts, 350);
-    });
+    document.addEventListener('DOMContentLoaded', () => initPulseCharts(), { once: true });
   } else {
     initPulseCharts();
-    setTimeout(initPulseCharts, 350);
-  }
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('load', () => {
-      setTimeout(initPulseCharts, 250);
-    });
   }
 }

@@ -1,11 +1,17 @@
 import os
 import re
 import json
-import pickle
+import tempfile
+import threading
 import requests
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from benefits_engine import PhysiologicalBenefitsEngine
+import state_store
+try:
+    import db
+except Exception:
+    db = None
 
 def uk_today_str() -> str:
     return datetime.now(ZoneInfo("Europe/London")).date().isoformat()
@@ -13,16 +19,31 @@ def uk_today_str() -> str:
 def uk_now() -> datetime:
     return datetime.now(ZoneInfo("Europe/London"))
 
-MND_DIR = os.environ.get('MND_TOKEN_DIR', '/tmp/mnd_tokens' if not os.path.exists('/shared/user/.gemini') else '/shared/user/.gemini/mnd_tokens')
+_DATA_DIR = state_store.get_data_dir()
+if 'MND_TOKEN_DIR' in os.environ and os.environ['MND_TOKEN_DIR'].strip():
+    MND_DIR = os.environ['MND_TOKEN_DIR'].strip()
+elif _DATA_DIR:
+    MND_DIR = os.path.join(_DATA_DIR, 'mnd_tokens')
+elif os.path.exists('/shared/user/.gemini'):
+    MND_DIR = '/shared/user/.gemini/mnd_tokens'
+else:
+    MND_DIR = '/tmp/mnd_tokens'
+
+try:
+    os.makedirs(MND_DIR, exist_ok=True)
+    _mnd_test = os.path.join(MND_DIR, '.write_test')
+    with open(_mnd_test, 'w', encoding='utf-8') as _tf:
+        _tf.write('1')
+    os.remove(_mnd_test)
+except Exception:
+    MND_DIR = '/tmp/mnd_tokens'
+    os.makedirs(MND_DIR, exist_ok=True)
+
 CREDS_FILE = os.path.join(MND_DIR, 'credentials.json')
-COOKIES_FILE = os.path.join(MND_DIR, 'session_cookies.pkl')
+COOKIES_FILE = os.path.join(MND_DIR, 'session_cookies.json')
 HISTORY_CACHE_FILE = os.path.join(MND_DIR, 'mnd_history_cache.json')
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_STATE_PATH = os.path.join(REPO_ROOT, 'live_state.json')
-if not os.path.exists(DEFAULT_STATE_PATH):
-    DEFAULT_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
-LIVE_STATE_PATH = os.environ.get('LIVE_STATE_PATH', DEFAULT_STATE_PATH)
+LIVE_STATE_PATH = state_store.get_live_state_path()
 ARTIFACT_LIVE_STATE_PATH = os.environ.get('ARTIFACT_LIVE_STATE_PATH', LIVE_STATE_PATH)
 
 DEFAULT_HEADERS = {
@@ -47,17 +68,66 @@ class MyNetDiarySyncService:
     def _load_cookies(self):
         if os.path.exists(COOKIES_FILE):
             try:
-                with open(COOKIES_FILE, 'rb') as f:
-                    self.session.cookies.update(pickle.load(f))
+                with open(COOKIES_FILE, 'r', encoding='utf-8') as f:
+                    raw = json.load(f)
+                if isinstance(raw, list):
+                    for item in raw:
+                        if not isinstance(item, dict) or not item.get('name'):
+                            continue
+                        self.session.cookies.set(
+                            item['name'],
+                            item.get('value', ''),
+                            domain=item.get('domain') or '',
+                            path=item.get('path') or '/',
+                            secure=bool(item.get('secure', False)),
+                            expires=item.get('expires'),
+                        )
+                elif isinstance(raw, dict):
+                    self.session.cookies.update(requests.utils.cookiejar_from_dict(raw))
             except Exception as e:
                 print(f"[MNDSync] Failed loading cookies: {e}")
 
     def _save_cookies(self):
+        tmp_path = None
         try:
-            with open(COOKIES_FILE, 'wb') as f:
-                pickle.dump(self.session.cookies, f)
+            os.makedirs(MND_DIR, exist_ok=True)
+            serialized = [
+                {
+                    'name': c.name,
+                    'value': c.value,
+                    'domain': c.domain,
+                    'path': c.path,
+                    'secure': bool(c.secure),
+                    'expires': c.expires,
+                }
+                for c in self.session.cookies
+            ]
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                encoding='utf-8',
+                dir=MND_DIR,
+                prefix='.session_cookies.',
+                suffix='.tmp',
+                delete=False,
+            ) as tmp:
+                tmp_path = tmp.name
+                json.dump(serialized, tmp, indent=2)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+            try:
+                os.chmod(tmp_path, 0o600)
+            except OSError:
+                pass
+            os.replace(tmp_path, COOKIES_FILE)
+            tmp_path = None
         except Exception as e:
             print(f"[MNDSync] Failed saving cookies: {e}")
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
 
     def get_credentials(self):
         env_u = os.environ.get('MND_USERNAME')
@@ -66,21 +136,28 @@ class MyNetDiarySyncService:
             return {'username': env_u, 'password': env_p}
         if os.path.exists(CREDS_FILE):
             try:
-                with open(CREDS_FILE, 'r') as f:
-                    return json.load(f)
+                with open(CREDS_FILE, 'r', encoding='utf-8') as f:
+                    creds = json.load(f)
+                if isinstance(creds, dict) and creds.get('username') and creds.get('password'):
+                    return {'username': creds['username'], 'password': creds['password']}
             except Exception:
                 pass
-        return {'username': os.environ.get('RENPHO_EMAIL', 'greg.putt@gmail.com'), 'password': os.environ.get('RENPHO_PASSWORD', 'He11o12345')}
+        return None
 
     def save_credentials(self, username, password):
         creds = {
             'username': username,
             'password': password,
-            'updated_at': datetime.now().isoformat()
+            'updated_at': uk_now().isoformat()
         }
         try:
-            with open(CREDS_FILE, 'w') as f:
+            os.makedirs(MND_DIR, exist_ok=True)
+            with open(CREDS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(creds, f, indent=2)
+            try:
+                os.chmod(CREDS_FILE, 0o600)
+            except OSError:
+                pass
         except Exception:
             pass
 
@@ -444,16 +521,14 @@ class MyNetDiarySyncService:
             except Exception as e:
                 print(f"[MNDSync] Warning loading history cache: {e}")
 
-        if os.path.exists(LIVE_STATE_PATH):
-            try:
-                with open(LIVE_STATE_PATH, 'r', encoding='utf-8') as f:
-                    ls = json.load(f)
-                hist_days = (ls.get('mnd_history') or {}).get('days') or []
-                for d in hist_days:
-                    if isinstance(d, dict) and d.get('date') and d['date'] not in cache and (d.get('calories') or 0) > 0:
-                        cache[d['date']] = d
-            except Exception:
-                pass
+        try:
+            ls = state_store.load_live_state(LIVE_STATE_PATH)
+            hist_days = (ls.get('mnd_history') or {}).get('days') or []
+            for d in hist_days:
+                if isinstance(d, dict) and d.get('date') and d['date'] not in cache and (d.get('calories') or 0) > 0:
+                    cache[d['date']] = d
+        except Exception:
+            pass
         return cache
 
     def _save_history_cache(self, cache):
@@ -543,11 +618,18 @@ class MyNetDiarySyncService:
             if d_str in skip_set:
                 continue
             cached_day = cache.get(d_str)
+            cached_items = cached_day.get('items') if isinstance(cached_day, dict) else None
+            has_zeroed_items = (
+                isinstance(cached_items, list)
+                and len(cached_items) > 0
+                and all(isinstance(it, dict) and (it.get('cals') or 0) == 0 for it in cached_items)
+            )
             is_past_cached = (
                 d_str < today_str
                 and d_str != yesterday_str
                 and isinstance(cached_day, dict)
                 and (cached_day.get('calories') or 0) > 0
+                and not has_zeroed_items
             )
             if is_past_cached:
                 continue
@@ -607,7 +689,7 @@ class MyNetDiarySyncService:
         except Exception as e:
             return {'success': False, 'error': f'Request failed: {str(e)}'}
 
-        if data.get('needLogon') or not data:
+        if not data or (isinstance(data, dict) and data.get('needLogon')):
             authed, err = self.ensure_authenticated()
             if not authed:
                 return {'success': False, 'requires_auth': True, 'error': err}
@@ -616,6 +698,8 @@ class MyNetDiarySyncService:
                 data = resp.json()
             except Exception as e:
                 return {'success': False, 'error': f'Request failed after relogin: {str(e)}'}
+            if not data or (isinstance(data, dict) and data.get('needLogon')):
+                return {'success': False, 'requires_auth': True, 'error': 'MyNetDiary session still requires login after re-authentication'}
 
         self._save_cookies()
 
@@ -652,7 +736,30 @@ class MyNetDiarySyncService:
             cache = self._load_history_cache()
             cache[target_date_str] = self._build_day_summary(target_date_str, totals, meals)
             self._save_history_cache(cache)
-            history_summary = self.fetch_multi_day_history(target_date_str, days=10, skip_refresh_dates={target_date_str})
+
+            # Build immediate history summary from cache without blocking the HTTP response
+            try:
+                end_dt = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+            except Exception:
+                end_dt = uk_now().date()
+            window_dates = [
+                (end_dt - timedelta(days=offset)).isoformat()
+                for offset in range(9, -1, -1)
+            ]
+            logged_days = [
+                cache[d_str]
+                for d_str in window_dates
+                if isinstance(cache.get(d_str), dict) and (cache[d_str].get('calories') or 0) > 0
+            ]
+            history_summary = {
+                "window_days": len(logged_days),
+                "start_date": logged_days[0]["date"] if logged_days else target_date_str,
+                "end_date": target_date_str,
+                "days": logged_days,
+                "averages_10d": self._compute_history_averages(logged_days),
+                "averages_7d": self._compute_history_averages(logged_days[-7:]),
+            }
+            self._schedule_history_backfill(target_date_str, days=10)
         except Exception as e:
             print(f"[MNDSync] Warning building multi-day history: {e}")
 
@@ -669,6 +776,32 @@ class MyNetDiarySyncService:
             'history': history_summary,
             'live_state': state
         }
+
+    def _schedule_history_backfill(self, target_date_str, days=10):
+        lock = getattr(self, '_history_backfill_lock', None)
+        if lock is None:
+            lock = threading.Lock()
+            self._history_backfill_lock = lock
+        if not lock.acquire(blocking=False):
+            return
+
+        def _worker():
+            try:
+                summary = self.fetch_multi_day_history(
+                    target_date_str, days=days, skip_refresh_dates={target_date_str}
+                )
+                if summary:
+                    with state_store.state_lock(LIVE_STATE_PATH):
+                        st = state_store.load_live_state(LIVE_STATE_PATH, raise_on_corrupt=True)
+                        st.setdefault('garmin', {})['mnd_history'] = summary
+                        state_store.save_live_state(st, LIVE_STATE_PATH)
+            except Exception as exc:
+                print(f"[MNDSync] Background history backfill warning: {exc}")
+            finally:
+                lock.release()
+
+        t = threading.Thread(target=_worker, name="mnd-history-backfill", daemon=True)
+        t.start()
 
     def _parse_mnd_response(self, meals_data, analysis_data):
         totals = {
@@ -741,24 +874,24 @@ class MyNetDiarySyncService:
             for item in entries:
                 if not isinstance(item, dict):
                     continue
-                label = item.get('foodLabel', {})
+                label = item.get('foodLabel') or {}
+                item_vals = item.get('values') or {}
                 name = label.get('cleanFoodName') or label.get('foodName') or item.get('inputString') or item.get('name', 'Food Item')
-                cals = int(round(float(item.get('calories', 0) or 0)))
+                cals = int(round(float(item.get('calories') or 0)))
 
-                p_val = label.get('protein', {}).get('values', {}).get('rawValue') or item.get('values', {}).get('203') or 0
-                p = int(round(float(p_val)))
+                def _safe_nut(label_key, val_code):
+                    node = label.get(label_key)
+                    vals = node.get('values') if isinstance(node, dict) else None
+                    raw = vals.get('rawValue') if isinstance(vals, dict) else None
+                    if raw is not None:
+                        return raw
+                    return item_vals.get(val_code) or 0
 
-                c_val = label.get('totalCarbs', {}).get('values', {}).get('rawValue') or item.get('values', {}).get('205') or 0
-                c = int(round(float(c_val)))
-
-                f_val = label.get('totalFat', {}).get('values', {}).get('rawValue') or item.get('values', {}).get('204') or 0
-                f = int(round(float(f_val)))
-
-                fib_val = label.get('fiber', {}).get('values', {}).get('rawValue') or item.get('values', {}).get('291') or 0
-                totals['fiber'] += int(round(float(fib_val)))
-
-                sod_val = label.get('sodium', {}).get('values', {}).get('rawValue') or item.get('values', {}).get('307') or 0
-                totals['sodium'] += int(round(float(sod_val)))
+                p = int(round(float(_safe_nut('protein', '203') or 0)))
+                c = int(round(float(_safe_nut('totalCarbs', '205') or 0)))
+                f = int(round(float(_safe_nut('totalFat', '204') or 0)))
+                totals['fiber'] += int(round(float(_safe_nut('fiber', '291') or 0)))
+                totals['sodium'] += int(round(float(_safe_nut('sodium', '307') or 0)))
 
                 sugar_g = _get_nut(label, "sugars", "sugar", "totalSugars", "269")
                 if sugar_g == 0.0 and isinstance(item.get('values'), dict):
@@ -815,13 +948,18 @@ class MyNetDiarySyncService:
         return totals, meals
 
     def _update_live_state(self, totals, meals, weight_info=None, garmin_bridge=None, target_date_str=None, history_summary=None):
-        state = {}
-        if os.path.exists(LIVE_STATE_PATH):
-            try:
-                with open(LIVE_STATE_PATH, 'r', encoding='utf-8') as f:
-                    state = json.load(f)
-            except Exception:
-                state = {}
+        with state_store.state_lock(LIVE_STATE_PATH):
+            return self._update_live_state_locked(
+                totals,
+                meals,
+                weight_info=weight_info,
+                garmin_bridge=garmin_bridge,
+                target_date_str=target_date_str,
+                history_summary=history_summary,
+            )
+
+    def _update_live_state_locked(self, totals, meals, weight_info=None, garmin_bridge=None, target_date_str=None, history_summary=None):
+        state = state_store.load_live_state(LIVE_STATE_PATH, raise_on_corrupt=True)
 
         if target_date_str:
             state['date'] = target_date_str
@@ -970,6 +1108,15 @@ class MyNetDiarySyncService:
                     merged_recent.sort(key=lambda x: str(x.get('date', '')), reverse=True)
                     garmin_state['recent_activities'] = merged_recent
 
+        today_str = target_date_str or uk_today_str()
+        db_water_l = 0.0
+        if db is not None:
+            try:
+                db_water_l = round(db.get_hydration_total(today_str) / 1000.0, 2)
+            except Exception:
+                db_water_l = 0.0
+        merged_water_l = round(max(float(totals.get('water') or 0.0), db_water_l), 2)
+
         mnd_payload = {
             'calories': totals['calories'],
             'protein_g': totals['protein'],
@@ -977,7 +1124,7 @@ class MyNetDiarySyncService:
             'fat_g': totals['fat'],
             'fiber_g': totals.get('fiber', 0),
             'sodium_mg': totals.get('sodium', 0),
-            'water_l': totals.get('water', 0.0),
+            'water_l': merged_water_l,
             'sugar_g': totals.get('sugar_g', 0.0),
             'sat_fat_g': totals.get('sat_fat_g', 0.0),
             'last_pulled': uk_now().isoformat(),
@@ -1005,7 +1152,7 @@ class MyNetDiarySyncService:
             target_dt = datetime.strptime(today_str, '%Y-%m-%d')
             d_num = str(target_dt.day)
             b_month = target_dt.strftime('%b')  # e.g. "Nov"
-            target_day_month_regex = rf'(?:{d_num}\s+{b_month}|{b_month}\s+{d_num})'
+            target_day_month_regex = rf'\b(?:{d_num}\s+{b_month}|{b_month}\s+{d_num})\b'
         except Exception:
             target_day_month_regex = r'$^'
 
@@ -1032,8 +1179,19 @@ class MyNetDiarySyncService:
                     pass
             if kg is None:
                 try:
-                    lbs = float(raw_w)
-                    kg = round(lbs * 0.45359237, 2)
+                    num_w = float(raw_w)
+                    unit_hint = str(
+                        weight_info.get('weightUnit')
+                        or weight_info.get('unit')
+                        or ''
+                    ).lower()
+                    is_imperial = (
+                        'lb' in unit_hint
+                        or 'lb' in last_weigh_in_stmt
+                        or 'lb' in expl.lower()
+                        or num_w > 140.0
+                    )
+                    kg = round(num_w * 0.45359237, 2) if is_imperial else round(num_w, 2)
                 except Exception:
                     kg = 97.70
 
@@ -1075,40 +1233,27 @@ class MyNetDiarySyncService:
         nutrition['remaining_protein_g'] = nutrition['protein_remaining']
         nutrition['protein_achieved_pct'] = round((totals['protein'] / 200.0) * 100, 1)
 
-        with open(LIVE_STATE_PATH, 'w', encoding='utf-8') as f:
-            json.dump(state, f, indent=2)
-
-        backend_state_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'live_state.json')
-        if backend_state_path != LIVE_STATE_PATH:
-            try:
-                with open(backend_state_path, 'w', encoding='utf-8') as f:
-                    json.dump(state, f, indent=2)
-            except Exception:
-                pass
-
-        try:
-            if ARTIFACT_LIVE_STATE_PATH != LIVE_STATE_PATH:
-                with open(ARTIFACT_LIVE_STATE_PATH, 'w', encoding='utf-8') as f:
-                    json.dump(state, f, indent=2)
-        except Exception:
-            pass
-
-        try:
-            perm_dir = '/shared/user/.gemini/pulse_backend'
-            os.makedirs(perm_dir, exist_ok=True)
-            with open(os.path.join(perm_dir, 'live_state.json'), 'w', encoding='utf-8') as f:
-                json.dump(state, f, indent=2)
-        except Exception:
-            pass
+        mirrors = []
+        if ARTIFACT_LIVE_STATE_PATH and ARTIFACT_LIVE_STATE_PATH != LIVE_STATE_PATH:
+            mirrors.append(ARTIFACT_LIVE_STATE_PATH)
+        state_store.save_live_state(state, LIVE_STATE_PATH, mirror_paths=mirrors)
 
         return state
 
     def get_status(self):
         creds = self.get_credentials()
         has_cookies = os.path.exists(COOKIES_FILE)
+        masked_user = None
+        if creds and creds.get('username'):
+            raw_u = str(creds['username'])
+            if '@' in raw_u:
+                local, domain = raw_u.split('@', 1)
+                masked_user = f"{local[:1]}***@{domain}" if local else f"***@{domain}"
+            else:
+                masked_user = f"{raw_u[:1]}***" if raw_u else None
         return {
             'configured': creds is not None,
-            'username': creds.get('username') if creds else None,
+            'username': masked_user,
             'has_cached_session': has_cookies,
             'last_updated': creds.get('updated_at') if creds else None
         }

@@ -1115,9 +1115,9 @@
     .set-rows-container {
       display: flex;
       flex-direction: column;
-      gap: 3px;
-      max-height: 125px;
-      overflow-y: auto;
+      gap: 4px;
+      max-height: none;
+      overflow-y: visible;
     }
     .set-log-row {
       background: var(--surface-elevated);

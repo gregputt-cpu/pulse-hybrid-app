@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="./css/styles.css?v=5.32">
 </head>
 <body>
 
@@ -113,7 +113,7 @@
             TRAINING READINESS
           </div>
 
-          <div style="position:relative; width:158px; height:158px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, rgba(0, 240, 255, 0.14) 0%, transparent 65%); border-radius:50%;">
+          <div onclick="openReadinessOverridePrompt()" title="Tap to override Training Readiness" style="cursor:pointer; position:relative; width:158px; height:158px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, rgba(0, 240, 255, 0.14) 0%, transparent 65%); border-radius:50%;">
             <svg viewBox="0 0 160 160" style="width:100%; height:100%; transform:rotate(-90deg);">
               <defs>
                 <linearGradient id="readinessGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -127,11 +127,11 @@
               <!-- Subtle tick marks indicator / glow -->
               <circle cx="80" cy="80" r="76" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2, 6" />
               <!-- Progress Arc (88% = circumference 427.26, offset = 51.27) -->
-              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="85.5" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
+              <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="136.7" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
             </svg>
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">80</div>
-              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">High Readiness</div>
+              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">68</div>
+              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Moderate Readiness</div>
             </div>
           </div>
         </div>
@@ -140,7 +140,7 @@
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
           
           <!-- SLEEP GAUGE (Cyan Accent) -->
-          <div class="glass-metric-col-cyan" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
+          <div class="glass-metric-col-cyan" onclick="openSleepOverridePrompt()" title="Tap to override Sleep Score" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
                 <defs>
@@ -151,18 +151,18 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="28.3" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
+                <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="37.7" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">82</span>
+                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">76</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Sleep</div>
-            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 20m</div>
+            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 12m</div>
           </div>
 
           <!-- BODY BATTERY GAUGE (Indigo Accent) -->
-          <div class="glass-metric-col-indigo" style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
+          <div class="glass-metric-col-indigo" onclick="openBodyBatteryOverridePrompt()" title="Tap to override Body Battery" style="cursor:pointer; display:flex; flex-direction:column; align-items:center; text-align:center; padding:12px 6px;">
             <div style="position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center;">
               <svg viewBox="0 0 60 60" style="width:100%; height:100%; transform:rotate(-90deg);">
                 <defs>
@@ -173,14 +173,14 @@
                   </linearGradient>
                 </defs>
                 <circle cx="30" cy="30" r="25" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4.5" />
-                <circle id="vitalBatteryRing" cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="44.0" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
+                <circle id="vitalBatteryRing" cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="89.5" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">72%</span>
+                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">43%</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Body Battery</div>
-            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Charged</div>
+            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Moderate</div>
           </div>
 
           <!-- RESTING HEART RATE GAUGE (Coral Accent) -->
@@ -211,13 +211,16 @@
         <div id="todayBiometricSparklinesCard" class="card" style="padding:12px 14px;"></div>
 
         <!-- LIVE SCALE & BODY COMPOSITION (PULLED DIRECTLY FROM RENPHO CLOUD) -->
-        <div class="card" style="padding:14px 16px;">
+        <div class="card" style="padding:14px 16px; cursor:pointer;" onclick="openWeightModal()" title="Tap to log a manual weigh-in">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 6px rgba(0,229,255,0.6);"></span>
               <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">RENPHO SMART SCALE DIRECT</span>
             </div>
-            <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Today • 06:02</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Today • 06:02</span>
+              <span style="font-size:10px; font-weight:700; color:var(--cyan); background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.25); border-radius:6px; padding:1px 6px;">✎ Log</span>
+            </div>
           </div>
 
           <!-- Dual Main Value Columns -->
@@ -330,7 +333,7 @@
         </div>
 
         <!-- VIEW A: PRESCRIBED EXERCISE PLAYER -->
-        <div id="trainViewPrescribed" style="min-height:calc(100% - 34px); display:flex; flex-direction:column; justify-content:space-between;">
+        <div id="trainViewPrescribed" style="min-height:calc(100% - 34px); display:flex; flex-direction:column; justify-content:flex-start; gap:6px;">
           
           <!-- EQUIPMENT STATUS & GEAR CUSTOMIZER -->
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); padding:4px 8px; border-radius:7px; font-size:11px;">
@@ -343,10 +346,10 @@
 
           <!-- ARCHETYPE QUICK SWITCHER -->
           <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:3px; margin-bottom:6px;">
-            <button id="btnArchetype_option_a" onclick="loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10px; padding:6px 1px; text-align:center;">Option A (BB)</button>
-            <button id="btnArchetype_option_kb" onclick="loadDailyArchetype('option_kb')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option KB</button>
-            <button id="btnArchetype_option_b" onclick="loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option B (Work)</button>
-            <button id="btnArchetype_option_c" onclick="loadDailyArchetype('option_c')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option C (Flush)</button>
+            <button id="btnArchetype_option_a" onclick="window._userManualArchetype = true; loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10px; padding:6px 1px; text-align:center;">Option A (BB)</button>
+            <button id="btnArchetype_option_kb" onclick="window._userManualArchetype = true; loadDailyArchetype('option_kb')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option KB</button>
+            <button id="btnArchetype_option_b" onclick="window._userManualArchetype = true; loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option B (Work)</button>
+            <button id="btnArchetype_option_c" onclick="window._userManualArchetype = true; loadDailyArchetype('option_c')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option C (Flush)</button>
           </div>
 
           <!-- KB SUB-MODE SWITCHER (Shown when Option KB is active) -->
@@ -368,6 +371,11 @@
             </div>
           </div>
 
+          <div id="exerciseStepperHeader" style="display:none; font-size:10px; font-weight:800; color:var(--primary); letter-spacing:0.05em; text-transform:uppercase; margin:4px 0 2px; padding:0 2px;">
+            🎯 Pick 1 Standalone Session Below:
+          </div>
+          <div id="exerciseStepperPills" style="display:flex; gap:5px; overflow-x:auto; padding:2px 0 6px; scrollbar-width:none;"></div>
+
           <div class="exercise-box">
             <div class="ex-name-row">
               <div class="ex-name" id="exName">Barbell Romanian Deadlift (RDL)</div>
@@ -379,7 +387,7 @@
               <span style="color:var(--lime);font-weight:800;" id="exRestTarget">Rest: 90s</span>
             </div>
 
-            <div style="display:flex; gap:8px; margin:8px 0;">
+            <div id="exActionBtnsRow" style="display:flex; gap:8px; margin:8px 0;">
               <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:5px;">⇄ Swap Exercise</button>
               <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:5px;">✎ Edit Weight / Reps</button>
             </div>
@@ -646,6 +654,9 @@
           </div>
         </div>
 
+        <!-- v5.23: Nutritional Quality, Micronutrient & Food Gap Audit -->
+        <div id="nutritionQualityAuditCard" style="margin-bottom: 18px;"></div>
+
         <!-- 4. CHRONOLOGICAL MEAL STREAM (CLICK TO EXPAND / COLLAPSE) -->
         <div class="card" style="padding:12px 14px; border-radius:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -669,7 +680,7 @@
               <span>Hydration & Micronutrients</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:11px; color:var(--primary); font-weight:700;">2.4L Water • 32g Fiber</span>
+              <span id="fuelHydrationSummary" style="font-size:11px; color:var(--primary); font-weight:700;">0.0L Water • 0g Fiber</span>
               <span class="accordion-chevron">▼</span>
             </div>
           </summary>
@@ -1603,7 +1614,7 @@
           <div id="garminAuthBox" style="display:flex; flex-direction:column; gap:5px;">
             <div>
               <label style="font-size:11.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Garmin Connect Account</label>
-              <input type="email" id="garminEmailInput" value="greg.putt@gmail.com" style="width:100%; height:32px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:#fff; font-size:13.5px; padding:0 8px;">
+              <input type="email" id="garminEmailInput" placeholder="your@email.com" style="width:100%; height:32px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:#fff; font-size:13.5px; padding:0 8px;">
             </div>
             <div>
               <label style="font-size:11.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Password (Only needed if session expired)</label>
@@ -1614,19 +1625,11 @@
           <!-- MFA CHALLENGE BOX (Hidden by default) -->
           <div id="garminMfaBox" style="display:none; flex-direction:column; gap:5px; background:rgba(0,240,255,0.08); border:1px solid var(--cyan); padding:8px; border-radius:6px;">
             <div style="font-size:12.5px; font-weight:800; color:var(--cyan);">📧 6-Digit Verification Code Sent to Email</div>
-            <div style="font-size:11.5px; color:var(--text-muted);">Enter the verification code Garmin just emailed to greg.putt@gmail.com:</div>
+            <div style="font-size:11.5px; color:var(--text-muted);">Enter the verification code Garmin just emailed to your account:</div>
             <input type="text" id="garminMfaInput" placeholder="e.g. 123456" maxlength="6" style="width:100%; height:34px; background:var(--surface); border:1px solid var(--cyan); border-radius:6px; color:var(--cyan); font-size:14px; font-weight:900; letter-spacing:4px; text-align:center;">
             <button class="btn-action-primary" style="height:32px; font-size:13px;" onclick="submitGarminMfaCode()">
               ✓ Verify & Complete Sync
             </button>
-          </div>
-
-          <!-- PERMANENT TOKEN EXPORT BOX (Hidden by default, shown after sync / MFA) -->
-          <div id="garminTokenExportBox" style="display:none; flex-direction:column; gap:4px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:8px; margin-top:4px;">
-            <button class="btn-action-primary" style="height:32px; font-size:12px; background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#10b981; font-weight:800;" onclick="copyGarminPermanentToken()">
-              📋 Copy Permanent GARMIN_TOKENS_JSON
-            </button>
-            <div style="font-size:11px; color:var(--text-muted); text-align:center;">Paste this into Railway's GARMIN_TOKENS_JSON env var once to stay logged in across all future deploys.</div>
           </div>
 
           <button class="btn-action-primary" id="btnTriggerGarminSync" style="height:36px; margin-top:4px;" onclick="triggerGarminCloudSync()">
@@ -1883,7 +1886,7 @@
         <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
           <div>
             <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:2px; font-weight:700;">MyNetDiary Email or Username:</label>
-            <input type="text" id="mndLoginUser" placeholder="e.g. greg@example.com" value="greg.putt@gmail.com" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:13.5px; padding:6px 8px; border-radius:6px; outline:none;">
+            <input type="text" id="mndLoginUser" placeholder="your@email.com" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:13.5px; padding:6px 8px; border-radius:6px; outline:none;">
           </div>
           <div>
             <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:2px; font-weight:700;">Password:</label>
@@ -2089,8 +2092,8 @@
           </div>
 
           <div>
-            <label style="font-size:11px; color:var(--lime); display:block; margin-bottom:2px; font-weight:700;">Target Reps per Set:</label>
-            <input type="number" id="editLoadReps" placeholder="8" min="1" max="100" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
+            <label style="font-size:11px; color:var(--lime); display:block; margin-bottom:2px; font-weight:700;">Target Reps / Duration (e.g. 8, 30s, Max):</label>
+            <input type="text" id="editLoadReps" placeholder="8 or 30s" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:700; padding:6px 8px; border-radius:6px; outline:none; box-sizing:border-box;">
           </div>
 
           <div style="display:flex; gap:6px; margin-top:4px;">
@@ -2122,10 +2125,10 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js"></script>
-  <script src="./js/workout-engine.js"></script>
-  <script src="./js/charts.js"></script>
-  <script src="./js/fuel-engine.js"></script>
-  <script src="./js/telemetry.js"></script>
+  <script src="./js/state.js?v=5.32"></script>
+  <script src="./js/workout-engine.js?v=5.32"></script>
+  <script src="./js/charts.js?v=5.32"></script>
+  <script src="./js/fuel-engine.js?v=5.32"></script>
+  <script src="./js/telemetry.js?v=5.32"></script>
 </body>
 </html>
