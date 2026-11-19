@@ -3839,7 +3839,7 @@ function generateWorkoutFromGearAndGoal() {
         if (first.body_fat_pct && last.body_fat_pct) {
           bfDeltaPct = Number((last.body_fat_pct - first.body_fat_pct).toFixed(2));
         }
-        if (tsDiffDays >= 10 && renphoHist.length >= 4 && (weightDeltaKg >= -0.2 && bfDeltaPct >= -0.2)) {
+        if (tsDiffDays >= 10 && hist.length >= 4 && (weightDeltaKg >= -0.2 && bfDeltaPct >= -0.2)) {
           isPlateaued = true;
         }
       }
