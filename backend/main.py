@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from garminconnect import GarminConnectAuthenticationError
 from pydantic import BaseModel
 
 from benefits_engine import PhysiologicalBenefitsEngine
@@ -292,7 +293,11 @@ def sync_garmin(payload: Optional[DatePayload] = None):
         try:
             garmin_service.sync_today(target_date, force=True)
         except Exception as gex:
-            if payload and payload.email and payload.password:
+            gex_str = str(gex)
+            is_auth_exc = isinstance(gex, GarminConnectAuthenticationError) or any(
+                term in gex_str for term in ("401", "Unauthorized", "invalid_grant", "No valid Garmin token", "OAuth")
+            )
+            if is_auth_exc and payload and payload.email and payload.password:
                 login_res = garmin_service.login_with_credentials(payload.email, payload.password)
                 if login_res.get("needs_mfa"):
                     return login_res
@@ -304,7 +309,7 @@ def sync_garmin(payload: Optional[DatePayload] = None):
                     garmin_sync_error = str(gex2)
                     logger.warning(f"Direct Garmin OAuth sync notice after login (falling back to MND Garmin bridge): {gex2}")
             else:
-                garmin_sync_error = str(gex)
+                garmin_sync_error = gex_str
                 logger.warning(f"Direct Garmin OAuth sync notice (falling back to MND Garmin bridge): {gex}")
         try:
             mnd_service.fetch_today_data(target_date)

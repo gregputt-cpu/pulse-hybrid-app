@@ -801,8 +801,8 @@ class GarminSyncService:
                 garmin_state['hrv_status'] = hrv_status
             if hrv_last_night is not None:
                 garmin_state['hrv_last_night'] = hrv_last_night
-            if stress_avg is not None:
-                garmin_state['stress_avg'] = stress_avg
+            if avg_stress_level is not None:
+                garmin_state['stress_avg'] = avg_stress_level
 
             existing_activities = garmin_state.get('recent_activities', [])
             existing_map = {str(a.get('id')): a for a in existing_activities}
