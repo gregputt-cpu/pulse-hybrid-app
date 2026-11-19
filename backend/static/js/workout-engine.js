@@ -1252,6 +1252,10 @@
         getBaseWeight: () => "KB / Rope",
         getBaseReps: () => "10m EMOM",
         rest: "EMOM",
+        flowSteps: [
+          '12 KB Swings (Odd Min)',
+          '10 Push-Ups or 8 Goblet Squats (Even Min)'
+        ],
         cue: "Odd Mins: 15 KB Swings (or 15 Air Squats) • Even Mins: 45s Speed Rope (or High Knees). Rest remainder of each minute.",
         rationale: "Every-Minute-On-the-Minute pacing builds aerobic power and repeatable work capacity while capping systemic CNS fatigue.",
         setsCount: 10,
@@ -1268,6 +1272,12 @@
         getBaseWeight: () => "Body / KB",
         getBaseReps: () => "10:00 AMRAP",
         rest: "Continuous",
+        flowSteps: [
+          '10 KB Swings',
+          '8 Goblet Squats',
+          '6 Push-Ups',
+          '10m Bear Crawl / 20s Plank'
+        ],
         cue: "Cycle cleanly: 10 KB Swings + 10 Push-Ups + 40 Speed Rope Skips. Log each completed round.",
         rationale: "Continuous density benchmark that tracks total rounds completed over time for measurable metabolic progression.",
         setsCount: 1,
@@ -1301,6 +1311,13 @@
         getBaseWeight: () => "KB / Body",
         getBaseReps: () => "3 RFT",
         rest: "For Time",
+        flowSteps: [
+          '30 KB Swings',
+          '25 Goblet Squats',
+          '20 Push-Ups',
+          '15 1H KB Rows (Each Side)',
+          '30 KB Swings'
+        ],
         cue: "3 Rounds For Time (12m cap): 20 KB Swings + 15 Goblet Squats + 60s Speed Rope.",
         rationale: "High-output threshold test measuring total completion time as an objective conditioning benchmark.",
         setsCount: 1,
@@ -4618,6 +4635,7 @@ function viewCompletedWorkoutBreakdown() {
         intermissionMode: savedIntermission,
         inIntermission: false,
         flowStepIdx: 0,
+        activeFlowStepIdx: 0,
         running: false,
         intervalId: null
       };
@@ -4629,6 +4647,82 @@ function viewCompletedWorkoutBreakdown() {
       const r = s % 60;
       return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
     }
+
+    function parseFlowStepString(rawStep) {
+      const str = String(rawStep || '').trim();
+      const match = str.match(/^(\d+(?:-\d+)+|\d+s|\d+m|\d+)\s+(.+)$/i);
+      if (match) {
+        const rawQty = match[1];
+        let restName = match[2].trim();
+        let repsBadge = '';
+        let numericReps = 0;
+
+        if (rawQty.includes('-')) {
+          const parts = rawQty.split('-').map(n => parseInt(n, 10)).filter(n => !isNaN(n));
+          repsBadge = parts.length >= 2 ? `${parts[0]}→${parts[parts.length - 1]} LADDER` : `${rawQty} REPS`;
+          numericReps = parts.reduce((acc, v) => acc + v, 0);
+        } else if (/s$/i.test(rawQty)) {
+          repsBadge = rawQty.toUpperCase();
+        } else if (/m$/i.test(rawQty)) {
+          repsBadge = rawQty;
+        } else {
+          repsBadge = `× ${rawQty}`;
+          numericReps = parseInt(rawQty, 10) || 0;
+        }
+
+        let sideBadge = '';
+        const sideMatch = restName.match(/\s*\((L|R|Left|Right|Each Side|Odd Min|Even Min)\)\s*$/i);
+        if (sideMatch) {
+          const token = sideMatch[1].toUpperCase();
+          if (token === 'L' || token === 'LEFT') sideBadge = 'LEFT';
+          else if (token === 'R' || token === 'RIGHT') sideBadge = 'RIGHT';
+          else sideBadge = token;
+          restName = restName.slice(0, sideMatch.index).trim();
+        }
+
+        return { repsBadge, moveName: restName, sideBadge, numericReps, rawStep: str };
+      }
+
+      return { repsBadge: 'FLOW', moveName: str, sideBadge: '', numericReps: 0, rawStep: str };
+    }
+    window.parseFlowStepString = parseFlowStepString;
+
+    function setInlineCondFlowStep(exId, idx) {
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      const flowSteps = (ex && Array.isArray(ex.flowSteps)) ? ex.flowSteps : [];
+      const totalSteps = flowSteps.length || 1;
+      const nextIdx = ((idx % totalSteps) + totalSteps) % totalSteps;
+      inlineTimerState.activeFlowStepIdx = nextIdx;
+      inlineTimerState.flowStepIdx = nextIdx;
+      if (ex) renderCurrentExercise();
+      if (flowSteps[nextIdx]) {
+        const parsed = parseFlowStepString(flowSteps[nextIdx]);
+        speak(`Move ${nextIdx + 1}: ${flowSteps[nextIdx].replace(/\(L\)/gi, 'Left').replace(/\(R\)/gi, 'Right')}`);
+      }
+      beep(580, 0.04);
+    }
+    window.setInlineCondFlowStep = setInlineCondFlowStep;
+
+    function advanceInlineCondFlowStep(exId, delta) {
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      const flowSteps = (ex && Array.isArray(ex.flowSteps)) ? ex.flowSteps : [];
+      const totalSteps = flowSteps.length;
+      if (!totalSteps) return;
+      const cur = inlineTimerState.activeFlowStepIdx !== undefined
+        ? inlineTimerState.activeFlowStepIdx
+        : (inlineTimerState.flowStepIdx || 0);
+      const nextIdx = ((cur + (delta || 1)) % totalSteps + totalSteps) % totalSteps;
+      inlineTimerState.activeFlowStepIdx = nextIdx;
+      inlineTimerState.flowStepIdx = nextIdx;
+      renderCurrentExercise();
+      const rawStep = flowSteps[nextIdx];
+      if (rawStep) {
+        speak(`Move ${nextIdx + 1}: ${rawStep.replace(/\(L\)/gi, 'Left').replace(/\(R\)/gi, 'Right')}`);
+      }
+      if (typeof pulseHaptic === 'function') pulseHaptic([15]);
+      beep(660, 0.05);
+    }
+    window.advanceInlineCondFlowStep = advanceInlineCondFlowStep;
 
     function renderInlineConditioningPlayer(ex, fmt) {
       const container = document.getElementById('setRows');
@@ -4705,9 +4799,105 @@ function viewCompletedWorkoutBreakdown() {
         }).join('');
       }
 
+      // Build High-Visibility Flow Movement Chain & Live HUD (top of card)
+      const flowSteps = Array.isArray(ex.flowSteps) ? ex.flowSteps : [];
+      let flowBoardHtml = '';
+      if (flowSteps.length > 0) {
+        const parsedSteps = flowSteps.map(step => parseFlowStepString(step));
+        const rawActiveIdx = st.activeFlowStepIdx !== undefined ? st.activeFlowStepIdx : (st.flowStepIdx || 0);
+        const currIdx = ((rawActiveIdx % flowSteps.length) + flowSteps.length) % flowSteps.length;
+        const currParsed = parsedSteps[currIdx];
+        const nextIdx = (currIdx + 1) % flowSteps.length;
+        const nextParsed = parsedSteps[nextIdx];
+
+        const sumNumericReps = parsedSteps.reduce((acc, p) => acc + (p.numericReps || 0), 0);
+        const totalRepsRound = ex.repsPerRound || sumNumericReps;
+        const headerSummaryBadge = totalRepsRound > 0
+          ? `${flowSteps.length} Moves • ${totalRepsRound} reps / round`
+          : `${flowSteps.length} moves in chain`;
+
+        const renderSidePill = (sideBadge) => {
+          if (!sideBadge) return '';
+          const isLeft = sideBadge === 'LEFT';
+          const isRight = sideBadge === 'RIGHT';
+          const bg = isLeft ? 'rgba(245,158,11,0.18)' : (isRight ? 'rgba(0,229,255,0.18)' : 'rgba(168,85,247,0.18)');
+          const col = isLeft ? '#fbbf24' : (isRight ? '#38bdf8' : '#c084fc');
+          const bdr = isLeft ? 'rgba(245,158,11,0.45)' : (isRight ? 'rgba(0,229,255,0.45)' : 'rgba(168,85,247,0.45)');
+          return `<span style="font-size:10.5px; font-weight:900; padding:2px 7px; border-radius:5px; background:${bg}; border:1px solid ${bdr}; color:${col}; letter-spacing:0.04em;">${sideBadge}</span>`;
+        };
+
+        const ladderRowsHtml = parsedSteps.map((p, idx) => {
+          const isCurrent = idx === currIdx;
+          const isDone = idx < currIdx;
+          const isLast = idx === flowSteps.length - 1;
+          const stepNumBg = isCurrent
+            ? 'background:var(--teal, #00f5d4); color:#041318; border:1px solid var(--teal, #00f5d4); box-shadow:0 0 10px rgba(0,245,212,0.45);'
+            : (isDone
+              ? 'background:rgba(16,185,129,0.22); color:#34d399; border:1px solid rgba(16,185,129,0.45);'
+              : 'background:rgba(255,255,255,0.07); color:#94a3b8; border:1px solid rgba(255,255,255,0.14);');
+          const rowBg = isCurrent
+            ? 'background:linear-gradient(90deg, rgba(0,245,212,0.18) 0%, rgba(0,229,255,0.07) 100%); border:1.5px solid var(--teal, #00f5d4); box-shadow:0 0 14px rgba(0,245,212,0.16);'
+            : (isDone
+              ? 'background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.22);'
+              : 'background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1);');
+          const repPillStyle = isCurrent
+            ? 'background:rgba(0,245,212,0.22); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);'
+            : (isDone
+              ? 'background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#6ee7b7;'
+              : 'background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.28); color:#7dd3fc;');
+
+          return `
+            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; border-radius:9px; cursor:pointer; text-align:left; transition:all 0.15s ease; ${rowBg}">
+              <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                <span style="width:23px; height:23px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:900; font-family:'JetBrains Mono',monospace; flex-shrink:0; ${stepNumBg}">${isDone ? '✓' : (idx + 1)}</span>
+                <span style="font-size:14px; font-weight:800; color:#f8fafc; line-height:1.2; word-break:break-word;">${p.moveName}</span>
+                ${renderSidePill(p.sideBadge)}
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span style="font-size:13.5px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:4px 10px; border-radius:7px; white-space:nowrap; ${repPillStyle}">${p.repsBadge}</span>
+                <span style="font-size:11px; font-weight:800; color:${isLast ? '#38bdf8' : 'rgba(255,255,255,0.35)'};" title="${isLast ? 'Repeat Flow' : 'Flows into next move'}">${isLast ? '🔄' : '↓'}</span>
+              </div>
+            </button>
+          `;
+        }).join('');
+
+        flowBoardHtml = `
+          <div style="display:flex; flex-direction:column; gap:8px; background:rgba(3,12,20,0.75); border:1.5px solid rgba(0,245,212,0.38); border-radius:12px; padding:10px;">
+            <!-- A. 🐠 Goldfish Live Flow Spotlight Bar -->
+            <div style="background:linear-gradient(135deg, rgba(0,245,212,0.16) 0%, rgba(16,185,129,0.12) 100%); border:1.5px solid rgba(0,245,212,0.5); border-radius:10px; padding:10px 11px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:170px;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px;">
+                  <span style="font-size:10px; font-weight:900; letter-spacing:0.08em; color:var(--teal, #00f5d4); text-transform:uppercase;">🐠 CURRENT MOVE (${currIdx + 1}/${flowSteps.length})</span>
+                  <span style="font-size:10px; font-weight:700; color:#94a3b8;">• ${headerSummaryBadge}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="font-size:17px; font-weight:900; color:#ffffff; line-height:1.2;">${currParsed.moveName}</span>
+                  ${renderSidePill(currParsed.sideBadge)}
+                  <span style="font-size:16px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:4px 12px; border-radius:8px; background:rgba(0,245,212,0.18); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);">${currParsed.repsBadge}</span>
+                </div>
+                <div style="font-size:11.5px; font-weight:700; color:#cbd5e1; margin-top:5px;">
+                  <span style="color:#38bdf8; font-weight:800;">UP NEXT ➔</span> #${nextIdx + 1} ${nextParsed.moveName} ${nextParsed.sideBadge ? `(${nextParsed.sideBadge})` : ''} <strong style="color:var(--teal, #00f5d4);">(${nextParsed.repsBadge})</strong>
+                </div>
+              </div>
+              <button type="button" onclick="advanceInlineCondFlowStep('${ex.id}', 1)" style="padding:10px 14px; font-size:12px; font-weight:800; border-radius:10px; background:rgba(0,245,212,0.16); border:1px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4); cursor:pointer; white-space:nowrap; flex-shrink:0;">
+                Next Move ➔
+              </button>
+            </div>
+
+            <!-- B. High-Visibility Numbered Flow Movement Ladder -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0 2px;">
+              <span style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">📋 Full Movement Chain (Tap any move to jump)</span>
+              <span style="font-size:10px; font-weight:800; color:var(--teal, #00f5d4);">🔄 Repeat Flow</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+              ${ladderRowsHtml}
+            </div>
+          </div>
+        `;
+      }
+
       let kbFlowExtraHtml = '';
       if (st.format === 'kb_flow') {
-        const steps = Array.isArray(ex.flowSteps) ? ex.flowSteps : [];
         const bellKg = parseInt(String(ex.targetWeight || '20kg'), 10) || 20;
         const kbRepsRd = ex.kbRepsPerRound || 45;
         const totalRepsRd = ex.repsPerRound || kbRepsRd;
@@ -4717,11 +4907,6 @@ function viewCompletedWorkoutBreakdown() {
         const weightPills = [16, 20, 24, 32].map(w => {
           const active = bellKg === w;
           return `<button type="button" onclick="setKbFlowWeight('${w}kg')" style="padding:3px 8px; font-size:10px; font-weight:800; border-radius:5px; cursor:pointer; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.14)'}; background:${active ? 'var(--primary)' : 'rgba(255,255,255,0.04)'}; color:${active ? '#000' : 'var(--text-secondary)'};">${w}kg</button>`;
-        }).join('');
-
-        const stepsHtml = steps.map((s, idx) => {
-          const active = idx === (st.flowStepIdx || 0);
-          return `<button type="button" onclick="toggleKbFlowStep(${idx})" style="padding:4px 7px; font-size:10.5px; font-weight:700; border-radius:6px; cursor:pointer; text-align:left; border:1px solid ${active ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(0,229,255,0.16)' : 'rgba(255,255,255,0.03)'}; color:${active ? '#fff' : '#cbd5e1'};">${idx + 1}. ${s}</button>`;
         }).join('');
 
         const intermissionOpts = [
@@ -4754,11 +4939,6 @@ function viewCompletedWorkoutBreakdown() {
           </div>
 
           <div>
-            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Flow Sequence (${steps.length} moves • ${totalRepsRd} reps/rd • Tap step to mark spot)</div>
-            <div style="display:flex; flex-wrap:wrap; gap:4px;">${stepsHtml}</div>
-          </div>
-
-          <div>
             <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px;">Between-Round Intermission (Optional Bodyweight or Rest Only)</div>
             <div style="display:flex; flex-wrap:wrap; gap:4px;">${intermissionPills}</div>
           </div>
@@ -4772,7 +4952,7 @@ function viewCompletedWorkoutBreakdown() {
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
               <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
-              <button type="button" onclick="completeKbFlowRound()" style="padding:6px 12px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
+              <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:6px 12px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
             </div>
           </div>
         `;
@@ -4789,6 +4969,8 @@ function viewCompletedWorkoutBreakdown() {
             <span id="inlineTimerPhaseBadge" style="font-size:10.5px; font-weight:800; color:${phaseColor}; letter-spacing:0.04em; text-transform:uppercase;">${phaseLabel}</span>
             <span style="font-size:10px; color:var(--text-muted); font-weight:700;">${st.format.toUpperCase()} MODE</span>
           </div>
+
+          ${flowBoardHtml}
 
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
             <div id="inlineTimerDigits" style="font-size:38px; font-weight:800; font-family:var(--font-mono); color:#fff; letter-spacing:-0.03em; line-height:1;">${formatClockMMSS(st.secsLeft)}</div>
@@ -4811,7 +4993,7 @@ function viewCompletedWorkoutBreakdown() {
               <div style="display:flex; align-items:center; gap:8px;">
                 <button type="button" onclick="stepInlineRound(-1)" style="width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; font-weight:800; cursor:pointer;">−</button>
                 <strong style="font-size:14px; color:var(--primary); min-width:24px; text-align:center;">${st.amrapRounds}</strong>
-                <button type="button" onclick="stepInlineRound(1)" style="width:28px; height:28px; border-radius:6px; border:none; background:var(--primary); color:#000; font-weight:800; cursor:pointer;">+</button>
+                <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:5px 10px; border-radius:6px; border:none; background:var(--primary); color:#000; font-size:11px; font-weight:800; cursor:pointer;">+1 Round Done</button>
               </div>
             </div>
           ` : ''}
@@ -4847,30 +5029,36 @@ function viewCompletedWorkoutBreakdown() {
     window.setKbFlowIntermission = setKbFlowIntermission;
 
     function toggleKbFlowStep(idx) {
-      inlineTimerState.flowStepIdx = idx;
-      const ex = activeWorkoutPlan[currentExIdx];
-      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
-      beep(540, 0.03);
+      setInlineCondFlowStep(inlineTimerState.exId, idx);
     }
     window.toggleKbFlowStep = toggleKbFlowStep;
 
-    function completeKbFlowRound() {
+    function logInlineCondRound(exId) {
       inlineTimerState.amrapRounds = (inlineTimerState.amrapRounds || 0) + 1;
+      inlineTimerState.activeFlowStepIdx = 0;
       inlineTimerState.flowStepIdx = 0;
-      inlineTimerState.inIntermission = true;
-      const ex = activeWorkoutPlan[currentExIdx];
-      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
-      if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestTimer === 'function') {
-        restSecs = 60;
-        startRestTimer();
+      if (inlineTimerState.format === 'kb_flow') {
+        inlineTimerState.inIntermission = true;
+        if (inlineTimerState.intermissionMode === 'none_rest' && typeof startRestTimer === 'function') {
+          restSecs = 60;
+          startRestTimer();
+        }
       }
+      const ex = activeWorkoutPlan[currentExIdx] || getAllExercises().find(e => e.id === exId);
+      if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
       if (typeof pulseHaptic === 'function') pulseHaptic([20, 35, 20]);
       beep(880, 0.12);
+    }
+    window.logInlineCondRound = logInlineCondRound;
+
+    function completeKbFlowRound() {
+      logInlineCondRound(inlineTimerState.exId);
     }
     window.completeKbFlowRound = completeKbFlowRound;
 
     function finishKbFlowIntermission() {
       inlineTimerState.inIntermission = false;
+      inlineTimerState.activeFlowStepIdx = 0;
       inlineTimerState.flowStepIdx = 0;
       const ex = activeWorkoutPlan[currentExIdx];
       if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
@@ -4919,6 +5107,10 @@ function viewCompletedWorkoutBreakdown() {
 
     function stepInlineRound(delta) {
       inlineTimerState.amrapRounds = Math.max(0, inlineTimerState.amrapRounds + delta);
+      if (delta > 0) {
+        inlineTimerState.activeFlowStepIdx = 0;
+        inlineTimerState.flowStepIdx = 0;
+      }
       const ex = activeWorkoutPlan[currentExIdx];
       if (ex) renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
       beep(780, 0.05);
@@ -4930,10 +5122,11 @@ function viewCompletedWorkoutBreakdown() {
       if (!ex) return;
       inlineTimerState.currentRound = 1;
       inlineTimerState.elapsedSec = 0;
+      inlineTimerState.activeFlowStepIdx = 0;
+      inlineTimerState.flowStepIdx = 0;
       if (inlineTimerState.format === 'amrap' || inlineTimerState.format === 'kb_flow') {
         inlineTimerState.secsLeft = inlineTimerState.durationSec;
         inlineTimerState.inIntermission = false;
-        inlineTimerState.flowStepIdx = 0;
       } else if (inlineTimerState.format === 'for_time') {
         inlineTimerState.secsLeft = 0;
       } else {
@@ -5258,13 +5451,60 @@ function viewCompletedWorkoutBreakdown() {
       document.getElementById('movementFamilyTag').innerText = familyNames[ex.family] || "Functional";
 
       const fmt = getExerciseFormatConfig(ex);
+      const isFlowOrCond = Boolean(fmt && (fmt.isTimed || (fmt.format && fmt.format !== 'strength' && fmt.format !== 'standard_sets')));
       const wLabel = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
       document.getElementById('exTarget').innerText = fmt.isTimed
         ? `Prescribed: ${fmt.label}`
         : `Prescribed: ${ex.setsCount} Sets × ${ex.targetReps} Reps @ ${wLabel}`;
       document.getElementById('exRestTarget').innerText = fmt.isTimed ? `Format: ${fmt.format.toUpperCase()}` : `Rest: ${ex.rest}`;
-      document.getElementById('exCue').innerText = `Cue: ${ex.cue}`;
-      document.getElementById('exRationale').innerHTML = `<strong>Why Selected:</strong> ${ex.rationale || 'Selected for target biomechanical recruitment.'}`;
+
+      const cueEl = document.getElementById('exCue') || document.getElementById('exerciseCue');
+      const whyEl = document.getElementById('exRationale') || document.getElementById('exerciseWhy');
+      const actionRowEl = document.getElementById('exActionBtnsRow');
+      const whyText = ex.rationale || ex.why || 'Selected for target biomechanical recruitment.';
+      const isKbGrindsMode = (currentArchetypeKey === 'option_kb' && typeof getKbSubMode === 'function' && getKbSubMode() === 'grinds');
+      const kbQuickSwitchBanner = isKbGrindsMode ? `
+        <div style="margin-bottom:6px; padding:6px 9px; border-radius:8px; background:rgba(0,245,212,0.08); border:1px solid rgba(0,245,212,0.3); display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; font-size:11px; color:#cbd5e1;">
+          <span>Looking for a continuous KB Flow chain?</span>
+          <span style="display:inline-flex; gap:5px;">
+            <button type="button" onclick="setKbSubMode('flow_2h')" style="padding:3px 8px; font-size:10.5px; font-weight:800; border-radius:6px; border:1px solid var(--teal, #00f5d4); background:rgba(0,245,212,0.16); color:var(--teal, #00f5d4); cursor:pointer;">🌊 Switch to 2H Flow</button>
+            <button type="button" onclick="setKbSubMode('flow_1h')" style="padding:3px 8px; font-size:10.5px; font-weight:800; border-radius:6px; border:1px solid #38bdf8; background:rgba(56,189,248,0.16); color:#7dd3fc; cursor:pointer;">🔥 Switch to 1H Flow</button>
+          </span>
+        </div>
+      ` : '';
+
+      if (isFlowOrCond) {
+        if (cueEl) cueEl.style.display = 'none';
+        if (actionRowEl) actionRowEl.style.display = 'none';
+        if (whyEl) {
+          whyEl.innerHTML = `
+            ${kbQuickSwitchBanner}
+            <details style="margin:2px 0; cursor:pointer;">
+              <summary style="font-size:11px; font-weight:800; color:var(--text-secondary); list-style:none; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                <span>🐘 Flow Coaching Cue, Rationale &amp; Bell Options</span>
+                <span style="font-size:10px; color:var(--primary);">▼ Details</span>
+              </summary>
+              <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; gap:7px; font-size:11.5px; line-height:1.4;">
+                <div style="color:#e2e8f0;"><strong style="color:var(--primary);">Coaching Cue:</strong> ${ex.cue || ''}</div>
+                <div style="color:var(--text-secondary);"><strong>Why Selected:</strong> ${whyText}</div>
+                <div style="display:flex; gap:6px; margin-top:2px;">
+                  <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:7px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; flex:1;">⇄ Swap Flow</button>
+                  <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:7px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; flex:1;">✎ Edit Bell Weight</button>
+                </div>
+              </div>
+            </details>
+          `;
+        }
+      } else {
+        if (cueEl) {
+          cueEl.style.display = '';
+          cueEl.innerText = `Cue: ${ex.cue}`;
+        }
+        if (actionRowEl) actionRowEl.style.display = 'flex';
+        if (whyEl) {
+          whyEl.innerHTML = `${kbQuickSwitchBanner}<strong>Why Selected:</strong> ${whyText}`;
+        }
+      }
       document.getElementById('autoregBanner').classList.remove('active');
 
       const setRowsContainer = document.getElementById('setRows');
