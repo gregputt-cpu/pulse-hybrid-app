@@ -152,7 +152,6 @@
       display: flex;
       justify-content: center;
       align-items: stretch;
-      user-select: none;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -1133,6 +1132,10 @@
       border-color: rgba(0, 229, 255, 0.4);
       background: rgba(0, 229, 255, 0.08);
     }
+    .set-log-row.missed {
+      border-color: rgba(245, 158, 11, 0.55);
+      background: rgba(245, 158, 11, 0.1);
+    }
     .set-idx {
       font-weight: 800;
       color: var(--text-muted);
@@ -1756,6 +1759,9 @@
     }
     .modal-card {
       width: 100%;
+      max-height: 88vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       background: var(--surface);
       border: 1px solid var(--border-bright);
       border-radius: 15px;
@@ -2311,4 +2317,20 @@
   align-items: center;
   justify-content: center;
   animation: lubDubBeat 1.35s ease-in-out infinite;
+}
+
+/* Responsive Desktop Layout & Reduced-Motion Accessibility (MED-10) */
+@media (min-width: 900px) {
+  .app-screen {
+    max-width: 680px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

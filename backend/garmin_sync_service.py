@@ -13,12 +13,12 @@ except Exception:
 import state_store
 
 _DATA_DIR = state_store.get_data_dir()
-if 'GARMIN_TOKEN_DIR' in os.environ:
-    TOKEN_DIR = os.environ['GARMIN_TOKEN_DIR']
+if 'GARMIN_TOKEN_DIR' in os.environ and os.environ['GARMIN_TOKEN_DIR'].strip():
+    TOKEN_DIR = os.environ['GARMIN_TOKEN_DIR'].strip()
 elif _DATA_DIR:
     TOKEN_DIR = os.path.join(_DATA_DIR, 'garmin_tokens')
 else:
-    TOKEN_DIR = '/shared/user/.gemini/garmin_tokens'
+    TOKEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'garmin_tokens')
 
 # Only fall back to /tmp/garmin_tokens if TOKEN_DIR isn't writable
 try:
@@ -70,14 +70,6 @@ class GarminSyncService:
                     f.write(dumped)
             except Exception as e:
                 print(f"[GarminSync] Warning writing garmin_tokens_dump.json: {e}")
-            if os.path.exists('/shared/user/.gemini'):
-                try:
-                    backup_dir = '/shared/user/.gemini/pulse_backend'
-                    os.makedirs(backup_dir, exist_ok=True)
-                    with open(os.path.join(backup_dir, 'garmin_tokens.json'), 'w', encoding='utf-8') as f:
-                        f.write(dumped)
-                except Exception as e:
-                    print(f"[GarminSync] Warning writing shared backup tokens: {e}")
         if db is not None and dumped:
             try:
                 db.set_kv('garmin_tokens_json', dumped)
@@ -132,7 +124,6 @@ class GarminSyncService:
             if not loaded:
                 for dump_path in (
                     os.path.join(TOKEN_DIR, 'garmin_tokens_dump.json'),
-                    '/shared/user/.gemini/pulse_backend/garmin_tokens.json',
                 ):
                     if os.path.exists(dump_path):
                         try:

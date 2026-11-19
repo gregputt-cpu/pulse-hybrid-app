@@ -564,7 +564,7 @@
 
       // Persist locally so it survives refreshes on mobile
       try {
-        localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
+        localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData.slice(0, 60)));
       } catch(err) {}
 
       renderHistoryList();
@@ -681,7 +681,7 @@
 
         // Save immediately to localStorage
         try {
-          localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
+          localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData.slice(0, 60)));
         } catch(err) {}
 
         renderHistoryList();
@@ -717,7 +717,7 @@
       let isToday = false;
       let displayDate = act.date || '';
 
-      const raw = act.rawDate || (act.date && act.date.includes('2026') ? act.date : null);
+      const raw = act.rawDate || (act.date && /^\d{4}-\d{2}-\d{2}/.test(String(act.date)) ? act.date : null);
       if (raw) {
         const actD = new Date(raw.replace(' ', 'T'));
         if (!isNaN(actD.getTime())) {
@@ -1776,31 +1776,20 @@
       const curSleep = Number(g.sleep_score ?? 87);
       const curWt = Number(r.weight_kg ?? 98.4);
 
-      if (hist.length < 7) {
-        const seedOffsets = [
-          { bb: 78, rhr: curRhr + 2, sleep: 82, wt: +(curWt + 0.5).toFixed(1) },
-          { bb: 64, rhr: curRhr + 1, sleep: 79, wt: +(curWt + 0.4).toFixed(1) },
-          { bb: 85, rhr: curRhr,     sleep: 88, wt: +(curWt + 0.3).toFixed(1) },
-          { bb: 71, rhr: curRhr + 1, sleep: 84, wt: +(curWt + 0.2).toFixed(1) },
-          { bb: 58, rhr: curRhr + 2, sleep: 81, wt: +(curWt + 0.1).toFixed(1) },
-          { bb: 87, rhr: curRhr - 1, sleep: 89, wt: +(curWt + 0.1).toFixed(1) },
-          { bb: curBb, rhr: curRhr, sleep: curSleep, wt: curWt }
-        ];
-        hist = seedOffsets.map((s, idx) => ({
-          date: `d-${6 - idx}`,
-          body_battery: s.bb,
-          resting_hr: s.rhr,
-          sleep_score: s.sleep,
-          weight_kg: s.wt
-        }));
+      const todayKey = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : new Date().toISOString().slice(0, 10);
+      const liveEntry = {
+        date: todayKey,
+        body_battery: curBb,
+        resting_hr: curRhr,
+        sleep_score: curSleep,
+        weight_kg: curWt
+      };
+      if (hist.length === 0) {
+        hist = [liveEntry];
+      } else if (hist[hist.length - 1].date === todayKey) {
+        hist[hist.length - 1] = { ...hist[hist.length - 1], ...liveEntry };
       } else {
-        hist[hist.length - 1] = {
-          ...hist[hist.length - 1],
-          body_battery: curBb,
-          resting_hr: curRhr,
-          sleep_score: curSleep,
-          weight_kg: curWt
-        };
+        hist.push(liveEntry);
       }
 
       const recent7 = hist.slice(-7);
@@ -2097,7 +2086,7 @@
 
           recentActivitiesData = merged.length > 0 ? merged : garminActs;
           try {
-            localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData));
+            localStorage.setItem('pulse_recent_activities', JSON.stringify(recentActivitiesData.slice(0, 60)));
           } catch(e) {}
           renderHistoryList();
           renderTodayTrainingRecommendations();
@@ -2133,7 +2122,8 @@
               a.name === 'Hybrid Conditioning & Steps'
             );
             const hasRealTodayAct = combinedActs.some(a => String(a.date || a.rawDate || '').startsWith(todayIsoDate) && !isBridgeAct(a));
-            const seenTodayCals = new Set();
+            const seenTodayIds = new Set();
+            const seenFallbackCals = new Set();
             const filteredTodayActs = combinedActs.filter(a => {
               if (_isLowStepSyntheticBridge(a)) return false;
               const actDateStr = String(a.date || a.rawDate || '');
@@ -2144,9 +2134,17 @@
               const duration = Number(a.duration_min || a.durationMin || 0);
               const cals = Number(a.calories || a.workout_calories || 0);
               if (duration < 10 && cals < 80) return false;
+              const actIdKey = a.id != null ? String(a.id) : '';
+              if (actIdKey) {
+                if (seenTodayIds.has(actIdKey)) return false;
+                seenTodayIds.add(actIdKey);
+                if (!isBridgeAct(a) && !String(a.source || '').includes('manual')) {
+                  return true;
+                }
+              }
               const roundedCals = Math.round(cals);
-              if (roundedCals > 0 && seenTodayCals.has(roundedCals)) return false;
-              if (roundedCals > 0) seenTodayCals.add(roundedCals);
+              if (roundedCals > 0 && seenFallbackCals.has(roundedCals)) return false;
+              if (roundedCals > 0) seenFallbackCals.add(roundedCals);
               return true;
             });
             todayActsCount = filteredTodayActs.length;
@@ -2229,51 +2227,73 @@
 
       if (state.renpho) {
         const r = state.renpho;
-        if (r.weight_kg && !manualOverrideActive) {
+        const rWeight = Number(r.weight_kg);
+        const rBf = Number(r.body_fat_pct);
+        const rFatLose = r.fat_to_lose_kg != null ? Number(r.fat_to_lose_kg) : NaN;
+        const rMuscle = Number(r.muscle_mass_kg);
+        const rLbm = Number(r.lean_mass_kg);
+        const rWater = Number(r.water_pct);
+        const rVisceral = r.visceral_fat != null ? Number(r.visceral_fat) : NaN;
+
+        let renphoSyncAgeLabel = 'Synced';
+        if (r.last_synced) {
+          try {
+            const dPart = String(r.last_synced).replace('T', ' ').split(' ')[0];
+            if (dPart === todayIsoScale) {
+              renphoSyncAgeLabel = 'Synced Today';
+            } else {
+              const formatted = (typeof formatSyncDate === 'function') ? formatSyncDate(dPart, r.last_synced) : dPart;
+              renphoSyncAgeLabel = `Synced ${formatted}`;
+            }
+          } catch (e) {}
+        }
+
+        if (Number.isFinite(rWeight) && rWeight > 0 && !manualOverrideActive) {
           const el1 = document.getElementById('vitalScale');
-          if (el1) el1.innerText = Number(r.weight_kg.toFixed(2)).toString().includes('.') ? Number(r.weight_kg.toFixed(2)).toString() : r.weight_kg.toFixed(1);
+          if (el1) el1.innerText = Number(rWeight.toFixed(2)).toString().includes('.') ? Number(rWeight.toFixed(2)).toString() : rWeight.toFixed(1);
           const el2 = document.getElementById('bodyScaleWeight');
-          if (el2) el2.innerHTML = `${r.weight_kg.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+          if (el2) el2.innerHTML = `${rWeight.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
         }
-        if (r.body_fat_pct && !manualOverrideActive) {
+        if (Number.isFinite(rBf) && rBf > 0 && !manualOverrideActive) {
           const el1 = document.getElementById('vitalScaleSub');
-          if (el1) el1.innerText = `${r.body_fat_pct.toFixed(1)}`;
+          if (el1) el1.innerText = `${rBf.toFixed(1)}`;
           const el2 = document.getElementById('bodyScaleBf');
-          if (el2) el2.innerText = `${r.body_fat_pct.toFixed(1)}% Body Fat (Synced Today)`;
+          if (el2) el2.innerText = `${rBf.toFixed(1)}% Body Fat (${renphoSyncAgeLabel})`;
           const el3 = document.getElementById('normBfVal');
-          if (el3) el3.innerText = `${r.body_fat_pct.toFixed(1)}%`;
+          if (el3) el3.innerText = `${rBf.toFixed(1)}%`;
           const el4 = document.getElementById('normBfBadge');
-          if (el4) el4.innerText = `TOP ${r.body_fat_pct <= 16.7 ? '12%' : '15%'} OF 45yo MEN`;
+          if (el4) el4.innerText = `TOP ${rBf <= 16.7 ? '12%' : '15%'} OF 45yo MEN`;
           const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
-          if (elMeasuredLabel) elMeasuredLabel.innerText = `${r.body_fat_pct.toFixed(1)}% Scale Measured`;
+          if (elMeasuredLabel) elMeasuredLabel.innerText = `${rBf.toFixed(1)}% Scale Measured`;
         }
-        if (r.fat_to_lose_kg && !manualOverrideActive) {
+        if (Number.isFinite(rFatLose) && rFatLose >= 0 && !manualOverrideActive) {
           const el1 = document.getElementById('bodyFatToBurnNum');
-          if (el1) el1.innerText = `${r.fat_to_lose_kg} kg (${(r.fat_to_lose_kg * 2.20462).toFixed(1)} lbs)`;
+          if (el1) el1.innerText = `${rFatLose.toFixed(2)} kg (${(rFatLose * 2.20462).toFixed(1)} lbs)`;
           const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
-          const targetWeightAtGoal = (r.target_weight_at_15pct || 95.71).toFixed(2);
-          if (elGoalLabel) elGoalLabel.innerText = `${r.fat_to_lose_kg} kg to 15.0% Goal (${targetWeightAtGoal}kg)`;
+          const targetWtNum = Number(r.target_weight_at_15pct);
+          const targetWeightAtGoal = (Number.isFinite(targetWtNum) && targetWtNum > 0 ? targetWtNum : 95.71).toFixed(2);
+          if (elGoalLabel) elGoalLabel.innerText = `${rFatLose.toFixed(2)} kg to 15.0% Goal (${targetWeightAtGoal}kg)`;
         }
-        if (r.muscle_mass_kg) {
+        if (Number.isFinite(rMuscle) && rMuscle > 0) {
           const elMuscle = document.getElementById('renphoMuscleVal');
-          if (elMuscle) elMuscle.innerText = `${r.muscle_mass_kg.toFixed(1)}kg`;
+          if (elMuscle) elMuscle.innerText = `${rMuscle.toFixed(1)}kg`;
         }
-        if (r.lean_mass_kg) {
+        if (Number.isFinite(rLbm) && rLbm > 0) {
           const elLbm = document.getElementById('renphoLbmVal');
-          if (elLbm) elLbm.innerText = `${r.lean_mass_kg.toFixed(1)}kg`;
+          if (elLbm) elLbm.innerText = `${rLbm.toFixed(1)}kg`;
         }
-        if (r.water_pct) {
+        if (Number.isFinite(rWater) && rWater > 0) {
           const elWater = document.getElementById('renphoWaterVal');
-          if (elWater) elWater.innerText = `${r.water_pct.toFixed(1)}%`;
+          if (elWater) elWater.innerText = `${rWater.toFixed(1)}%`;
         }
-        if (r.visceral_fat !== undefined) {
+        if (Number.isFinite(rVisceral)) {
           const elVisceral = document.getElementById('renphoVisceralVal');
-          if (elVisceral) elVisceral.innerText = `${Number(r.visceral_fat).toFixed(1)}`;
+          if (elVisceral) elVisceral.innerText = `${rVisceral.toFixed(1)}`;
         }
         if (r.last_synced) {
           const syncEl = document.getElementById('renphoSyncTime');
           try {
-            const parts = r.last_synced.replace('T', ' ').split(' ');
+            const parts = String(r.last_synced).replace('T', ' ').split(' ');
             const datePart = parts[0];
             const timePart = (parts[1] || '').slice(0, 5);
             const dateLabel = formatSyncDate(datePart, r.last_synced);
@@ -2430,38 +2450,6 @@
             .catch(() => {});
         }
 
-        // Non-blocking auto-sync for Renpho if last_synced is not today
-        if (!window._renphoAutoSynced) {
-          const lastSynced = window.BAKED_LIVE_STATE?.renpho?.last_synced;
-          const _now = new Date();
-          const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
-          const isToday = lastSynced && lastSynced.startsWith(_todayIso);
-
-          if (!isToday) {
-            window._renphoAutoSynced = true;
-            fetch('/api/renpho/sync', { method: 'POST' })
-              .then(res => res.ok ? res.json() : null)
-              .then(data => {
-                if (data && data.renpho && data.renpho.last_synced) {
-                  const currentLast = window.BAKED_LIVE_STATE?.renpho?.last_synced;
-                  if (!currentLast || data.renpho.last_synced > currentLast) {
-                    if (window.BAKED_LIVE_STATE) {
-                      window.BAKED_LIVE_STATE.renpho = data.renpho;
-                    }
-                    if (typeof applyRenphoTelemetry === 'function') {
-                      applyRenphoTelemetry(window.BAKED_LIVE_STATE);
-                    }
-                    if (typeof updateTelemetryUI === 'function') {
-                      updateTelemetryUI(window.BAKED_LIVE_STATE);
-                    }
-                    applyLiveStateToDom(window.BAKED_LIVE_STATE);
-                    console.log("✓ Renpho auto-synced today's weigh-in successfully");
-                  }
-                }
-              })
-              .catch(() => {});
-          }
-        }
       } catch(e) {
         console.log("Local static fallback active:", e.message);
       }
@@ -2474,7 +2462,9 @@
         '20_4': { label: '20:4 Protocol', hours: 20 },
         'omad': { label: 'OMAD Protocol', hours: 23 }
       };
-      const p = protocols[key] || protocols['16_8'];
+      const resolvedKey = protocols[key] ? key : '16_8';
+      const p = protocols[resolvedKey];
+      window.activeFastingProtocolHours = p.hours;
       const tag = document.getElementById('fastingProtocolTag');
       if (tag) tag.innerText = p.label;
 
@@ -2482,12 +2472,12 @@
         const btnId = k === 'omad' ? 'btnFastOMAD' : 'btnFast' + k;
         const btn = document.getElementById(btnId);
         if (btn) {
-          if (k === key) btn.classList.add('active');
+          if (k === resolvedKey) btn.classList.add('active');
           else btn.classList.remove('active');
         }
       });
       try {
-        localStorage.setItem('pulse_fasting_protocol', key);
+        localStorage.setItem('pulse_fasting_protocol', resolvedKey);
       } catch(e) {}
     }
 
@@ -2503,7 +2493,7 @@
       loadLiveState();
       checkMndStatus();
 
-      // Backend APScheduler handles upstream Garmin sync; frontend polls read-only /api/live_state
+      // Backend APScheduler handles upstream Garmin/MND/Renpho sync; frontend polls read-only /api/live_state
       setInterval(() => {
         if (document.visibilityState === 'visible') {
           loadLiveState();
@@ -2525,7 +2515,16 @@
 
       // Initialize Expanded Fuel & MyNetDiary Macro Engine
       initMyNetDiaryEngine();
-      setFastingProtocol('16_8');
+      try {
+        const savedFast = localStorage.getItem('pulse_fasting_protocol') || '16_8';
+        setFastingProtocol(savedFast);
+        const savedDiet = localStorage.getItem('pulse_diet_strategy');
+        if (savedDiet && typeof selectDietStrategy === 'function') {
+          selectDietStrategy(savedDiet);
+        }
+      } catch (e) {
+        setFastingProtocol('16_8');
+      }
 
       // Initialize Injuries from localStorage if available
       try {

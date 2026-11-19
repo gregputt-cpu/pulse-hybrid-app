@@ -3,6 +3,11 @@ import json
 import hmac
 import hashlib
 import logging
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -774,7 +779,6 @@ def override_telemetry(payload: TelemetryOverridePayload):
         if payload.body_battery is not None:
             garmin["body_battery"] = payload.body_battery
             garmin["body_battery_manual_date"] = target_date
-            garmin["oauth_date"] = target_date
         elif payload.sleep_score is not None and garmin.get("body_battery") is None:
             active_cals_val = garmin.get("active_calories") or 0
             morning_bb = min(100, int(round(payload.sleep_score * 1.05)))

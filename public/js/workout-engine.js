@@ -259,8 +259,6 @@
       bench: { active: true },
       dipbar: { active: true },
       db: { active: true, weight: "2×22.5kg" },
-      get dumbbells() { return this.db; },
-      set dumbbells(v) { this.db = v; },
       kb: { active: true, weight: "24kg" },
       slamball: { active: false, weight: "10kg" },
       sandbag: { active: false, weight: "15kg" },
@@ -268,6 +266,12 @@
       speedrope: { active: true },
       lowceiling: { active: true }
     };
+    Object.defineProperty(gearConfig, 'dumbbells', {
+      enumerable: false,
+      configurable: true,
+      get() { return this.db; },
+      set(v) { this.db = v; }
+    });
 
     const presetProfiles = {
       gym: {
@@ -2606,6 +2610,34 @@ function generateWorkoutFromGearAndGoal() {
       const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
       const counts = { Hinge: 0, Squat: 0, Push: 0, Pull: 0, Conditioning: 0 };
 
+      const classifyExId = (exId, sets) => {
+        const id = String(exId || '').toLowerCase();
+        if (id.includes('rdl') || id.includes('hinge') || id.includes('swing') || id.includes('bridge')) counts.Hinge += sets;
+        else if (id.includes('squat') || id.includes('lunge')) counts.Squat += sets;
+        else if (id.includes('press') || id.includes('dip') || id.includes('push')) counts.Push += sets;
+        else if (id.includes('row') || id.includes('pull')) counts.Pull += sets;
+        else counts.Conditioning += sets;
+      };
+
+      try {
+        const rawSess = localStorage.getItem('pulse_session_history');
+        if (rawSess) {
+          const sessions = JSON.parse(rawSess);
+          if (Array.isArray(sessions)) {
+            sessions.forEach(s => {
+              const dt = s && s.date ? new Date(s.date).getTime() : 0;
+              if (!dt || isNaN(dt) || (now - dt) > sevenDaysMs) return;
+              if (s.details && typeof s.details === 'object') {
+                Object.keys(s.details).forEach(k => {
+                  const exId = k.split('_')[0];
+                  classifyExId(exId, 1);
+                });
+              }
+            });
+          }
+        }
+      } catch(e) {}
+
       try {
         const rawStr = localStorage.getItem('pulse_strength_history');
         if (rawStr) {
@@ -2614,11 +2646,7 @@ function generateWorkoutFromGearAndGoal() {
             const dt = entry && (entry.lastDate || entry.date) ? new Date(entry.lastDate || entry.date).getTime() : now;
             if (!isNaN(dt) && (now - dt) > sevenDaysMs) return;
             const sets = Number(entry.sets || entry.setsCount || 3);
-            if (exId.includes('rdl') || exId.includes('hinge') || exId.includes('swing') || exId.includes('bridge')) counts.Hinge += sets;
-            else if (exId.includes('squat') || exId.includes('lunge')) counts.Squat += sets;
-            else if (exId.includes('press') || exId.includes('dip') || exId.includes('push')) counts.Push += sets;
-            else if (exId.includes('row') || exId.includes('pull')) counts.Pull += sets;
-            else counts.Conditioning += sets;
+            classifyExId(exId, sets);
           });
         }
       } catch(e) {}
@@ -3811,12 +3839,7 @@ function generateWorkoutFromGearAndGoal() {
         if (first.body_fat_pct && last.body_fat_pct) {
           bfDeltaPct = Number((last.body_fat_pct - first.body_fat_pct).toFixed(2));
         }
-        if (tsDiffDays >= 3 && (weightDeltaKg >= -0.25 && bfDeltaPct >= -0.2)) {
-          isPlateaued = true;
-        }
-      } else {
-        const fatToLose = Number((window.BAKED_LIVE_STATE?.renpho?.fat_to_lose_kg) || (window.athleteProfile?.fatToLoseKg) || 0);
-        if (fatToLose > 1.0) {
+        if (tsDiffDays >= 10 && renphoHist.length >= 4 && (weightDeltaKg >= -0.2 && bfDeltaPct >= -0.2)) {
           isPlateaued = true;
         }
       }
@@ -4096,7 +4119,7 @@ function generateWorkoutFromGearAndGoal() {
           : Math.min(100, Math.round((v.sleepScore || 93) * 1.05));
         const currBb = Number(v.bodyBattery || 64);
         const bbDrain = Math.max(1, morningBb - currBb);
-        const activeBurn = Number(v.activeCaloriesToday || (comp ? comp.calories : 0) || 478);
+        const activeBurn = Number(v.activeCaloriesToday ?? (comp ? comp.calories : 0) ?? 0);
         const kcalPerBbPt = Math.round((activeBurn / bbDrain) * 10) / 10;
         const cleanLoad = kcalPerBbPt >= 8 || bbDrain <= 45;
 
@@ -6199,7 +6222,6 @@ function viewCompletedWorkoutBreakdown() {
       }
 
       try {
-        localStorage.setItem('pulse_sleep_score_override', String(score));
         localStorage.setItem('pulse_sleep_score_override_obj', JSON.stringify({ value: score, date: todayIso }));
       } catch(e) {}
 
@@ -6678,7 +6700,9 @@ function viewCompletedWorkoutBreakdown() {
 
       if (key === 'train' && typeof updateArchetypeStarBadge === 'function' && typeof computeTodayWorkoutVerdict === 'function') {
         try {
-          updateArchetypeStarBadge(computeTodayWorkoutVerdict().archetypeKey);
+          if (typeof currentArchetypeKey === 'undefined' || !currentArchetypeKey) {
+            updateArchetypeStarBadge(computeTodayWorkoutVerdict().archetypeKey);
+          }
         } catch(e) {}
       }
     }

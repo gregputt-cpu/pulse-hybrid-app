@@ -11,7 +11,8 @@ import time_utils
 
 logger = logging.getLogger("pulse-renpho-sync")
 
-CREDS_FILE = os.environ.get('RENPHO_CREDS_FILE', '/home/antigravity/.gemini/renpho_creds.json')
+_DATA_DIR = state_store.get_data_dir() or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+CREDS_FILE = os.environ.get('RENPHO_CREDS_FILE', os.path.join(_DATA_DIR, 'renpho_creds.json'))
 LIVE_STATE_PATH = state_store.get_live_state_path()
 
 class RenphoSyncService:

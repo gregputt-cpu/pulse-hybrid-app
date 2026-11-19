@@ -1971,6 +1971,37 @@
         if (btn) btn.classList.toggle('active', isActive);
         if (panel) panel.classList.toggle('active', isActive);
       });
+
+      try {
+        localStorage.setItem('pulse_diet_strategy', key);
+      } catch (e) {}
+
+      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || 2437;
+      const prot = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
+      const remCals = Math.max(0, cals - prot * 4);
+
+      if (!myNetDiaryData.targets) {
+        myNetDiaryData.targets = { calories: cals, protein: prot, carbs: 250, fat: 70 };
+      }
+
+      if (key === 'balanced') {
+        myNetDiaryData.targets.carbs = Math.max(50, Math.round((remCals * 0.62) / 4));
+        myNetDiaryData.targets.fat = Math.max(30, Math.round((remCals * 0.38) / 9));
+      } else if (key === 'lowcarb') {
+        myNetDiaryData.targets.carbs = 75;
+        myNetDiaryData.targets.fat = Math.max(40, Math.round(Math.max(0, remCals - 75 * 4) / 9));
+      } else if (key === 'carbcycle') {
+        const carbMap = { high: 300, mod: 200, low: 80 };
+        const lvl = (typeof currentCarbCycleLevel !== 'undefined' && carbMap[currentCarbCycleLevel]) ? currentCarbCycleLevel : 'mod';
+        myNetDiaryData.targets.carbs = carbMap[lvl];
+        myNetDiaryData.targets.fat = Math.max(30, Math.round(Math.max(0, remCals - carbMap[lvl] * 4) / 9));
+      } else if (key === 'fasting') {
+        myNetDiaryData.targets.carbs = Math.max(50, Math.round((remCals * 0.55) / 4));
+        myNetDiaryData.targets.fat = Math.max(35, Math.round((remCals * 0.45) / 9));
+      }
+
+      saveMndToLocalStorage();
+      renderMyNetDiaryEngine();
     }
 
     function setCarbCycleLevel(level) {

@@ -734,29 +734,21 @@ async function renderRenphoTrendChart() {
     console.warn('[RenphoChart] Fetch failed, using fallback live state:', err);
   }
 
-  // Graceful fallback to single point from athleteProfile or BAKED_LIVE_STATE
-  if (!records || records.length === 0) {
+  if (!records || records.length < 2) {
     const baked = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
     const rState = baked.renpho || baked.athlete || (typeof window !== 'undefined' ? window.athleteProfile : null) || {};
-    const curWeight = Number(rState.weight_kg || 97.75);
-    const curBf = Number(rState.body_fat_pct || 17.1);
-    const curLm = Number(rState.lean_mass_kg || 81.03);
-
-    // Create a 14-day progression anchored to this single point
-    const now = Date.now();
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(now - i * 86400000);
-      const dayBf = Number((curBf + (i * 0.02) + Math.sin(i * 0.8) * 0.04).toFixed(2));
-      const dayLm = Number((curLm - (i * 0.015) + Math.cos(i * 0.8) * 0.05).toFixed(2));
-      const dayWt = Number((curWeight + (i * 0.03)).toFixed(2));
-      records.push({
-        timestamp: Math.floor(d.getTime() / 1000),
-        date_str: (typeof getLocalDateStr === 'function' ? getLocalDateStr(d) : d.toISOString().slice(0, 10)),
-        weight_kg: dayWt,
-        body_fat_pct: dayBf,
-        lean_mass_kg: dayLm
-      });
-    }
+    const curWt = Number(rState.weight_kg);
+    const curBf = Number(rState.body_fat_pct);
+    const curLm = Number(rState.lean_mass_kg);
+    const snapshotLine = Number.isFinite(curWt) && curWt > 0
+      ? `Latest reading: ${curWt.toFixed(2)} kg${Number.isFinite(curBf) && curBf > 0 ? ` • ${curBf.toFixed(1)}% BF` : ''}${Number.isFinite(curLm) && curLm > 0 ? ` • ${curLm.toFixed(2)} kg LBM` : ''}`
+      : 'Sync Renpho or log a manual weigh-in to begin tracking.';
+    container.innerHTML = `
+      <div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.14); border-radius:12px; padding:16px; text-align:center;">
+        <div style="font-size:12px; font-weight:800; color:#e4e4e7; margin-bottom:4px;">Need ≥ 2 weigh-ins to plot 30-day trend</div>
+        <div style="font-size:11px; color:var(--text-muted);">${snapshotLine}</div>
+      </div>`;
+    return;
   }
 
   // Ensure chronologically sorted
@@ -1114,31 +1106,22 @@ async function renderStrengthProgressionChart() {
       lastE1rm > baselineE1rm
     );
 
-    // Compute 4-week progression values (W1, W2, W3, W4)
-    let w1Val, w2Val, w3Val, w4Val;
-    if (historyLogs.length >= 4) {
-      w1Val = Number(historyLogs[historyLogs.length - 4].e1rm).toFixed(1);
-      w2Val = Number(historyLogs[historyLogs.length - 3].e1rm).toFixed(1);
-      w3Val = Number(historyLogs[historyLogs.length - 2].e1rm).toFixed(1);
-      w4Val = Number(historyLogs[historyLogs.length - 1].e1rm).toFixed(1);
-    } else if (historyLogs.length >= 2) {
-      w1Val = (baselineE1rm - 5.0).toFixed(1);
-      w2Val = (baselineE1rm - 2.5).toFixed(1);
-      w3Val = Number(historyLogs[0].e1rm).toFixed(1);
-      w4Val = Number(historyLogs[historyLogs.length - 1].e1rm).toFixed(1);
+    // Plot only real recorded sessions (no synthetic fabricated history bars)
+    const realTail = historyLogs.slice(-4);
+    let weekValues;
+    let w4Val;
+    if (realTail.length >= 2) {
+      weekValues = realTail.map((entry, idx) => ({
+        label: idx === realTail.length - 1 ? 'Now' : `S${idx + 1}`,
+        val: Number(Number(entry.e1rm || baselineE1rm).toFixed(1)),
+        isCurrent: idx === realTail.length - 1
+      }));
+      w4Val = weekValues[weekValues.length - 1].val.toFixed(1);
     } else {
-      w1Val = (baselineE1rm - 5.0).toFixed(1);
-      w2Val = (baselineE1rm - 2.5).toFixed(1);
-      w3Val = baselineE1rm.toFixed(1);
-      w4Val = (isProgReady ? Math.max(lastE1rm, baselineE1rm + 2.5) : baselineE1rm).toFixed(1);
+      const currentVal = Number((realTail.length === 1 ? realTail[0].e1rm : (isProgReady ? Math.max(lastE1rm, baselineE1rm) : baselineE1rm)).toFixed(1));
+      weekValues = [{ label: 'Now', val: currentVal, isCurrent: true }];
+      w4Val = currentVal.toFixed(1);
     }
-
-    const weekValues = [
-      { label: 'W1', val: Number(w1Val), isCurrent: false },
-      { label: 'W2', val: Number(w2Val), isCurrent: false },
-      { label: 'W3', val: Number(w3Val), isCurrent: false },
-      { label: 'W4', val: Number(w4Val), isCurrent: true }
-    ];
 
     const minW = Math.min(...weekValues.map(w => w.val));
     const maxW = Math.max(...weekValues.map(w => w.val));

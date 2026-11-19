@@ -239,6 +239,33 @@
     }
     window.getLocalDateStr = getLocalDateStr;
 
+    // Global Frontend Error Boundary & Universal Modal UX (Escape + Backdrop Close)
+    if (typeof window !== 'undefined' && !window._pulseGlobalGuardsInstalled) {
+      window._pulseGlobalGuardsInstalled = true;
+      window.addEventListener('error', (ev) => {
+        console.error('[PULSE Runtime Error]', ev.message || ev.error);
+        if (typeof showToast === 'function' && ev.message && !String(ev.message).includes('ResizeObserver')) {
+          showToast('⚠️ Something went wrong — check console or refresh');
+        }
+      });
+      window.addEventListener('unhandledrejection', (ev) => {
+        console.error('[PULSE Unhandled Promise Rejection]', ev.reason);
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') {
+          document.querySelectorAll('.modal-overlay.open').forEach((m) => {
+            if (m.id !== 'pulseAuthModal') m.classList.remove('open');
+          });
+        }
+      });
+      document.addEventListener('click', (ev) => {
+        const target = ev.target;
+        if (target && target.classList && target.classList.contains('modal-overlay') && target.classList.contains('open')) {
+          if (target.id !== 'pulseAuthModal') target.classList.remove('open');
+        }
+      });
+    }
+
     // ==================== LOCAL STORAGE SESSION PERSISTENCE ====================
     let sessionLoggedSets = {};
 

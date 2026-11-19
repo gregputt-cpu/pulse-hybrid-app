@@ -24,10 +24,8 @@ if 'MND_TOKEN_DIR' in os.environ and os.environ['MND_TOKEN_DIR'].strip():
     MND_DIR = os.environ['MND_TOKEN_DIR'].strip()
 elif _DATA_DIR:
     MND_DIR = os.path.join(_DATA_DIR, 'mnd_tokens')
-elif os.path.exists('/shared/user/.gemini'):
-    MND_DIR = '/shared/user/.gemini/mnd_tokens'
 else:
-    MND_DIR = '/tmp/mnd_tokens'
+    MND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'mnd_tokens')
 
 try:
     os.makedirs(MND_DIR, exist_ok=True)
