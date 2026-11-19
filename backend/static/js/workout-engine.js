@@ -4852,13 +4852,9 @@ function viewCompletedWorkoutBreakdown() {
           </div>
         `;
 
-        const isTwoCol = flowSteps.length > 4;
-        const isOddCount = (flowSteps.length % 2 === 1);
         const ladderRowsHtml = parsedSteps.map((p, idx) => {
           const isCurrent = idx === currIdx;
           const isDone = idx < currIdx;
-          const isLastOdd = isTwoCol && isOddCount && (idx === flowSteps.length - 1);
-          const spanStyle = isLastOdd ? 'grid-column: span 2;' : '';
           const stepNumBg = isCurrent
             ? 'background:var(--teal, #00f5d4); color:#041318; border:1px solid var(--teal, #00f5d4); box-shadow:0 0 8px rgba(0,245,212,0.45);'
             : (isDone
@@ -4876,20 +4872,19 @@ function viewCompletedWorkoutBreakdown() {
               : 'background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.28); color:#7dd3fc;');
 
           return `
-            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="${spanStyle} width:100%; display:flex; align-items:center; justify-content:space-between; gap:5px; padding:5px 7px; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.12s ease; min-width:0; ${rowBg}">
-              <div style="display:flex; align-items:center; gap:5px; min-width:0; flex:1;">
+            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 9px; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.12s ease; min-width:0; ${rowBg}">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0; flex:1;">
                 <span style="width:18px; height:18px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:900; font-family:'JetBrains Mono',monospace; flex-shrink:0; ${stepNumBg}">${isDone ? '✓' : (idx + 1)}</span>
-                <span style="font-size:12.5px; font-weight:800; color:#f8fafc; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.moveName}</span>
+                <span style="font-size:13px; font-weight:800; color:#f8fafc; line-height:1.2;">${p.moveName}</span>
                 ${renderSidePill(p.sideBadge)}
               </div>
-              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 6px; border-radius:5px; white-space:nowrap; flex-shrink:0; ${repPillStyle}">${p.repsBadge}</span>
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; white-space:nowrap; flex-shrink:0; ${repPillStyle}">${p.repsBadge}</span>
             </button>
           `;
         }).join('');
 
-        const gridColsCss = isTwoCol ? 'repeat(2, minmax(0, 1fr))' : '1fr';
         flowGridHtml = `
-          <div style="display:grid; grid-template-columns:${gridColsCss}; gap:4px;">
+          <div style="display:grid; grid-template-columns:1fr; gap:4px;">
             ${ladderRowsHtml}
           </div>
         `;
@@ -5508,6 +5503,8 @@ function viewCompletedWorkoutBreakdown() {
       document.getElementById('autoregBanner').classList.remove('active');
 
       const setRowsContainer = document.getElementById('setRows');
+      setRowsContainer.style.maxHeight = 'none';
+      setRowsContainer.style.overflowY = 'visible';
       setRowsContainer.innerHTML = '';
 
       if (fmt.isTimed) {

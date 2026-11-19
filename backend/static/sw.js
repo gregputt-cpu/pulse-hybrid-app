@@ -1,14 +1,14 @@
 // PULSE • Hybrid Athlete OS Service Worker
-const CACHE_NAME = 'pulse-hybrid-v5.31-20261119';
+const CACHE_NAME = 'pulse-hybrid-v5.32-20261119';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/css/styles.css?v=5.31',
-  '/js/state.js?v=5.31',
-  '/js/workout-engine.js?v=5.31',
-  '/js/charts.js?v=5.31',
-  '/js/fuel-engine.js?v=5.31',
-  '/js/telemetry.js?v=5.31',
+  '/css/styles.css?v=5.32',
+  '/js/state.js?v=5.32',
+  '/js/workout-engine.js?v=5.32',
+  '/js/charts.js?v=5.32',
+  '/js/fuel-engine.js?v=5.32',
+  '/js/telemetry.js?v=5.32',
   '/manifest.json',
   '/icon.svg',
   '/icon-192.png',
