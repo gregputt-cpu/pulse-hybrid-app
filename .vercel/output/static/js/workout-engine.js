@@ -3597,12 +3597,12 @@ function generateWorkoutFromGearAndGoal() {
 
       if (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) {
         const g = window.BAKED_LIVE_STATE.garmin;
-        if (g.sleep_score !== undefined) sleepScore = g.sleep_score;
-        if (g.sleep_duration !== undefined) sleepDuration = g.sleep_duration;
-        if (g.training_readiness !== undefined) readiness = g.training_readiness;
-        if (g.resting_hr !== undefined) restingHr = g.resting_hr;
-        if (g.body_battery !== undefined) bodyBattery = g.body_battery;
-        if (g.active_calories !== undefined) activeCaloriesToday = g.active_calories;
+        if (g.sleep_score !== undefined && g.sleep_score !== null) sleepScore = g.sleep_score;
+        if (g.sleep_duration !== undefined && g.sleep_duration !== null) sleepDuration = g.sleep_duration;
+        if (g.training_readiness !== undefined && g.training_readiness !== null) readiness = g.training_readiness;
+        if (g.resting_hr !== undefined && g.resting_hr !== null) restingHr = g.resting_hr;
+        if (g.body_battery !== undefined && g.body_battery !== null) bodyBattery = g.body_battery;
+        if (g.active_calories !== undefined && g.active_calories !== null) activeCaloriesToday = g.active_calories;
       }
 
       // Gather activities

@@ -199,6 +199,7 @@ if os.path.isdir(os.path.join(static_dir, "js")):
     app.mount("/js", StaticFiles(directory=os.path.join(static_dir, "js")), name="js")
 
 @app.get("/")
+@app.get("/index.html")
 def root():
     static_index = os.path.join(static_dir, "index.html")
     if os.path.exists(static_index):

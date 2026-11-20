@@ -760,13 +760,14 @@ class GarminSyncService:
             state['date'] = target_date_str
 
             garmin_state = state.setdefault('garmin', {})
+            prev_garmin_date = garmin_state.get('oauth_date') or prev_date
             # Clear stale prior-day daily metrics on day rollover so yesterday's values never leak into today
-            if prev_date and prev_date != target_date_str:
+            if prev_garmin_date and prev_garmin_date != target_date_str:
                 for stale_key in (
-                    'sleep_score', 'sleep_duration', 'body_battery',
-                    'training_readiness', 'readiness_level', 'readiness_feedback',
-                    'today_activities', 'active_calories', 'workout_calories',
-                    'steps', 'stress_avg', 'hrv_last_night'
+                    'sleep_score', 'sleep_duration', 'sleep_score_source',
+                    'body_battery', 'training_readiness', 'readiness_level',
+                    'readiness_feedback', 'today_activities', 'active_calories',
+                    'workout_calories', 'steps', 'stress_avg', 'hrv_last_night'
                 ):
                     garmin_state.pop(stale_key, None)
 
@@ -774,7 +775,9 @@ class GarminSyncService:
             garmin_state['oauth_date'] = target_date_str
             garmin_state['last_synced'] = now_london_iso
             if summary.get('totalSteps') is not None:
-                garmin_state['steps'] = summary.get('totalSteps')
+                garmin_state['steps'] = int(summary.get('totalSteps'))
+            elif isinstance(summary, dict) and summary:
+                garmin_state['steps'] = 0
             if summary.get('restingHeartRate') is not None:
                 garmin_state['resting_hr'] = summary.get('restingHeartRate')
             if live_body_battery is not None:
@@ -786,6 +789,22 @@ class GarminSyncService:
 
             if sleep_score is not None:
                 garmin_state['sleep_score'] = sleep_score
+                garmin_state['sleep_score_source'] = 'garmin_oauth'
+            elif (
+                garmin_state.get('sleep_score_source') == 'mnd_estimated'
+                and garmin_state.get('sleep_score_manual_date') != target_date_str
+            ):
+                garmin_state.pop('sleep_score', None)
+                garmin_state.pop('sleep_duration', None)
+                garmin_state.pop('sleep_score_source', None)
+                if (
+                    readiness_score is None
+                    and garmin_state.get('readiness_manual_date') != target_date_str
+                    and garmin_state.get('readiness_feedback') in ('WELL_RECOVERED', 'MODERATE_LOAD')
+                ):
+                    garmin_state.pop('training_readiness', None)
+                    garmin_state.pop('readiness_level', None)
+                    garmin_state.pop('readiness_feedback', None)
             if sleep_duration is not None:
                 garmin_state['sleep_duration'] = sleep_duration
 

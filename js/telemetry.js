@@ -1898,7 +1898,7 @@
         if (_todayActsNow.length === 0 && Number(g.steps || 0) < 500 && g.source !== 'garmin_oauth') {
           g.active_calories = 0;
         }
-        if (g.training_readiness !== undefined) {
+        if (g.training_readiness !== undefined && g.training_readiness !== null) {
           const numEl = document.getElementById('todayDialNum');
           if (numEl && String(numEl.innerText).trim() !== String(g.training_readiness)) {
             numEl.innerText = g.training_readiness;
@@ -1921,8 +1921,19 @@
             const hdrText = `${g.training_readiness} READY`;
             if (hdrEl.innerText !== hdrText) hdrEl.innerText = hdrText;
           }
+        } else if (g.source === 'garmin_oauth') {
+          const numEl = document.getElementById('todayDialNum');
+          if (numEl && numEl.innerText !== '—') numEl.innerText = '—';
+          const ringEl = document.getElementById('todayDialRing');
+          if (ringEl && ringEl.style.strokeDashoffset !== '427.26') {
+            ringEl.style.strokeDashoffset = '427.26';
+          }
+          const subEl = document.getElementById('todayDialSub');
+          if (subEl && subEl.innerText !== 'Awaiting Sync') subEl.innerText = 'Awaiting Sync';
+          const hdrEl = document.getElementById('hdrReadiness');
+          if (hdrEl && hdrEl.innerText !== 'SYNCING') hdrEl.innerText = 'SYNCING';
         }
-        if (g.sleep_score !== undefined) {
+        if (g.sleep_score !== undefined && g.sleep_score !== null) {
           const el = document.getElementById('vSleep');
           if (el && String(el.innerText).trim() !== String(g.sleep_score)) {
             el.innerText = g.sleep_score;
@@ -1939,14 +1950,23 @@
               sleepRing.style.strokeDashoffset = offset;
             }
           }
+        } else if (g.source === 'garmin_oauth') {
+          const el = document.getElementById('vSleep');
+          if (el && el.innerText !== '—') el.innerText = '—';
+          const elSub = document.getElementById('vSleepSub');
+          if (elSub && elSub.innerText !== 'Awaiting Sync') elSub.innerText = 'Awaiting Sync';
+          const sleepRing = document.getElementById('vSleepRing');
+          if (sleepRing && sleepRing.style.strokeDashoffset !== '157') {
+            sleepRing.style.strokeDashoffset = '157';
+          }
         }
-        if (g.resting_hr !== undefined) {
+        if (g.resting_hr !== undefined && g.resting_hr !== null) {
           const el = document.getElementById('vitalRhrVal') || document.getElementById('vitalRhr') || document.getElementById('vRhr');
           if (el && String(el.innerText).trim() !== String(g.resting_hr)) {
             el.innerText = g.resting_hr;
           }
         }
-        if (g.body_battery !== undefined) {
+        if (g.body_battery !== undefined && g.body_battery !== null) {
           const el = document.getElementById('vitalBattery');
           const bbText = `${g.body_battery}%`;
           if (el && el.innerText !== bbText) {
@@ -1966,24 +1986,26 @@
             if (elSub.innerText !== bbSubText) elSub.innerText = bbSubText;
           }
         }
-        if (g.active_calories !== undefined) {
-          const totalActiveBurn = (typeof getTodayActiveBurn === 'function')
-            ? getTodayActiveBurn({ garmin: g })
-            : (Number(g.active_calories) || 0);
+        if ((g.active_calories !== undefined && g.active_calories !== null) || (g.steps !== undefined && g.steps !== null)) {
           const el2 = document.getElementById('vitalBurnSub');
           if (el2) {
-            const desiredText = `fēnix 8 • ${g.steps || 105} Steps`;
+            const desiredText = `fēnix 8 • ${g.steps ?? 0} Steps`;
             if (el2.innerText !== desiredText) el2.innerText = desiredText;
           }
-          const el3 = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
-          if (el3) {
-            const desiredHtml = `${totalActiveBurn} <small style="font-size:13px;">kcal</small>`;
-            if (el3.innerHTML !== desiredHtml) el3.innerHTML = desiredHtml;
-          }
-          const bannerBurn = document.getElementById('garminBannerBurn');
-          if (bannerBurn) {
-            const desiredText = `${totalActiveBurn} kcal`;
-            if (bannerBurn.innerText !== desiredText) bannerBurn.innerText = desiredText;
+          if (g.active_calories !== undefined && g.active_calories !== null) {
+            const totalActiveBurn = (typeof getTodayActiveBurn === 'function')
+              ? getTodayActiveBurn({ garmin: g })
+              : (Number(g.active_calories) || 0);
+            const el3 = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
+            if (el3) {
+              const desiredHtml = `${totalActiveBurn} <small style="font-size:13px;">kcal</small>`;
+              if (el3.innerHTML !== desiredHtml) el3.innerHTML = desiredHtml;
+            }
+            const bannerBurn = document.getElementById('garminBannerBurn');
+            if (bannerBurn) {
+              const desiredText = `${totalActiveBurn} kcal`;
+              if (bannerBurn.innerText !== desiredText) bannerBurn.innerText = desiredText;
+            }
           }
         }
         const bTitle = document.getElementById('garminBannerTitle');
@@ -2007,7 +2029,7 @@
           );
           const hasRealOAuthActs = g.source === 'garmin_oauth' || rawGarminActs.some(a => !isBridgeAct(a));
           const garminActs = rawGarminActs
-            .filter(a => !_isLowStepSyntheticBridge(a) && (!hasRealOAuthActs || !isBridgeAct(a)))
+            .filter(a => a && !_isLowStepSyntheticBridge(a) && (!hasRealOAuthActs || !isBridgeAct(a)))
             .map((a) => {
               const actDate = a.date;
               const formatted = formatActivityDisplay({ rawDate: actDate, date: actDate, id: a.id });
@@ -2044,6 +2066,7 @@
           }
           if (Array.isArray(localActs)) {
             localActs = localActs.filter(a => {
+              if (!a || typeof a !== 'object') return false;
               const sid = String(a && a.id);
               if (sid === '99202611170' || sid === '992026111701' || sid === '992026111702' || sid === '25109482110' || sid === '9920261118') return false;
               if (_isLowStepSyntheticBridge(a)) return false;
@@ -2079,8 +2102,8 @@
           });
 
           merged.sort((a, b) => {
-            const da = new Date((a.rawDate || a.date || '').replace(' ', 'T')).getTime() || 0;
-            const db = new Date((b.rawDate || b.date || '').replace(' ', 'T')).getTime() || 0;
+            const da = new Date(String((a && (a.rawDate || a.date)) || '').replace(' ', 'T')).getTime() || 0;
+            const db = new Date(String((b && (b.rawDate || b.date)) || '').replace(' ', 'T')).getTime() || 0;
             return db - da;
           });
 
@@ -2092,10 +2115,10 @@
           renderTodayTrainingRecommendations();
         }
         if (bSub) {
-          const sleepNum = (g.sleep_score !== undefined) ? g.sleep_score : 94;
-          const sleepRating = sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair');
-          const readinessNum = (g.training_readiness !== undefined) ? g.training_readiness : 93;
-          const rhrNum = (g.resting_hr !== undefined) ? g.resting_hr : 46;
+          const sleepNum = (g.sleep_score !== undefined && g.sleep_score !== null) ? g.sleep_score : '—';
+          const sleepRating = typeof sleepNum === 'number' ? (sleepNum >= 90 ? 'Optimal' : (sleepNum >= 80 ? 'Good' : 'Fair')) : 'Awaiting Sync';
+          const readinessNum = (g.training_readiness !== undefined && g.training_readiness !== null) ? g.training_readiness : '—';
+          const rhrNum = (g.resting_hr !== undefined && g.resting_hr !== null) ? g.resting_hr : '—';
           const completedToday = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
           let todayActsCount = 0;
           let displayKcal = g.active_calories || 0;
