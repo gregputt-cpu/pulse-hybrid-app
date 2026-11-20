@@ -1,241 +1,9 @@
-    // REAL INGESTED GARMIN ACTIVITIES WITH DETAILED BENEFITS ENGINE
-    let recentActivitiesData = [
-      {
-            "id": "25020969123",
-            "name": "Walking",
-            "subTitle": "Runnymede Walking",
-            "rawDate": "2026-11-09 15:27:38",
-            "date": "Today • 15:27",
-            "durationMin": 42.7,
-            "calories": 205,
-            "avgHr": 75,
-            "maxHr": 100,
-            "aerobicTe": 0.3,
-            "anaerobicTe": 0.0,
-            "isToday": true,
-            "benefits": {
-                  "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Spinal Erectors, Foot Arch Intrinsic Muscles",
-                  "biomechanics": "Low-impact cyclical ground force absorption (~1.2× bodyweight, ~119.8kg per stride). Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.",
-                  "cardio": "Average HR 75 bpm with peak spike at 100 bpm (53% estimated HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
-                  "metabolic": "205 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4–8 hours post-session.",
-                  "autoregulation": "Zero systemic CNS recovery debt. Stimulates parasympathetic tone and metabolic waste flush, priming neuromuscular pathways for high-output barbell lifting."
-            }
-      },
-      {
-            "id": "25016923422",
-            "name": "Indoor_cardio",
-            "subTitle": "Cardio",
-            "rawDate": "2026-11-09 08:18:44",
-            "date": "Today \u2022 08:18",
-            "durationMin": 34.4,
-            "calories": 419,
-            "avgHr": 126,
-            "maxHr": 151,
-            "aerobicTe": 2.4000000953674316,
-            "anaerobicTe": 2.0999999046325684,
-            "isToday": true,
-            "benefits": {
-                  "muscles_worked": "Cardiovascular Myocardium, Slow-Twitch Oxidative Fibers, Core Stabilizers, Lower Extremity Postural Chain",
-                  "biomechanics": "Controlled functional biomechanics maintaining joint alignment, intra-abdominal pressure, and smooth kinetic chain force transfer without pathological joint shear.",
-                  "cardio": "Average HR 126 bpm with peak spike at 151 bpm (79% estimated HRmax). Aerobic TE 2.4 + Anaerobic TE 2.1 stimulates mitochondrial capillary density, lactate clearance shuttling, and myocardial stroke volume expansion.",
-                  "metabolic": "419 kcal active expenditure dynamically expands today's caloric runway while protecting your 350 kcal deficit towards 15.0% body fat. Elevates excess post-exercise oxygen consumption (EPOC) for 4\u20138 hours post-session.",
-                  "autoregulation": "Optimal cardiovascular and neuromuscular stimulus. Systemic fatigue remains manageable; cleared for scheduled training."
-            }
-      },
-      {
-            "id": "25007961560",
-            "name": "Walking",
-            "subTitle": "Rushmoor Walking",
-            "rawDate": "2026-11-08 11:01:35",
-            "date": "Yesterday \u2022 11:01",
-            "durationMin": 56.5,
-            "calories": 294,
-            "avgHr": 80,
-            "maxHr": 106,
-            "aerobicTe": 0.30000001192092896,
-            "anaerobicTe": 0.0,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Soleus & Gastrocnemius, Gluteus Medius, Postural Core Stabilizers, Tibialis Anterior",
-                  "biomechanics": "Low-impact cyclical steady cadence absorbing ~1.2\u00d7 bodyweight (~119.8kg) per stride. Promotes joint synovial fluid circulation, venous blood return, and lumbar decompression without CNS or axial strain.",
-                  "cardio": "Average HR 80 bpm with peak anaerobic spike at 106 bpm (55% HRmax). Aerobic TE 0.3 + Anaerobic TE 0.0 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.",
-                  "metabolic": "294 kcal active burn contributed to yesterday's 649 kcal active burn while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.",
-                  "autoregulation": "Zero recovery debt; high parasympathetic tone stimulus that accelerates metabolic waste clearance and promotes recovery for subsequent lifting."
-            }
-      },
-      {
-            "id": "25006317774",
-            "name": "Indoor_cardio",
-            "subTitle": "10m Combat Warm-up + 300 Tuck Jumps",
-            "rawDate": "2026-11-08 09:47:33",
-            "date": "Yesterday \u2022 09:47",
-            "durationMin": 28.2,
-            "calories": 355,
-            "avgHr": 128,
-            "maxHr": 165,
-            "aerobicTe": 2.5,
-            "anaerobicTe": 2.4000000953674316,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex (gastrocnemius/soleus), Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis, Rotator cuff & Deltoids, Obliques & Transverse Abdominis, Serratus anterior, Calf spring complex",
-                  "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~349\u2013449kg peak eccentric ground reaction force per jump at 99.8kg bodyweight). Significantly enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
-                  "cardio": "Average HR 128 bpm with peak anaerobic spike at 165 bpm (86% HRmax). Aerobic TE 2.5 + Anaerobic TE 2.4 drives rapid lactate shuttling, mitochondrial oxygen utilization, and anaerobic glycolytic buffering capacity.",
-                  "metabolic": "355 kcal active burn natively expands today's caloric runway while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours post-session.",
-                  "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy axial squats."
-            }
-      },
-      {
-            "id": "24994235032",
-            "name": "Cardio",
-            "subTitle": "Aerobic Base Conditioning (73.8 min)",
-            "rawDate": "2026-11-07 07:37:10",
-            "date": "Yesterday \u2022 07:37",
-            "durationMin": 73.8,
-            "calories": 656,
-            "avgHr": 118,
-            "maxHr": 168,
-            "aerobicTe": 2.5,
-            "anaerobicTe": 1.3,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
-                  "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.",
-                  "cardio": "Avg HR 118 bpm, Max HR 168 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.",
-                  "metabolic": "656 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
-                  "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
-            }
-      },
-      {
-            "id": "24983208933",
-            "name": "Cardio",
-            "subTitle": "Aerobic Base Conditioning (49.2 min)",
-            "rawDate": "2026-11-06 06:07:11",
-            "date": "Yesterday \u2022 06:07",
-            "durationMin": 49.2,
-            "calories": 514,
-            "avgHr": 123,
-            "maxHr": 157,
-            "aerobicTe": 2.5,
-            "anaerobicTe": 1.6,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Slow-twitch oxidative muscle fibers, cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
-                  "biomechanics": "Low-impact rhythmic endurance conditioning expanding stroke volume and capillary network density.",
-                  "cardio": "Avg HR 123 bpm, Max HR 157 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.",
-                  "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
-                  "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
-            }
-      },
-      {
-            "id": "24977983886",
-            "name": "Cardio",
-            "subTitle": "Cardio (26.2 min)",
-            "rawDate": "2026-11-05 17:09:29",
-            "date": "Yesterday \u2022 17:09",
-            "durationMin": 26.2,
-            "calories": 277,
-            "avgHr": 124,
-            "maxHr": 162,
-            "aerobicTe": 2.3,
-            "anaerobicTe": 0.8,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
-                  "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
-                  "cardio": "Avg HR 124 bpm, Max HR 162 bpm. Aerobic Training Effect 2.3 reinforces baseline aerobic engine.",
-                  "metabolic": "277 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
-                  "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
-            }
-      },
-      {
-            "id": "24971876362",
-            "name": "Cardio",
-            "subTitle": "Cardio (34.6 min)",
-            "rawDate": "2026-11-05 06:29:03",
-            "date": "Yesterday \u2022 06:29",
-            "durationMin": 34.6,
-            "calories": 514,
-            "avgHr": 145,
-            "maxHr": 170,
-            "aerobicTe": 3.4,
-            "anaerobicTe": 1.1,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
-                  "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
-                  "cardio": "Avg HR 145 bpm, Max HR 170 bpm. Aerobic Training Effect 3.4 reinforces baseline aerobic engine.",
-                  "metabolic": "514 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
-                  "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
-            }
-      },
-      {
-            "id": "24959919457",
-            "name": "Cardio",
-            "subTitle": "Cardio (22.9 min)",
-            "rawDate": "2026-11-04 06:13:36",
-            "date": "Yesterday \u2022 06:13",
-            "durationMin": 22.9,
-            "calories": 279,
-            "avgHr": 128,
-            "maxHr": 162,
-            "aerobicTe": 2.5,
-            "anaerobicTe": 0.4,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
-                  "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
-                  "cardio": "Avg HR 128 bpm, Max HR 162 bpm. Aerobic Training Effect 2.5 reinforces baseline aerobic engine.",
-                  "metabolic": "279 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
-                  "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
-            }
-      },
-      {
-            "id": "24948635377",
-            "name": "Cardio",
-            "subTitle": "High-Intensity Plyometrics (26.6 min)",
-            "rawDate": "2026-11-03 08:17:44",
-            "date": "Yesterday \u2022 08:17",
-            "durationMin": 26.6,
-            "calories": 372,
-            "avgHr": 136,
-            "maxHr": 162,
-            "aerobicTe": 3.0,
-            "anaerobicTe": 2.0,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Quadriceps (vastus medialis/lateralis), Calves & Achilles tendon complex, Gluteus Maximus, Hip Flexors (iliopsoas), Rectus Abdominis",
-                  "biomechanics": "300 plyometric landings absorbing 3.5\u20134.5\u00d7 bodyweight (~350\u2013450kg peak eccentric ground reaction force per jump at 99.85kg bodyweight). Enhances Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.",
-                  "cardio": "Average HR 136 bpm with peak anaerobic spike at 162 bpm (94% HRmax). Aerobic TE 3.0 + Anaerobic TE 2.0 drives rapid lactate shuttling and anaerobic glycolytic buffering.",
-                  "metabolic": "372 kcal active burn natively expands today's caloric runway from 2,092 kcal to 2464 kcal while maintaining your 350 kcal fat-loss deficit. Elevates post-exercise oxygen consumption (EPOC) for 4\u20136 hours.",
-                  "autoregulation": "High eccentric tension on patellar tendons and gastrocnemius. Recommendation: Pair upcoming training with horizontal push (bench/dips/push-ups) and give knee extensors 24\u201348 hours recovery before heavy squats."
-            }
-      },
-      {
-            "id": "24938502919",
-            "name": "Hart Walking",
-            "subTitle": "Hart Walking (4.7 min)",
-            "rawDate": "2026-11-02 12:12:37",
-            "date": "Yesterday \u2022 12:12",
-            "durationMin": 4.7,
-            "calories": 24,
-            "avgHr": 86,
-            "maxHr": 108,
-            "aerobicTe": 0.0,
-            "anaerobicTe": 0.0,
-            "isToday": false,
-            "benefits": {
-                  "muscles_worked": "Cardiovascular system, core stabilizers, lower extremity posterior & anterior chain",
-                  "biomechanics": "Steady cadence conditioning supporting aerobic work capacity and mitochondrial density.",
-                  "cardio": "Avg HR 86 bpm, Max HR 108 bpm. Aerobic Training Effect 0.0 reinforces baseline aerobic engine.",
-                  "metabolic": "24 kcal active expenditure supporting weekly caloric expenditure and metabolic flexibility.",
-                  "autoregulation": "Cardiovascular stimulus sustained. Systemic fatigue is low; full clearance for subsequent strength work."
-            }
-      }
-];
+    // GARMIN & WORKOUT ACTIVITIES STORE (Hydrated dynamically from localStorage & /api/live_state)
+    let recentActivitiesData = [];
 
     function restoreActivitiesFromLocalStorage() {
       try {
-        const CURRENT_ACT_VERSION = "v5.22_nov17_notes";
+        const CURRENT_ACT_VERSION = "v5.38_clean";
         if (localStorage.getItem('pulse_act_version') !== CURRENT_ACT_VERSION) {
           localStorage.removeItem('pulse_recent_activities');
           localStorage.setItem('pulse_act_version', CURRENT_ACT_VERSION);
@@ -244,7 +12,7 @@
         const saved = localStorage.getItem('pulse_recent_activities');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             recentActivitiesData = parsed;
           }
         }
@@ -608,17 +376,24 @@
       return [];
     }
 
-    function syncExercisePreferencesToApi(prefs) {
+    async function syncExercisePreferencesToApi(prefs) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/preferences/exercises', prefs, 'POST');
+        return;
+      }
       try {
-        fetch('/api/preferences/exercises', {
+        const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/preferences/exercises', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(prefs)
-        }).catch(err => {
-          console.warn('Could not sync exercise preferences to API:', err);
+          body: JSON.stringify(prefs),
+          timeoutMs: 4000
         });
+        if (!res || !res.ok) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/preferences/exercises', prefs, 'POST');
+        }
       } catch(e) {
-        console.warn('syncExercisePreferencesToApi error:', e);
+        if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/preferences/exercises', prefs, 'POST');
+        console.warn('syncExercisePreferencesToApi queued offline:', e);
       }
     }
 
@@ -2337,29 +2112,44 @@
 
       localStorage.setItem('pulse_athlete_weight', val.toFixed(2));
       localStorage.setItem('pulse_athlete_bf', bfPct.toFixed(1));
-      const _now = new Date();
-      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
       localStorage.setItem('pulse_manual_scale_date', todayIso);
 
-      fetch('/api/renpho/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weight_kg: val, body_fat_pct: !isNaN(inpBf) ? inpBf : null })
-      })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && data.success && data.renpho) {
-          if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
-          window.BAKED_LIVE_STATE.renpho = data.renpho;
-          if (data.state && data.state.athlete) {
-            window.BAKED_LIVE_STATE.athlete = data.state.athlete;
-          }
-          if (typeof applyLiveStateToDom === 'function') {
-            applyLiveStateToDom(window.BAKED_LIVE_STATE);
-          }
+      const scalePayload = { weight_kg: val, body_fat_pct: !isNaN(inpBf) ? inpBf : null };
+      const _doScaleSync = async () => {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/renpho/manual', scalePayload, 'POST');
+          return;
         }
-      })
-      .catch(err => console.warn('Could not post manual weight:', err));
+        try {
+          const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/renpho/manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scalePayload),
+            timeoutMs: 5000
+          });
+          if (!res || !res.ok) {
+            if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/renpho/manual', scalePayload, 'POST');
+            if (typeof showToast === 'function') showToast('Saved weigh-in locally — queued for cloud sync');
+            return;
+          }
+          const data = await res.json();
+          if (data && data.success && data.renpho) {
+            if (!window.BAKED_LIVE_STATE) window.BAKED_LIVE_STATE = {};
+            window.BAKED_LIVE_STATE.renpho = data.renpho;
+            if (data.state && data.state.athlete) {
+              window.BAKED_LIVE_STATE.athlete = data.state.athlete;
+            }
+            if (typeof applyLiveStateToDom === 'function') {
+              applyLiveStateToDom(window.BAKED_LIVE_STATE);
+            }
+          }
+        } catch (err) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/renpho/manual', scalePayload, 'POST');
+          console.warn('Could not post manual weight:', err);
+        }
+      };
+      _doScaleSync();
 
       closeWeightModal();
       showToast(`✓ Weigh-in saved: ${val.toFixed(2)} kg (${bfPct}% BF)`);
@@ -2652,18 +2442,26 @@ function generateWorkoutFromGearAndGoal() {
         }
       } catch(e) {}
 
-      try {
-        const rawCond = localStorage.getItem('pulse_conditioning_history');
-        if (rawCond) {
-          const cmap = JSON.parse(rawCond);
-          Object.values(cmap).forEach(entry => {
-            const dt = entry && (entry.lastDate || entry.date) ? new Date(entry.lastDate || entry.date).getTime() : 0;
-            if (dt && (now - dt) <= sevenDaysMs) {
-              counts.Conditioning += Math.max(1, Number(entry.amrapRounds || entry.roundsCompleted || 2));
-            }
-          });
-        }
-      } catch(e) {}
+      const _seenCondTimestamps = new Set();
+      const _addCondEntries = (raw) => {
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed && typeof parsed === 'object' ? Object.values(parsed) : []);
+        list.forEach(entry => {
+          if (!entry || typeof entry !== 'object') return;
+          const stamp = String(entry.lastDate || entry.date || '');
+          const dt = stamp ? new Date(stamp).getTime() : 0;
+          if (!dt || (now - dt) > sevenDaysMs) return;
+          const dedupKey = `${stamp}_${entry.format || entry.mode || ''}`;
+          if (_seenCondTimestamps.has(dedupKey)) return;
+          _seenCondTimestamps.add(dedupKey);
+          counts.Conditioning += Math.max(1, Number(entry.amrapRounds || entry.roundsCompleted || entry.rounds || 2));
+        });
+      };
+      try { _addCondEntries(localStorage.getItem('pulse_conditioning_history')); } catch(e) {}
+      try { _addCondEntries(localStorage.getItem('pulse_conditioning_progression')); } catch(e) {}
 
       const acts = Array.isArray(recentActivitiesData) ? recentActivitiesData : [];
       acts.forEach(a => {
@@ -2919,13 +2717,27 @@ function generateWorkoutFromGearAndGoal() {
         if (r.target_weight_at_15pct) targetWeight = r.target_weight_at_15pct;
       }
 
-      const todayText = `${completedToday?.title || ''} ${(acts && acts[0] && (acts[0].subTitle || acts[0].sub_title)) || ''}`.toLowerCase();
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
+      const todayAct = (todayIso ? acts.find(a => String(a.rawDate || a.date || '').startsWith(todayIso) || a.isToday) : null) || null;
+      const latestAct = todayAct || acts[0] || null;
+      const actLabelRaw = (todayAct && (todayAct.subTitle || todayAct.sub_title || todayAct.name))
+        || (latestAct && (latestAct.subTitle || latestAct.sub_title || latestAct.name))
+        || '';
+      const todaySessionDesc = (completedToday && completedToday.title)
+        ? `today's ${escapeHtml(completedToday.title)}${completedToday.calories ? ` (${completedToday.calories} kcal)` : ''}`
+        : (todayAct
+          ? `today's ${escapeHtml(actLabelRaw)}`
+          : (latestAct ? `your recent ${escapeHtml(actLabelRaw)}` : 'your recent training volume'));
+      const curBb = window.BAKED_LIVE_STATE?.garmin?.body_battery;
+      const batteryPhrase = (curBb !== undefined && curBb !== null) ? `${curBb}%` : 'current levels';
+
+      const todayText = `${completedToday?.title || ''} ${actLabelRaw}`.toLowerCase();
       const fatigued = (typeof getFatiguedPatterns48h === 'function') ? getFatiguedPatterns48h() : { hinge: false, h_push: false, h_pull: false, v_push: false, knee_dom: false };
       const didSkipAndSwings = /skip|jump/.test(todayText) && /swing|kb|kettlebell/.test(todayText);
       const isLowerHeavy = todayText.includes('squat') || todayText.includes('option a') || todayText.includes('barbell') || todayText.includes('strength');
 
-      let latestAvgHr = 137;
-      if (acts.length > 0 && acts[0] && (acts[0].avgHr || acts[0].avg_hr)) latestAvgHr = acts[0].avgHr || acts[0].avg_hr;
+      let latestAvgHr = 128;
+      if (latestAct && (latestAct.avgHr || latestAct.avg_hr)) latestAvgHr = latestAct.avgHr || latestAct.avg_hr;
 
       let tomorrowGear = null;
       try { tomorrowGear = localStorage.getItem('pulse_tomorrow_gear'); } catch(e) {}
@@ -2943,7 +2755,7 @@ function generateWorkoutFromGearAndGoal() {
         return {
           presetKey: 'option_c',
           title: 'Option C: 20-Min Zone 2 Incline Walk & Thoracic/Hip Mobility Reset',
-          subtitle: 'Cortisol Control, Achilles/Hamstring Flush & Zero CNS Debt',
+          subtitle: 'Cortisol Control, Lower-Body Flush & Zero CNS Debt',
           durationMin: 25,
           calories: 140,
           estMorningBattery: '<50%',
@@ -2951,7 +2763,7 @@ function generateWorkoutFromGearAndGoal() {
           fatigueImpact: '0h CNS Debt',
           equipment: 'Bodyweight, Foam Roller & Resistance Band',
           badge: 'POOR SLEEP CONTINGENCY (<65)',
-          summary: `If tonight's sleep score drops below 65 (Morning Battery <50%, Readiness <58), avoid heavy axial spinal compression. A 20-minute Zone 2 walk + hip/ankle mobility lowers cortisol to protect all ${leanMass} kg of lean mass in your 350 kcal deficit while flushing calf & hamstring soreness from today's Jump Rope + KB Swings.`,
+          summary: `If tonight's sleep score drops below 65 (Morning Battery <50%, Readiness <58), avoid heavy axial spinal compression. A 20-minute Zone 2 walk + hip/ankle mobility lowers cortisol to protect all ${leanMass} kg of lean mass in your 350 kcal deficit while flushing residual soreness after ${todaySessionDesc}.`,
           reasoning: [
             {
               title: 'Cortisol & Lean Mass Protection',
@@ -2959,7 +2771,7 @@ function generateWorkoutFromGearAndGoal() {
             },
             {
               title: 'Achilles & Posterior Chain Flush',
-              desc: `Promotes synovial fluid circulation and gentle blood flow to calves, Achilles tendons, and hamstrings after today's 2,185 skips + 5×12 @ 24kg KB swings.`
+              desc: `Promotes synovial fluid circulation and gentle blood flow to calves, Achilles tendons, and hamstrings following ${todaySessionDesc}.`
             },
             {
               title: 'Autonomic Parasympathetic Reset',
@@ -2973,7 +2785,7 @@ function generateWorkoutFromGearAndGoal() {
           blueprint: [
             { name: 'Zone 2 Brisk Walk / Incline Treadmill', prescription: '20 min @ 100–112 bpm', cue: 'Nasal breathing only, relaxed shoulders, smooth heel-to-toe cadence.' },
             { name: 'Eccentric Calf & Achilles Wall Stretch', prescription: '2 × 45s/side (30s rest)', cue: 'Bent-knee soleus + straight-knee gastrocnemius decompression.' },
-            { name: '90/90 Hip & Hamstring Flossing', prescription: '2 × 10 reps/side', cue: 'Restore posterior hip capsule glide after 60 ballistic KB swings.' },
+            { name: '90/90 Hip & Hamstring Flossing', prescription: '2 × 10 reps/side', cue: 'Restore posterior hip capsule glide and lumbar freedom.' },
             { name: 'Deadbug Isometric Core Reset', prescription: '3 × 30s hold', cue: 'Press lower back flat into floor, slow diaphragmatic exhales.' }
           ],
           alternative: {
@@ -2997,11 +2809,11 @@ function generateWorkoutFromGearAndGoal() {
           fatigueImpact: 'Moderate CNS',
           equipment: `Single Heavy Kettlebell (${kbW})`,
           badge: 'MODERATE SLEEP FORECAST (65–79)',
-          summary: `Assuming moderate sleep (Score 65–79, Morning Battery ~65%, Readiness ~68), skip heavy spinal barbell loading and ballistic swings. Focus on controlled ${kbW} Kettlebell Upper Push/Pull grinds (Strict Press, Floor Press, Rows) which are 100% fresh after today's Jump Rope + 5×12 KB Swings.`,
+          summary: `Assuming moderate sleep (Score 65–79, Morning Battery ~65%, Readiness ~68), skip heavy spinal barbell loading and ballistic swings. Focus on controlled ${kbW} Kettlebell Upper Push/Pull grinds (Strict Press, Floor Press, Rows) alongside your recovery after ${todaySessionDesc}.`,
           reasoning: [
             {
-              title: 'Kinetic Chain Rotation (Upper Fresh, Lower Recovering)',
-              desc: `Today's <strong>2,185 skips + 60 ballistic 24kg KB swings (1,440 kg volume)</strong> taxed your calves, Achilles, and hamstrings. Tomorrow's controlled KB grinds target your completely fresh chest, shoulders, lats, and obliques.`
+              title: 'Kinetic Chain Rotation (Upper Push/Pull Focus)',
+              desc: `Accounting for ${todaySessionDesc}${didSkipAndSwings || fatigued.hinge ? ', which taxed your calves, Achilles, and posterior chain,' : ','} tomorrow's controlled ${kbW} KB grinds target your chest, shoulders, lats, and core stability.`
             },
             {
               title: 'Zero Spinal Axial Compression',
@@ -3045,12 +2857,12 @@ function generateWorkoutFromGearAndGoal() {
           fatigueImpact: lowerFatigued ? 'Low Posterior Load' : 'Moderate CNS',
           equipment: `Single Heavy Kettlebell (${kbW})`,
           badge: 'ASSUMING GOOD SLEEP (80+) • HEAVY KB',
-          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery ~85%), your CNS will be fresh tomorrow. Because today's <strong>2,185 skips + 5×12 @ 24kg KB Swings</strong> loaded your calves and posterior hinge while leaving <strong>Upper Push & Pull 100% fresh</strong>, tomorrow prioritizes heavy unilateral KB Pressing, Floor Pressing, and Rows.`,
+          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery ~85%), your CNS will be fresh tomorrow. ${lowerFatigued ? `Because ${todaySessionDesc} loaded your lower/posterior kinetic chain while keeping Upper Push & Pull fresh,` : `With recovery clear after ${todaySessionDesc},`} tomorrow prioritizes heavy unilateral ${kbW} KB Pressing, Floor Pressing, and Rows.`,
           reasoning: [
             {
               title: 'Musculoskeletal Load Management',
               desc: lowerFatigued
-                ? `Today's 5×12 @ 24kg KB swings + 2,185 skips loaded your posterior chain and calves. Tomorrow biases toward strict press, floor press, and gorilla rows while reducing RDL volume.`
+                ? `Accounting for ${todaySessionDesc}, posterior chain fatigue is managed by biasing tomorrow toward strict press, floor press, and gorilla rows while reducing RDL volume.`
                 : `Posterior chain is recovered. Heavy KB RDLs (4 × 10) plus unilateral press and row cover every major movement pattern without barbell spinal compression.`
             },
             {
@@ -3093,19 +2905,19 @@ function generateWorkoutFromGearAndGoal() {
           fatigueImpact: 'Upper Prime • Hinge Spared',
           equipment: 'Barbell, Squat Rack & Bench',
           badge: 'ASSUMING GOOD SLEEP (80+) • OPTIMAL PAIRING',
-          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery recharged to ~85%), your CNS will be fresh tomorrow. Because today's <strong>2,185 skips + 5×12 @ 24kg KB Swings</strong> loaded your calves, Achilles, and ballistic hip hinge while leaving your <strong>Upper Body Push & Pull 100% fresh</strong>, tomorrow is ideal for <strong>Heavy Barbell Bench Press (${fmtLoad(rxBench.weight)} × ${rxBench.reps}) & Pendlay Rows (${fmtLoad(rxRow.weight)} × ${rxRow.reps})</strong>, plus Back Squats if calves/hamstrings feel recovered (or swap RDL volume down to spare the posterior chain).`,
+          summary: `Assuming a restorative night's sleep (Sleep ~82+, Morning Battery recharged to ~85%), your CNS will be fresh tomorrow. Because ${todaySessionDesc} loaded your calves, Achilles, and ballistic hip hinge while leaving your <strong>Upper Body Push & Pull 100% fresh</strong>, tomorrow is ideal for <strong>Heavy Barbell Bench Press (${fmtLoad(rxBench.weight)} × ${rxBench.reps}) & Pendlay Rows (${fmtLoad(rxRow.weight)} × ${rxRow.reps})</strong>, plus controlled squats or reduced RDL volume.`,
           reasoning: [
             {
               title: '100% Fresh Upper Push & Pull Kinetic Chains',
-              desc: `Today's Jump Rope (2,185 skips) + 5 sets × 12 KB Swings (60 ballistic hinges @ 24kg = 1,440 kg volume) taxed the Achilles tendon complex, gastrocnemius/soleus, and hamstrings. Your <strong>Pectorals, Deltoids, Triceps, and Lats have 0% local fatigue</strong> and are primed for peak barbell loading.`
+              desc: `Because ${todaySessionDesc} taxed the Achilles tendon complex, calves, and posterior chain, your <strong>Pectorals, Deltoids, Triceps, and Lats have minimal local fatigue</strong> and are primed for peak barbell loading.`
             },
             {
-              title: 'Autoregulated Lower-Body Volume adjustment',
-              desc: `Since 60 ballistic KB swings already delivered potent hip-hinge stimulus today, tomorrow places <strong>Flat Bench Press (${fmtLoad(rxBench.weight)})</strong> and <strong>Pendlay Rows (${fmtLoad(rxRow.weight)})</strong> first, keeps Back Squats optional/controlled, and trims RDL volume to 2 controlled sets so hamstrings don't overreach.`
+              title: 'Autoregulated Lower-Body Volume Adjustment',
+              desc: `Since ballistic hinging already delivered potent posterior stimulus, tomorrow places <strong>Flat Bench Press (${fmtLoad(rxBench.weight)})</strong> and <strong>Pendlay Rows (${fmtLoad(rxRow.weight)})</strong> first, keeps Back Squats controlled, and trims RDL volume to 2 controlled sets so hamstrings don't overreach.`
             },
             {
               title: 'Sleep & CNS Rebound Projection',
-              desc: `Assuming 7.5–8h of quality sleep tonight (Sleep Score ~82+), your Body Battery will rebound from today's ${window.BAKED_LIVE_STATE?.garmin?.body_battery || 40}% back to <strong>~85%</strong> with Readiness <strong>~82</strong> — optimal for high-threshold motor unit recruitment.`
+              desc: `Assuming 7.5–8h of quality sleep tonight (Sleep Score ~82+), your Body Battery will rebound from ${batteryPhrase} back to <strong>~85%</strong> with Readiness <strong>~82</strong> — optimal for high-threshold motor unit recruitment.`
             },
             {
               title: 'Lean Mass Anchor in Deficit',
@@ -3116,13 +2928,13 @@ function generateWorkoutFromGearAndGoal() {
             { name: 'Barbell Flat Bench Press (Primary Push)', prescription: `4 × ${rxBench.reps} @ ${fmtLoad(rxBench.weight)} (90s rest)`, cue: '100% fresh chest/triceps — retract scapulae, drive feet into floor, explosive press.' },
             { name: 'Barbell Pendlay Row (Primary Pull)', prescription: `4 × ${rxRow.reps} @ ${fmtLoad(rxRow.weight)} (90s rest)`, cue: 'Dead-stop from floor each rep, brace core to protect posterior chain.' },
             { name: 'Barbell Overhead / Z-Press', prescription: `3 × ${rxZPress.reps} @ ${fmtLoad(rxZPress.weight)} (75s rest)`, cue: 'Strict vertical deltoid & triceps press; zero lower-back arch.' },
-            { name: 'Barbell Back Squat (Calf/Ankle Check)', prescription: `3 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Perform 3 crisp sets if calves feel bouncy after 2,185 skips; stop at 2 RIR.' },
-            { name: 'Barbell RDL (Reduced Hinge Volume)', prescription: `2 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Capped at 2 sets since 5×12 24kg KB swings already hit hamstrings today.' }
+            { name: 'Barbell Back Squat (Calf/Ankle Check)', prescription: `3 × ${rxSquat.reps} @ ${fmtLoad(rxSquat.weight)} (120s rest)`, cue: 'Perform 3 crisp sets if calves feel bouncy after plyometric work; stop at 2 RIR.' },
+            { name: 'Barbell RDL (Reduced Hinge Volume)', prescription: `2 × ${rxRdl.reps} @ ${fmtLoad(rxRdl.weight)} (90s rest)`, cue: 'Capped at 2 sets since ballistic hinging already stimulated hamstrings.' }
           ],
           alternative: {
             presetKey: 'option_kb',
-            title: 'Option KB: Heavy 24kg Kettlebell Upper Session',
-            desc: 'If training away from the barbell rack tomorrow, tap Moderate or Change Gear for 24kg KB Strict Press & Rows.'
+            title: `Option KB: Heavy ${kbW} Kettlebell Upper Session`,
+            desc: `If training away from the barbell rack tomorrow, tap Moderate or Change Gear for ${kbW} KB Strict Press & Rows.`
           }
         };
       }
@@ -3372,11 +3184,11 @@ function generateWorkoutFromGearAndGoal() {
               ${isSwapped ? '<span style="font-size:9px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--primary); padding:1px 4px; border-radius:3px;">SWAPPED</span>' : ''}
             </div>
             <div style="display:flex; align-items:center; gap:4px;">
-              <button type="button" class="header-pill-btn" onclick="openSwapModal('today', '${archKey}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:700; height:24px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); cursor:pointer;">⇄ Swap</button>
-              <button type="button" class="header-pill-btn" onclick="openEditLoadModal('${me.id}', '${archKey}', ${idx})" style="padding:2px 7px; font-size:10px; font-weight:800; height:24px; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.3); color:var(--primary); cursor:pointer;">✎ ${wStr}×${reps}</button>
+              <button type="button" class="header-pill-btn" data-arch-key="${escapeHtml(archKey)}" data-ex-idx="${idx}" onclick="openSwapModal('today', this.dataset.archKey, Number(this.dataset.exIdx))" style="padding:2px 7px; font-size:10px; font-weight:700; height:24px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-secondary); cursor:pointer;">⇄ Swap</button>
+              <button type="button" class="header-pill-btn" data-ex-id="${escapeHtml(me.id)}" data-arch-key="${escapeHtml(archKey)}" data-ex-idx="${idx}" onclick="openEditLoadModal(this.dataset.exId, this.dataset.archKey, Number(this.dataset.exIdx))" style="padding:2px 7px; font-size:10px; font-weight:800; height:24px; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.3); color:var(--primary); cursor:pointer;">✎ ${escapeHtml(wStr)}×${escapeHtml(reps)}</button>
             </div>
           </div>
-          <div style="font-size:10.5px; color:var(--text-muted); margin-top:-1px;">Cue: ${me.cue || baseEx.cue || ''}</div>
+          <div style="font-size:10.5px; color:var(--text-muted); margin-top:-1px;">Cue: ${escapeHtml(me.cue || baseEx.cue || '')}</div>
         `;
       }).join('');
     }
@@ -4327,7 +4139,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
-              Second Session: ${sec.title}
+              Second Session: ${escapeHtml(sec.title)}
             </div>
 
             <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-top:5px;">
@@ -4372,7 +4184,7 @@ function generateWorkoutFromGearAndGoal() {
           ? `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
               ${completed.sessionSummaries.map((s, idx) => `
                 <span style="font-size:10.5px; font-weight:700; color:${idx === 0 ? 'var(--primary)' : 'var(--cyan)'}; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:3px 8px; border-radius:6px;">
-                  Session ${idx + 1}: ${s.title} (${s.durationMin}m • ${s.calories} kcal)
+                  Session ${idx + 1}: ${escapeHtml(s.title)} (${s.durationMin}m • ${s.calories} kcal)
                 </span>
               `).join('')}
             </div>`
@@ -4393,7 +4205,7 @@ function generateWorkoutFromGearAndGoal() {
             </div>
 
             <div style="font-size:16px; font-weight:800; color:#fff; margin-top:8px; font-family:var(--font-sans);">
-              ${completed.title || 'Completed Session'}
+              ${escapeHtml(completed.title || 'Completed Session')}
             </div>
 
             ${sessionChipsHtml}
@@ -4494,8 +4306,9 @@ function generateWorkoutFromGearAndGoal() {
 
     function launchDynamicWorkout(optionId) {
       const opt = todayWorkoutOptions.find(o => o.id === optionId) || todayWorkoutOptions[0];
+      if (!opt) return;
       const rotatedInfo = (typeof getRotatedExercisesForOption === 'function') ? getRotatedExercisesForOption(opt) : { exerciseIds: opt.exerciseIds, rotationNote: null };
-      const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds;
+      const activeExerciseIds = rotatedInfo.exerciseIds || opt.exerciseIds || [];
       const todaySwaps = getTodayExerciseSwaps();
 
       activeWorkoutPlan = activeExerciseIds.map((origExId, idx) => {
@@ -4522,7 +4335,7 @@ function generateWorkoutFromGearAndGoal() {
         id: opt.id,
         title: opt.title,
         preset: opt.preset || currentPreset,
-        goal: opt.goal || currentGoal
+        goal: opt.goal || (typeof currentGoalKey !== 'undefined' ? currentGoalKey : 'recomp')
       };
       currentExIdx = 0;
       const badgeEl = document.getElementById('wPlanBadge');
@@ -4573,6 +4386,9 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     // ==================== INLINE CONDITIONING & TIME-BASED ENGINE (INTERVAL / EMOM / AMRAP / STEADY / FOR TIME) ====================
+    const PULSE_COND_PROG_KEY = 'pulse_conditioning_progression';
+    const PULSE_COND_HIST_KEY = 'pulse_conditioning_history';
+
     let inlineTimerState = {
       exId: null,
       format: 'interval',
@@ -4585,6 +4401,7 @@ function viewCompletedWorkoutBreakdown() {
       secsLeft: 45,
       elapsedSec: 0,
       amrapRounds: 0,
+      lastTickMs: 0,
       running: false,
       intervalId: null
     };
@@ -4595,23 +4412,84 @@ function viewCompletedWorkoutBreakdown() {
         inlineTimerState.intervalId = null;
       }
       inlineTimerState.running = false;
+      inlineTimerState.lastTickMs = 0;
+      if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
+    }
+
+    function _readConditioningProgressionMap() {
+      try {
+        const rawProg = localStorage.getItem(PULSE_COND_PROG_KEY);
+        if (rawProg) {
+          const parsedProg = JSON.parse(rawProg);
+          if (parsedProg && typeof parsedProg === 'object' && !Array.isArray(parsedProg)) {
+            return parsedProg;
+          }
+        }
+        // One-time migration if legacy plain Object was stored in pulse_conditioning_history
+        const rawHist = localStorage.getItem(PULSE_COND_HIST_KEY);
+        if (rawHist) {
+          const parsedHist = JSON.parse(rawHist);
+          if (parsedHist && typeof parsedHist === 'object' && !Array.isArray(parsedHist)) {
+            localStorage.setItem(PULSE_COND_PROG_KEY, JSON.stringify(parsedHist));
+            return parsedHist;
+          }
+        }
+      } catch(e) {}
+      return {};
+    }
+
+    function _readConditioningHistoryArray() {
+      try {
+        const raw = localStorage.getItem(PULSE_COND_HIST_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === 'object') {
+          try {
+            if (!localStorage.getItem(PULSE_COND_PROG_KEY)) {
+              localStorage.setItem(PULSE_COND_PROG_KEY, JSON.stringify(parsed));
+            }
+          } catch(e) {}
+          const converted = Object.entries(parsed)
+            .filter(([, v]) => v && typeof v === 'object' && (v.date || v.lastDate))
+            .map(([k, v]) => ({
+              exId: k,
+              name: v.name || k,
+              date: v.date || v.lastDate,
+              mode: v.format || v.mode || 'interval',
+              format: v.format || v.mode || 'interval',
+              rounds: v.roundsCompleted || v.amrapRounds || v.nextRounds || 1,
+              amrapRounds: v.amrapRounds || v.roundsCompleted || 0,
+              duration_min: v.totalSeconds ? Math.max(1, Math.round(v.totalSeconds / 60)) : Math.max(1, Math.round((v.durationSec || 600) / 60)),
+              sub_title: v.name || 'Conditioning'
+            }));
+          localStorage.setItem(PULSE_COND_HIST_KEY, JSON.stringify(converted));
+          return converted;
+        }
+      } catch(e) {}
+      return [];
+    }
+
+    function _appendConditioningHistoryEntry(entry) {
+      try {
+        const arr = _readConditioningHistoryArray();
+        arr.unshift(entry);
+        localStorage.setItem(PULSE_COND_HIST_KEY, JSON.stringify(arr.slice(0, 50)));
+      } catch(e) {}
     }
 
     function getConditioningProgression(exId) {
       try {
-        const raw = localStorage.getItem('pulse_conditioning_history');
-        if (!raw) return null;
-        const map = JSON.parse(raw);
+        const map = _readConditioningProgressionMap();
         return map[exId] || null;
       } catch(e) { return null; }
     }
 
     function saveConditioningProgression(exId, entry) {
       try {
-        const raw = localStorage.getItem('pulse_conditioning_history');
-        const map = raw ? JSON.parse(raw) : {};
+        const map = _readConditioningProgressionMap();
         map[exId] = entry;
-        localStorage.setItem('pulse_conditioning_history', JSON.stringify(map));
+        localStorage.setItem(PULSE_COND_PROG_KEY, JSON.stringify(map));
       } catch(e) {}
     }
 
@@ -4862,8 +4740,9 @@ function viewCompletedWorkoutBreakdown() {
       };
 
       const hasRoundCounter = (st.format === 'kb_flow' || st.format === 'amrap' || st.format === 'for_time');
+      const escExId = escapeHtml(ex.id);
       const roundBtnHtml = hasRoundCounter ? `
-        <button type="button" onclick="logInlineCondRound('${ex.id}')" style="padding:5px 9px; font-size:11px; font-weight:900; background:var(--primary); color:#000; border:none; border-radius:7px; cursor:pointer; white-space:nowrap;">+1 Rd (${st.amrapRounds})</button>
+        <button type="button" data-ex-id="${escExId}" onclick="logInlineCondRound(this.dataset.exId)" style="padding:5px 9px; font-size:11px; font-weight:900; background:var(--primary); color:#000; border:none; border-radius:7px; cursor:pointer; white-space:nowrap;">+1 Rd (${st.amrapRounds})</button>
         ${st.amrapRounds > 0 ? `<button type="button" onclick="stepInlineRound(-1)" title="Subtract round" style="padding:4px 6px; font-size:11px; font-weight:800; border-radius:6px; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.06); color:#fff; cursor:pointer;">−</button>` : ''}
       ` : '';
 
@@ -4885,14 +4764,14 @@ function viewCompletedWorkoutBreakdown() {
           <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; padding-top:5px; border-top:1px solid rgba(0,245,212,0.22);">
             <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; min-width:0; flex:1;">
               <span style="font-size:10px; font-weight:900; color:var(--teal, #00f5d4); letter-spacing:0.04em;">NOW (${currIdx + 1}/${flowSteps.length}):</span>
-              <strong style="font-size:13.5px; color:#fff; font-weight:900;">${currParsed.moveName}</strong>
+              <strong style="font-size:13.5px; color:#fff; font-weight:900;">${escapeHtml(currParsed.moveName)}</strong>
               ${renderSidePill(currParsed.sideBadge)}
-              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; background:rgba(0,245,212,0.2); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);">${currParsed.repsBadge}</span>
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; background:rgba(0,245,212,0.2); border:1.5px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4);">${escapeHtml(currParsed.repsBadge)}</span>
               <span style="font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap;">
-                <span style="color:#38bdf8; font-weight:800;">UP NEXT ➔</span> #${nextIdx + 1} ${nextParsed.moveName} (${nextParsed.repsBadge})
+                <span style="color:#38bdf8; font-weight:800;">UP NEXT ➔</span> #${nextIdx + 1} ${escapeHtml(nextParsed.moveName)} (${escapeHtml(nextParsed.repsBadge)})
               </span>
             </div>
-            <button type="button" onclick="advanceInlineCondFlowStep('${ex.id}', 1)" style="padding:4px 9px; font-size:11px; font-weight:800; border-radius:7px; background:rgba(0,245,212,0.18); border:1px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4); cursor:pointer; white-space:nowrap; flex-shrink:0;">
+            <button type="button" data-ex-id="${escExId}" onclick="advanceInlineCondFlowStep(this.dataset.exId, 1)" style="padding:4px 9px; font-size:11px; font-weight:800; border-radius:7px; background:rgba(0,245,212,0.18); border:1px solid var(--teal, #00f5d4); color:var(--teal, #00f5d4); cursor:pointer; white-space:nowrap; flex-shrink:0;">
               Next ➔
             </button>
           </div>
@@ -4918,13 +4797,13 @@ function viewCompletedWorkoutBreakdown() {
               : 'background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.28); color:#7dd3fc;');
 
           return `
-            <button type="button" onclick="setInlineCondFlowStep('${ex.id}', ${idx})" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 9px; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.12s ease; min-width:0; ${rowBg}">
+            <button type="button" data-ex-id="${escExId}" data-step-idx="${idx}" onclick="setInlineCondFlowStep(this.dataset.exId, Number(this.dataset.stepIdx))" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 9px; border-radius:7px; cursor:pointer; text-align:left; transition:all 0.12s ease; min-width:0; ${rowBg}">
               <div style="display:flex; align-items:center; gap:6px; min-width:0; flex:1;">
                 <span style="width:18px; height:18px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:900; font-family:'JetBrains Mono',monospace; flex-shrink:0; ${stepNumBg}">${isDone ? '✓' : (idx + 1)}</span>
-                <span style="font-size:13px; font-weight:800; color:#f8fafc; line-height:1.2;">${p.moveName}</span>
+                <span style="font-size:13px; font-weight:800; color:#f8fafc; line-height:1.2;">${escapeHtml(p.moveName)}</span>
                 ${renderSidePill(p.sideBadge)}
               </div>
-              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; white-space:nowrap; flex-shrink:0; ${repPillStyle}">${p.repsBadge}</span>
+              <span style="font-size:12px; font-weight:900; font-family:'JetBrains Mono',monospace; padding:2px 7px; border-radius:5px; white-space:nowrap; flex-shrink:0; ${repPillStyle}">${escapeHtml(p.repsBadge)}</span>
             </button>
           `;
         }).join('');
@@ -5030,8 +4909,8 @@ function viewCompletedWorkoutBreakdown() {
                 <div style="display:flex; gap:4px; flex-wrap:wrap;">${presetsHtml}</div>
               </div>
               ${drawerExtraControlsHtml}
-              <div style="color:#e2e8f0; line-height:1.35;"><strong style="color:var(--primary);">Coaching Cue:</strong> ${ex.cue || ''}</div>
-              <div style="color:var(--text-secondary); line-height:1.35;"><strong>Why Selected:</strong> ${whyText}</div>
+              <div style="color:#e2e8f0; line-height:1.35;"><strong style="color:var(--primary);">Coaching Cue:</strong> ${escapeHtml(ex.cue || '')}</div>
+              <div style="color:var(--text-secondary); line-height:1.35;"><strong>Why Selected:</strong> ${escapeHtml(whyText)}</div>
               <div style="display:flex; gap:6px;">
                 <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; flex:1;">⇄ Swap Session</button>
                 <button type="button" onclick="openEditLoadModalForActive()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:#fff; border-radius:6px; padding:4px 8px; font-size:10.5px; font-weight:700; cursor:pointer; flex:1;">✎ Edit Bell / Target</button>
@@ -5042,7 +4921,7 @@ function viewCompletedWorkoutBreakdown() {
           <!-- 5. Compact Bottom Status & Complete Session Bar -->
           <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; padding:2px 2px 0;">
             <span style="font-size:10.5px; font-weight:800; color:#94a3b8;">${bottomStatusText}</span>
-            <button type="button" onclick="completeInlineConditioning('${ex.id}')" style="padding:5px 11px; border-radius:7px; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.55); color:${isLogged ? '#000' : '#34d399'}; font-size:11px; font-weight:900; cursor:pointer; white-space:nowrap;">
+            <button type="button" data-ex-id="${escExId}" onclick="completeInlineConditioning(this.dataset.exId)" style="padding:5px 11px; border-radius:7px; background:${isLogged ? '#10b981' : 'rgba(16,185,129,0.22)'}; border:1px solid rgba(16,185,129,0.55); color:${isLogged ? '#000' : '#34d399'}; font-size:11px; font-weight:900; cursor:pointer; white-space:nowrap;">
               ${isLogged ? '✓ Session Logged' : '✓ Complete & Log Session'}
             </button>
           </div>
@@ -5208,24 +5087,12 @@ function viewCompletedWorkoutBreakdown() {
       beep(700, 0.08);
     }
 
-    function toggleInlineTimer() {
+    function _stepInlineTimerSeconds(deltaSec, isCatchUp) {
       const ex = activeWorkoutPlan[currentExIdx];
-      if (!ex) return;
-      if (inlineTimerState.running) {
-        stopInlineTimer();
-        renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
-        return;
-      }
-      inlineTimerState.running = true;
-      requestWakeLock();
-      beep(880, 0.1);
-      if (inlineTimerState.format === 'interval') speak("Work! Let's go!");
-      else if (inlineTimerState.format === 'emom') speak("Minute 1. Go!");
-      else if (inlineTimerState.format === 'amrap') speak("AMRAP started.");
-      else if (inlineTimerState.format === 'kb_flow') speak("Kettlebell flow AMRAP started.");
-
-      inlineTimerState.intervalId = setInterval(() => {
-        const st = inlineTimerState;
+      const st = inlineTimerState;
+      const steps = Math.max(0, Math.floor(deltaSec));
+      for (let i = 0; i < steps; i++) {
+        if (!st.running) return;
         st.elapsedSec++;
         if (st.format === 'for_time') {
           st.secsLeft = st.elapsedSec;
@@ -5233,69 +5100,99 @@ function viewCompletedWorkoutBreakdown() {
             stopInlineTimer();
             beep(900, 0.25);
             speak("Time cap reached.");
-            completeInlineConditioning(ex.id);
+            completeInlineConditioning(ex ? ex.id : st.exId);
             return;
           }
         } else {
           st.secsLeft--;
           if (st.secsLeft <= 0) {
+            const isFinalStep = (i === steps - 1);
             if (st.format === 'interval' || (st.format === 'steady' && st.rounds > 1)) {
               if (st.phase === 'work' && st.restSec > 0 && st.currentRound < st.rounds) {
                 st.phase = 'rest';
                 st.secsLeft = st.restSec;
-                beep(520, 0.18);
-                speak("Rest.");
+                if (isFinalStep || !isCatchUp) { beep(520, 0.18); speak("Rest."); }
               } else if (st.currentRound < st.rounds) {
                 st.currentRound++;
                 st.phase = 'work';
                 st.secsLeft = st.workSec;
-                beep(880, 0.18);
-                speak(`Round ${st.currentRound}. Work!`);
+                if (isFinalStep || !isCatchUp) { beep(880, 0.18); speak(`Round ${st.currentRound}. Work!`); }
               } else {
                 stopInlineTimer();
                 beep(950, 0.3);
                 speak("Conditioning block complete!");
-                completeInlineConditioning(ex.id);
+                completeInlineConditioning(ex ? ex.id : st.exId);
                 return;
-              }
-              const badgeEl = document.getElementById('inlineTimerPhaseBadge');
-              if (badgeEl) {
-                badgeEl.innerText = st.phase === 'rest'
-                  ? `REST • R${st.currentRound}/${st.rounds}`
-                  : `WORK • R${st.currentRound}/${st.rounds}`;
-                badgeEl.style.color = st.phase === 'rest' ? '#f59e0b' : '#22c55e';
               }
             } else if (st.format === 'emom') {
               if (st.currentRound < st.rounds) {
                 st.currentRound++;
                 st.secsLeft = 60;
-                beep(880, 0.18);
-                speak(`Minute ${st.currentRound}.`);
-                const badgeEl = document.getElementById('inlineTimerPhaseBadge');
-                if (badgeEl) {
-                  badgeEl.innerText = `MIN ${st.currentRound}/${st.rounds}`;
-                  badgeEl.style.color = '#00e5ff';
-                }
+                if (isFinalStep || !isCatchUp) { beep(880, 0.18); speak(`Minute ${st.currentRound}.`); }
               } else {
                 stopInlineTimer();
                 beep(950, 0.3);
                 speak("EMOM complete!");
-                completeInlineConditioning(ex.id);
+                completeInlineConditioning(ex ? ex.id : st.exId);
                 return;
               }
             } else {
               stopInlineTimer();
               beep(950, 0.3);
               speak("Time complete!");
-              completeInlineConditioning(ex.id);
+              completeInlineConditioning(ex ? ex.id : st.exId);
               return;
             }
           }
         }
-        const digitsEl = document.getElementById('inlineTimerDigits');
-        if (digitsEl) digitsEl.innerText = formatClockMMSS(st.secsLeft);
-      }, 1000);
+      }
+      const badgeEl = document.getElementById('inlineTimerPhaseBadge');
+      if (badgeEl) {
+        if (st.format === 'interval' || (st.format === 'steady' && st.rounds > 1)) {
+          badgeEl.innerText = st.phase === 'rest'
+            ? `REST • R${st.currentRound}/${st.rounds}`
+            : `WORK • R${st.currentRound}/${st.rounds}`;
+          badgeEl.style.color = st.phase === 'rest' ? '#f59e0b' : '#22c55e';
+        } else if (st.format === 'emom') {
+          badgeEl.innerText = `MIN ${st.currentRound}/${st.rounds}`;
+          badgeEl.style.color = '#00e5ff';
+        }
+      }
+      const digitsEl = document.getElementById('inlineTimerDigits');
+      if (digitsEl) digitsEl.innerText = formatClockMMSS(st.secsLeft);
+    }
 
+    function _tickInlineTimerFromClock() {
+      const st = inlineTimerState;
+      if (!st.running) return;
+      const nowMs = Date.now();
+      if (!st.lastTickMs) st.lastTickMs = nowMs;
+      const deltaSec = Math.floor((nowMs - st.lastTickMs) / 1000);
+      if (deltaSec > 0) {
+        st.lastTickMs += deltaSec * 1000;
+        _stepInlineTimerSeconds(deltaSec, deltaSec > 3);
+      }
+    }
+
+    function toggleInlineTimer() {
+      const ex = activeWorkoutPlan[currentExIdx];
+      if (!ex) return;
+      if (inlineTimerState.running) {
+        _tickInlineTimerFromClock();
+        stopInlineTimer();
+        renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
+        return;
+      }
+      inlineTimerState.running = true;
+      inlineTimerState.lastTickMs = Date.now();
+      requestWakeLock();
+      beep(880, 0.1);
+      if (inlineTimerState.format === 'interval') speak("Work! Let's go!");
+      else if (inlineTimerState.format === 'emom') speak("Minute 1. Go!");
+      else if (inlineTimerState.format === 'amrap') speak("AMRAP started.");
+      else if (inlineTimerState.format === 'kb_flow') speak("Kettlebell flow AMRAP started.");
+
+      inlineTimerState.intervalId = setInterval(_tickInlineTimerFromClock, 250);
       renderInlineConditioningPlayer(ex, getExerciseFormatConfig(ex));
     }
 
@@ -5321,12 +5218,13 @@ function viewCompletedWorkoutBreakdown() {
 
       // Elephant Progression: advance rounds or record AMRAP/For-Time benchmark
       let nextMsg = '';
+      const nowIso = new Date().toISOString();
       if (st.format === 'interval' || st.format === 'emom') {
         const nextRounds = Math.min(16, st.rounds + 1);
-        saveConditioningProgression(exId, { workSec: st.workSec, restSec: st.restSec, nextRounds, lastDate: new Date().toISOString() });
+        saveConditioningProgression(exId, { workSec: st.workSec, restSec: st.restSec, nextRounds, lastDate: nowIso });
         nextMsg = `Conditioning density hit (${st.rounds} rounds, ~${estBurn} kcal). Next session progresses to ${nextRounds} rounds.`;
       } else if (st.format === 'amrap') {
-        saveConditioningProgression(exId, { durationSec: st.durationSec, amrapRounds: st.amrapRounds, lastDate: new Date().toISOString() });
+        saveConditioningProgression(exId, { durationSec: st.durationSec, amrapRounds: st.amrapRounds, lastDate: nowIso });
         nextMsg = `AMRAP logged: ${st.amrapRounds} rounds in ${Math.round(st.durationSec / 60)}m (~${estBurn} kcal). Beat ${st.amrapRounds} next time.`;
       } else if (st.format === 'kb_flow') {
         const intermissionLabel = st.intermissionMode === 'none_rest' ? 'Rest Only (60s)' : (st.intermissionMode || 'Rest Only');
@@ -5340,16 +5238,29 @@ function viewCompletedWorkoutBreakdown() {
           format: 'kb_flow',
           roundsCompleted: st.amrapRounds,
           totalSeconds: totalDurationSec,
-          date: new Date().toISOString(),
-          lastDate: new Date().toISOString()
+          date: nowIso,
+          lastDate: nowIso
         });
         nextMsg = `KB Flow logged: ${st.amrapRounds} rounds (${totalTonnageKg.toLocaleString()} kg tonnage) in ${Math.round(st.durationSec / 60)}m • ${intermissionLabel} (~${estBurn} kcal). Beat ${st.amrapRounds} next time.`;
       } else if (st.format === 'for_time') {
-        saveConditioningProgression(exId, { elapsedSec: totalDurationSec, lastDate: new Date().toISOString() });
+        saveConditioningProgression(exId, { elapsedSec: totalDurationSec, lastDate: nowIso });
         nextMsg = `For-Time benchmark logged: ${formatClockMMSS(totalDurationSec)} (~${estBurn} kcal).`;
       } else {
         nextMsg = `Timed block logged (${formatClockMMSS(totalDurationSec)}, ~${estBurn} kcal).`;
       }
+
+      _appendConditioningHistoryEntry({
+        exId: exId,
+        name: ex ? ex.name : (st.format || 'Conditioning'),
+        date: nowIso,
+        mode: st.format,
+        format: st.format,
+        rounds: (st.format === 'kb_flow' || st.format === 'amrap') ? st.amrapRounds : st.rounds,
+        amrapRounds: st.amrapRounds,
+        duration_min: Math.max(1, Math.round(totalDurationSec / 60)),
+        calories: estBurn,
+        sub_title: ex ? ex.name : 'Conditioning'
+      });
 
       saveActiveSessionToLocalStorage();
       const banner = document.getElementById('autoregBanner');
@@ -5389,7 +5300,7 @@ function viewCompletedWorkoutBreakdown() {
           <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#00e5ff; text-transform:uppercase;">🏆 Session Complete</span>
           <span onclick="closeSessionSummaryModal()" style="cursor:pointer; color:var(--text-muted); font-size:16px; padding:2px 6px;">✕</span>
         </div>
-        <div style="font-size:16px; font-weight:800; color:#fff; line-height:1.25; margin-bottom:12px;">${opts.title || 'Workout Logged'}</div>
+        <div style="font-size:16px; font-weight:800; color:#fff; line-height:1.25; margin-bottom:12px;">${escapeHtml(opts.title || 'Workout Logged')}</div>
         <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:12px;">
           <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
             <div style="font-size:10px; color:var(--text-muted); font-weight:700;">DURATION</div>
@@ -5397,7 +5308,7 @@ function viewCompletedWorkoutBreakdown() {
           </div>
           <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
             <div style="font-size:10px; color:var(--text-muted); font-weight:700;">ROUNDS</div>
-            <div style="font-size:20px; font-weight:800; color:#00e5ff; font-family:var(--font-mono);">${rounds}</div>
+            <div style="font-size:20px; font-weight:800; color:#00e5ff; font-family:var(--font-mono);">${escapeHtml(rounds)}</div>
           </div>
           <div style="background:var(--surface-elevated); border:1px solid var(--border); border-radius:10px; padding:9px 10px;">
             <div style="font-size:10px; color:var(--text-muted); font-weight:700;">TONNAGE</div>
@@ -5409,7 +5320,7 @@ function viewCompletedWorkoutBreakdown() {
           </div>
         </div>
         <div style="font-size:11.5px; color:#cbd5e1; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2); border-radius:8px; padding:8px 10px; line-height:1.4; margin-bottom:12px;">
-          ${opts.note || 'Saved to PULSE conditioning history & ready for Garmin activity auto-pairing.'}
+          ${escapeHtml(opts.note || 'Saved to PULSE conditioning history & ready for Garmin activity auto-pairing.')}
         </div>
         <button type="button" onclick="closeSessionSummaryModal()" class="btn-action-primary" style="width:100%; margin:0;">✓ Done</button>
       `;
@@ -5553,7 +5464,7 @@ function viewCompletedWorkoutBreakdown() {
         if (actionRowEl) actionRowEl.style.display = 'flex';
         if (whyEl) {
           whyEl.style.display = '';
-          whyEl.innerHTML = `${kbQuickSwitchBanner}<strong>Why Selected:</strong> ${whyText}`;
+          whyEl.innerHTML = `${kbQuickSwitchBanner}<strong>Why Selected:</strong> ${escapeHtml(whyText)}`;
         }
         if (restBarEl) restBarEl.style.display = '';
       }
@@ -5592,7 +5503,7 @@ function viewCompletedWorkoutBreakdown() {
             <input type="number" inputmode="numeric" class="set-input-box" value="${escapeHtml(displayR)}" id="rIn_${currentExIdx}_${s}">
             <span style="font-size:13px;color:var(--text-muted);">reps</span>
           </div>
-          <button class="btn-log-set ${isLogged ? 'done' : ''}" onclick="logSet(this, ${s}, '${ex.id}', ${cleanWeightNum}, ${typeof ex.targetReps === 'number' ? ex.targetReps : 8})">${isLogged ? '✓ Logged' : '✓ Log'}</button>
+          <button class="btn-log-set ${isLogged ? 'done' : ''}" data-set-num="${s}" data-ex-id="${escapeHtml(ex.id)}" data-target-w="${cleanWeightNum}" data-target-r="${typeof ex.targetReps === 'number' ? ex.targetReps : 8}" onclick="logSet(this, Number(this.dataset.setNum), this.dataset.exId, Number(this.dataset.targetW), Number(this.dataset.targetR))">${isLogged ? '✓ Logged' : '✓ Log'}</button>
         `;
         setRowsContainer.appendChild(row);
       }
@@ -5919,7 +5830,7 @@ function viewCompletedWorkoutBreakdown() {
                   ${Number(ex.setsCount) || 3} sets × ${escapeHtml(targetR)} reps @ ${escapeHtml(wStr)} • Rest: ${escapeHtml(ex.rest || '60s')}
                 </div>
               </div>
-              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" onclick="selectSwapExercise('${escapeHtml(ex.id)}')">
+              <button type="button" class="btn-action-primary" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; white-space:nowrap;" data-ex-id="${escapeHtml(ex.id)}" onclick="selectSwapExercise(this.dataset.exId)">
                 ${swapContext.mode === 'add' ? 'Add +' : 'Swap ⇄'}
               </button>
             </div>
@@ -6184,13 +6095,28 @@ function viewCompletedWorkoutBreakdown() {
         renderCurrentExercise();
       }
 
-      // 4. Fire POST to /api/prescription/override
+      // 4. Fire POST to /api/prescription/override via pulseApiFetch + offline queue
       const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
-      fetch(`${apiBase}/api/prescription/override`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exercise_id: exId, weight: targetWeight, reps: targetReps })
-      }).catch(() => {});
+      const rxPayload = { exercise_id: exId, weight: targetWeight, reps: targetReps };
+      (async () => {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/prescription/override`, rxPayload, 'POST');
+          return;
+        }
+        try {
+          const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)(`${apiBase}/api/prescription/override`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rxPayload),
+            timeoutMs: 4000
+          });
+          if (!res || !res.ok) {
+            if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/prescription/override`, rxPayload, 'POST');
+          }
+        } catch(e) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/prescription/override`, rxPayload, 'POST');
+        }
+      })();
 
       closeEditLoadModal();
       renderTodayTrainingRecommendations();
@@ -6230,11 +6156,19 @@ function viewCompletedWorkoutBreakdown() {
           }
 
           const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
-          fetch(`${apiBase}/api/telemetry/override`, {
+          const ovBody = { sleep_score: score, key: 'sleep_score', value: score, date: todayIso, category: 'garmin' };
+          (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)(`${apiBase}/api/telemetry/override`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sleep_score: score, key: 'sleep_score', value: score, date: todayIso, category: 'garmin' })
-          }).catch(() => {});
+            body: JSON.stringify(ovBody),
+            timeoutMs: 4000
+          }).then(res => {
+            if (!res || !res.ok) {
+              if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/telemetry/override`, ovBody, 'POST');
+            }
+          }).catch(() => {
+            if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/telemetry/override`, ovBody, 'POST');
+          });
 
           renderTodayTrainingRecommendations();
           if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
@@ -6270,11 +6204,19 @@ function viewCompletedWorkoutBreakdown() {
           }
 
           const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
-          fetch(`${apiBase}/api/telemetry/override`, {
+          const ovBody = { body_battery: bb, key: 'body_battery', value: bb, date: todayIso };
+          (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)(`${apiBase}/api/telemetry/override`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ body_battery: bb, key: 'body_battery', value: bb, date: todayIso })
-          }).catch(() => {});
+            body: JSON.stringify(ovBody),
+            timeoutMs: 4000
+          }).then(res => {
+            if (!res || !res.ok) {
+              if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/telemetry/override`, ovBody, 'POST');
+            }
+          }).catch(() => {
+            if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/telemetry/override`, ovBody, 'POST');
+          });
 
           renderTodayTrainingRecommendations();
           if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
@@ -6317,11 +6259,19 @@ function viewCompletedWorkoutBreakdown() {
           }
 
           const apiBase = (typeof API_BASE !== 'undefined' ? API_BASE : '');
-          fetch(`${apiBase}/api/telemetry/override`, {
+          const ovBody = { training_readiness: tr, key: 'training_readiness', value: tr, date: todayIso };
+          (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)(`${apiBase}/api/telemetry/override`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ training_readiness: tr, key: 'training_readiness', value: tr, date: todayIso })
-          }).catch(() => {});
+            body: JSON.stringify(ovBody),
+            timeoutMs: 4000
+          }).then(res => {
+            if (!res || !res.ok) {
+              if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/telemetry/override`, ovBody, 'POST');
+            }
+          }).catch(() => {
+            if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite(`${apiBase}/api/telemetry/override`, ovBody, 'POST');
+          });
 
           renderTodayTrainingRecommendations();
           if (typeof renderBiometricSparklines === 'function') renderBiometricSparklines();
@@ -6394,8 +6344,9 @@ function viewCompletedWorkoutBreakdown() {
         return;
       }
 
-      const _now = new Date();
-      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+      const todayIso = (typeof getLocalDateStr === 'function')
+        ? getLocalDateStr()
+        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
       closeTelemetryOverrideModal();
       cfg.apply(val, todayIso);
     }
@@ -6459,6 +6410,8 @@ function viewCompletedWorkoutBreakdown() {
 
     let restTimerInterval = null;
     let restSecs = 90;
+    let restEndTimeMs = 0;
+    let restLastCueSec = 0;
 
     function logSet(btn, setNum, exId, targetW, targetR) {
       const row = btn.closest('.set-log-row');
@@ -6619,10 +6572,52 @@ function viewCompletedWorkoutBreakdown() {
       }
     }
 
+    function _tickRestTimer() {
+      if (!restTimerInterval || !restEndTimeMs) return;
+      const remaining = Math.max(0, Math.ceil((restEndTimeMs - Date.now()) / 1000));
+      const jumped = (restLastCueSec - remaining) > 3;
+      const crossed = (thresh) => restLastCueSec > thresh && remaining <= thresh;
+
+      if (!jumped && remaining > 0) {
+        if (crossed(30)) {
+          speak("30 seconds remaining.");
+        } else if (crossed(10)) {
+          speak("10 seconds. Get ready.");
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        } else if (crossed(3)) {
+          speak("3");
+        } else if (crossed(2)) {
+          speak("2");
+        } else if (crossed(1)) {
+          speak("1");
+        }
+      }
+
+      restLastCueSec = remaining;
+      restSecs = remaining;
+
+      if (remaining <= 0) {
+        clearInterval(restTimerInterval);
+        restTimerInterval = null;
+        restEndTimeMs = 0;
+        const pill = document.getElementById('floatingRestPill');
+        if (pill) pill.classList.remove('active');
+        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+        beep(1046, 0.2);
+        speak("Rest complete! Set time, let's go!");
+        showToast('⚡ Rest complete! Time for the next set!');
+        if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
+      }
+      updateRestDisplay();
+    }
+
     function startRestCountdown(seconds, nextCue) {
       clearInterval(restTimerInterval);
       restTimerInterval = null;
-      restSecs = seconds;
+      const cleanSecs = Math.max(0, Number(seconds) || 0);
+      restSecs = cleanSecs;
+      restEndTimeMs = Date.now() + cleanSecs * 1000;
+      restLastCueSec = cleanSecs + 1;
       const elCue = document.getElementById('restNextCue');
       if (elCue) elCue.innerText = `Next: ${nextCue}`;
       const floatingPill = document.getElementById('floatingRestPill');
@@ -6631,33 +6626,9 @@ function viewCompletedWorkoutBreakdown() {
       if (floatingNext) floatingNext.innerText = nextCue || '';
       updateRestDisplay();
       requestWakeLock();
-      speak(`Rest started. ${seconds} seconds on the clock.`, true);
+      speak(`Rest started. ${cleanSecs} seconds on the clock.`, true);
 
-      restTimerInterval = setInterval(() => {
-        restSecs--;
-        if (restSecs === 30) {
-          speak("30 seconds remaining.");
-        } else if (restSecs === 10) {
-          speak("10 seconds. Get ready.");
-          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        } else if (restSecs === 3) {
-          speak("3");
-        } else if (restSecs === 2) {
-          speak("2");
-        } else if (restSecs === 1) {
-          speak("1");
-        } else if (restSecs <= 0) {
-          clearInterval(restTimerInterval);
-          restTimerInterval = null;
-          const pill = document.getElementById('floatingRestPill');
-          if (pill) pill.classList.remove('active');
-          if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
-          beep(1046, 0.2);
-          speak("Rest complete! Set time, let's go!");
-          showToast('⚡ Rest complete! Time for the next set!');
-        }
-        updateRestDisplay();
-      }, 1000);
+      restTimerInterval = setInterval(_tickRestTimer, 250);
     }
 
     function updateRestDisplay() {
@@ -6671,7 +6642,14 @@ function viewCompletedWorkoutBreakdown() {
     }
 
     function addRest(sec) {
-      restSecs += sec;
+      const addMs = Number(sec) || 0;
+      if (restTimerInterval && restEndTimeMs) {
+        restEndTimeMs += addMs * 1000;
+        restSecs = Math.max(0, Math.ceil((restEndTimeMs - Date.now()) / 1000));
+        restLastCueSec = restSecs + 1;
+      } else {
+        restSecs = Math.max(0, restSecs + addMs);
+      }
       updateRestDisplay();
       speak(`Added ${sec} seconds.`);
       beep(600, 0.05);
@@ -6679,6 +6657,7 @@ function viewCompletedWorkoutBreakdown() {
 
     function skipRest() {
       restSecs = 0;
+      restEndTimeMs = 0;
       clearInterval(restTimerInterval);
       restTimerInterval = null;
       const pill = document.getElementById('floatingRestPill');
@@ -6686,6 +6665,7 @@ function viewCompletedWorkoutBreakdown() {
       if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
       beep(1046, 0.2);
       updateRestDisplay();
+      if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
       showToast('Rest skipped. Ready for next set!');
       speak("Rest skipped. Let's work!");
     }
@@ -6695,13 +6675,14 @@ function viewCompletedWorkoutBreakdown() {
       if (typeof skipRest === 'function') skipRest();
       clearInterval(restTimerInterval);
       restTimerInterval = null;
+      restEndTimeMs = 0;
       restSecs = 0;
       const fp = document.getElementById('floatingRestPill');
       if (fp) fp.classList.remove('active');
 
       beep(880, 0.2);
       setTimeout(() => beep(1100, 0.3), 150);
-      speak("Outstanding session Coach Greg! Workout saved to training history.");
+      speak("Outstanding session! Workout saved to training history.");
       
       const setsLoggedCount = Object.keys(sessionLoggedSets).length;
       const totalPlannedSets = activeWorkoutPlan.reduce((acc, ex) => acc + (ex.setsCount || 3), 0) || 15;
@@ -6784,13 +6765,14 @@ function viewCompletedWorkoutBreakdown() {
       speak("Tailored workout loaded. Let's work!");
     }
 
-    // TIMER TAB
+    // TIMER TAB (Wall-Clock Resynchronized)
     let tMode = 'skip';
     let tSeconds = 45;
     let tInterval = null;
     let tRunning = false;
     let tRounds = 0;
     let isWorkPhase = true;
+    let tLastTickMs = 0;
 
     function setTimerMode(m) {
       tMode = m;
@@ -6816,9 +6798,144 @@ function viewCompletedWorkoutBreakdown() {
       beep(650, 0.05);
     }
 
+    function stepMainTimerSeconds(deltaSec, isCatchUp = false) {
+      const steps = Math.max(0, Math.floor(deltaSec));
+      for (let i = 0; i < steps; i++) {
+        if (!tRunning) return;
+        const isLastStep = (i === steps - 1);
+        if (tMode === 'stopwatch') {
+          tSeconds++;
+        } else {
+          tSeconds--;
+          if (!isCatchUp) {
+            if (tMode === 'skip' && isWorkPhase && tSeconds === 20) {
+              speak("20 seconds remaining.");
+            } else if (tSeconds === 5) {
+              speak("5, 4, 3, 2, 1");
+              if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+            }
+          }
+          if (tSeconds <= 0) {
+            if (tMode === 'skip') {
+              isWorkPhase = !isWorkPhase;
+              if (isWorkPhase) {
+                tRounds++;
+                if (tRounds >= 6) {
+                  clearInterval(tInterval);
+                  tInterval = null;
+                  tRunning = false;
+                  tLastTickMs = 0;
+                  tSeconds = 0;
+                  const playIcon = document.getElementById('timerPlayIcon');
+                  const playText = document.getElementById('timerPlayText');
+                  const toggleBtn = document.getElementById('btnTimerToggle');
+                  if (playIcon) playIcon.innerText = '▶';
+                  if (playText) playText.innerText = 'START';
+                  if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+                  const phaseEl = document.getElementById('timerPhase');
+                  if (phaseEl) {
+                    phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
+                    phaseEl.style.color = 'var(--lime)';
+                  }
+                  const rdEl = document.getElementById('roundsDisplay');
+                  if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+                  beep(950, 0.45);
+                  speak("6 rounds complete! Outstanding interval work!");
+                  if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+                  showToast('🏆 6-Round Skip Interval Complete!');
+                  if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
+                  updateTimerUI();
+                  return;
+                }
+                tSeconds = 45;
+                const phaseEl = document.getElementById('timerPhase');
+                if (phaseEl) {
+                  phaseEl.innerText = `🟢 WORK INTERVAL ${tRounds + 1} OF 6`;
+                  phaseEl.style.color = 'var(--lime)';
+                }
+                if (isLastStep || !isCatchUp) {
+                  beep(880, 0.4);
+                  speak(`Work interval round ${tRounds + 1}. Let's go!`);
+                  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                }
+              } else {
+                if (tRounds + 1 >= 6) {
+                  tRounds = 6;
+                  clearInterval(tInterval);
+                  tInterval = null;
+                  tRunning = false;
+                  tLastTickMs = 0;
+                  tSeconds = 0;
+                  const playIcon = document.getElementById('timerPlayIcon');
+                  const playText = document.getElementById('timerPlayText');
+                  const toggleBtn = document.getElementById('btnTimerToggle');
+                  if (playIcon) playIcon.innerText = '▶';
+                  if (playText) playText.innerText = 'START';
+                  if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
+                  const phaseEl = document.getElementById('timerPhase');
+                  if (phaseEl) {
+                    phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
+                    phaseEl.style.color = 'var(--lime)';
+                  }
+                  const rdEl = document.getElementById('roundsDisplay');
+                  if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+                  beep(950, 0.45);
+                  speak("6 rounds complete! Outstanding interval work!");
+                  if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+                  showToast('🏆 6-Round Skip Interval Complete!');
+                  if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
+                  updateTimerUI();
+                  return;
+                }
+                tSeconds = 15;
+                const phaseEl = document.getElementById('timerPhase');
+                if (phaseEl) {
+                  phaseEl.innerText = '🟡 REST INTERVAL (15s)';
+                  phaseEl.style.color = 'var(--amber)';
+                }
+                if (isLastStep || !isCatchUp) {
+                  beep(520, 0.3);
+                  speak("Rest interval! 15 seconds.");
+                  if (navigator.vibrate) navigator.vibrate([150, 60, 150]);
+                }
+              }
+              const rdEl = document.getElementById('roundsDisplay');
+              if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
+            } else {
+              clearInterval(tInterval);
+              tInterval = null;
+              tRunning = false;
+              tLastTickMs = 0;
+              tSeconds = 0;
+              beep(880, 0.5);
+              speak("AMRAP complete! Fantastic work.");
+              if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+              showToast('🏆 AMRAP Interval Complete!');
+              if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
+              updateTimerUI();
+              return;
+            }
+          }
+        }
+      }
+      updateTimerUI();
+    }
+
+    function _tickMainTimerFromClock() {
+      if (!tRunning) return;
+      const nowMs = Date.now();
+      if (!tLastTickMs) tLastTickMs = nowMs;
+      const deltaSec = Math.floor((nowMs - tLastTickMs) / 1000);
+      if (deltaSec > 0) {
+        tLastTickMs += deltaSec * 1000;
+        stepMainTimerSeconds(deltaSec, deltaSec > 3);
+      }
+    }
+
     function toggleTimer() {
       if (!tRunning) {
         tRunning = true;
+        tLastTickMs = Date.now();
         document.getElementById('timerPlayIcon').innerText = '⏸';
         document.getElementById('timerPlayText').innerText = 'PAUSE';
         document.getElementById('btnTimerToggle').style.background = 'var(--cyan)';
@@ -6833,108 +6950,17 @@ function viewCompletedWorkoutBreakdown() {
           speak("Stopwatch started.", true);
         }
 
-        tInterval = setInterval(() => {
-          if (tMode === 'stopwatch') {
-            tSeconds++;
-          } else {
-            tSeconds--;
-            if (tMode === 'skip' && isWorkPhase && tSeconds === 20) {
-              speak("20 seconds remaining.");
-            } else if (tSeconds === 5) {
-              speak("5, 4, 3, 2, 1");
-              if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
-            }
-            if (tSeconds <= 0) {
-              if (tMode === 'skip') {
-                isWorkPhase = !isWorkPhase;
-                if (isWorkPhase) {
-                  tRounds++;
-                  if (tRounds >= 6) {
-                    clearInterval(tInterval);
-                    tInterval = null;
-                    tRunning = false;
-                    tSeconds = 0;
-                    const playIcon = document.getElementById('timerPlayIcon');
-                    const playText = document.getElementById('timerPlayText');
-                    const toggleBtn = document.getElementById('btnTimerToggle');
-                    if (playIcon) playIcon.innerText = '▶';
-                    if (playText) playText.innerText = 'START';
-                    if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
-                    const phaseEl = document.getElementById('timerPhase');
-                    if (phaseEl) {
-                      phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
-                      phaseEl.style.color = 'var(--lime)';
-                    }
-                    const rdEl = document.getElementById('roundsDisplay');
-                    if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
-                    beep(950, 0.45);
-                    speak("6 rounds complete! Outstanding interval work!");
-                    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-                    showToast('🏆 6-Round Skip Interval Complete!');
-                    updateTimerUI();
-                    return;
-                  }
-                  tSeconds = 45;
-                  document.getElementById('timerPhase').innerText = `🟢 WORK INTERVAL ${tRounds + 1} OF 6`;
-                  document.getElementById('timerPhase').style.color = 'var(--lime)';
-                  beep(880, 0.4);
-                  speak(`Work interval round ${tRounds + 1}. Let's go!`);
-                  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                } else {
-                  if (tRounds + 1 >= 6) {
-                    tRounds = 6;
-                    clearInterval(tInterval);
-                    tInterval = null;
-                    tRunning = false;
-                    tSeconds = 0;
-                    const playIcon = document.getElementById('timerPlayIcon');
-                    const playText = document.getElementById('timerPlayText');
-                    const toggleBtn = document.getElementById('btnTimerToggle');
-                    if (playIcon) playIcon.innerText = '▶';
-                    if (playText) playText.innerText = 'START';
-                    if (toggleBtn) toggleBtn.style.background = 'var(--lime)';
-                    const phaseEl = document.getElementById('timerPhase');
-                    if (phaseEl) {
-                      phaseEl.innerText = '🏆 6 OF 6 ROUNDS COMPLETE!';
-                      phaseEl.style.color = 'var(--lime)';
-                    }
-                    const rdEl = document.getElementById('roundsDisplay');
-                    if (rdEl) rdEl.innerText = `${tRounds} Rounds Done`;
-                    beep(950, 0.45);
-                    speak("6 rounds complete! Outstanding interval work!");
-                    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-                    showToast('🏆 6-Round Skip Interval Complete!');
-                    updateTimerUI();
-                    return;
-                  }
-                  tSeconds = 15;
-                  document.getElementById('timerPhase').innerText = '🟡 REST INTERVAL (15s)';
-                  document.getElementById('timerPhase').style.color = 'var(--amber)';
-                  beep(520, 0.3);
-                  speak("Rest interval! 15 seconds.");
-                  if (navigator.vibrate) navigator.vibrate([150, 60, 150]);
-                }
-                document.getElementById('roundsDisplay').innerText = `${tRounds} Rounds Done`;
-              } else {
-                clearInterval(tInterval);
-                tInterval = null;
-                tRunning = false;
-                beep(880, 0.5);
-                speak("AMRAP complete! Fantastic work Coach Greg.");
-                if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-                showToast('🏆 AMRAP Interval Complete!');
-              }
-            }
-          }
-          updateTimerUI();
-        }, 1000);
+        tInterval = setInterval(_tickMainTimerFromClock, 250);
       } else {
+        _tickMainTimerFromClock();
         tRunning = false;
+        tLastTickMs = 0;
         clearInterval(tInterval);
         tInterval = null;
         document.getElementById('timerPlayIcon').innerText = '▶';
         document.getElementById('timerPlayText').innerText = 'RESUME';
         document.getElementById('btnTimerToggle').style.background = 'var(--lime)';
+        if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
         speak("Paused.");
         beep(500, 0.1);
       }
@@ -6942,6 +6968,7 @@ function viewCompletedWorkoutBreakdown() {
 
     function resetTimer() {
       tRunning = false;
+      tLastTickMs = 0;
       clearInterval(tInterval);
       tInterval = null;
       tRounds = 0;
@@ -6974,6 +7001,7 @@ function viewCompletedWorkoutBreakdown() {
           phaseEl.style.color = 'var(--text-muted)';
         }
       }
+      if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
       updateTimerUI();
       beep(450, 0.05);
     }
@@ -7006,19 +7034,15 @@ function viewCompletedWorkoutBreakdown() {
       const isoDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const subTitle = `${modeLabel} • ${rounds} Rounds (${durationMin}m)`;
 
-      // 1. Persist to pulse_conditioning_history
-      try {
-        const condHist = JSON.parse(localStorage.getItem('pulse_conditioning_history') || '[]');
-        condHist.unshift({
-          date: now.toISOString(),
-          mode: tMode,
-          rounds: rounds,
-          duration_min: durationMin,
-          calories: estCalories,
-          sub_title: subTitle
-        });
-        localStorage.setItem('pulse_conditioning_history', JSON.stringify(condHist.slice(0, 50)));
-      } catch(e) {}
+      // 1. Persist to pulse_conditioning_history (Array schema)
+      _appendConditioningHistoryEntry({
+        date: now.toISOString(),
+        mode: tMode,
+        rounds: rounds,
+        duration_min: durationMin,
+        calories: estCalories,
+        sub_title: subTitle
+      });
 
       // 2. Update date-scoped pulse_inapp_burn_today
       try {
@@ -7059,38 +7083,62 @@ function viewCompletedWorkoutBreakdown() {
       }
       if (typeof calculateDailyTargets === 'function') calculateDailyTargets();
 
-      // 4. Sync to backend (/api/sync_activity & /api/sync_session)
-      try {
-        fetch('/api/sync_activity', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'Conditioning',
-            sub_title: subTitle,
-            duration_min: durationMin,
-            calories: estCalories,
-            avg_hr: 145,
-            max_hr: 170,
-            aerobic_te: 2.6,
-            anaerobic_te: 1.8
-          })
-        }).catch(() => {});
-        if (typeof syncSessionToBackend === 'function') {
-          syncSessionToBackend({
-            date: now.toISOString(),
-            preset: `timer_${tMode}`,
-            goal: typeof currentGoalKey !== 'undefined' ? currentGoalKey : 'recomp',
-            exercisesCompleted: 1,
-            setsLogged: rounds,
-            calories: estCalories,
-            details: { mode: tMode, rounds: rounds, duration_min: durationMin }
-          });
+      // 4. Sync to backend (/api/sync_activity & /api/sync_session via pulseApiFetch + offline queue)
+      const actPayload = {
+        name: 'Conditioning',
+        sub_title: subTitle,
+        duration_min: durationMin,
+        calories: estCalories,
+        avg_hr: 145,
+        max_hr: 170,
+        aerobic_te: 2.6,
+        anaerobic_te: 1.8
+      };
+      (async () => {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/sync_activity', actPayload, 'POST');
+          return;
         }
-      } catch(e) {}
+        try {
+          const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/sync_activity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(actPayload),
+            timeoutMs: 4000
+          });
+          if (!res || !res.ok) {
+            if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/sync_activity', actPayload, 'POST');
+          }
+        } catch(e) {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/sync_activity', actPayload, 'POST');
+        }
+      })();
+      if (typeof syncSessionToBackend === 'function') {
+        syncSessionToBackend({
+          date: now.toISOString(),
+          preset: `timer_${tMode}`,
+          goal: typeof currentGoalKey !== 'undefined' ? currentGoalKey : 'recomp',
+          exercisesCompleted: 1,
+          setsLogged: rounds,
+          calories: estCalories,
+          details: { mode: tMode, rounds: rounds, duration_min: durationMin }
+        });
+      }
 
       beep(880, 0.2);
       showToast(`✓ Logged ${rounds} rounds (${estCalories} kcal) to training history!`);
       switchTab('fuel');
+    }
+
+    if (typeof document !== 'undefined' && !window._pulseTimerVisibilityHooked) {
+      window._pulseTimerVisibilityHooked = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          if (typeof _tickRestTimer === 'function') _tickRestTimer();
+          if (typeof _tickMainTimerFromClock === 'function') _tickMainTimerFromClock();
+          if (typeof _tickInlineTimerFromClock === 'function') _tickInlineTimerFromClock();
+        }
+      });
     }
 
     // EXPOSE TO WINDOW FOR INLINE ONCLICK HANDLERS
@@ -7141,6 +7189,13 @@ function viewCompletedWorkoutBreakdown() {
     window.removePermanentSwap = removePermanentSwap;
     window.getHiddenExercises = getHiddenExercises;
     window.addHiddenExercise = addHiddenExercise;
+    window.getConditioningProgression = getConditioningProgression;
+    window.saveConditioningProgression = saveConditioningProgression;
+    window.stepMainTimerSeconds = stepMainTimerSeconds;
+    window._stepInlineTimerSeconds = _stepInlineTimerSeconds;
+    window._tickRestTimer = _tickRestTimer;
+    window._tickMainTimerFromClock = _tickMainTimerFromClock;
+    window._tickInlineTimerFromClock = _tickInlineTimerFromClock;
 
 
 

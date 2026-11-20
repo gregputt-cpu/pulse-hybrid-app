@@ -11,6 +11,7 @@ const backendStaticDir = path.join(rootDir, 'backend', 'static');
 
 for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
   fs.mkdirSync(d, { recursive: true });
+  fs.rmSync(path.join(d, 'live_state.json'), { force: true });
 }
 
 const assets = [
@@ -20,7 +21,6 @@ const assets = [
   'icon.svg',
   'icon-192.png',
   'icon-512.png',
-  'live_state.json',
   'README.md'
 ];
 
@@ -45,12 +45,6 @@ for (const file of assets) {
   if (fs.existsSync(src)) {
     for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
       fs.copyFileSync(src, path.join(d, file));
-    }
-    if (file === 'live_state.json') {
-      const backendDir = path.join(rootDir, 'backend');
-      if (fs.existsSync(backendDir)) {
-        fs.copyFileSync(src, path.join(backendDir, file));
-      }
     }
   }
 }

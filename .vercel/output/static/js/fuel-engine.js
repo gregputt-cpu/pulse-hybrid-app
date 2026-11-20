@@ -6,253 +6,83 @@
     let dailyLoggedMealsList = [];
     let activeDietStrategy = 'balanced';
     let currentCarbCycleLevel = 'high';
+    const PULSE_FASTING_STORAGE_KEY = 'pulse_fasting_timer_state';
     let currentFastingProtocol = '16_8';
-    let fastingTimerSeconds = 14 * 3600 + 25 * 60; // 14h 25m initial
-    let fastingTimerRunning = true;
+    let fastingTimerState = { running: false, startedAtMs: null, accumulatedSec: 0 };
     let fastingTimerInterval = null;
     let solverProteinTarget = 45;
     let activeRetailStore = 'tesco';
 
     const DEFAULT_MND_10D_HISTORY = {
-      "window_days": 10,
-      "start_date": "2026-11-08",
-      "end_date": "2026-11-17",
-      "averages_10d": { "calories": 2438, "protein": 254, "carbs": 230, "fat": 63.5, "fiber": 36.3, "sodium": 2381, "sugar_g": 67.3, "sat_fat_g": 18.4 },
-      "averages_7d": { "calories": 2544, "protein": 259, "carbs": 253, "fat": 64.4, "fiber": 39.9, "sodium": 2492, "sugar_g": 74.9, "sat_fat_g": 18.6 },
-      "days": [
-        {
-          "date": "2026-11-08", "calories": 1896, "protein": 223, "carbs": 157, "fat": 44, "sugar_g": 94.6, "sat_fat_g": 16.9, "fiber": 32, "sodium": 1850,
-          "items": [
-            { "name": "Grass Fed 5% Reduced Fat Beef Steak Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Beansprouts", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Tomatoey Lentils", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "0% Fat Authentic Greek Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Freshona Blueberries Freshly Frozen", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Whole Strawberries", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-09", "calories": 2392, "protein": 233, "carbs": 231, "fat": 67, "sugar_g": 34.5, "sat_fat_g": 16.5, "fiber": 33, "sodium": 2100,
-          "items": [
-            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "British Chicken Diced Breast", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Egg Noodles Soft & Tender", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Beansprouts Tender & Crunchy", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Aberdeen Angus Steak Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Sweet Chilli Stir Fry Sauce Medium", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-10", "calories": 2283, "protein": 275, "carbs": 140, "fat": 73, "sugar_g": 19.6, "sat_fat_g": 19.9, "fiber": 19, "sodium": 2420,
-          "items": [
-            { "name": "Egg Protein Pot", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Chicken Salad Lemon & Pepper Mayo Sandwich", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Carrot and Houmous", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "5% Fat Lean British Chicken Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Beansprouts", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "5% Fat Lean Beef Steak Mince", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-11", "calories": 2486, "protein": 249, "carbs": 250, "fat": 61, "sugar_g": 56.3, "sat_fat_g": 18.8, "fiber": 38, "sodium": 1980,
-          "items": [
-            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "0% Fat Authentic Greek Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "British Beef Lean Steak Mince 5% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Mediterranean Style Vegetables", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Ready Set Cook! Protein Noodles", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-12", "calories": 2360, "protein": 218, "carbs": 238, "fat": 70, "sugar_g": 57.9, "sat_fat_g": 20.5, "fiber": 41, "sodium": 2650,
-          "items": [
-            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Protein Cheese Bar", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Hot Smoked Salmon & Potato Salad", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Fat Free Authentic Luxury Greek Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Chicken Tikka Salad", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-13", "calories": 2832, "protein": 247, "carbs": 292, "fat": 84, "sugar_g": 103.1, "sat_fat_g": 22.9, "fiber": 53, "sodium": 2310,
-          "items": [
-            { "name": "Freshona Blueberries Freshly Frozen", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Whole Strawberries", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Cold Milled Flaxseed Almonds Brazil Nuts Walnuts and Q10", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Korean Style Vegetables & Mixed Rice", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "British Lean Beef Steak Mince 5% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-14", "calories": 2761, "protein": 307, "carbs": 242, "fat": 72, "sugar_g": 114.6, "sat_fat_g": 19.2, "fiber": 36, "sodium": 2890,
-          "items": [
-            { "name": "Chicken Salad Lemon & Pepper Mayo Sandwich", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Carrot and Houmous", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "5% Fat Beef Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Butcher's Choice Cooked Chicken Slices", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Mediterranean-style Vegetables & Giant Cous Cous in a Tomato & Basil Sauce", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Skyr Natural 0% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Frozen at The Peak Of Freshness Blueberries", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-15", "calories": 2568, "protein": 311, "carbs": 200, "fat": 65, "sugar_g": 101.9, "sat_fat_g": 18.4, "fiber": 30, "sodium": 2740,
-          "items": [
-            { "name": "5% Fat Beef Mince", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Butcher's Choice Cooked Chicken Slices", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Mediterranean Style Roasting Vegetables in Basil Oil 700g Pack", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Beansprouts Tender & Crunchy", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "British Chicken Diced Breast", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Sweet Chilli Stir Fry Sauce Medium", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Customized Egg Noodles", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "0% Fat Authentic Greek Natural Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Whole Strawberries", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-16", "calories": 2500, "protein": 264, "carbs": 255, "fat": 53, "sugar_g": 29.0, "sat_fat_g": 14.9, "fiber": 32, "sodium": 2299,
-          "items": [
-            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Snickers Impact Whey Isolate", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "0% Fat Authentic Greek Natural Yogurt", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Irish Beef Steak Mince 10% Fat", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Beef Stock Cube", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Simply Chicken Chipolatas Lightly Seasoned", "cals": 0, "p": 0, "c": 0, "f": 0 },
-            { "name": "Old Fashioned Jumbo Oats", "cals": 0, "p": 0, "c": 0, "f": 0 }
-          ]
-        },
-        {
-          "date": "2026-11-17", "calories": 2300, "protein": 216, "carbs": 296, "fat": 46, "sugar_g": 61.6, "sat_fat_g": 15.5, "fiber": 49, "sodium": 2574,
-          "items": [
-            { "name": "Old Fashioned Jumbo Oats", "cals": 563, "p": 16, "c": 104, "f": 12 },
-            { "name": "Snickers Impact Whey Isolate", "cals": 141, "p": 28, "c": 7, "f": 1 },
-            { "name": "Protein Cheese Bar", "cals": 284, "p": 41, "c": 4, "f": 12 },
-            { "name": "Chicken Tikka Salad", "cals": 486, "p": 42, "c": 64, "f": 11 },
-            { "name": "Fat Free Authentic Luxury Greek Yogurt", "cals": 328, "p": 49, "c": 30, "f": 2 },
-            { "name": "Raw Protein Flap Jack Chocolate Brownie", "cals": 498, "p": 40, "c": 87, "f": 8 }
-          ]
-        }
-      ]
+      "window_days": 0,
+      "start_date": null,
+      "end_date": null,
+      "averages_10d": { "calories": 0, "protein": 0, "carbs": 0, "fat": 0.0, "fiber": 0.0, "sodium": 0, "sugar_g": 0.0, "sat_fat_g": 0.0 },
+      "averages_7d": { "calories": 0, "protein": 0, "carbs": 0, "fat": 0.0, "fiber": 0.0, "sodium": 0, "sugar_g": 0.0, "sat_fat_g": 0.0 },
+      "days": []
     };
+
+    function _createEmptyMndMeals() {
+      return {
+        "breakfast": { "name": "Breakfast", "time": "Pending", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": [] },
+        "lunch": { "name": "Lunch", "time": "Pending", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": [] },
+        "dinner": { "name": "Dinner", "time": "Pending", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": [] },
+        "snacks": { "name": "Snacks & Hydration", "time": "Pending", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "items": [] }
+      };
+    }
+
+    function _createEmptyMndTotals() {
+      return {
+        "calories": 0,
+        "protein": 0,
+        "carbs": 0,
+        "fat": 0,
+        "fiber": 0,
+        "sodium": 0,
+        "water": 0.0,
+        "sugar_g": 0.0,
+        "sat_fat_g": 0.0
+      };
+    }
 
     // ==================== MYNETDIARY ENGINE STATE & DATA STORE ====================
     let myNetDiaryData = {
-      "totals": {
-            "calories": 2300,
-            "protein": 216,
-            "carbs": 296,
-            "fat": 46,
-            "fiber": 49,
-            "sodium": 2574,
-            "water": 0.0,
-            "sugar_g": 61.6,
-            "sat_fat_g": 15.5
-      },
+      "date": (typeof getLocalDateStr === 'function' ? getLocalDateStr() : null),
+      "totals": _createEmptyMndTotals(),
       "history": DEFAULT_MND_10D_HISTORY,
-      "meals": {
-            "breakfast": {
-                  "name": "Breakfast",
-                  "time": "6:24",
-                  "calories": 2300,
-                  "protein": 216,
-                  "carbs": 296,
-                  "fat": 46,
-                  "items": [
-                        {
-                              "name": "Old Fashioned Jumbo Oats",
-                              "cals": 563,
-                              "p": 16,
-                              "c": 104,
-                              "f": 12
-                        },
-                        {
-                              "name": "Snickers Impact Whey Isolate",
-                              "cals": 141,
-                              "p": 28,
-                              "c": 7,
-                              "f": 1
-                        },
-                        {
-                              "name": "Protein Cheese Bar",
-                              "cals": 284,
-                              "p": 41,
-                              "c": 4,
-                              "f": 12
-                        },
-                        {
-                              "name": "Chicken Tikka Salad",
-                              "cals": 486,
-                              "p": 42,
-                              "c": 64,
-                              "f": 11
-                        },
-                        {
-                              "name": "Fat Free Authentic Luxury Greek Yogurt",
-                              "cals": 328,
-                              "p": 49,
-                              "c": 30,
-                              "f": 2
-                        },
-                        {
-                              "name": "Raw Protein Flap Jack Chocolate Brownie",
-                              "cals": 498,
-                              "p": 40,
-                              "c": 87,
-                              "f": 8
-                        }
-                  ]
-            },
-            "lunch": {
-                  "name": "Lunch",
-                  "time": "12:45",
-                  "calories": 0,
-                  "protein": 0,
-                  "carbs": 0,
-                  "fat": 0,
-                  "items": []
-            },
-            "dinner": {
-                  "name": "Dinner",
-                  "time": "Pending",
-                  "calories": 0,
-                  "protein": 0,
-                  "carbs": 0,
-                  "fat": 0,
-                  "items": []
-            },
-            "snacks": {
-                  "name": "Snacks & Hydration",
-                  "time": "15:15",
-                  "calories": 0,
-                  "protein": 0,
-                  "carbs": 0,
-                  "fat": 0,
-                  "items": []
-            }
+      "meals": _createEmptyMndMeals()
+    };
+
+    function getCanonicalDailyCalorieTarget() {
+      const state = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const todayIso = (typeof getLocalDateStr === 'function')
+        ? getLocalDateStr()
+        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+      const n = state.nutrition || null;
+      const inAppBurn = (typeof getTodayInAppBurn === 'function') ? getTodayInAppBurn(state.garmin) : 0;
+      if (n && Number(n.calorie_target) > 0 && state.date === todayIso) {
+        return Math.max(1200, Math.round(Number(n.calorie_target) + inAppBurn));
       }
-};
+      const gKey = (typeof currentGoalKey !== 'undefined' && currentGoalKey) ? currentGoalKey : 'recomp';
+      const goalBase = (typeof athleteGoals !== 'undefined' && athleteGoals && athleteGoals[gKey] && Number(athleteGoals[gKey].calories)) || 2092;
+      const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn(state) : inAppBurn;
+      return Math.max(1200, Math.round(goalBase + activeBurn));
+    }
+    if (typeof window !== 'undefined') {
+      window.getCanonicalDailyCalorieTarget = getCanonicalDailyCalorieTarget;
+    }
 
     // ==================== MYNETDIARY ENGINE & MACRO BREAKDOWN ====================
     function initMyNetDiaryEngine() {
       restoreMndFromLocalStorage();
+      initFastingTimer();
       renderMyNetDiaryEngine();
     }
 
     function renderMyNetDiaryEngine() {
       // 1. Resolve Dynamic Daily Calorie Target via canonical state accessor
       const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
-      const totalBudget = 2092 + activeBurn;
+      const totalBudget = getCanonicalDailyCalorieTarget();
       athleteDailyBudget = totalBudget;
 
       const ftEl = document.getElementById('fuelTargetNum');
@@ -260,14 +90,14 @@
       const fbEl = document.getElementById('fuelBudgetNum');
       if (fbEl) fbEl.innerText = totalBudget;
 
-      // 2. Macro Targets (Greg Putt: 98.0kg, 17.2% BF -> 81.14kg lean mass)
-      const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200; // 2.46g/kg lean mass
-      const cTarget = (myNetDiaryData.targets && myNetDiaryData.targets.carbs) || 251; // Glycogen recharge for hybrid lifting + cardio
-      const fTarget = (myNetDiaryData.targets && myNetDiaryData.targets.fat) || 80;  // Endocrine & cell health floor
+      // 2. Macro Targets
+      const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
+      const cTarget = (myNetDiaryData.targets && myNetDiaryData.targets.carbs) || 251;
+      const fTarget = (myNetDiaryData.targets && myNetDiaryData.targets.fat) || 80;
 
       // Current Consumed Totals
       if (!myNetDiaryData.totals) {
-        myNetDiaryData.totals = { calories: 824, protein: 49, carbs: 115, fat: 23, fiber: 19, sodium: 275, water: 0.0 };
+        myNetDiaryData.totals = _createEmptyMndTotals();
       }
       const cals = myNetDiaryData.totals.calories || 0;
       const prot = myNetDiaryData.totals.protein || 0;
@@ -399,7 +229,7 @@
 
     function updateRunwayUI() {
       const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
-      const totalBudget = 2092 + activeBurn;
+      const totalBudget = getCanonicalDailyCalorieTarget();
       athleteDailyBudget = totalBudget;
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
       const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
@@ -538,7 +368,7 @@
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="color:var(--text-muted); font-size:11px;">${Number(item.cals) || 0} kcal</span>
                 <span style="color:var(--primary); font-weight:700; font-size:11px;">${Number(item.p) || 0}g P</span>
-                <span style="color:var(--text-muted); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:3px;" title="Remove food item" onclick="event.stopPropagation(); deleteMndMealItem('${escapeHtml(mKey)}', ${itemIdx})">✕</span>
+                <span style="color:var(--text-muted); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:3px;" title="Remove food item" data-meal-key="${escapeHtml(mKey)}" data-item-idx="${itemIdx}" onclick="event.stopPropagation(); deleteMndMealItem(this.dataset.mealKey, Number(this.dataset.itemIdx))">✕</span>
               </div>
             </div>
           `).join('');
@@ -600,14 +430,18 @@
 
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
       const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
+      const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
+      const lbmKg = (window.athleteProfile && Number(window.athleteProfile.leanMassKg))
+        ? Number(window.athleteProfile.leanMassKg).toFixed(1)
+        : '81.0';
       let advice = '';
 
-      if (cals >= totalBudget && prot >= 200) {
-        advice = `<strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>${cals.toLocaleString()} kcal</strong> and <strong>${prot}g protein</strong> today (crushing your 200g anchor by +${prot - 200}g). You've matched your active maintenance expenditure (~2,738 kcal), preserving all 81.1kg of lean muscle without gaining fat. Hydrate well tonight for tomorrow's strength lifting session!`;
+      if (cals >= totalBudget && prot >= pTarget) {
+        advice = `<strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>${cals.toLocaleString()} kcal</strong> and <strong>${prot}g protein</strong> today (crushing your ${pTarget}g anchor by +${prot - pTarget}g). You've matched your active expenditure (~${Math.round(totalBudget).toLocaleString()} kcal), preserving all ${lbmKg}kg of lean muscle without gaining fat. Hydrate well tonight for tomorrow's session!`;
       } else if (protLeft > 0) {
-        advice = `You have <strong>${calsLeft.toLocaleString()} kcal</strong> and <strong>${protLeft}g of protein</strong> left to reach your daily anchor. Aim for lean protein (chicken breast, egg whites, or 5% mince) to protect muscle while continuing to burn fat toward your 15% goal.`;
+        advice = `You have <strong>${calsLeft.toLocaleString()} kcal</strong> and <strong>${protLeft}g of protein</strong> left to reach your ${pTarget}g daily anchor. Aim for lean protein (chicken breast, egg whites, or 5% mince) to protect muscle while continuing to burn fat toward your 15% goal.`;
       } else {
-        advice = `<strong>✓ Protein Goal Reached!</strong> You've locked in your 200g protein anchor to protect all 81.1kg of muscle. You have <strong>${calsLeft.toLocaleString()} kcal</strong> of room remaining today. Keep your evening meal or snack clean and drink plenty of water before tomorrow's strength workout.`;
+        advice = `<strong>✓ Protein Goal Reached!</strong> You've locked in your ${pTarget}g protein anchor to protect all ${lbmKg}kg of muscle. You have <strong>${calsLeft.toLocaleString()} kcal</strong> of room remaining today. Keep your evening meal or snack clean and drink plenty of water before tomorrow's workout.`;
       }
 
       el.innerHTML = advice;
@@ -914,7 +748,7 @@
                 ].filter(Boolean).join('');
                 const isTodayCol = d.date === endDateStr;
                 return `
-                  <div title="${d.date}: ${d.calories} kcal • P:${d.protein}g C:${d.carbs}g F:${fatVal}g • Fib:${d.fiber}g" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px; border-radius:6px; ${isTodayCol ? 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.28);' : ''}">
+                  <div title="${escapeAuditHtml(d.date)}: ${Number(d.calories) || 0} kcal • P:${Number(d.protein) || 0}g C:${Number(d.carbs) || 0}g F:${fatVal}g • Fib:${Number(d.fiber) || 0}g" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px; border-radius:6px; ${isTodayCol ? 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.28);' : ''}">
                     <span style="font-size:9.5px; font-weight:800; color:${fatColor};">${fatVal}g</span>
                     <div style="width:100%; max-width:18px; height:48px; display:flex; align-items:flex-end; justify-content:center; background:rgba(255,255,255,0.04); border-radius:4px; overflow:hidden; position:relative;">
                       <div style="width:100%; height:${barH}px; background:${barBg}; border-radius:3px 3px 0 0;"></div>
@@ -1062,7 +896,8 @@
         const lowFatNote = ultraLowFatChoices.length > 0
           ? ` Selecting <strong>${escapeAuditHtml(ultraLowFatChoices.slice(0, 2).join(' + '))}</strong> kept dietary fat low.`
           : '';
-        fatBody = `At 98.4kg, dropping below the <strong>60–65g</strong> fat floor restricts testosterone/endocrine synthesis, joint lubrication, and fat-soluble vitamin (A, D, E, K) absorption.${lowFatNote}`;
+        const curWtKg = (window.athleteProfile && Number(window.athleteProfile.weightKg)) ? `${Number(window.athleteProfile.weightKg).toFixed(1)}kg` : 'your bodyweight';
+        fatBody = `At ${curWtKg}, dropping below the <strong>60–65g</strong> fat floor restricts testosterone/endocrine synthesis, joint lubrication, and fat-soluble vitamin (A, D, E, K) absorption.${lowFatNote}`;
       } else if (f <= safeFTarget + 15) {
         fatBadgeText = `✅ OPTIMAL LIPID PROFILE (${f}g / ${safeFTarget}g)`;
         fatBadgeColor = '#10b981';
@@ -1126,7 +961,7 @@
         const garnishNote = garnishItems.length > 0
           ? ` Only garnish/mixed salad logged (${escapeAuditHtml(garnishItems.map(x => x.name).join(', '))}).`
           : '';
-        vitCBody = `Zero whole fruit, berries, citrus, kiwi, or bell peppers logged today.${garnishNote} Vitamin C (50–200mg) is a mandatory cofactor for pro-collagen synthesis in your Achilles &amp; patellar tendons after skipping (2,185 jumps) and heavy KB swings, and boosts non-heme iron absorption from Jumbo Oats.`;
+        vitCBody = `Zero whole fruit, berries, citrus, kiwi, or bell peppers logged today.${garnishNote} Vitamin C (50–200mg) is a mandatory cofactor for pro-collagen synthesis in your Achilles &amp; patellar tendons after high-impact or resistance training, and boosts non-heme iron absorption from Jumbo Oats.`;
       } else if (vitCPowerItems.length === 1) {
         vitCBadgeText = `ℹ️ MODERATE MICRONUTRIENTS (1 source)`;
         vitCBadgeColor = '#38bdf8';
@@ -1307,7 +1142,7 @@
       const badge = document.getElementById('mndConnectionStatusBadge');
       const panelText = document.getElementById('mndSyncPanelStatusText');
       const bannerText = document.getElementById('mndBannerSummaryText');
-      const t = (myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : { calories: 824, protein: 49 };
+      const t = (myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : { calories: 0, protein: 0 };
       const calsStr = (t.calories || 0).toLocaleString();
       const protStr = t.protein || 0;
 
@@ -1349,11 +1184,8 @@
       updateMndStatusBadgesUI(savedUser, Boolean(savedUser));
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2200);
-        const res = await fetch('/api/mnd/status', { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) return;
+        const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/mnd/status', { timeoutMs: 2200, promptAuthOn401: false });
+        if (!res || !res.ok) return;
         const data = await res.json();
 
         if (data.configured || data.has_cached_session) {
@@ -1391,16 +1223,13 @@
       if (msg) msg.innerHTML = '<span style="color:var(--cyan);">Connecting to MyNetDiary cloud service...</span>';
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch('/api/mnd/login', {
+        const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/mnd/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ login: user, password: pass }),
-          signal: controller.signal
+          timeoutMs: 6000
         });
-        clearTimeout(timeoutId);
-        if (!res.ok || res.status === 404) {
+        if (!res || !res.ok || res.status === 404) {
           throw new Error('Cloud backend offline');
         }
         const data = await res.json();
@@ -1501,18 +1330,15 @@
       });
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        const res = await fetch('/api/mnd/sync', {
+        const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/mnd/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}),
-          signal: controller.signal
+          timeoutMs: 20000
         });
-        clearTimeout(timeoutId);
 
-        if (!res.ok || res.status === 404) {
-          throw new Error(`Cloud backend returned HTTP ${res.status}`);
+        if (!res || !res.ok || res.status === 404) {
+          throw new Error(`Cloud backend returned HTTP ${res ? res.status : 'offline'}`);
         }
 
         const data = await res.json();
@@ -1580,18 +1406,18 @@
       if (connMod) connMod.classList.remove('open');
 
       const t = (myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : {};
-      const elCals = document.getElementById('mndInputCals'); if (elCals) elCals.value = t.calories ?? 824;
-      const elProt = document.getElementById('mndInputProtein'); if (elProt) elProt.value = t.protein ?? 49;
-      const elCarbs = document.getElementById('mndInputCarbs'); if (elCarbs) elCarbs.value = t.carbs ?? 115;
-      const elFat = document.getElementById('mndInputFat'); if (elFat) elFat.value = t.fat ?? 23;
-      const elFiber = document.getElementById('mndInputFiber'); if (elFiber) elFiber.value = t.fiber ?? 19;
-      const elSodium = document.getElementById('mndInputSodium'); if (elSodium) elSodium.value = t.sodium ?? 275;
+      const elCals = document.getElementById('mndInputCals'); if (elCals) elCals.value = t.calories ?? 0;
+      const elProt = document.getElementById('mndInputProtein'); if (elProt) elProt.value = t.protein ?? 0;
+      const elCarbs = document.getElementById('mndInputCarbs'); if (elCarbs) elCarbs.value = t.carbs ?? 0;
+      const elFat = document.getElementById('mndInputFat'); if (elFat) elFat.value = t.fat ?? 0;
+      const elFiber = document.getElementById('mndInputFiber'); if (elFiber) elFiber.value = t.fiber ?? 0;
+      const elSodium = document.getElementById('mndInputSodium'); if (elSodium) elSodium.value = t.sodium ?? 0;
       const elWater = document.getElementById('mndInputWater'); if (elWater) elWater.value = t.water ?? 0.0;
       const elPaste = document.getElementById('mndPasteInput'); if (elPaste) elPaste.value = '';
 
       const bannerText = document.getElementById('mndBannerSummaryText');
       if (bannerText) {
-        bannerText.innerText = `${(t.calories ?? 824).toLocaleString()} kcal • ${t.protein ?? 49}g P • ${(t.water ?? 0.0)}L Water`;
+        bannerText.innerText = `${(t.calories ?? 0).toLocaleString()} kcal • ${t.protein ?? 0}g P • ${(t.water ?? 0.0)}L Water`;
       }
 
       const modal = document.getElementById('mndSyncModal');
@@ -1605,25 +1431,37 @@
       beep(450, 0.05);
     }
 
-    function syncManualMndToBackend() {
+    async function syncManualMndToBackend() {
+      const mndPayload = {
+        totals: myNetDiaryData.totals || {},
+        meals: myNetDiaryData.meals || {},
+        date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined)
+      };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
+        if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+        return;
+      }
       try {
-        fetch('/api/mnd/manual', {
+        const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch : fetch)('/api/mnd/manual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            totals: myNetDiaryData.totals || {},
-            meals: myNetDiaryData.meals || {},
-            date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined)
-          })
-        })
-          .then(res => res.ok ? res.json() : null)
-          .then(data => {
-            if (data && data.success && data.state) {
-              window.BAKED_LIVE_STATE = data.state;
-            }
-          })
-          .catch(() => {});
-      } catch (e) {}
+          body: JSON.stringify(mndPayload),
+          timeoutMs: 5000
+        });
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data && data.success && data.state) {
+            window.BAKED_LIVE_STATE = data.state;
+          }
+        } else {
+          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
+          if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+        }
+      } catch (e) {
+        if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
+        if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+      }
     }
 
     function saveMndSyncTotals() {
@@ -1807,16 +1645,22 @@
     // ==================== PERSISTENCE & LOCALSTORAGE ====================
     function saveMndToLocalStorage() {
       try {
+        const todayStr = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : new Date().toISOString().split('T')[0];
+        if (myNetDiaryData && typeof myNetDiaryData === 'object') {
+          myNetDiaryData.date = todayStr;
+        }
         localStorage.setItem('pulse_mnd_data', JSON.stringify(myNetDiaryData));
       } catch(e) {}
     }
 
     function restoreMndFromLocalStorage() {
       try {
-        const CURRENT_MND_VERSION = "v5.24_nov17_multiday";
+        const CURRENT_MND_VERSION = "v5.38_dated_clean";
+        const todayStr = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : new Date().toISOString().split('T')[0];
         if (localStorage.getItem('pulse_mnd_version') !== CURRENT_MND_VERSION) {
           localStorage.removeItem('pulse_mnd_data');
           localStorage.setItem('pulse_mnd_version', CURRENT_MND_VERSION);
+          myNetDiaryData.date = todayStr;
           saveMndToLocalStorage();
           return;
         }
@@ -1824,6 +1668,26 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && parsed.totals && parsed.meals) {
+            if (parsed.date !== todayStr) {
+              myNetDiaryData.date = todayStr;
+              myNetDiaryData.totals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, water: 0.0 };
+              myNetDiaryData.meals = {
+                breakfast: { name: "Breakfast", time: "", calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+                lunch: { name: "Lunch", time: "", calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+                dinner: { name: "Dinner", time: "", calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+                snacks: { name: "Snacks & Hydration", time: "", calories: 0, protein: 0, carbs: 0, fat: 0, items: [] }
+              };
+              if (parsed.targets && typeof parsed.targets === 'object') {
+                myNetDiaryData.targets = parsed.targets;
+              }
+              if (parsed.history && Array.isArray(parsed.history.days) && parsed.history.days.length > 0) {
+                myNetDiaryData.history = parsed.history;
+              } else if (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.mnd_history) {
+                myNetDiaryData.history = window.BAKED_LIVE_STATE.mnd_history;
+              }
+              saveMndToLocalStorage();
+              return;
+            }
             myNetDiaryData = parsed;
             if (!myNetDiaryData.history || !Array.isArray(myNetDiaryData.history.days) || myNetDiaryData.history.days.length === 0) {
               myNetDiaryData.history = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.mnd_history)
@@ -1850,17 +1714,32 @@
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
 
+      const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+      const payload = { amount_ml: amountMl };
+      let syncedOk = false;
       try {
-        await fetch('/api/hydration/add', {
+        const res = await fetcher('/api/hydration/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount_ml: amountMl })
+          body: JSON.stringify(payload)
         });
+        if (res && res.ok) {
+          syncedOk = true;
+        } else if (typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
+          enqueueOfflineWrite('/api/hydration/add', payload, 'POST');
+        }
       } catch(e) {
         console.warn('Hydration offline log sync notice:', e);
+        if (typeof enqueueOfflineWrite === 'function') {
+          enqueueOfflineWrite('/api/hydration/add', payload, 'POST');
+        }
       }
 
-      showToast(`✓ +${amountMl}ml Hydration Logged`);
+      if (syncedOk) {
+        showToast(`✓ +${amountMl}ml Hydration Logged`);
+      } else {
+        showToast(`Saved +${amountMl}ml locally — queued for cloud sync`);
+      }
     }
 
     // ==================== FUEL TAB CONTROLS & QUICK LOG MODAL ====================
@@ -1954,7 +1833,7 @@
       }
     }
 
-    function selectDietStrategy(key) {
+    function selectDietStrategy(key, opts = {}) {
       activeDietStrategy = key;
       const strategyMap = {
         'balanced': ['btnDietBalanced', 'panelDietBalanced'],
@@ -1972,11 +1851,15 @@
         if (panel) panel.classList.toggle('active', isActive);
       });
 
+      if (opts && opts.fromBoot === true) {
+        return;
+      }
+
       try {
         localStorage.setItem('pulse_diet_strategy', key);
       } catch (e) {}
 
-      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || 2437;
+      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || (typeof getCanonicalDailyCalorieTarget === 'function' ? getCanonicalDailyCalorieTarget() : 2092);
       const prot = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
       const remCals = Math.max(0, cals - prot * 4);
 
@@ -2032,7 +1915,50 @@
       renderMyNetDiaryEngine();
     }
 
+    let fastingTimerRunning = false;
+    let fastingTimerSeconds = 0;
+    let _fastingVisBound = false;
+
+    function _loadFastingState() {
+      try {
+        const raw = localStorage.getItem(PULSE_FASTING_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            return {
+              running: Boolean(parsed.running),
+              startedAtMs: (typeof parsed.startedAtMs === 'number' && Number.isFinite(parsed.startedAtMs)) ? parsed.startedAtMs : null,
+              accumulatedSec: Math.max(0, Math.floor(Number(parsed.accumulatedSec) || 0))
+            };
+          }
+        }
+      } catch (e) {}
+      return { running: false, startedAtMs: null, accumulatedSec: 0 };
+    }
+
+    function _saveFastingState(st) {
+      try {
+        localStorage.setItem(PULSE_FASTING_STORAGE_KEY, JSON.stringify({
+          running: Boolean(st.running),
+          startedAtMs: st.running && st.startedAtMs ? st.startedAtMs : null,
+          accumulatedSec: Math.max(0, Math.floor(Number(st.accumulatedSec) || 0))
+        }));
+      } catch (e) {}
+    }
+
+    function getFastingElapsedSeconds(st) {
+      const state = st || _loadFastingState();
+      let total = Math.max(0, Math.floor(Number(state.accumulatedSec) || 0));
+      if (state.running && state.startedAtMs) {
+        total += Math.max(0, Math.floor((Date.now() - state.startedAtMs) / 1000));
+      }
+      return total;
+    }
+
     function updateFastingTimerDisplay() {
+      const st = _loadFastingState();
+      fastingTimerRunning = st.running;
+      fastingTimerSeconds = getFastingElapsedSeconds(st);
       const d = document.getElementById('fastingTimerDisplay');
       if (d) {
         const h = Math.floor(fastingTimerSeconds / 3600);
@@ -2040,30 +1966,81 @@
         d.innerText = `${h}h ${m}m`;
       }
       const btn = document.getElementById('btnToggleFastTimer');
-      if (btn) btn.innerText = fastingTimerRunning ? 'Running' : 'Paused';
+      if (btn) btn.innerText = st.running ? 'Running' : (fastingTimerSeconds > 0 ? 'Paused' : 'Start');
+    }
+
+    function _startFastingTicker() {
+      if (fastingTimerInterval) {
+        clearInterval(fastingTimerInterval);
+        fastingTimerInterval = null;
+      }
+      fastingTimerInterval = setInterval(() => {
+        updateFastingTimerDisplay();
+      }, 1000);
+    }
+
+    function initFastingTimer() {
+      const st = _loadFastingState();
+      fastingTimerRunning = st.running;
+      fastingTimerSeconds = getFastingElapsedSeconds(st);
+      if (st.running) {
+        _startFastingTicker();
+      } else if (fastingTimerInterval) {
+        clearInterval(fastingTimerInterval);
+        fastingTimerInterval = null;
+      }
+      if (!_fastingVisBound && typeof document !== 'undefined') {
+        _fastingVisBound = true;
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            updateFastingTimerDisplay();
+          }
+        });
+      }
+      updateFastingTimerDisplay();
     }
 
     function toggleFastingTimer() {
-      fastingTimerRunning = !fastingTimerRunning;
-      if (fastingTimerRunning) {
-        if (!fastingTimerInterval) {
-          fastingTimerInterval = setInterval(() => {
-            fastingTimerSeconds++;
-            updateFastingTimerDisplay();
-          }, 1000);
-        }
-      } else {
+      const st = _loadFastingState();
+      if (st.running) {
+        const elapsed = getFastingElapsedSeconds(st);
+        const nextSt = { running: false, startedAtMs: null, accumulatedSec: elapsed };
+        _saveFastingState(nextSt);
+        fastingTimerRunning = false;
+        fastingTimerSeconds = elapsed;
         if (fastingTimerInterval) {
           clearInterval(fastingTimerInterval);
           fastingTimerInterval = null;
         }
+        if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
+      } else {
+        const nextSt = { running: true, startedAtMs: Date.now(), accumulatedSec: st.accumulatedSec };
+        _saveFastingState(nextSt);
+        fastingTimerRunning = true;
+        fastingTimerSeconds = st.accumulatedSec;
+        _startFastingTicker();
       }
       updateFastingTimerDisplay();
     }
 
     function resetFastingTimer() {
+      if (fastingTimerInterval) {
+        clearInterval(fastingTimerInterval);
+        fastingTimerInterval = null;
+      }
+      _saveFastingState({ running: false, startedAtMs: null, accumulatedSec: 0 });
+      fastingTimerRunning = false;
       fastingTimerSeconds = 0;
+      if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
       updateFastingTimerDisplay();
+    }
+
+    if (typeof window !== 'undefined') {
+      window.initFastingTimer = initFastingTimer;
+      window.toggleFastingTimer = toggleFastingTimer;
+      window.resetFastingTimer = resetFastingTimer;
+      window.getFastingElapsedSeconds = getFastingElapsedSeconds;
+      window.updateFastingTimerDisplay = updateFastingTimerDisplay;
     }
 
     function updateProDial() {

@@ -567,6 +567,8 @@ function renderHistoryList() {
       ? `<span>•</span><span style="color:var(--cyan); font-weight:700;">👣 ${estSteps.toLocaleString()} activity steps${estMiles > 0 ? ` (${estMiles} mi)` : ''}</span>`
       : '';
 
+    const esc = (typeof escapeHtml === 'function' ? escapeHtml : (v => String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))));
+
     const card = document.createElement('div');
     card.className = `history-card ${isToday ? 'today-highlight' : ''}`;
     card.style.background = isToday ? '#141a24' : '#11141c';
@@ -579,10 +581,10 @@ function renderHistoryList() {
       <div class="history-top-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
         <div>
           <div class="history-title" style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
-            ${displayTitle}
+            ${esc(displayTitle)}
           </div>
           <div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-            <span>${displayDate}</span>
+            <span>${esc(displayDate)}</span>
             <span>•</span>
             <span>⏱ ${normDurationMin} min</span>
             <span>•</span>
@@ -636,12 +638,12 @@ function renderHistoryList() {
       </div>
 
       <!-- ELEPHANT LAYER: EXPANDABLE BENEFITS, CHARTS & RECOVERY ACCORDION -->
-      <div class="benefits-toggle-btn" onclick="toggleBenefitAccordion('${act.id}')" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
+      <div class="benefits-toggle-btn" data-act-id="${esc(act.id)}" onclick="toggleBenefitAccordion(this.dataset.actId)" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
         <span>🔬 View Garmin Telemetry, Charts & Recovery (6 sections)</span>
-        <span class="accordion-arrow" id="arrow_${act.id}" style="transition:transform 0.2s;">▾</span>
+        <span class="accordion-arrow" id="arrow_${esc(act.id)}" style="transition:transform 0.2s;">▾</span>
       </div>
 
-      <div class="benefits-accordion-body" id="benefit_body_${act.id}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
+      <div class="benefits-accordion-body" id="benefit_body_${esc(act.id)}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
         
         <!-- SECTION 1: GARMIN HEART RATE TIME-SERIES CURVE (SVG) -->
         <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
@@ -709,8 +711,8 @@ function renderHistoryList() {
       </div>
 
       <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:10.5px; color:var(--text-muted);">Garmin Telemetry • ID: ${act.id}</span>
-        <button class="header-pill-btn" style="padding:3px 8px; font-size:11px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-secondary);" onclick="openAnnotateModal('${act.id}')">
+        <span style="font-size:10.5px; color:var(--text-muted);">Garmin Telemetry • ID: ${esc(act.id)}</span>
+        <button class="header-pill-btn" style="padding:3px 8px; font-size:11px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-secondary);" data-act-id="${esc(act.id)}" onclick="openAnnotateModal(this.dataset.actId)">
           Annotate Notes ✎
         </button>
       </div>
@@ -725,7 +727,7 @@ async function renderRenphoTrendChart() {
   let records = [];
 
   try {
-    const res = await fetch('/api/renpho/history?days=30');
+    const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/renpho/history?days=30', { promptAuthOn401: false }) : fetch('/api/renpho/history?days=30'));
     if (res.ok) {
       const data = await res.json();
       records = Array.isArray(data) ? data : (data && Array.isArray(data.history) ? data.history : []);
@@ -1006,7 +1008,7 @@ async function renderStrengthProgressionChart() {
 
   // Try fetching 30-day history from backend
   try {
-    const res = await fetch('/api/strength/history?days=30');
+    const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/strength/history?days=30', { promptAuthOn401: false }) : fetch('/api/strength/history?days=30'));
     if (res.ok) {
       const data = await res.json();
       strengthHistory = (data && data.exercises) || data || {};

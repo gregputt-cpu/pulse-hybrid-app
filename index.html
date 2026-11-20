@@ -45,7 +45,7 @@
       </svg>
     </div>
     <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; letter-spacing:0.22em; color:#fff; margin-top:16px; text-shadow:0 0 18px rgba(0,229,255,0.45);">PULSE</div>
-    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v5.36</div>
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v5.38</div>
   </div>
 
   <div class="app-screen">
@@ -804,10 +804,10 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:8px;">
                   <div>
                     <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Fast Timer</div>
-                    <div style="font-size:18px; font-weight:800; color:#fff;" id="fastingTimerDisplay">14h 25m</div>
+                    <div style="font-size:18px; font-weight:800; color:#fff;" id="fastingTimerDisplay">0h 0m</div>
                   </div>
                   <div style="display:flex; gap:5px;">
-                    <button class="solver-size-btn" id="btnToggleFastTimer" onclick="toggleFastingTimer()" style="background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); font-size:11px; padding:5px 10px; border-radius:6px; box-shadow:0 0 8px rgba(0,229,255,0.2);">Running</button>
+                    <button class="solver-size-btn" id="btnToggleFastTimer" onclick="toggleFastingTimer()" style="background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid rgba(0,229,255,0.4); font-size:11px; padding:5px 10px; border-radius:6px; box-shadow:0 0 8px rgba(0,229,255,0.2);">Start</button>
                     <button class="solver-size-btn" onclick="resetFastingTimer()" style="font-size:11px; padding:5px 8px; border-radius:6px;">Reset</button>
                   </div>
                 </div>
@@ -1253,7 +1253,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div>
             <strong style="font-size:15px; font-weight:800; color:#fff;">PULSE Settings</strong>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Coach Greg • Hybrid Athlete OS • v5.36</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v5.38</div>
           </div>
           <span class="btn-modal-close" onclick="closeQuickSettingsModal()" style="cursor:pointer; font-size:18px; color:var(--text-muted); padding:2px 6px;">✕</span>
         </div>
@@ -1349,7 +1349,7 @@
           </button>
         </div>
 
-        <!-- PANEL 1: REALISTIC PRESET SUGGESTIONS FOR GREG PUTT -->
+        <!-- PANEL 1: REALISTIC PRESET SUGGESTIONS -->
         <div class="goal-view-panel active" id="panelGoalPresets">
           <!-- PRESET 1: 15% RECOMPOSITION (RECOMMENDED) -->
           <div class="goal-option-card selected" id="opt_recomp" onclick="selectGoal('recomp')">
@@ -2167,10 +2167,10 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=5.36"></script>
-  <script src="./js/workout-engine.js?v=5.36"></script>
-  <script src="./js/charts.js?v=5.36"></script>
-  <script src="./js/fuel-engine.js?v=5.36"></script>
-  <script src="./js/telemetry.js?v=5.36"></script>
+  <script src="./js/state.js?v=5.38"></script>
+  <script src="./js/workout-engine.js?v=5.38"></script>
+  <script src="./js/charts.js?v=5.38"></script>
+  <script src="./js/fuel-engine.js?v=5.38"></script>
+  <script src="./js/telemetry.js?v=5.38"></script>
 </body>
 </html>

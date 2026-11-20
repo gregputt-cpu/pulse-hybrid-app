@@ -2,14 +2,15 @@ import re
 
 class PhysiologicalBenefitsEngine:
     """
-    Physiological Benefits Engine for Greg Putt (99.85 kg, 17.5% -> 15.0% BF Recomposition).
+    Physiological Benefits Engine for PULSE Hybrid Athlete OS.
     Generates 5-pillar physiological and biomechanical breakdowns for Garmin workouts.
     """
 
     def __init__(self, athlete_weight_kg=99.85):
         self.weight_kg = athlete_weight_kg
 
-    def generate_benefits(self, activity_name, sub_title, duration_min, calories, avg_hr, max_hr, aerobic_te=0.0, anaerobic_te=0.0):
+    def generate_benefits(self, activity_name, sub_title, duration_min, calories, avg_hr, max_hr, aerobic_te=0.0, anaerobic_te=0.0, weight_kg=None):
+        w = float(weight_kg) if weight_kg is not None else float(self.weight_kg)
         text = f"{activity_name} {sub_title}".lower()
         
         # Determine movement archetype
@@ -44,20 +45,20 @@ class PhysiologicalBenefitsEngine:
                             "through pelvic rotation to anterior deltoid/serratus punch extension and hip-flexor kick chambers. "
                             "Drives VO2 stroke volume and lactate clearance with zero axial spinal compression.")
         elif is_jump:
-            min_force = round(self.weight_kg * 3.5, 1)
-            max_force = round(self.weight_kg * 4.5, 1)
+            min_force = round(w * 3.5, 1)
+            max_force = round(w * 4.5, 1)
             biomechanics = (f"High-frequency plyometric impacts generating peak eccentric ground reaction forces of "
-                            f"3.5–4.5× bodyweight (~{min_force}–{max_force}kg per landing at {self.weight_kg}kg bodyweight). "
+                            f"3.5–4.5× bodyweight (~{min_force}–{max_force}kg per landing at {w}kg bodyweight). "
                             f"Drives Achilles tendon stiffness, elastic energy storage, and stretch-shortening cycle (SSC) reactive strength.")
         elif is_ruck:
             biomechanics = (f"Loaded axial locomotion challenging posterior chain tensile capacity and lumbar stability. "
                             f"Strengthens spinal erector endurance, pelvic stabilizer recruitment, and knee joint integrity under load.")
         elif is_walk:
-            impact = round(self.weight_kg * 1.2, 1)
+            impact = round(w * 1.2, 1)
             biomechanics = (f"Low-impact cyclical ground force absorption (~1.2× bodyweight, ~{impact}kg per stride). "
                             f"Promotes synovial fluid circulation in knee/hip joints, venous blood pooling return, and axial lumbar decompression.")
         elif is_run:
-            impact = round(self.weight_kg * 2.5, 1)
+            impact = round(w * 2.5, 1)
             biomechanics = (f"Dynamic unilateral flight-and-impact cycles absorbing 2.5–3.0× bodyweight (~{impact}kg/stride). "
                             f"Demands sagittal plane pelvic control, gluteus medius stabilization, and reactive Achilles elastic recoil.")
         else:
@@ -100,8 +101,12 @@ class PhysiologicalBenefitsEngine:
 
     def analyze_workout(self, text, telemetry=None, athlete=None):
         telemetry = telemetry or {}
-        if athlete and athlete.get("weight_kg"):
-            self.weight_kg = float(athlete.get("weight_kg"))
+        weight_kg = None
+        if athlete and athlete.get("weight_kg") is not None:
+            try:
+                weight_kg = float(athlete.get("weight_kg"))
+            except (ValueError, TypeError):
+                weight_kg = None
         return self.generate_benefits(
             activity_name="",
             sub_title=text or "",
@@ -111,5 +116,6 @@ class PhysiologicalBenefitsEngine:
             max_hr=float(telemetry.get("max_hr") or 160),
             aerobic_te=float(telemetry.get("aerobic_te") or 2.5),
             anaerobic_te=float(telemetry.get("anaerobic_te") or 1.3),
+            weight_kg=weight_kg,
         )
 

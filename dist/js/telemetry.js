@@ -23,13 +23,11 @@
         if (m) {
           actDateStr = m[0];
         } else if (raw.toLowerCase().includes('today') || act.isToday) {
-          const now = new Date();
-          actDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+          actDateStr = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
         }
       }
       if (!actDateStr && act.isToday) {
-        const now = new Date();
-        actDateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        actDateStr = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
       }
 
       try {
@@ -129,12 +127,14 @@
         const headerBtn = document.getElementById('btnHeaderSync');
         const headerSpan = headerBtn ? headerBtn.querySelector('span:last-child') : null;
         if (headerSpan) headerSpan.innerText = 'Syncing...';
-        const res = await fetch('/api/garmin/sync', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/garmin/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
+          promptAuthOn401: false
         });
-        if (res.ok) {
+        if (res && res.ok) {
           const data = await res.json();
           if (data && data.state) {
             window.BAKED_LIVE_STATE = data.state;
@@ -369,23 +369,36 @@
         `;
         return;
       }
+      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (v => String(v ?? ''));
       const rowsHtml = acts.map((a, idx) => {
         const title = a.sub_title || a.subTitle || a.name || 'Workout';
         const dur = Number(a.duration_min || a.durationMin || 0).toFixed(1);
         const cals = Number(a.calories || 0);
-        const hr = a.avg_hr || a.avgHr ? ` • Avg HR ${a.avg_hr || a.avgHr} bpm` : '';
+        const hrVal = a.avg_hr || a.avgHr;
+        const hr = hrVal ? ` • Avg HR ${esc(hrVal)} bpm` : '';
         const color = idx === 0 ? 'var(--primary)' : 'var(--cyan)';
-        return `<div style="font-size:11.5px; font-weight:700; color:${color}; background:rgba(0,0,0,0.3); padding:5px 7px; border-radius:4px;">⚡ ${title} (${dur} min) • ${cals} kcal${hr}</div>`;
+        return `<div style="font-size:11.5px; font-weight:700; color:${color}; background:rgba(0,0,0,0.3); padding:5px 7px; border-radius:4px;">⚡ ${esc(title)} (${esc(dur)} min) • ${esc(cals)} kcal${hr}</div>`;
       }).join('');
       notice.innerHTML = `
-        <div style="font-size:12.5px; font-weight:800; color:var(--primary);">✓ Cloud Sync Active (${totalBurn} kcal • ${steps.toLocaleString()} steps)</div>
+        <div style="font-size:12.5px; font-weight:800; color:var(--primary);">✓ Cloud Sync Active (${esc(totalBurn)} kcal • ${esc(steps.toLocaleString())} steps)</div>
         <div style="font-size:11.5px; color:#fff; line-height:1.35;">${acts.length} workout${acts.length > 1 ? 's' : ''} recorded today on your Garmin watch:</div>
         <div style="display:flex; flex-direction:column; gap:4px;">${rowsHtml}</div>
-        <button class="btn-action-primary" style="height:32px; font-size:12px; background:var(--primary); color:#000; font-weight:800; margin-top:3px;" onclick="loadLiveState(); closeSyncModal(); showToast('✓ ${acts.length} Garmin Workout${acts.length > 1 ? 's' : ''} Loaded (${totalBurn} kcal)!');">
-          ✓ View Ingested Workouts (${totalBurn} kcal)
+        <button class="btn-action-primary" style="height:32px; font-size:12px; background:var(--primary); color:#000; font-weight:800; margin-top:3px;" data-acts-count="${acts.length}" data-total-burn="${esc(totalBurn)}" onclick="acknowledgeGarminSyncNotice(this)">
+          ✓ View Ingested Workouts (${esc(totalBurn)} kcal)
         </button>
       `;
     }
+
+    function acknowledgeGarminSyncNotice(btnEl) {
+      const cnt = btnEl ? Number(btnEl.getAttribute('data-acts-count') || 0) : 0;
+      const burn = btnEl ? Number(btnEl.getAttribute('data-total-burn') || 0) : 0;
+      loadLiveState();
+      closeSyncModal();
+      if (cnt > 0) {
+        showToast(`✓ ${cnt} Garmin Workout${cnt > 1 ? 's' : ''} Loaded (${burn} kcal)!`);
+      }
+    }
+    window.acknowledgeGarminSyncNotice = acknowledgeGarminSyncNotice;
 
     async function triggerGarminCloudSync() {
       const btn = document.getElementById('btnTriggerGarminSync');
@@ -396,19 +409,18 @@
         btn.innerHTML = '↻ CONNECTING TO GARMIN CLOUD...';
       }
 
+      const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
       // Best-effort Renpho cloud sync so clicking Sync always pulls latest weigh-in
-      fetch('/api/renpho/sync', { method: 'POST' }).catch(() => {});
+      fetcher('/api/renpho/sync', { method: 'POST', promptAuthOn401: false }).catch(() => {});
 
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
-        const res = await fetch('/api/garmin/sync', {
+        const res = await fetcher('/api/garmin/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: email, password: pass }),
-          signal: controller.signal
+          timeoutMs: 25000,
+          promptAuthOn401: true
         });
-        clearTimeout(timeoutId);
 
         if (!res.ok || res.status === 404) {
           await loadLiveState();
@@ -492,11 +504,17 @@
       showToast('Validating MFA code with Garmin...');
 
       try {
-        const res = await fetch('/api/garmin/submit_mfa', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/garmin/submit_mfa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mfa_code: code, client_state: garminMfaState })
+          body: JSON.stringify({ mfa_code: code, client_state: garminMfaState }),
+          promptAuthOn401: true
         });
+        if (!res || !res.ok) {
+          showToast(`MFA Error (HTTP ${res ? res.status : 'offline'})`);
+          return;
+        }
         const data = await res.json();
         if (data.success || data.status === 'success') {
           if (data.state) {
@@ -576,7 +594,7 @@
       const fuelBurn = document.getElementById('fuelBurnNum') || document.getElementById('fuelGarminBurn');
       if (fuelBurn) fuelBurn.innerHTML = `${newBurn} <small style="font-size:13px;">kcal</small>`;
 
-      const curTarget = 2092 + newBurn;
+      const curTarget = (typeof getCanonicalDailyCalorieTarget === 'function') ? getCanonicalDailyCalorieTarget() : (2092 + newBurn);
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${curTarget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${newBurn} kcal</small>`;
       const fbEl = document.getElementById('fuelBudgetNum');
@@ -586,29 +604,36 @@
       beep(880, 0.15);
       showToast(`✓ Synced ${subTitle}! (+${cal} kcal)`);
 
-      // Opportunistic background sync (silent ignore if remote server offline)
+      // Background sync with offline replay queue fallback
+      const actPayload = {
+        name: type,
+        sub_title: subTitle,
+        duration_min: dur,
+        calories: cal,
+        avg_hr: avgHr,
+        max_hr: maxHr,
+        aerobic_te: 2.0,
+        anaerobic_te: 0.0,
+        steps: steps,
+        benefits: benefits
+      };
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        await fetch('/api/sync_activity', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/sync_activity', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: type,
-            sub_title: subTitle,
-            duration_min: dur,
-            calories: cal,
-            avg_hr: avgHr,
-            max_hr: maxHr,
-            aerobic_te: 2.0,
-            anaerobic_te: 0.0,
-            steps: steps,
-            benefits: benefits
-          }),
-          signal: controller.signal
+          body: JSON.stringify(actPayload),
+          timeoutMs: 4000
         });
-        clearTimeout(timeoutId);
+        if (!res || !res.ok) {
+          if (typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
+            enqueueOfflineWrite('/api/sync_activity', actPayload, 'POST');
+          }
+        }
       } catch(e) {
+        if (typeof enqueueOfflineWrite === 'function') {
+          enqueueOfflineWrite('/api/sync_activity', actPayload, 'POST');
+        }
         console.log("Local-first: saved activity to browser storage.");
       }
     }
@@ -692,18 +717,25 @@
         showToast('✓ Workout details & physiological benefits analyzed!');
       }
 
-      // Opportunistic background sync (silent ignore if remote server offline)
+      // Background sync with offline replay queue fallback
+      const annPayload = { activity_id: actId, user_text: text };
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        await fetch('/api/annotate_activity', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/annotate_activity', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ activity_id: actId, user_text: text }),
-          signal: controller.signal
+          body: JSON.stringify(annPayload),
+          timeoutMs: 4000
         });
-        clearTimeout(timeoutId);
+        if (!res || !res.ok) {
+          if (typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
+            enqueueOfflineWrite('/api/annotate_activity', annPayload, 'POST');
+          }
+        }
       } catch(e) {
+        if (typeof enqueueOfflineWrite === 'function') {
+          enqueueOfflineWrite('/api/annotate_activity', annPayload, 'POST');
+        }
         console.log("Local-first: saved annotation to browser storage.");
       }
     }
@@ -821,58 +853,76 @@
       }
 
       let achievements = [];
+      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (v => String(v ?? ''));
+      const prof = (typeof window !== 'undefined' && window.athleteProfile) ? window.athleteProfile : {};
+      const liveState = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const safeSubTitle = esc(act.subTitle || act.sub_title || act.name || '');
+      const safeCustomNote = esc(customNoteSummary);
+      const lbmNum = (Number.isFinite(Number(prof.leanMassKg)) && Number(prof.leanMassKg) > 0) ? Number(prof.leanMassKg) : null;
+      const lbmLabel = lbmNum !== null ? `${lbmNum.toFixed(2)} kg lean mass` : 'lean muscle mass';
+      const protAnchor = (liveState.nutrition && Number(liveState.nutrition.protein_target_g) > 0) ? Number(liveState.nutrition.protein_target_g) : 200;
+
       if (isBodyCombat) {
         achievements.push(`<strong>High-Velocity Striking &amp; Rotational Core Power:</strong> Rapid kinetic-chain force transfer from rear-foot pivot through pelvic rotation to anterior deltoid/serratus punch extension and hip-flexor kick chambers.`);
-        achievements.push(`<strong>Cardiovascular &amp; Glycolytic Conditioning:</strong> Avg HR ${act.avgHr || 118} bpm (Peak ${act.maxHr || 144} bpm). Repeated striking combinations drive VO2 stroke volume and lactate clearance without axial spinal compression.`);
+        achievements.push(`<strong>Cardiovascular &amp; Glycolytic Conditioning:</strong> Avg HR ${esc(act.avgHr || '--')} bpm (Peak ${esc(act.maxHr || '--')} bpm). Repeated striking combinations drive VO2 stroke volume and lactate clearance without axial spinal compression.`);
         achievements.push(`<strong>Target Muscular Activation:</strong> Anterior/Lateral Deltoids (Boxer Guard), Serratus Anterior, External/Internal Obliques, Iliopsoas (Hip Flexors), Gastrocnemius/Soleus (Dynamic Footwork).`);
       } else if (isHybridPlyoStrength) {
-        achievements.push(`<strong>Ballistic Posterior-Chain & Hip Hinge Output:</strong> Completed ${parsed.sets || 5} sets × ${parsed.reps || 12} reps (${parsed.totalReps || 60} total reps${parsed.weightKg ? ` @ ${parsed.weightKg}kg = ${(parsed.tonnageKg || 1440).toLocaleString()} kg ballistic load` : ''}), recruiting gluteus maximus, hamstrings, latissimus dorsi, and spinal erectors alongside ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' jump rope skips' : 'cardio intervals'}.`);
-        achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${act.avgHr || 137} bpm with interval peaks to ${act.maxHr || 161} bpm (${Math.round(((act.maxHr || 161)/190)*100)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.8).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 1.3).toFixed(1)} drove both mitochondrial density and fast-twitch glycolytic power.`);
-        achievements.push(`<strong>Metabolic & Lean Mass Preservation:</strong> ${act.calories || 361} kcal active expenditure expanded today's calorie runway while high-velocity KB hip extension signaled retention of your ${(window.athleteProfile ? window.athleteProfile.leanMassKg : 80.99).toFixed(2)} kg lean mass.`);
+        const setsN = Number(parsed.sets || 5);
+        const repsN = Number(parsed.reps || 12);
+        const totalRepsN = Number(parsed.totalReps || (setsN * repsN));
+        const maxHrVal = Number(act.maxHr || 0);
+        const hrMaxStr = maxHrVal > 0 ? ` (${Math.round((maxHrVal / 190) * 100)}% HRmax)` : '';
+        achievements.push(`<strong>Ballistic Posterior-Chain & Hip Hinge Output:</strong> Completed ${setsN} sets × ${repsN} reps (${totalRepsN} total reps${parsed.weightKg ? ` @ ${parsed.weightKg}kg = ${(parsed.tonnageKg || 0).toLocaleString()} kg ballistic load` : ''}), recruiting gluteus maximus, hamstrings, latissimus dorsi, and spinal erectors alongside ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' jump rope skips' : 'cardio intervals'}.`);
+        achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${esc(act.avgHr || '--')} bpm with interval peaks to ${esc(act.maxHr || '--')} bpm${hrMaxStr}. Aerobic TE ${Number(act.aerobicTe || 0).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 0).toFixed(1)} drove both mitochondrial density and fast-twitch glycolytic power.`);
+        achievements.push(`<strong>Metabolic & Lean Mass Preservation:</strong> ${esc(act.calories || 0)} kcal active expenditure expanded today's calorie runway while high-velocity KB hip extension signaled retention of your ${lbmLabel}.`);
       } else if (isStrength) {
         if (customNoteSummary) {
-          achievements.push(`<strong>Annotated Volume & Tonnage:</strong> Logged ${customNoteSummary} (${act.subTitle || act.sub_title}), delivering targeted mechanical tension.`);
+          achievements.push(`<strong>Annotated Volume & Tonnage:</strong> Logged ${safeCustomNote} (${safeSubTitle}), delivering targeted mechanical tension.`);
         }
-        achievements.push(`<strong>Mechanical Tension & Lean Mass Preservation:</strong> Recruited high-threshold motor units across primary kinetic chains. High mechanical load signals your endocrine system to preserve all ${(window.athleteProfile ? window.athleteProfile.leanMassKg : 81.03).toFixed(2)} kg of lean mass while oxidizing fat in your deficit.`);
-        achievements.push(`<strong>Metabolic & EPOC Expansion:</strong> ${act.calories || 320} kcal active expenditure elevated excess post-exercise oxygen consumption (EPOC) for 12–24 hours, stimulating elevated mitochondrial respiration.`);
-        achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${act.avgHr || 122} bpm with interval peaks to ${act.maxHr || 154} bpm (${Math.round(((act.maxHr || 154)/190)*100)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.1).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 2.3).toFixed(1)}.`);
+        achievements.push(`<strong>Mechanical Tension & Lean Mass Preservation:</strong> Recruited high-threshold motor units across primary kinetic chains. High mechanical load signals your endocrine system to preserve ${lbmLabel} while oxidizing fat in your deficit.`);
+        achievements.push(`<strong>Metabolic & EPOC Expansion:</strong> ${esc(act.calories || 0)} kcal active expenditure elevated excess post-exercise oxygen consumption (EPOC) for 12–24 hours, stimulating elevated mitochondrial respiration.`);
+        const maxHrVal = Number(act.maxHr || 0);
+        const hrMaxStr = maxHrVal > 0 ? ` (${Math.round((maxHrVal / 190) * 100)}% HRmax)` : '';
+        achievements.push(`<strong>Cardiovascular & Autonomic Priming:</strong> Avg HR ${esc(act.avgHr || '--')} bpm with interval peaks to ${esc(act.maxHr || '--')} bpm${hrMaxStr}. Aerobic TE ${Number(act.aerobicTe || 0).toFixed(1)} + Anaerobic TE ${Number(act.anaerobicTe || 0).toFixed(1)}.`);
       } else {
         if (customNoteSummary) {
-          achievements.push(`<strong>Session Breakdown:</strong> Completed ${customNoteSummary} (${act.subTitle || act.sub_title}).`);
+          achievements.push(`<strong>Session Breakdown:</strong> Completed ${safeCustomNote} (${safeSubTitle}).`);
         }
-        achievements.push(`<strong>Cardiovascular & Aerobic Capacity:</strong> Avg HR ${act.avgHr || 119} bpm (Peak ${act.maxHr || 151} bpm, ${(act.maxHr ? Math.round((act.maxHr/190)*100) : 79)}% HRmax). Aerobic TE ${Number(act.aerobicTe || 2.2).toFixed(1)} expanded myocardial stroke volume and mitochondrial capillary density in slow/fast oxidative fibers.`);
-        achievements.push(`<strong>Metabolic Fat Loss Runway:</strong> ${act.calories} kcal active expenditure dynamically expanded your daily calorie runway while protecting your 350 kcal deficit towards 15.0% body fat. Stimulates excess post-exercise oxygen consumption (EPOC) for 4–8 hours.`);
+        const maxHrVal = Number(act.maxHr || 0);
+        const hrPctStr = maxHrVal > 0 ? `, ${Math.round((maxHrVal / 190) * 100)}% HRmax` : '';
+        achievements.push(`<strong>Cardiovascular & Aerobic Capacity:</strong> Avg HR ${esc(act.avgHr || '--')} bpm (Peak ${esc(act.maxHr || '--')} bpm${hrPctStr}). Aerobic TE ${Number(act.aerobicTe || 0).toFixed(1)} expanded myocardial stroke volume and mitochondrial capillary density in slow/fast oxidative fibers.`);
+        achievements.push(`<strong>Metabolic Fat Loss Runway:</strong> ${esc(act.calories || 0)} kcal active expenditure dynamically expanded your daily calorie runway while protecting your ${(liveState.nutrition && Number(liveState.nutrition.deficit)) || 350} kcal deficit towards 15.0% body fat. Stimulates excess post-exercise oxygen consumption (EPOC) for 4–8 hours.`);
       }
       if (!isBodyCombat) {
-        const muscles = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isHybridPlyoStrength ? "Gluteus Maximus, Biceps Femoris & Semitendinosus (Hamstrings), Calves & Achilles Tendon Complex, Latissimus Dorsi, Core Brace" : (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain"));
-        achievements.push(`<strong>Target Muscular Activation:</strong> Recruited ${muscles}.`);
+        const musclesRaw = (act.benefits && (act.benefits.muscles || act.benefits.muscles_worked)) || (isHybridPlyoStrength ? "Gluteus Maximus, Biceps Femoris & Semitendinosus (Hamstrings), Calves & Achilles Tendon Complex, Latissimus Dorsi, Core Brace" : (isStrength ? "Pectoralis Major, Triceps Brachii, Latissimus Dorsi, Posterior Hamstring Chain, Gluteus Complex" : "Cardiovascular Myocardium, Core Stabilizers, Lower Extremity Postural Chain"));
+        achievements.push(`<strong>Target Muscular Activation:</strong> Recruited ${esc(musclesRaw)}.`);
       }
 
       let stressors = [];
+      const athleteWt = (Number.isFinite(Number(prof.weightKg)) && Number(prof.weightKg) > 0) ? Number(prof.weightKg) : null;
       if (isBodyCombat) {
         stressors.push(`<strong>Shoulder Guard &amp; Rotational Oblique Endurance:</strong> Sustained isometric guard elevation and high-speed punch retraction create localized anterior deltoid and scapular stabilizer fatigue.`);
         stressors.push(`<strong>Dynamic Footwork &amp; Hip-Flexor Load:</strong> High-cadence directional agility and kick deceleration load the calves and iliopsoas with low-to-moderate joint shear.`);
       } else if (isHybridPlyoStrength) {
-        const athleteWt = (window.athleteProfile ? window.athleteProfile.weightKg : 97.9);
-        const grfLow = Math.round(athleteWt * 3.5);
-        const grfHigh = Math.round(athleteWt * 4.5);
-        stressors.push(`<strong>Dual Plyometric + Ballistic Hinge Load:</strong> ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' elastic skips' : 'Jump rope intervals'} (~${grfLow}–${grfHigh} kg peak ground force) taxed the Achilles/patellar tendons, while ${parsed.totalReps || 60} ballistic ${parsed.weightKg || 24}kg KB swings loaded eccentric hamstring deceleration and lumbar erectors.`);
+        const grfLabel = athleteWt ? ` (~${Math.round(athleteWt * 3.5)}–${Math.round(athleteWt * 4.5)} kg peak ground force)` : '';
+        const repsLabel = parsed.totalReps || (parsed.sets && parsed.reps ? parsed.sets * parsed.reps : 'ballistic');
+        stressors.push(`<strong>Dual Plyometric + Ballistic Hinge Load:</strong> ${act.total_reps ? Number(act.total_reps).toLocaleString() + ' elastic skips' : 'Jump rope intervals'}${grfLabel} taxed the Achilles/patellar tendons, while ${repsLabel} ${parsed.weightKg ? parsed.weightKg + 'kg ' : ''}KB swings loaded eccentric hamstring deceleration and lumbar erectors.`);
         stressors.push(`<strong>Targeted Local Fatigue (Upper Body Spared):</strong> Calves, ankles, and posterior hip hinge absorbed high mechanical work, whereas horizontal push (chest/shoulders/triceps) and upper-back pulling remain un-fatigued.`);
       } else if (isStrength) {
-        stressors.push(`<strong>Myofibrillar Microtrauma:</strong> Eccentric muscle contraction caused micro-tears in sarcomeres; requires elevated amino acid availability (200g protein target) for cellular remodeling.`);
+        stressors.push(`<strong>Myofibrillar Microtrauma:</strong> Eccentric muscle contraction caused micro-tears in sarcomeres; requires elevated amino acid availability (${protAnchor}g protein target) for cellular remodeling.`);
         stressors.push(`<strong>Central Nervous System (CNS) Fatigue:</strong> Heavy mechanical loading taxes sympathetic pathways and neuromuscular junctions; parasympathetic tone dips temporarily.`);
         stressors.push(`<strong>Connective Tissue Strain:</strong> Tendinous junctions and joint capsules subjected to high tensile force; requires 24–48h recovery prior to repeating heavy axial loading on the same kinetic chain.`);
       } else if (isJump) {
-        const athleteWt = (window.athleteProfile ? window.athleteProfile.weightKg : 97.75);
-        const grfLow = Math.round(athleteWt * 3.5);
-        const grfHigh = Math.round(athleteWt * 4.5);
-        stressors.push(`<strong>Joint & Tendon Impact:</strong> Peak eccentric ground reaction forces reached 3.5–4.5× bodyweight (~${grfLow}–${grfHigh} kg per landing at ${athleteWt.toFixed(1)} kg across ${skipCountStr}). Created significant tensile strain on the patellar tendons and Achilles spring complex.`);
+        const grfLabel = athleteWt ? ` (~${Math.round(athleteWt * 3.5)}–${Math.round(athleteWt * 4.5)} kg per landing at ${athleteWt.toFixed(1)} kg)` : '';
+        stressors.push(`<strong>Joint & Tendon Impact:</strong> Peak eccentric ground reaction forces reached 3.5–4.5× bodyweight${grfLabel} across ${esc(skipCountStr)}. Created significant tensile strain on the patellar tendons and Achilles spring complex.`);
         stressors.push(`<strong>Neuromuscular Debt:</strong> High fast-twitch motor unit fatigue; temporary depletion of intramuscular phosphocreatine and localized calf stiffness.`);
       } else if (isWalk) {
-        stressors.push(`<strong>Joint & Spinal Stress:</strong> Negligible ground reaction forces (~1.2× bodyweight, ~118 kg per stride). Promoted knee/hip synovial fluid circulation and axial lumbar decompression with zero joint trauma.`);
+        const walkForce = athleteWt ? ` (~1.2× bodyweight, ~${Math.round(athleteWt * 1.2)} kg per stride)` : ' (~1.2× bodyweight)';
+        stressors.push(`<strong>Joint & Spinal Stress:</strong> Negligible ground reaction forces${walkForce}. Promoted knee/hip synovial fluid circulation and axial lumbar decompression with zero joint trauma.`);
         stressors.push(`<strong>Systemic Stress:</strong> Zero CNS or metabolic debt; promotes parasympathetic relaxation.`);
       } else {
-        stressors.push(`<strong>Biomechanical Load:</strong> Rhythmic ground impacts (~2.0–2.5× bodyweight, ~196–245 kg per stride) created moderate lower extremity fatigue and temporary synovial friction.`);
+        const modForce = athleteWt ? ` (~2.0–2.5× bodyweight, ~${Math.round(athleteWt * 2.0)}–${Math.round(athleteWt * 2.5)} kg per stride)` : ' (~2.0–2.5× bodyweight)';
+        stressors.push(`<strong>Biomechanical Load:</strong> Rhythmic ground impacts${modForce} created moderate lower extremity fatigue and temporary synovial friction.`);
         stressors.push(`<strong>Metabolic & Electrolyte Loss:</strong> Moderate glycogen depletion in working muscles and perspiration sodium loss (~600–800mg). Temporary sympathetic nervous system elevation.`);
       }
 
@@ -881,14 +931,17 @@
       const protStr = protStatus.achieved
         ? `${protStatus.logged}g already logged ✓ (Target surpassed)`
         : `${protStatus.logged}g logged / ${protStatus.target}g target • ${protStatus.remaining}g remaining`;
+      const benchPrescribed = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('Barbell Bench Press', '70kg') : 'prescribed Bench';
+      const rowPrescribed = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad('Pendlay Row', 'prescribed Row') : 'prescribed Row';
+      const kbSwingsDone = (parsed.sets && parsed.reps) ? (parsed.sets * parsed.reps) : (parsed.totalReps || 'your');
 
       if (isBodyCombat) {
-        recoveryProtocol.push(`<strong>Optimal Strength Pairing:</strong> Because Body Combat uses high-velocity unloaded striking, it pairs ideally as a warm-up or metabolic bookend around heavy low-rep Barbell Strength (` + (isToday ? `like your 70kg Bench &amp; Pendlay Row block today` : `Bench/Squat/Row`) + `).`);
+        recoveryProtocol.push(`<strong>Optimal Strength Pairing:</strong> Because Body Combat uses high-velocity unloaded striking, it pairs ideally as a warm-up or metabolic bookend around heavy low-rep Barbell Strength (` + (isToday ? `like your ${esc(benchPrescribed)} Bench &amp; ${esc(rowPrescribed)} Row block today` : `Bench/Squat/Row`) + `).`);
         recoveryProtocol.push(`<strong>Nutritional &amp; Guard Recovery:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and replenish electrolytes to restore deltoid/oblique endurance.`);
       } else if (isHybridPlyoStrength) {
         recoveryProtocol.push(`<strong>Kinetic Chain Recovery Status:</strong> Calves/Achilles and posterior hip hinge (hamstrings/glutes) were loaded today (allow 24–36h before high-volume ballistic hinging), while <strong>Upper Push (Bench/Overhead)</strong> and <strong>Upper Pull (Rows)</strong> remain <strong>100% fresh for tomorrow</strong>.`);
         recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and replenish electrolytes to support tendon collagen synthesis and hamstring remodeling.`);
-        recoveryProtocol.push(`<strong>Optimal Tomorrow Pairing (Assuming Good Sleep):</strong> Heavy Upper Push/Pull Priority (Barbell Bench Press 95kg × 8, Pendlay Rows 85kg × 8, Z-Press) + Back Squats if calves feel fresh (keep RDL volume light since 60 ballistic KB swings already hit the hinge pattern).`);
+        recoveryProtocol.push(`<strong>Optimal Tomorrow Pairing (Assuming Good Sleep):</strong> Heavy Upper Push/Pull Priority (Barbell Bench Press ${esc(benchPrescribed)} × 8, Pendlay Rows ${esc(rowPrescribed)} × 8, Z-Press) + Back Squats if calves feel fresh (keep RDL volume light since ${esc(kbSwingsDone)} ballistic KB swings already hit the hinge pattern).`);
       } else if (isStrength) {
         recoveryProtocol.push(`<strong>Recommended Recovery Window:</strong> 24–48 hours before another heavy resistance training session on the same muscle groups.`);
         recoveryProtocol.push(`<strong>Nutritional Action:</strong> Hit your ${protStatus.target}g daily protein target (${protStr}) and consume 3–4g sodium/electrolytes with 2.5L+ hydration.`);
@@ -1211,11 +1264,20 @@
       loadDailyArchetype(currentArchetypeKey || 'option_a');
       try {
         localStorage.setItem('pulse_athlete_injuries', JSON.stringify(athleteInjuries));
-        fetch('/api/athlete/injuries', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        fetcher('/api/athlete/injuries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(athleteInjuries)
-        }).catch(() => {});
+        }).then(res => {
+          if ((!res || !res.ok) && typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
+            enqueueOfflineWrite('/api/athlete/injuries', athleteInjuries, 'POST');
+          }
+        }).catch(() => {
+          if (typeof enqueueOfflineWrite === 'function') {
+            enqueueOfflineWrite('/api/athlete/injuries', athleteInjuries, 'POST');
+          }
+        });
       } catch(e) {}
       beep(880, 0.1);
       showToast('✓ All restrictions removed. Full compound strength clearance active!');
@@ -1288,10 +1350,30 @@
       renderInjuryRules();
       updateInjuryBadge();
 
-      const weight = (window.athleteProfile && window.athleteProfile.weightKg) ? window.athleteProfile.weightKg : 97.75;
-      const leanMass = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
-      const sleepScore = (window.athleteProfile && window.athleteProfile.sleepScore) ? window.athleteProfile.sleepScore : 88;
-      const rhr = (window.athleteProfile && window.athleteProfile.restingHr) ? window.athleteProfile.restingHr : 48;
+      const prof = (typeof window !== 'undefined' && window.athleteProfile) ? window.athleteProfile : {};
+      const liveState = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const g = liveState.garmin || {};
+      const r = liveState.renpho || {};
+      const weight = Number.isFinite(Number(prof.weightKg)) ? Number(prof.weightKg) : (Number.isFinite(Number(r.weight_kg)) ? Number(r.weight_kg) : null);
+      const leanMass = Number.isFinite(Number(prof.leanMassKg)) ? Number(prof.leanMassKg) : (Number.isFinite(Number(r.lean_mass_kg)) ? Number(r.lean_mass_kg) : null);
+      const sleepScore = Number.isFinite(Number(prof.sleepScore)) ? Number(prof.sleepScore) : (g.sleep_score != null ? Number(g.sleep_score) : null);
+      const rhr = Number.isFinite(Number(prof.restingHr)) ? Number(prof.restingHr) : (g.resting_hr != null ? Number(g.resting_hr) : null);
+      const sleepDurStr = g.sleep_duration || g.sleep_duration_str || null;
+      const waterPct = (r.water_pct != null && Number.isFinite(Number(r.water_pct))) ? Number(r.water_pct) : null;
+      const protTarget = (liveState.nutrition && Number(liveState.nutrition.protein_target_g) > 0) ? Number(liveState.nutrition.protein_target_g) : 200;
+      const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
+      const recentActs = Array.isArray(g.recent_activities) ? g.recent_activities : [];
+      const latestAct = todayActs[0] || recentActs[0] || null;
+      const actDur = latestAct ? Number(latestAct.duration_min || latestAct.durationMin || 0) : 0;
+      const actCal = latestAct ? Number(latestAct.calories || 0) : 0;
+      const actSummaryStr = (latestAct && (actDur > 0 || actCal > 0))
+        ? `Recent ${actDur > 0 ? actDur.toFixed(1) + 'm ' : ''}${(typeof escapeHtml === 'function' ? escapeHtml(latestAct.name || 'session') : (latestAct.name || 'session'))}${actCal > 0 ? ' (' + actCal + ' kcal)' : ''} plus cumulative impact load contributed to patellar tendon tensile strain.`
+        : `Cumulative lower-limb impact and ground-reaction loading contributed to acute patellar tendon tensile strain.`;
+
+      const wtLabel = weight !== null ? `At <strong>${weight.toFixed(1)} kg</strong> bodyweight` : `At current bodyweight`;
+      const peakForceLabel = weight !== null ? ` (~<strong>${Math.round(weight * 2.5)} kg</strong> per stride)` : '';
+      const leanLabel = leanMass !== null ? `<strong>${leanMass.toFixed(1)} kg</strong> lean muscle mass` : `lean muscle mass`;
+
       const primaryJoint = activeJoints[0];
       const rule = injuryRules[primaryJoint] || injuryRules.knees;
 
@@ -1299,10 +1381,10 @@
       let swapPrescription = "";
 
       if (primaryJoint === 'knees') {
-        rootCauseText = `At <strong>${weight.toFixed(1)} kg</strong> bodyweight, each foot strike during morning cardio generated peak patellofemoral reaction forces of ~2.5× bodyweight (<strong>~245 kg</strong> per stride). Today's 30.7m cardio (345 kcal) + previous high-impact training delivered ~8,200 cyclical impacts, triggering acute patellar tendon tensile strain.`;
-        swapPrescription = `Today's workout is automatically switched to <strong>Option A: Heavy Barbell Hinge & Push</strong>. Romanian Deadlifts (pure posterior chain hip hinge) eliminate patellofemoral shear completely while protecting your <strong>${leanMass.toFixed(1)} kg</strong> lean muscle mass.`;
+        rootCauseText = `${wtLabel}, foot strikes during upright cardio generate peak patellofemoral reaction forces of ~2.5× bodyweight${peakForceLabel}. ${actSummaryStr}`;
+        swapPrescription = `Today's workout is automatically switched to <strong>Option A: Heavy Barbell Hinge & Push</strong>. Romanian Deadlifts (pure posterior chain hip hinge) eliminate patellofemoral shear completely while protecting your ${leanLabel}.`;
       } else if (primaryJoint === 'lumbar') {
-        rootCauseText = `Spinal erectors and lumbar stabilizing ligaments are experiencing compressive fatigue. At <strong>${weight.toFixed(1)} kg</strong>, axial loading under fatigued stabilizers increases shear across L4-S1.`;
+        rootCauseText = `Spinal erectors and lumbar stabilizing ligaments are experiencing compressive fatigue. ${wtLabel}, axial loading under fatigued stabilizers increases shear across L4-S1.`;
         swapPrescription = `Axial compressive loading is deloaded today. Barbell squats and standing overhead work are banned. Swapped to <strong>Chest-Supported DB Rows</strong>, <strong>Neutral Floor Press</strong>, and <strong>Hip Thrusts</strong> with zero spinal shear.`;
       } else if (primaryJoint === 'shoulders') {
         rootCauseText = `Anterior capsule shear and supraspinatus tendon impingement under the subacromial arch during deep flexion/internal rotation.`;
@@ -1314,7 +1396,7 @@
         rootCauseText = `Carpal joint compression and wrist hyperextension torque under heavy load.`;
         swapPrescription = `Hyperextension eliminated. Swapped to <strong>Push-up handles / dumbbell grips</strong> and neutral-grip pressing to maintain straight carpal alignment.`;
       } else if (primaryJoint === 'ankles') {
-        rootCauseText = `Achilles tendon and soleus myofascial tightness from high-impact cyclical ground strikes at <strong>${weight.toFixed(1)} kg</strong>.`;
+        rootCauseText = `Achilles tendon and soleus myofascial tightness from high-impact cyclical ground strikes${weight !== null ? ' at <strong>' + weight.toFixed(1) + ' kg</strong>' : ''}.`;
         swapPrescription = `Ballistic plyometrics and jump rope banned today. Swapped to <strong>Low-Impact Zone 2 Incline Walking</strong> and seated compound strength.`;
       }
 
@@ -1328,6 +1410,11 @@
         banned: rule.banned,
         safe: rule.safe,
         decompression: rule.decompression,
+        sleepScore,
+        sleepDurStr,
+        rhr,
+        protTarget,
+        waterPct,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
@@ -1338,11 +1425,20 @@
 
       try {
         localStorage.setItem('pulse_athlete_injuries', JSON.stringify(athleteInjuries));
-        fetch('/api/athlete/injuries', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        fetcher('/api/athlete/injuries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(athleteInjuries)
-        }).catch(() => {});
+        }).then(res => {
+          if ((!res || !res.ok) && typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
+            enqueueOfflineWrite('/api/athlete/injuries', athleteInjuries, 'POST');
+          }
+        }).catch(() => {
+          if (typeof enqueueOfflineWrite === 'function') {
+            enqueueOfflineWrite('/api/athlete/injuries', athleteInjuries, 'POST');
+          }
+        });
       } catch(e) {}
 
       loadDailyArchetype(currentArchetypeKey || 'option_a');
@@ -1352,7 +1448,27 @@
 
     function renderAssessmentResultCard(data) {
       const container = document.getElementById('injuryAssessmentResult');
-      if (!container) return;
+      if (!container || !data) return;
+
+      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (v => String(v ?? ''));
+      const liveState = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const g = liveState.garmin || {};
+      const r = liveState.renpho || {};
+      const liveSleep = data.sleepScore != null ? data.sleepScore : (g.sleep_score != null ? Number(g.sleep_score) : null);
+      const liveSleepDur = data.sleepDurStr || g.sleep_duration || null;
+      const liveRhr = data.rhr != null ? data.rhr : (g.resting_hr != null ? Number(g.resting_hr) : null);
+      const liveProt = data.protTarget || (liveState.nutrition && Number(liveState.nutrition.protein_target_g)) || 200;
+      const liveWater = data.waterPct != null ? data.waterPct : (r.water_pct != null ? Number(r.water_pct) : null);
+
+      const sleepSummary = liveSleep !== null
+        ? `Garmin Sleep Score of <strong>${esc(liveSleep)}</strong>${liveSleepDur ? ' (' + esc(liveSleepDur) + ')' : ''}`
+        : `Latest Garmin sleep telemetry`;
+      const rhrSummary = liveRhr !== null
+        ? `and Resting HR of <strong>${esc(liveRhr)} bpm</strong>`
+        : `and cardiac readiness trends`;
+      const waterSummary = liveWater !== null
+        ? `and <strong>${esc(liveWater.toFixed(1))}% body water</strong>`
+        : `and daily hydration targets`;
 
       container.style.display = 'block';
       container.innerHTML = `
@@ -1363,15 +1479,15 @@
             <span style="font-size:10px; font-weight:800; color:var(--lime); background:rgba(34,197,94,0.14); border:1px solid rgba(34,197,94,0.4); padding:2px 8px; border-radius:6px; letter-spacing:0.04em;">
               🟢 SYSTEMIC CNS CLEAR • 🛡️ LOCAL TISSUE DELOAD
             </span>
-            <span style="font-size:10px; color:var(--text-muted);">${data.timestamp || 'Live Ingested'}</span>
+            <span style="font-size:10px; color:var(--text-muted);">${esc(data.timestamp || 'Live Ingested')}</span>
           </div>
 
           <div style="font-size:13.5px; font-weight:800; color:#fff; line-height:1.35; margin-bottom:6px;">
-            ${data.statusTitle}
+            ${esc(data.statusTitle)}
           </div>
 
           <div style="font-size:12px; color:#d4d4d8; line-height:1.45; margin-bottom:8px;">
-            <strong>Systemic Recovery:</strong> Garmin Sleep Score of <strong>88</strong> (7h 43m deep sleep) and Resting HR of <strong>48 bpm</strong> confirm high parasympathetic vagal tone and <strong>zero central nervous system fatigue</strong>. Your cardiovascular engine is 100% primed. You do <em>not</em> need total rest; you need mechanical deloading of the affected tissue.
+            <strong>Systemic Recovery:</strong> ${sleepSummary} ${rhrSummary} guide today's local mechanical load limits. Your systemic conditioning stays active; you do <em>not</em> need total rest, only targeted mechanical deloading of the affected tissue.
           </div>
 
           <div style="font-size:12px; color:#cbd5e1; line-height:1.45; background:rgba(0,240,255,0.06); border:1px solid rgba(0,240,255,0.25); border-radius:8px; padding:8px 10px; margin-bottom:8px;">
@@ -1383,13 +1499,13 @@
             <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:6px 8px;">
               <div style="font-size:10.5px; font-weight:800; color:#fca5a5; margin-bottom:3px;">🚫 ELIMINATED TODAY:</div>
               <div style="font-size:11px; color:#e2e8f0; line-height:1.3;">
-                ${(data.banned || []).slice(0, 3).map(b => '• ' + b).join('<br>')}
+                ${(data.banned || []).slice(0, 3).map(b => '• ' + esc(b)).join('<br>')}
               </div>
             </div>
             <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:6px 8px;">
               <div style="font-size:10.5px; font-weight:800; color:var(--lime); margin-bottom:3px;">✅ PRESCRIBED SWAPS:</div>
               <div style="font-size:11px; color:#e2e8f0; line-height:1.3;">
-                ${(data.safe || []).slice(0, 3).map(s => '• ' + s).join('<br>')}
+                ${(data.safe || []).slice(0, 3).map(s => '• ' + esc(s)).join('<br>')}
               </div>
             </div>
           </div>
@@ -1407,11 +1523,11 @@
               </div>
               <div>
                 <strong style="color:var(--lime); font-size:11.5px;">2. Immediate 3-Minute Tissue Flossing Protocol:</strong><br>
-                ${data.decompression}
+                ${esc(data.decompression)}
               </div>
               <div>
                 <strong style="color:#38bdf8; font-size:11.5px;">3. Tissue Remodeling & Recovery Horizon:</strong><br>
-                Expected recovery to full compound tolerance: <strong>24–48 hours</strong> with impact deload. Your <strong>200g daily protein anchor</strong> and <strong>59.6% body water</strong> supply optimal amino acids and synovial fluid lubrication for collagen remodeling.
+                Expected recovery to full compound tolerance: <strong>24–48 hours</strong> with impact deload. Your <strong>${esc(liveProt)}g daily protein anchor</strong> ${waterSummary} supply amino acids and synovial support for collagen remodeling.
               </div>
             </div>
           </details>
@@ -1436,14 +1552,21 @@
         localStorage.setItem('pulse_athlete_injuries', JSON.stringify(athleteInjuries));
       } catch(e) {}
 
-      // Persist to server
+      // Persist to server with offline queue fallback
       try {
-        await fetch('/api/athlete/injuries', {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/athlete/injuries', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(athleteInjuries)
         });
+        if ((!res || !res.ok) && typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
+          enqueueOfflineWrite('/api/athlete/injuries', athleteInjuries, 'POST');
+        }
       } catch(e) {
+        if (typeof enqueueOfflineWrite === 'function') {
+          enqueueOfflineWrite('/api/athlete/injuries', athleteInjuries, 'POST');
+        }
         console.warn('Could not persist injuries to backend:', e);
       }
 
@@ -1504,16 +1627,23 @@
     }
 
 
-    function selectGoal(goalKey) {
-      currentGoalKey = goalKey;
-      const goal = athleteGoals[goalKey];
+    function selectGoal(goalKey, opts = {}) {
+      const resolvedKey = (typeof athleteGoals !== 'undefined' && athleteGoals[goalKey]) ? goalKey : 'recomp';
+      currentGoalKey = resolvedKey;
+      const goal = (typeof athleteGoals !== 'undefined') ? athleteGoals[resolvedKey] : null;
+      if (!goal) return;
 
-      document.getElementById('hdrGoal').innerText = goal.badge;
-      document.getElementById('todayGoalTitle').innerText = goal.title;
-      document.getElementById('todayGoalSub').innerText = goal.sub;
+      const hdrGoalEl = document.getElementById('hdrGoal');
+      if (hdrGoalEl) hdrGoalEl.innerText = goal.badge;
+      const todayGoalTitleEl = document.getElementById('todayGoalTitle');
+      if (todayGoalTitleEl) todayGoalTitleEl.innerText = goal.title;
+      const todayGoalSubEl = document.getElementById('todayGoalSub');
+      if (todayGoalSubEl) todayGoalSubEl.innerText = goal.sub;
 
       const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
-      const dynamicTarget = goal.calories + activeBurn;
+      const dynamicTarget = (typeof getCanonicalDailyCalorieTarget === 'function')
+        ? getCanonicalDailyCalorieTarget()
+        : (goal.calories + activeBurn);
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${dynamicTarget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
       const mpEl = document.getElementById('macroProtein');
@@ -1528,20 +1658,31 @@
       if (fsd) fsd.innerText = goal.strategyDesc;
 
       document.querySelectorAll('.goal-option-card').forEach(c => c.classList.remove('selected'));
-      const optEl = document.getElementById(`opt_${goalKey}`);
+      const optEl = document.getElementById(`opt_${resolvedKey}`);
       if (optEl) optEl.classList.add('selected');
 
-      closeGoalModal();
-      generateWorkoutFromGearAndGoal();
-      showToast(`🎯 Active Target switched to ${goal.title}`);
+      try {
+        localStorage.setItem('pulse_current_goal', resolvedKey);
+      } catch(e) {}
+
+      if (typeof renderMyNetDiaryEngine === 'function') renderMyNetDiaryEngine();
+      if (!(opts && opts.fromBoot)) {
+        if (typeof closeGoalModal === 'function') closeGoalModal();
+        if (typeof generateWorkoutFromGearAndGoal === 'function') generateWorkoutFromGearAndGoal();
+        if (typeof showToast === 'function') showToast(`🎯 Active Target switched to ${goal.title}`);
+      }
     }
 
     // RATIONALE MODAL
     function openRationaleModal() {
+      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (v => String(v ?? ''));
       const profile = presetProfiles[currentPreset] || presetProfiles.custom;
-      document.getElementById('modalRationaleSub').innerText = `Why this ${currentPreset.toUpperCase()} session was chosen for you`;
-      document.getElementById('modalModalityTag').innerText = profile.badge.split('•')[1]?.trim() || "Dynamic Modality";
-      document.getElementById('modalModalityDesc').innerText = profile.summary;
+      const subEl = document.getElementById('modalRationaleSub');
+      if (subEl) subEl.innerText = `Why this ${currentPreset.toUpperCase()} session was chosen for you`;
+      const tagEl = document.getElementById('modalModalityTag');
+      if (tagEl) tagEl.innerText = profile.badge.split('•')[1]?.trim() || "Dynamic Modality";
+      const descEl = document.getElementById('modalModalityDesc');
+      if (descEl) descEl.innerText = profile.summary;
 
       const listEl = document.getElementById('modalRationaleList');
       if (listEl) {
@@ -1552,17 +1693,18 @@
           const wLabel = typeof ex.targetWeight === 'number' ? `${ex.targetWeight}kg` : ex.targetWeight;
           item.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1px;">
-              <strong style="font-size:13px; color:#fff;">${idx + 1}. ${ex.name}</strong>
-              <span style="font-size:11.5px; color:var(--lime); font-weight:800;">${ex.setsCount} × ${ex.targetReps} @ ${wLabel}</span>
+              <strong style="font-size:13px; color:#fff;">${idx + 1}. ${esc(ex.name)}</strong>
+              <span style="font-size:11.5px; color:var(--lime); font-weight:800;">${esc(ex.setsCount)} × ${esc(ex.targetReps)} @ ${esc(wLabel)}</span>
             </div>
             <div style="font-size:12px; color:var(--cyan); line-height:1.25;">
-              ${ex.rationale || 'Selected for target biomechanical recruitment.'}
+              ${esc(ex.rationale || 'Selected for target biomechanical recruitment.')}
             </div>
           `;
           listEl.appendChild(item);
         });
       }
-      document.getElementById('rationaleModal').classList.add('open');
+      const modalEl = document.getElementById('rationaleModal');
+      if (modalEl) modalEl.classList.add('open');
       beep(600, 0.05);
     }
 
@@ -1616,16 +1758,25 @@
       if (!state) return;
       if (!window.athleteProfile) {
         window.athleteProfile = {
-          weightKg: 97.7,
-          bodyFatPct: 17.1,
-          leanMassKg: 80.99,
+          weightKg: null,
+          bodyFatPct: null,
+          leanMassKg: null,
           targetBfPct: 15.0,
-          targetWeightKg: 95.28,
-          fatToLoseKg: 2.42,
-          restingHr: 46,
-          sleepScore: 82,
-          readiness: 80
+          targetWeightKg: null,
+          fatToLoseKg: null,
+          restingHr: null,
+          sleepScore: null,
+          readiness: null
         };
+      }
+      if (state.athlete) {
+        const a = state.athlete;
+        if (a.weight_kg != null) window.athleteProfile.weightKg = Number(a.weight_kg);
+        if (a.body_fat_pct != null) window.athleteProfile.bodyFatPct = Number(a.body_fat_pct);
+        if (a.lean_mass_kg != null) window.athleteProfile.leanMassKg = Number(a.lean_mass_kg);
+        if (a.target_weight_kg != null) window.athleteProfile.targetWeightKg = Number(a.target_weight_kg);
+        if (a.fat_to_lose_kg != null) window.athleteProfile.fatToLoseKg = Number(a.fat_to_lose_kg);
+        if (a.target_body_fat_pct != null) window.athleteProfile.targetBfPct = Number(a.target_body_fat_pct);
       }
       if (state.renpho) {
         const r = state.renpho;
@@ -1638,14 +1789,6 @@
           window.athleteProfile.targetWeightKg = Number(r.target_weight_kg);
         }
         if (r.fat_to_lose_kg !== undefined && r.fat_to_lose_kg !== null) window.athleteProfile.fatToLoseKg = Number(r.fat_to_lose_kg);
-      } else if (state.athlete) {
-        const a = state.athlete;
-        if (a.weight_kg !== undefined) window.athleteProfile.weightKg = Number(a.weight_kg);
-        if (a.body_fat_pct !== undefined) window.athleteProfile.bodyFatPct = Number(a.body_fat_pct);
-        if (a.lean_mass_kg !== undefined) window.athleteProfile.leanMassKg = Number(a.lean_mass_kg);
-        if (a.target_weight_kg !== undefined) window.athleteProfile.targetWeightKg = Number(a.target_weight_kg);
-        if (a.fat_to_lose_kg !== undefined) window.athleteProfile.fatToLoseKg = Number(a.fat_to_lose_kg);
-        if (a.target_body_fat_pct !== undefined) window.athleteProfile.targetBfPct = Number(a.target_body_fat_pct);
       }
       if (state.garmin) {
         const g = state.garmin;
@@ -1655,8 +1798,7 @@
       }
 
       // Check if manual weigh-in was saved today and renpho data is older
-      const _now = new Date();
-      const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
       const manualScaleDate = localStorage.getItem('pulse_manual_scale_date');
       const savedWt = localStorage.getItem('pulse_athlete_weight');
       const savedBf = localStorage.getItem('pulse_athlete_bf');
@@ -1667,45 +1809,70 @@
       if (isManualToday && renphoIsOlder && savedWt) {
         const pWt = parseFloat(savedWt);
         const pBf = parseFloat(savedBf) || window.athleteProfile.bodyFatPct;
-        const lbm = window.athleteProfile.leanMassKg || 81.03;
-        const targetWt = window.athleteProfile.targetWeightKg || parseFloat((lbm / 0.85).toFixed(2));
-        const fatToBurn = parseFloat(Math.max(0, pWt - targetWt).toFixed(2));
-        window.athleteProfile.weightKg = pWt;
-        window.athleteProfile.bodyFatPct = pBf;
-        window.athleteProfile.fatToLoseKg = fatToBurn;
+        const lbm = Number.isFinite(Number(window.athleteProfile.leanMassKg)) ? Number(window.athleteProfile.leanMassKg) : (Number.isFinite(pWt) && Number.isFinite(pBf) ? parseFloat((pWt * (1 - pBf / 100)).toFixed(2)) : null);
+        const targetWt = Number.isFinite(Number(window.athleteProfile.targetWeightKg))
+          ? Number(window.athleteProfile.targetWeightKg)
+          : (lbm !== null ? parseFloat((lbm / 0.85).toFixed(2)) : null);
+        const fatToBurn = (targetWt !== null && Number.isFinite(pWt)) ? parseFloat(Math.max(0, pWt - targetWt).toFixed(2)) : null;
+        if (Number.isFinite(pWt)) window.athleteProfile.weightKg = pWt;
+        if (Number.isFinite(pBf)) window.athleteProfile.bodyFatPct = pBf;
+        if (lbm !== null) window.athleteProfile.leanMassKg = lbm;
+        if (targetWt !== null) window.athleteProfile.targetWeightKg = targetWt;
+        if (fatToBurn !== null) window.athleteProfile.fatToLoseKg = fatToBurn;
       }
+
+      const prof = window.athleteProfile;
+      const hasWt = Number.isFinite(Number(prof.weightKg)) && Number(prof.weightKg) > 0;
+      const hasBf = Number.isFinite(Number(prof.bodyFatPct)) && Number(prof.bodyFatPct) > 0;
+      const hasLbm = Number.isFinite(Number(prof.leanMassKg)) && Number(prof.leanMassKg) > 0;
+      const hasTargetWt = Number.isFinite(Number(prof.targetWeightKg)) && Number(prof.targetWeightKg) > 0;
+      const hasFatLoss = Number.isFinite(Number(prof.fatToLoseKg)) && Number(prof.fatToLoseKg) >= 0;
+      const hasRhr = Number.isFinite(Number(prof.restingHr)) && Number(prof.restingHr) > 0;
 
       // Dynamically update Body-tab / Today-tab elements
       const elTargetWt = document.getElementById('bodyTargetWeightNum');
-      if (elTargetWt) elTargetWt.innerHTML = `${window.athleteProfile.targetWeightKg.toFixed(2)} <small style="font-size:13px; font-weight:500; color:var(--primary);">kg</small>`;
+      if (elTargetWt) elTargetWt.innerHTML = hasTargetWt ? `${Number(prof.targetWeightKg).toFixed(2)} <small style="font-size:13px; font-weight:500; color:var(--primary);">kg</small>` : `-- <small style="font-size:13px; font-weight:500; color:var(--primary);">kg</small>`;
 
       const elLbmProtected = document.getElementById('bodyLeanMassProtected');
-      if (elLbmProtected) elLbmProtected.innerText = `Lean Mass: ${window.athleteProfile.leanMassKg.toFixed(2)} kg Protected`;
+      if (elLbmProtected) elLbmProtected.innerText = hasLbm ? `Lean Mass: ${Number(prof.leanMassKg).toFixed(2)} kg Protected` : 'Lean Mass: Pending Sync';
 
       const elCoachLbm = document.getElementById('coachBriefingLbm');
-      if (elCoachLbm) elCoachLbm.innerText = `${window.athleteProfile.leanMassKg.toFixed(1)}kg Pure Lean Muscle`;
+      if (elCoachLbm) elCoachLbm.innerText = hasLbm ? `${Number(prof.leanMassKg).toFixed(1)}kg Pure Lean Muscle` : 'Lean Muscle Mass';
 
       const elNormLbm = document.getElementById('normLbmVal');
       if (elNormLbm) {
-        const lbs = (window.athleteProfile.leanMassKg * 2.20462).toFixed(1);
-        elNormLbm.innerText = `${window.athleteProfile.leanMassKg.toFixed(2)} kg (${lbs} lbs)`;
+        if (hasLbm) {
+          const lbmN = Number(prof.leanMassKg);
+          const lbs = (lbmN * 2.20462).toFixed(1);
+          elNormLbm.innerText = `${lbmN.toFixed(2)} kg (${lbs} lbs)`;
+        } else {
+          elNormLbm.innerText = '--';
+        }
       }
 
       const elCoachBody = document.getElementById('coachBriefingBody');
       if (elCoachBody) {
-        const wt = window.athleteProfile.weightKg.toFixed(1);
-        const lbm = window.athleteProfile.leanMassKg.toFixed(2);
-        const fatLoss = window.athleteProfile.fatToLoseKg.toFixed(2);
-        const rhr = Math.round(window.athleteProfile.restingHr);
-        elCoachBody.innerHTML = `At <strong>190.5 cm (6'3") and ${wt} kg</strong>, standard medical BMI tables lazily categorize you as "overweight," completely failing to recognize that <strong>${lbm} kg is pure fat-free lean muscle mass</strong>. You have the athletic frame of a high-level decathlete or rugby back. You are already in the top 15% for body composition and top 1% for cardiovascular stroke volume (${rhr} bpm RHR). Your target of shedding <strong>${fatLoss} kg fat</strong> is not a drastic cut — it is precision tuning to reveal your muscular definition while protecting your joints.`;
+        if (hasWt && hasLbm) {
+          const wt = Number(prof.weightKg).toFixed(1);
+          const lbm = Number(prof.leanMassKg).toFixed(2);
+          const fatLoss = hasFatLoss ? Number(prof.fatToLoseKg).toFixed(2) : '--';
+          const rhr = hasRhr ? Math.round(Number(prof.restingHr)) : '--';
+          elCoachBody.innerHTML = `At <strong>190.5 cm (6'3") and ${wt} kg</strong>, standard medical BMI tables lazily categorize you as "overweight," completely failing to recognize that <strong>${lbm} kg is pure fat-free lean muscle mass</strong>. You have the athletic frame of a high-level decathlete or rugby back. You are already in the top 15% for body composition and top 1% for cardiovascular stroke volume (${rhr} bpm RHR). Your target of shedding <strong>${fatLoss} kg fat</strong> is not a drastic cut — it is precision tuning to reveal your muscular definition while protecting your joints.`;
+        } else {
+          elCoachBody.innerText = 'Sync Renpho scale and Garmin telemetry to unlock personalized lean-mass & cardiovascular composition analysis.';
+        }
       }
 
       const elNormBfNote = document.getElementById('normBfNote');
       if (elNormBfNote) {
-        const bf = window.athleteProfile.bodyFatPct.toFixed(1);
-        const fatLoss = window.athleteProfile.fatToLoseKg.toFixed(2);
-        const targetBf = (window.athleteProfile.targetBfPct || 15.0).toFixed(1);
-        elNormBfNote.innerHTML = `Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Your ${bf}% places you firmly in the fit/athletic tier. You are only <strong>${fatLoss} kg</strong> away from your ${targetBf}% milestone!`;
+        const targetBf = (Number.isFinite(Number(prof.targetBfPct)) ? Number(prof.targetBfPct) : 15.0).toFixed(1);
+        if (hasBf && hasFatLoss) {
+          const bf = Number(prof.bodyFatPct).toFixed(1);
+          const fatLoss = Number(prof.fatToLoseKg).toFixed(2);
+          elNormBfNote.innerHTML = `Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Your ${bf}% places you firmly in the fit/athletic tier. You are only <strong>${fatLoss} kg</strong> away from your ${targetBf}% milestone!`;
+        } else {
+          elNormBfNote.innerHTML = `Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Sync Renpho telemetry to track distance to your ${targetBf}% milestone.`;
+        }
       }
     }
 
@@ -1771,10 +1938,10 @@
 
       const g = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) || {};
       const r = (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.renpho) || {};
-      const curBb = Number(g.body_battery ?? 31);
-      const curRhr = Number(g.resting_hr ?? 46);
-      const curSleep = Number(g.sleep_score ?? 87);
-      const curWt = Number(r.weight_kg ?? 98.4);
+      const curBb = (g.body_battery != null && Number.isFinite(Number(g.body_battery))) ? Number(g.body_battery) : null;
+      const curRhr = (g.resting_hr != null && Number.isFinite(Number(g.resting_hr))) ? Number(g.resting_hr) : null;
+      const curSleep = (g.sleep_score != null && Number.isFinite(Number(g.sleep_score))) ? Number(g.sleep_score) : null;
+      const curWt = (r.weight_kg != null && Number.isFinite(Number(r.weight_kg))) ? Number(r.weight_kg) : null;
 
       const todayKey = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : new Date().toISOString().slice(0, 10);
       const liveEntry = {
@@ -1876,6 +2043,11 @@
         } catch(e) {}
       }
       window.BAKED_LIVE_STATE = state;
+      try {
+        if (state && state.last_synced) {
+          localStorage.setItem('pulse_cached_live_state', JSON.stringify(state));
+        }
+      } catch(e) {}
       recordDailyBiometricSnapshot(state);
       renderBiometricSparklines();
       updateAthleteProfileFromState(state);
@@ -2294,8 +2466,8 @@
           if (el1) el1.innerText = `${rFatLose.toFixed(2)} kg (${(rFatLose * 2.20462).toFixed(1)} lbs)`;
           const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
           const targetWtNum = Number(r.target_weight_at_15pct);
-          const targetWeightAtGoal = (Number.isFinite(targetWtNum) && targetWtNum > 0 ? targetWtNum : 95.71).toFixed(2);
-          if (elGoalLabel) elGoalLabel.innerText = `${rFatLose.toFixed(2)} kg to 15.0% Goal (${targetWeightAtGoal}kg)`;
+          const goalWtSuffix = (Number.isFinite(targetWtNum) && targetWtNum > 0) ? ` (${targetWtNum.toFixed(2)}kg)` : '';
+          if (elGoalLabel) elGoalLabel.innerText = `${rFatLose.toFixed(2)} kg to 15.0% Goal${goalWtSuffix}`;
         }
         if (Number.isFinite(rMuscle) && rMuscle > 0) {
           const elMuscle = document.getElementById('renphoMuscleVal');
@@ -2328,24 +2500,29 @@
       // Load manual local storage weight override if no renpho sync exists OR if manual weigh-in today is newer than renpho sync
       if (savedWt && (!state.renpho || (isManualToday && renphoIsOlder))) {
         const pWt = parseFloat(savedWt);
-        const pBf = parseFloat(savedBf) || ((window.athleteProfile && window.athleteProfile.bodyFatPct) ? window.athleteProfile.bodyFatPct : 17.1);
-        const lbm = (window.athleteProfile && window.athleteProfile.leanMassKg) ? window.athleteProfile.leanMassKg : 81.03;
-        const targetWt = (window.athleteProfile && window.athleteProfile.targetWeightKg) ? window.athleteProfile.targetWeightKg : parseFloat((lbm / 0.85).toFixed(2));
-        const fatToBurn = parseFloat(Math.max(0, pWt - targetWt).toFixed(2));
+        const pBfRaw = parseFloat(savedBf);
+        const pBf = Number.isFinite(pBfRaw) ? pBfRaw : ((window.athleteProfile && Number.isFinite(Number(window.athleteProfile.bodyFatPct))) ? Number(window.athleteProfile.bodyFatPct) : null);
+        const lbm = (window.athleteProfile && Number.isFinite(Number(window.athleteProfile.leanMassKg)))
+          ? Number(window.athleteProfile.leanMassKg)
+          : (Number.isFinite(pWt) && pBf !== null ? parseFloat((pWt * (1 - pBf / 100)).toFixed(2)) : null);
+        const targetWt = (window.athleteProfile && Number.isFinite(Number(window.athleteProfile.targetWeightKg)))
+          ? Number(window.athleteProfile.targetWeightKg)
+          : (lbm !== null ? parseFloat((lbm / 0.85).toFixed(2)) : null);
+        const fatToBurn = (targetWt !== null && Number.isFinite(pWt)) ? parseFloat(Math.max(0, pWt - targetWt).toFixed(2)) : null;
         const vs = document.getElementById('vitalScale');
-        if (vs) vs.innerHTML = `${pWt.toFixed(1)}`;
+        if (vs && Number.isFinite(pWt)) vs.innerHTML = `${pWt.toFixed(1)}`;
         const vss = document.getElementById('vitalScaleSub');
-        if (vss) vss.innerText = `${pBf.toFixed(1)}`;
+        if (vss) vss.innerText = pBf !== null ? `${pBf.toFixed(1)}` : '--';
         const bsw = document.getElementById('bodyScaleWeight');
-        if (bsw) bsw.innerHTML = `${pWt.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
+        if (bsw && Number.isFinite(pWt)) bsw.innerHTML = `${pWt.toFixed(2)} <small style="font-size:13px;font-weight:400;">kg</small>`;
         const bsbf = document.getElementById('bodyScaleBf');
-        if (bsbf) bsbf.innerText = `${pBf}% Body Fat (Logged Today)`;
+        if (bsbf) bsbf.innerText = pBf !== null ? `${pBf}% Body Fat (Logged Today)` : 'Body Fat Pending Sync';
         const bfb = document.getElementById('bodyFatToBurnNum');
-        if (bfb) bfb.innerText = `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)`;
+        if (bfb) bfb.innerText = fatToBurn !== null ? `${fatToBurn} kg (${(fatToBurn * 2.20462).toFixed(1)} lbs)` : '--';
         const elGoalLabel = document.getElementById('renphoGoalRunwayLabel');
-        if (elGoalLabel) elGoalLabel.innerText = `${fatToBurn} kg to 15.0% Goal (${targetWt.toFixed(2)}kg)`;
+        if (elGoalLabel) elGoalLabel.innerText = (fatToBurn !== null && targetWt !== null) ? `${fatToBurn} kg to 15.0% Goal (${targetWt.toFixed(2)}kg)` : '15.0% Goal Runway';
         const elMeasuredLabel = document.getElementById('renphoMeasuredBfLabel');
-        if (elMeasuredLabel) elMeasuredLabel.innerText = `${pBf.toFixed(1)}% Scale Measured`;
+        if (elMeasuredLabel) elMeasuredLabel.innerText = pBf !== null ? `${pBf.toFixed(1)}% Scale Measured` : '--';
       }
 
       // 3. Nutrition Targets
@@ -2383,9 +2560,10 @@
       if (typeof renderStrengthProgressionChart === 'function') renderStrengthProgressionChart();
     }
 
-    // DYNAMIC TELEMETRY SYNC PIPELINE (Reads Railway /api/live_state or live_state.json)
-    async function loadLiveState() {
-      // Synchronously apply baked state first to prevent any startup flash
+    // DYNAMIC TELEMETRY SYNC PIPELINE (Reads Railway /api/live_state)
+    async function loadLiveState(options = {}) {
+      const silent = Boolean(options && options.silent);
+      // Synchronously apply local/baked state first to prevent any startup flash
       if (typeof window.BAKED_LIVE_STATE !== 'undefined' && window.BAKED_LIVE_STATE) {
         applyLiveStateToDom(window.BAKED_LIVE_STATE);
       }
@@ -2393,25 +2571,14 @@
       try {
         let state = null;
         try {
-          const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 10000);
-          let res = await fetch('/api/live_state', { signal: ctrl.signal, cache: 'no-store' });
-          clearTimeout(tid);
-          if (res.status === 401 && typeof window.ensurePulseApiAuth === 'function') {
-            const authed = await window.ensurePulseApiAuth();
-            if (authed) {
-              res = await fetch('/api/live_state', { cache: 'no-store' });
-            }
-          }
-          if (res.ok) state = await res.json();
+          const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+          const res = await fetcher('/api/live_state', {
+            timeoutMs: 10000,
+            cache: 'no-store',
+            promptAuthOn401: !silent
+          });
+          if (res && res.ok) state = await res.json();
         } catch(apiErr) {}
-
-        if (!state) {
-          try {
-            const res = await fetch('./live_state.json?t=' + Date.now());
-            if (res.ok) state = await res.json();
-          } catch(fetchErr) {}
-        }
 
         if (!state && typeof window.BAKED_LIVE_STATE !== 'undefined' && window.BAKED_LIVE_STATE) {
           state = window.BAKED_LIVE_STATE;
@@ -2419,8 +2586,7 @@
         if (!state) return;
 
         try {
-          const _now = new Date();
-          const todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
+          const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
           if (!window._garminSessionRestored) {
             window._garminSessionRestored = true;
             const todayBackupRaw = localStorage.getItem('pulse_garmin_today_backup');
@@ -2434,15 +2600,17 @@
               } catch(e) {}
             }
             if (todayGarminBackup) {
-              fetch('/api/garmin/restore_session', {
+              const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+              fetcher('/api/garmin/restore_session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   garmin_state: todayGarminBackup,
                   date: todayIso
-                })
+                }),
+                promptAuthOn401: false
               })
-                .then(r => r.ok ? r.json() : null)
+                .then(r => (r && r.ok) ? r.json() : null)
                 .then(resData => {
                   if (resData && resData.state) {
                     applyLiveStateToDom(resData.state);
@@ -2454,13 +2622,14 @@
         } catch(e) {}
         
         applyLiveStateToDom(state);
-        console.log("✓ Dynamic telemetry successfully synced from live_state.json");
+        console.log("✓ Dynamic telemetry successfully synced from /api/live_state");
 
         // Non-blocking 14-day Renpho trend fetch for plateau & goal-trajectory coaching
         if (!window._renphoHistoryFetched) {
           window._renphoHistoryFetched = true;
-          fetch('/api/renpho/history?days=14')
-            .then(res => res.ok ? res.json() : null)
+          const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+          fetcher('/api/renpho/history?days=14', { promptAuthOn401: false })
+            .then(res => (res && res.ok) ? res.json() : null)
             .then(data => {
               const hist = Array.isArray(data) ? data : (data && Array.isArray(data.history) ? data.history : []);
               if (hist.length > 0) {
@@ -2474,7 +2643,7 @@
         }
 
       } catch(e) {
-        console.log("Local static fallback active:", e.message);
+        console.log("Local cache fallback active:", e.message);
       }
     }
 
@@ -2519,31 +2688,35 @@
       // Backend APScheduler handles upstream Garmin/MND/Renpho sync; frontend polls read-only /api/live_state
       setInterval(() => {
         if (document.visibilityState === 'visible') {
-          loadLiveState();
+          loadLiveState({ silent: true });
         }
       }, 2 * 60 * 1000);
 
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-          loadLiveState();
+          loadLiveState({ silent: true });
         }
       });
 
       window.addEventListener('focus', () => {
         if (Date.now() - (window._lastLiveStatePollMs || 0) > 60 * 1000) {
           window._lastLiveStatePollMs = Date.now();
-          loadLiveState();
+          loadLiveState({ silent: true });
         }
       });
 
       // Initialize Expanded Fuel & MyNetDiary Macro Engine
       initMyNetDiaryEngine();
       try {
+        const savedGoal = localStorage.getItem('pulse_current_goal');
+        if (savedGoal && typeof selectGoal === 'function') {
+          selectGoal(savedGoal, { fromBoot: true });
+        }
         const savedFast = localStorage.getItem('pulse_fasting_protocol') || '16_8';
         setFastingProtocol(savedFast);
         const savedDiet = localStorage.getItem('pulse_diet_strategy');
         if (savedDiet && typeof selectDietStrategy === 'function') {
-          selectDietStrategy(savedDiet);
+          selectDietStrategy(savedDiet, { fromBoot: true });
         }
       } catch (e) {
         setFastingProtocol('16_8');

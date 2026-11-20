@@ -16,6 +16,7 @@ backend/data/
 garmin_tokens/
 mnd_tokens/
 token_*.json
+backend/renpho_seed.json
 
 # Logs, uploads, and scratch media
 *.log

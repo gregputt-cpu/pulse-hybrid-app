@@ -1,8 +1,13 @@
 import os
+import re
+import math
+import time
 import json
 import hmac
 import hashlib
 import logging
+import threading
+from collections import defaultdict, deque
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -33,7 +38,12 @@ logger = logging.getLogger("pulse-backend")
 
 PULSE_API_SECRET = os.environ.get("PULSE_API_SECRET", "").strip()
 PULSE_SESSION_COOKIE = "pulse_session"
-_PUBLIC_API_PATHS = {"/api/health", "/api/auth/status", "/api/auth/login"}
+_SESSION_TTL_SEC = 60 * 60 * 24 * 90
+_PUBLIC_API_PATHS = {"/api/health", "/api/auth/status", "/api/auth/login", "/api/auth/logout"}
+_LOGIN_FAIL_WINDOW_SEC = 300
+_LOGIN_MAX_FAILS = 10
+_LOGIN_FAILURES: Dict[str, deque] = defaultdict(deque)
+_LOGIN_FAIL_LOCK = threading.Lock()
 
 if not PULSE_API_SECRET:
     logger.warning("[SECURITY] PULSE_API_SECRET is not set. Configure PULSE_API_SECRET in Railway Variables to require authentication on /api/* endpoints.")
@@ -41,22 +51,55 @@ if not PULSE_API_SECRET:
 def _sign_session_token(secret: str) -> str:
     return hmac.new(secret.encode("utf-8"), b"pulse-hybrid-session-v1", hashlib.sha256).hexdigest()
 
-def _is_request_authenticated(request: Request) -> bool:
+def _sign_session_token_v2(secret: str, exp_ts: Optional[int] = None) -> str:
+    exp = int(exp_ts if exp_ts is not None else (time.time() + _SESSION_TTL_SEC))
+    sig = hmac.new(
+        secret.encode("utf-8"),
+        f"pulse-hybrid-session-v2:{exp}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"v2.{exp}.{sig}"
+
+def _verify_session_cookie(cookie_val: str, secret: str) -> tuple[bool, bool]:
+    """Return (is_valid, needs_upgrade_from_v1)."""
+    if not cookie_val or not secret:
+        return False, False
+    if cookie_val.startswith("v2."):
+        parts = cookie_val.split(".")
+        if len(parts) != 3:
+            return False, False
+        _, exp_s, sig = parts
+        try:
+            exp = int(exp_s)
+        except ValueError:
+            return False, False
+        if exp <= int(time.time()):
+            return False, False
+        expected = hmac.new(
+            secret.encode("utf-8"),
+            f"pulse-hybrid-session-v2:{exp}".encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        return (hmac.compare_digest(sig, expected), False)
+    expected_v1 = _sign_session_token(secret)
+    if hmac.compare_digest(cookie_val, expected_v1):
+        return True, True
+    return False, False
+
+def _is_request_authenticated(request: Request) -> tuple[bool, bool]:
+    """Return (is_authenticated, should_upgrade_cookie)."""
     if not PULSE_API_SECRET:
-        return True
+        return (not bool(os.environ.get("RAILWAY_ENVIRONMENT")), False)
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         token = auth_header[7:].strip()
         if hmac.compare_digest(token, PULSE_API_SECRET):
-            return True
+            return True, False
     api_key = request.headers.get("x-api-key", "").strip()
     if api_key and hmac.compare_digest(api_key, PULSE_API_SECRET):
-        return True
+        return True, False
     cookie_val = request.cookies.get(PULSE_SESSION_COOKIE, "")
-    expected_cookie = _sign_session_token(PULSE_API_SECRET)
-    if cookie_val and hmac.compare_digest(cookie_val, expected_cookie):
-        return True
-    return False
+    return _verify_session_cookie(cookie_val, PULSE_API_SECRET)
 
 scheduler = BackgroundScheduler()
 
@@ -103,10 +146,25 @@ app.add_middleware(
 @app.middleware("http")
 async def api_auth_and_cache_middleware(request: Request, call_next):
     path = request.url.path
+    needs_upgrade = False
     if path.startswith("/api/") and request.method != "OPTIONS" and path not in _PUBLIC_API_PATHS:
-        if not _is_request_authenticated(request):
+        if not PULSE_API_SECRET and os.environ.get("RAILWAY_ENVIRONMENT"):
+            return JSONResponse(status_code=503, content={"detail": "Server authentication not configured"})
+        authed, needs_upgrade = _is_request_authenticated(request)
+        if not authed:
             return JSONResponse(status_code=401, content={"detail": "Authentication required"})
     response = await call_next(request)
+    if needs_upgrade and PULSE_API_SECRET:
+        is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
+        response.set_cookie(
+            key=PULSE_SESSION_COOKIE,
+            value=_sign_session_token_v2(PULSE_API_SECRET),
+            httponly=True,
+            samesite="lax",
+            secure=is_https,
+            max_age=_SESSION_TTL_SEC,
+            path="/",
+        )
     if path == "/" or path.endswith((".html", ".js", ".css", ".json")) or path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
@@ -259,28 +317,54 @@ class AuthLoginPayload(BaseModel):
 
 @app.get("/api/auth/status")
 def auth_status(request: Request):
+    authed, _ = _is_request_authenticated(request)
     return {
         "auth_required": bool(PULSE_API_SECRET),
-        "authenticated": _is_request_authenticated(request)
+        "authenticated": authed
     }
+
+def _get_client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if fwd:
+        return fwd
+    return request.client.host if request.client else "unknown"
 
 @app.post("/api/auth/login")
 def auth_login(payload: AuthLoginPayload, request: Request, response: Response):
     if not PULSE_API_SECRET:
+        if os.environ.get("RAILWAY_ENVIRONMENT"):
+            raise HTTPException(status_code=503, detail="Server authentication not configured")
         return {"success": True, "auth_required": False}
+    client_ip = _get_client_ip(request)
+    now_ts = time.time()
+    with _LOGIN_FAIL_LOCK:
+        bucket = _LOGIN_FAILURES[client_ip]
+        while bucket and (now_ts - bucket[0]) > _LOGIN_FAIL_WINDOW_SEC:
+            bucket.popleft()
+        if len(bucket) >= _LOGIN_MAX_FAILS:
+            raise HTTPException(status_code=429, detail="Too many failed login attempts. Try again in 5 minutes.")
     if not hmac.compare_digest(payload.secret.strip(), PULSE_API_SECRET):
+        with _LOGIN_FAIL_LOCK:
+            _LOGIN_FAILURES[client_ip].append(now_ts)
         raise HTTPException(status_code=401, detail="Invalid access key")
+    with _LOGIN_FAIL_LOCK:
+        _LOGIN_FAILURES.pop(client_ip, None)
     is_https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto", "").lower() == "https"
     response.set_cookie(
         key=PULSE_SESSION_COOKIE,
-        value=_sign_session_token(PULSE_API_SECRET),
+        value=_sign_session_token_v2(PULSE_API_SECRET),
         httponly=True,
         samesite="lax",
         secure=is_https,
-        max_age=60 * 60 * 24 * 30,
+        max_age=_SESSION_TTL_SEC,
         path="/",
     )
     return {"success": True, "authenticated": True}
+
+@app.post("/api/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie(key=PULSE_SESSION_COOKIE, path="/")
+    return {"success": True, "authenticated": False}
 
 @app.get("/api/live_state")
 def get_live_state():
@@ -420,18 +504,36 @@ class ManualMndPayload(BaseModel):
     meals: Optional[Dict[str, Any]] = None
     date: Optional[str] = None
 
+def _safe_nonneg_float(val: Any, field_name: str) -> float:
+    if val is None or val == "":
+        return 0.0
+    if isinstance(val, bool):
+        raise HTTPException(status_code=422, detail=f"Invalid numeric value for {field_name}")
+    try:
+        num = float(val)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail=f"Invalid numeric value for {field_name}")
+    if not math.isfinite(num):
+        raise HTTPException(status_code=422, detail=f"Invalid numeric value for {field_name}")
+    return max(0.0, num)
+
+def _safe_nonneg_int(val: Any, field_name: str) -> int:
+    return int(round(_safe_nonneg_float(val, field_name)))
+
 @app.post("/api/mnd/manual")
 def manual_mnd_entry(payload: ManualMndPayload):
     t = payload.totals or {}
     now_uk = datetime.now(ZoneInfo("Europe/London"))
     date_str = payload.date or now_uk.date().isoformat()
-    cals = int(round(float(t.get("calories") or 0)))
-    prot = int(round(float(t.get("protein") or t.get("protein_g") or 0)))
-    carbs = int(round(float(t.get("carbs") or t.get("carbs_g") or 0)))
-    fat = int(round(float(t.get("fat") or t.get("fat_g") or 0)))
-    fiber = int(round(float(t.get("fiber") or t.get("fiber_g") or 0)))
-    sodium = int(round(float(t.get("sodium") or t.get("sodium_mg") or 0)))
-    water = round(float(t.get("water") or t.get("water_l") or 0.0), 2)
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(date_str)):
+        raise HTTPException(status_code=422, detail="Invalid date format; expected YYYY-MM-DD")
+    cals = _safe_nonneg_int(t.get("calories"), "calories")
+    prot = _safe_nonneg_int(t.get("protein") if t.get("protein") is not None else t.get("protein_g"), "protein")
+    carbs = _safe_nonneg_int(t.get("carbs") if t.get("carbs") is not None else t.get("carbs_g"), "carbs")
+    fat = _safe_nonneg_int(t.get("fat") if t.get("fat") is not None else t.get("fat_g"), "fat")
+    fiber = _safe_nonneg_int(t.get("fiber") if t.get("fiber") is not None else t.get("fiber_g"), "fiber")
+    sodium = _safe_nonneg_int(t.get("sodium") if t.get("sodium") is not None else t.get("sodium_mg"), "sodium")
+    water = round(_safe_nonneg_float(t.get("water") if t.get("water") is not None else t.get("water_l"), "water"), 2)
 
     mnd_logged = {
         "date": date_str,
@@ -474,12 +576,13 @@ def sync_renpho():
 
 @app.post("/api/renpho/manual")
 def manual_renpho_entry(payload: ManualScalePayload):
-    weight_kg = round(float(payload.weight_kg), 2)
-    if weight_kg <= 20.0 or weight_kg >= 300.0:
+    raw_w = float(payload.weight_kg)
+    if not math.isfinite(raw_w) or raw_w <= 20.0 or raw_w >= 300.0:
         raise HTTPException(status_code=422, detail="weight_kg must be between 20 and 300 kg")
+    weight_kg = round(raw_w, 2)
     if payload.body_fat_pct is not None:
         bf_check = float(payload.body_fat_pct)
-        if bf_check < 3.0 or bf_check > 60.0:
+        if not math.isfinite(bf_check) or bf_check < 3.0 or bf_check > 60.0:
             raise HTTPException(status_code=422, detail="body_fat_pct must be between 3 and 60")
 
     now_uk = datetime.now(ZoneInfo("Europe/London"))
@@ -524,21 +627,21 @@ def manual_renpho_entry(payload: ManualScalePayload):
             "target_weight_kg": target_weight_at_15pct
         })
 
-        save_live_state(state)
+        try:
+            db.upsert_renpho_measurements([{
+                "id": f"manual_{today_str}",
+                "timeStamp": int(now_uk.timestamp()),
+                "localCreatedAt": last_synced,
+                "weight": weight_kg,
+                "bodyfat": body_fat_pct,
+                "fatFreeWeight": lean_mass_kg,
+                "sinew": muscle_mass_kg if muscle_mass_kg is not None else round(max(0.0, lean_mass_kg - 4.0), 2),
+                "water": water_pct if water_pct is not None else 0.0,
+            }])
+        except Exception as dbe:
+            logger.warning(f"Failed upserting manual Renpho entry to SQLite: {dbe}")
 
-    try:
-        db.upsert_renpho_measurements([{
-            "id": f"manual_{today_str}",
-            "timeStamp": int(now_uk.timestamp()),
-            "localCreatedAt": last_synced,
-            "weight": weight_kg,
-            "bodyfat": body_fat_pct,
-            "fatFreeWeight": lean_mass_kg,
-            "sinew": muscle_mass_kg if muscle_mass_kg is not None else round(max(0.0, lean_mass_kg - 4.0), 2),
-            "water": water_pct if water_pct is not None else 0.0,
-        }])
-    except Exception as dbe:
-        logger.warning(f"Failed upserting manual Renpho entry to SQLite: {dbe}")
+        save_live_state(state)
 
     return {"success": True, "renpho": state["renpho"], "state": state}
 
@@ -563,16 +666,20 @@ def get_strength_history(days: int = 30):
 
 @app.post("/api/hydration/add")
 def add_hydration(payload: HydrationPayload):
+    if payload.amount_ml <= 0 or payload.amount_ml > 5000:
+        raise HTTPException(status_code=422, detail="amount_ml must be between 1 and 5000 ml")
+    if payload.date and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(payload.date)):
+        raise HTTPException(status_code=422, detail="Invalid date format; expected YYYY-MM-DD")
+
     try:
         date_str = payload.date if payload.date else datetime.now(ZoneInfo("Europe/London")).date().isoformat()
-        total_ml = db.add_hydration(date_str, payload.amount_ml)
-
         with state_store.state_lock(LIVE_STATE_PATH):
+            total_ml = db.add_hydration(date_str, payload.amount_ml)
             state = load_live_state(raise_on_corrupt=True)
             garmin_state = state.setdefault("garmin", {})
             mnd_logged = garmin_state.setdefault("mnd_logged", {})
             current_water_l = float(mnd_logged.get("water_l") or 0.0)
-            new_water_l = round(current_water_l + (payload.amount_ml / 1000.0), 2)
+            new_water_l = round(max(current_water_l + (payload.amount_ml / 1000.0), total_ml / 1000.0), 2)
             mnd_logged["water_l"] = new_water_l
 
             if "mnd_logged" in state and isinstance(state["mnd_logged"], dict):
@@ -586,6 +693,8 @@ def add_hydration(payload: HydrationPayload):
             "total_ml": total_ml,
             "water_l": new_water_l
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Hydration add error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -664,8 +773,17 @@ def sync_set(payload: SetLogPayload):
         save_live_state(state)
     return {"success": True, "status": "success", "result": sp}
 
+def _validate_payload_size(payload_obj: Any, max_bytes: int = 65536) -> None:
+    try:
+        encoded = json.dumps(payload_obj).encode("utf-8")
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="Payload must be JSON-serializable")
+    if len(encoded) > max_bytes:
+        raise HTTPException(status_code=422, detail=f"Payload exceeds maximum allowed size ({max_bytes} bytes)")
+
 @app.post("/api/sync_session")
 def sync_session(payload: Dict[str, Any]):
+    _validate_payload_size(payload, 65536)
     now_iso = datetime.now(ZoneInfo("Europe/London")).isoformat()
     entry = dict(payload or {})
     entry.setdefault("date", now_iso)
@@ -751,28 +869,67 @@ def sync_activity(payload: ActivitySyncPayload):
 
     return {"success": True, "status": "success", "activity": entry, "state": state}
 
+_INJURY_JOINT_KEYS = ("lumbar", "shoulders", "knees", "elbows", "wrists", "ankles")
+_INJURY_ALLOWED_KEYS = set(_INJURY_JOINT_KEYS) | {"notes", "assessment"}
+
 @app.post("/api/athlete/injuries")
 def save_athlete_injuries(payload: Dict[str, Any]):
+    _validate_payload_size(payload, 65536)
+    cleaned: Dict[str, Any] = {}
+    for k, v in (payload or {}).items():
+        if k not in _INJURY_ALLOWED_KEYS:
+            continue
+        if k in _INJURY_JOINT_KEYS:
+            cleaned[k] = bool(v)
+        elif k == "notes":
+            cleaned[k] = str(v)[:2000] if v is not None else ""
+        else:
+            cleaned[k] = v
+    for j in _INJURY_JOINT_KEYS:
+        cleaned.setdefault(j, False)
     with state_store.state_lock(LIVE_STATE_PATH):
         state = load_live_state(raise_on_corrupt=True)
-        state["injuries"] = payload
+        state["injuries"] = cleaned
         save_live_state(state)
-    return {"success": True, "injuries": payload}
+    return {"success": True, "injuries": cleaned}
+
+def _parse_metric_0_100(val: Any, field_name: str) -> int:
+    if isinstance(val, bool):
+        raise HTTPException(status_code=422, detail=f"{field_name} must be an integer between 0 and 100")
+    try:
+        num = float(val)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail=f"{field_name} must be a number between 0 and 100")
+    if not math.isfinite(num):
+        raise HTTPException(status_code=422, detail=f"{field_name} must be a finite number between 0 and 100")
+    score = int(round(num))
+    if score < 0 or score > 100:
+        raise HTTPException(status_code=422, detail=f"{field_name} must be between 0 and 100")
+    return score
 
 @app.post("/api/telemetry/override")
 def override_telemetry(payload: TelemetryOverridePayload):
+    if payload.key == "sleep_score" and payload.value is not None:
+        payload.sleep_score = _parse_metric_0_100(payload.value, "sleep_score")
+    elif payload.key == "body_battery" and payload.value is not None:
+        payload.body_battery = _parse_metric_0_100(payload.value, "body_battery")
+    elif payload.key == "training_readiness" and payload.value is not None:
+        payload.training_readiness = _parse_metric_0_100(payload.value, "training_readiness")
+
+    if payload.sleep_score is not None:
+        payload.sleep_score = _parse_metric_0_100(payload.sleep_score, "sleep_score")
+    if payload.body_battery is not None:
+        payload.body_battery = _parse_metric_0_100(payload.body_battery, "body_battery")
+    if payload.training_readiness is not None:
+        payload.training_readiness = _parse_metric_0_100(payload.training_readiness, "training_readiness")
+    if payload.date and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(payload.date)):
+        raise HTTPException(status_code=422, detail="Invalid date format; expected YYYY-MM-DD")
+
     with state_store.state_lock(LIVE_STATE_PATH):
         state = load_live_state(raise_on_corrupt=True)
         garmin = state.setdefault("garmin", {})
 
         target_date = payload.date or state.get("date") or datetime.now(ZoneInfo("Europe/London")).date().isoformat()
-
-        if payload.key == "sleep_score" and payload.value is not None:
-            payload.sleep_score = int(float(payload.value))
-        elif payload.key == "body_battery" and payload.value is not None:
-            payload.body_battery = int(float(payload.value))
-        elif payload.key == "training_readiness" and payload.value is not None:
-            payload.training_readiness = int(float(payload.value))
 
         if payload.sleep_score is not None:
             garmin["sleep_score"] = payload.sleep_score

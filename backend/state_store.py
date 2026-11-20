@@ -192,11 +192,21 @@ def save_live_state(
     backend_copy = os.path.join(BACKEND_DIR, "live_state.json")
 
     with state_lock(target):
+        if os.path.exists(target):
+            try:
+                with open(target, "r", encoding="utf-8") as prev_f:
+                    prev_data = json.load(prev_f)
+                if isinstance(prev_data, dict):
+                    _atomic_write_json(bak_path, prev_data)
+            except Exception as e:
+                logger.warning(f"[StateStore] Could not snapshot previous state to {bak_path}: {e}")
+
         _atomic_write_json(target, state)
-        try:
-            _atomic_write_json(bak_path, state)
-        except Exception as e:
-            logger.warning(f"[StateStore] Could not update backup {bak_path}: {e}")
+        if not os.path.exists(bak_path):
+            try:
+                _atomic_write_json(bak_path, state)
+            except Exception as e:
+                logger.warning(f"[StateStore] Could not initialize backup {bak_path}: {e}")
 
         targets = []
         if get_data_dir() is None and os.path.abspath(target) == os.path.abspath(get_live_state_path()) and os.path.abspath(backend_copy) != os.path.abspath(target):

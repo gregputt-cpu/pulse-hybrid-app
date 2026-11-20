@@ -58,6 +58,8 @@ class MyNetDiarySyncService:
             os.makedirs(MND_DIR, exist_ok=True)
         except Exception:
             pass
+        self._session_lock = threading.RLock()
+        self._history_cache_lock = threading.Lock()
         self.session = requests.Session()
         self.session.headers.update(DEFAULT_HEADERS)
         self.benefits_engine = PhysiologicalBenefitsEngine()
@@ -159,6 +161,18 @@ class MyNetDiarySyncService:
         except Exception:
             pass
 
+    def _copy_cookies_to_session(self, target_session):
+        with self._session_lock:
+            for c in list(self.session.cookies):
+                target_session.cookies.set(
+                    c.name,
+                    c.value,
+                    domain=c.domain,
+                    path=c.path,
+                    secure=c.secure,
+                    expires=c.expires,
+                )
+
     def login(self, username, password):
         url = 'https://www.mynetdiary.com/muiSignIn.do'
         payload = {
@@ -170,21 +184,27 @@ class MyNetDiarySyncService:
         headers['Content-Type'] = 'application/json;charset=UTF-8'
 
         try:
-            resp = self.session.post(url, json=payload, headers=headers, timeout=15)
-            data = resp.json()
-            if data.get('loggedIn'):
-                self._save_cookies()
-                self.save_credentials(username, password)
-                return {
-                    'success': True,
-                    'message': 'Successfully authenticated with MyNetDiary',
-                    'username': username
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': 'Invalid username/email or password.'
-                }
+            with self._session_lock:
+                resp = self.session.post(url, json=payload, headers=headers, timeout=15)
+                if resp.status_code != 200:
+                    return {
+                        'success': False,
+                        'error': f'MyNetDiary returned HTTP {resp.status_code}.'
+                    }
+                data = resp.json()
+                if data.get('loggedIn'):
+                    self._save_cookies()
+                    self.save_credentials(username, password)
+                    return {
+                        'success': True,
+                        'message': 'Successfully authenticated with MyNetDiary',
+                        'username': username
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': 'Invalid username/email or password.'
+                    }
         except Exception as e:
             return {
                 'success': False,
@@ -510,14 +530,15 @@ class MyNetDiarySyncService:
 
     def _load_history_cache(self):
         cache = {}
-        if os.path.exists(HISTORY_CACHE_FILE):
-            try:
-                with open(HISTORY_CACHE_FILE, 'r', encoding='utf-8') as f:
-                    loaded = json.load(f)
-                    if isinstance(loaded, dict):
-                        cache = loaded
-            except Exception as e:
-                print(f"[MNDSync] Warning loading history cache: {e}")
+        with self._history_cache_lock:
+            if os.path.exists(HISTORY_CACHE_FILE):
+                try:
+                    with open(HISTORY_CACHE_FILE, 'r', encoding='utf-8') as f:
+                        loaded = json.load(f)
+                        if isinstance(loaded, dict):
+                            cache = loaded
+                except Exception as e:
+                    print(f"[MNDSync] Warning loading history cache: {e}")
 
         try:
             ls = state_store.load_live_state(LIVE_STATE_PATH)
@@ -531,9 +552,9 @@ class MyNetDiarySyncService:
 
     def _save_history_cache(self, cache):
         try:
-            os.makedirs(MND_DIR, exist_ok=True)
-            with open(HISTORY_CACHE_FILE, 'w', encoding='utf-8') as f:
-                json.dump(cache, f, indent=2)
+            with self._history_cache_lock:
+                os.makedirs(MND_DIR, exist_ok=True)
+                state_store._atomic_write_json(HISTORY_CACHE_FILE, cache)
         except Exception as e:
             print(f"[MNDSync] Warning saving history cache: {e}")
 
@@ -612,6 +633,10 @@ class MyNetDiarySyncService:
         meals_url = 'https://www.mynetdiary.com/muiGetMeals.do'
         cache_dirty = False
 
+        local_session = requests.Session()
+        local_session.headers.update(DEFAULT_HEADERS)
+        self._copy_cookies_to_session(local_session)
+
         for d_str in window_dates:
             if d_str in skip_set:
                 continue
@@ -633,14 +658,17 @@ class MyNetDiarySyncService:
                 continue
 
             try:
-                resp = self.session.get(meals_url, params={'date': d_str}, headers=headers, timeout=8)
+                resp = local_session.get(meals_url, params={'date': d_str}, headers=headers, timeout=8)
                 if resp.status_code != 200:
                     continue
                 r_json = resp.json()
                 if isinstance(r_json, dict) and r_json.get('needLogon'):
                     authed, _ = self.ensure_authenticated()
                     if authed:
-                        resp = self.session.get(meals_url, params={'date': d_str}, headers=headers, timeout=8)
+                        self._copy_cookies_to_session(local_session)
+                        resp = local_session.get(meals_url, params={'date': d_str}, headers=headers, timeout=8)
+                        if resp.status_code != 200:
+                            continue
                         r_json = resp.json()
                     else:
                         continue
@@ -682,7 +710,10 @@ class MyNetDiarySyncService:
 
         params = {'date': target_date_str}
         try:
-            resp = self.session.get(meals_url, params=params, headers=headers, timeout=15)
+            with self._session_lock:
+                resp = self.session.get(meals_url, params=params, headers=headers, timeout=15)
+            if resp.status_code != 200:
+                return {'success': False, 'error': f'MND HTTP {resp.status_code}'}
             data = resp.json()
         except Exception as e:
             return {'success': False, 'error': f'Request failed: {str(e)}'}
@@ -692,19 +723,24 @@ class MyNetDiarySyncService:
             if not authed:
                 return {'success': False, 'requires_auth': True, 'error': err}
             try:
-                resp = self.session.get(meals_url, params=params, headers=headers, timeout=15)
+                with self._session_lock:
+                    resp = self.session.get(meals_url, params=params, headers=headers, timeout=15)
+                if resp.status_code != 200:
+                    return {'success': False, 'error': f'MND HTTP {resp.status_code} after relogin'}
                 data = resp.json()
             except Exception as e:
                 return {'success': False, 'error': f'Request failed after relogin: {str(e)}'}
             if not data or (isinstance(data, dict) and data.get('needLogon')):
                 return {'success': False, 'requires_auth': True, 'error': 'MyNetDiary session still requires login after re-authentication'}
 
-        self._save_cookies()
+        with self._session_lock:
+            self._save_cookies()
 
         analysis_data = {}
         try:
             analysis_url = 'https://www.mynetdiary.com/muiGetDailyAnalysis.do'
-            a_resp = self.session.get(analysis_url, params={'date': target_date_str}, headers=headers, timeout=10)
+            with self._session_lock:
+                a_resp = self.session.get(analysis_url, params={'date': target_date_str}, headers=headers, timeout=10)
             if a_resp.status_code == 200:
                 analysis_data = a_resp.json()
         except Exception as e:
@@ -714,10 +750,11 @@ class MyNetDiarySyncService:
         exercises_by_date = {}
         raw_exercise_items = []
         try:
-            dash_resp = self.session.get('https://www.mynetdiary.com/muiGetDashboard.do', params={'date': target_date_str}, headers=headers, timeout=12)
+            with self._session_lock:
+                dash_resp = self.session.get('https://www.mynetdiary.com/muiGetDashboard.do', params={'date': target_date_str}, headers=headers, timeout=12)
+                ex_resp = self.session.get('https://www.mynetdiary.com/muiGetExercises.do', params={'date': target_date_str}, headers=headers, timeout=10)
             if dash_resp.status_code == 200:
                 dash_data = dash_resp.json()
-            ex_resp = self.session.get('https://www.mynetdiary.com/muiGetExercises.do', params={'date': target_date_str}, headers=headers, timeout=10)
             if ex_resp.status_code == 200:
                 ex_json = ex_resp.json()
                 raw_exercise_items = [item for item in ex_json.get('list', []) if isinstance(item, dict)]
@@ -791,7 +828,9 @@ class MyNetDiarySyncService:
                 if summary:
                     with state_store.state_lock(LIVE_STATE_PATH):
                         st = state_store.load_live_state(LIVE_STATE_PATH, raise_on_corrupt=True)
-                        st.setdefault('garmin', {})['mnd_history'] = summary
+                        st['mnd_history'] = summary
+                        if isinstance(st.get('garmin'), dict):
+                            st['garmin'].pop('mnd_history', None)
                         state_store.save_live_state(st, LIVE_STATE_PATH)
             except Exception as exc:
                 print(f"[MNDSync] Background history backfill warning: {exc}")
