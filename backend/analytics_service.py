@@ -1,5 +1,6 @@
 import json
 import math
+import uuid
 from contextlib import closing
 from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -533,6 +534,8 @@ def build_analytics_summary(state: Dict[str, Any]) -> Dict[str, Any]:
         nutrition_rows = db.get_daily_nutrition(days=21, conn=conn)
         bio_rows = db.get_daily_biometrics(days=28, conn=conn)
         strength_prs = db.get_strength_pr_map(conn=conn)
+        flex_history = load_flex_history(conn=conn)
+        flex_plan = load_flex_bank_plan(conn=conn)
 
     prescriptions = safe_state.get("strength_prescriptions")
     if isinstance(prescriptions, dict):
@@ -551,11 +554,29 @@ def build_analytics_summary(state: Dict[str, Any]) -> Dict[str, Any]:
                     "timestamp": sp.get("last_updated"),
                 }
 
+    adaptive_tdee = compute_adaptive_tdee(safe_state, renpho_rows, nutrition_rows, today_str)
+    overreaching = compute_acwr_overreaching(safe_state, sessions, manual_acts, bio_rows, today_str)
+    flex_refeed = compute_flex_refeed_status(
+        safe_state,
+        renpho_rows=renpho_rows,
+        nutrition_rows=nutrition_rows,
+        sessions=sessions,
+        manual_acts=manual_acts,
+        bio_rows=bio_rows,
+        adaptive_tdee=adaptive_tdee,
+        overreaching=overreaching,
+        flex_history=flex_history,
+        flex_plan=flex_plan,
+        today_str=today_str,
+        now_uk=now_uk,
+    )
+
     return {
-        "adaptive_tdee": compute_adaptive_tdee(safe_state, renpho_rows, nutrition_rows, today_str),
-        "overreaching": compute_acwr_overreaching(safe_state, sessions, manual_acts, bio_rows, today_str),
+        "adaptive_tdee": adaptive_tdee,
+        "overreaching": overreaching,
         "sync_freshness": compute_sync_freshness(safe_state, now_uk=now_uk),
         "strength_prs": strength_prs,
+        "flex_refeed": flex_refeed,
     }
 
 
@@ -637,6 +658,23 @@ def recalculate_nutrition(
     nutrition["carbs_target_g"] = targets["carbs_target_g"]
     nutrition["fat_target_g"] = targets["fat_target_g"]
 
+    target_date_str = str(date_str or uk_today_str())[:10]
+    flex_delta = compute_active_flex_delta(
+        state,
+        target_date_str=target_date_str,
+        normal_calories=targets["calorie_target"],
+        protein_g=targets["protein_target_g"],
+        carbs_g=targets["carbs_target_g"],
+        fat_g=targets["fat_target_g"],
+    )
+    if flex_delta is not None:
+        nutrition["calorie_target"] = max(1200, targets["calorie_target"] + int(flex_delta["adjustment_kcal"]))
+        nutrition["carbs_target_g"] = max(20, targets["carbs_target_g"] + int(flex_delta["carb_delta_g"]))
+        nutrition["fat_target_g"] = max(20, targets["fat_target_g"] + int(flex_delta["fat_delta_g"]))
+        nutrition["flex_active"] = flex_delta
+    else:
+        nutrition["flex_active"] = None
+
     def _logged_for_date(ml: Any) -> Optional[Dict[str, Any]]:
         if not isinstance(ml, dict) or not ml:
             return None
@@ -701,3 +739,1087 @@ def merge_preferences_v1(
         },
         "field_resolutions": field_resolutions,
     }
+
+
+# ---------------------------------------------------------------------------
+# Earned Flex, Refeed & Planned Weekend Banking Engine
+# ---------------------------------------------------------------------------
+FLEX_HISTORY_KV_KEY = "flex_refeed_history_v1"
+FLEX_PLAN_KV_KEY = "flex_bank_plan_v1"
+FLEX_HISTORY_MAX_ITEMS = 30
+FLEX_VALID_MODES = ("flex_snack", "flex_meal", "refeed_day", "planned_flex")
+FLEX_SHIELD_MODES = ("flex_meal", "refeed_day", "planned_flex")
+
+_FLEX_MACRO_SPLITS: Dict[str, Tuple[float, float]] = {
+    "flex_snack": (0.75, 0.25),
+    "flex_meal": (0.65, 0.35),
+    "planned_flex": (0.65, 0.35),
+    "refeed_day": (0.80, 0.20),
+}
+
+_FLEX_SCALE_SHIELD_NOTE = (
+    "Expected +0.5–1.2 kg water & muscle glycogen retention for 24–48h "
+    "after your Flex/Refeed — normal hydration physics, not fat gain."
+)
+
+
+class FlexRuleError(ValueError):
+    """Domain validation/eligibility error carrying an explicit HTTP status code."""
+
+    def __init__(self, message: str, status_code: int = 409):
+        super().__init__(message)
+        self.status_code = int(status_code)
+
+
+def _parse_iso_date(raw_val: Any) -> Optional[date]:
+    dt = parse_uk_datetime(raw_val)
+    return dt.date() if dt is not None else None
+
+
+def _flex_mode_label(mode: str, bonus_kcal: int) -> str:
+    sign = "+" if bonus_kcal >= 0 else ""
+    titles = {
+        "flex_snack": "Flex Snack",
+        "flex_meal": "Flex Meal",
+        "refeed_day": "Refeed Day",
+        "planned_flex": "Planned Flex",
+    }
+    title = titles.get(mode, "Flex")
+    return f"{title} ({sign}{bonus_kcal} kcal)"
+
+
+def load_flex_history(conn=None) -> List[Dict[str, Any]]:
+    raw = db.get_kv(FLEX_HISTORY_KV_KEY, conn=conn)
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    cleaned: List[Dict[str, Any]] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        mode = str(item.get("mode") or "").strip()
+        d_str = str(item.get("date_str") or "")[:10]
+        if mode not in FLEX_VALID_MODES or _parse_iso_date(d_str) is None:
+            continue
+        bonus = _finite_float(item.get("bonus_kcal"))
+        if bonus is None or bonus <= 0:
+            continue
+        cleaned.append({
+            "claim_id": str(item.get("claim_id") or f"flx_{d_str.replace('-', '')}"),
+            "date_str": d_str,
+            "claimed_at": str(item.get("claimed_at") or f"{d_str}T12:00:00+00:00"),
+            "mode": mode,
+            "bonus_kcal": int(round(bonus)),
+            "carb_share": float(item.get("carb_share") or _FLEX_MACRO_SPLITS.get(mode, (0.65, 0.35))[0]),
+            "fat_share": float(item.get("fat_share") or _FLEX_MACRO_SPLITS.get(mode, (0.65, 0.35))[1]),
+            "triggers_scale_shield": bool(
+                item.get("triggers_scale_shield")
+                if item.get("triggers_scale_shield") is not None
+                else (mode in FLEX_SHIELD_MODES)
+            ),
+            "plan_id": item.get("plan_id"),
+            "source": str(item.get("source") or "earned"),
+            "label": str(item.get("label") or _flex_mode_label(mode, int(round(bonus)))),
+        })
+    return cleaned[-FLEX_HISTORY_MAX_ITEMS:]
+
+
+def save_flex_history(items: List[Dict[str, Any]]) -> None:
+    trimmed = list(items or [])[-FLEX_HISTORY_MAX_ITEMS:]
+    db.set_kv(FLEX_HISTORY_KV_KEY, json.dumps(trimmed, allow_nan=False))
+
+
+def load_flex_bank_plan(conn=None) -> Optional[Dict[str, Any]]:
+    raw = db.get_kv(FLEX_PLAN_KV_KEY, conn=conn)
+    if not raw:
+        return None
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def save_flex_bank_plan(plan: Optional[Dict[str, Any]]) -> None:
+    db.set_kv(FLEX_PLAN_KV_KEY, json.dumps(plan, allow_nan=False))
+
+
+def _merge_daily_nutrition_by_date(
+    state: Dict[str, Any], nutrition_rows: List[Dict[str, Any]]
+) -> Dict[date, Dict[str, int]]:
+    """Merge MND history + authoritative SQLite nutrition logs; <800 kcal days stay excluded/unlogged."""
+    by_date: Dict[date, Dict[str, int]] = {}
+    mnd_days = ((state.get("mnd_history") or {}).get("days") or []) if isinstance(state, dict) else []
+    for item in mnd_days:
+        if not isinstance(item, dict):
+            continue
+        d = _parse_iso_date(item.get("date") or item.get("date_str"))
+        if d is None:
+            continue
+        c_val = _finite_float(item.get("calories"))
+        cals = int(round(c_val)) if c_val is not None else 0
+        if cals >= 800:
+            p_val = _finite_float(item.get("protein_g") if item.get("protein_g") is not None else item.get("protein"))
+            cb_val = _finite_float(item.get("carbs_g") if item.get("carbs_g") is not None else item.get("carbs"))
+            ft_val = _finite_float(item.get("fat_g") if item.get("fat_g") is not None else item.get("fat"))
+            by_date[d] = {
+                "calories": cals,
+                "protein_g": int(round(p_val)) if p_val is not None else 0,
+                "carbs_g": int(round(cb_val)) if cb_val is not None else 0,
+                "fat_g": int(round(ft_val)) if ft_val is not None else 0,
+            }
+
+    for item in nutrition_rows or []:
+        if not isinstance(item, dict):
+            continue
+        d = _parse_iso_date(item.get("date_str") or item.get("date"))
+        if d is None:
+            continue
+        c_val = _finite_float(item.get("calories"))
+        cals = int(round(c_val)) if c_val is not None else 0
+        if cals >= 800:
+            p_val = _finite_float(item.get("protein_g") if item.get("protein_g") is not None else item.get("protein"))
+            cb_val = _finite_float(item.get("carbs_g") if item.get("carbs_g") is not None else item.get("carbs"))
+            ft_val = _finite_float(item.get("fat_g") if item.get("fat_g") is not None else item.get("fat"))
+            by_date[d] = {
+                "calories": cals,
+                "protein_g": int(round(p_val)) if p_val is not None else 0,
+                "carbs_g": int(round(cb_val)) if cb_val is not None else 0,
+                "fat_g": int(round(ft_val)) if ft_val is not None else 0,
+            }
+        else:
+            by_date.pop(d, None)
+
+    return by_date
+
+
+def _build_daily_workout_burn_map(
+    state: Dict[str, Any],
+    sessions: List[Dict[str, Any]],
+    manual_acts: List[Dict[str, Any]],
+    today_date: date,
+    win_days: int = 14,
+) -> Dict[date, int]:
+    """Build per-day deduped workout calories over recent days without inflating non-workout days."""
+    win_start = today_date - timedelta(days=win_days)
+    per_day_entries: Dict[date, List[Tuple[int, float, str]]] = {}
+
+    def _add(raw_ts: Any, calories: Any, source: Any, name: Any, act_id: Any, prio: int) -> None:
+        src = str(source or "").strip().lower()
+        nm = str(name or "").strip().lower()
+        if src == "garmin_via_mnd_bridge" and "daily steps" in nm:
+            return
+        d = _parse_iso_date(raw_ts)
+        if d is None or d < win_start or d > today_date:
+            return
+        cals = _finite_float(calories) or 0.0
+        if cals <= 0.0:
+            return
+        per_day_entries.setdefault(d, []).append((prio, cals, str(act_id or "").strip()))
+
+    garmin = (state.get("garmin") or {}) if isinstance(state, dict) else {}
+    for act_list in (garmin.get("recent_activities") or [], garmin.get("today_activities") or []):
+        for a in act_list:
+            if not isinstance(a, dict):
+                continue
+            src = a.get("source") or garmin.get("source")
+            _add(a.get("date") or a.get("rawDate"), a.get("calories"), src, a.get("name"), a.get("id"), 1)
+
+    for s in sessions or []:
+        if isinstance(s, dict):
+            _add(s.get("timestamp"), s.get("calories"), "workout_session", s.get("preset"), s.get("id"), 2)
+
+    for m in manual_acts or []:
+        if isinstance(m, dict):
+            _add(m.get("timestamp"), m.get("calories"), "manual_app_entry", m.get("name"), m.get("id"), 2)
+
+    burn_by_day: Dict[date, int] = {}
+    for d, items in per_day_entries.items():
+        items.sort(key=lambda x: x[0])
+        seen_ids = set()
+        seen_cals: List[float] = []
+        day_total = 0.0
+        for _, cals, aid in items:
+            if aid and aid in seen_ids:
+                continue
+            if any(abs(cals - sc) <= 15.0 for sc in seen_cals):
+                continue
+            if aid:
+                seen_ids.add(aid)
+            seen_cals.append(cals)
+            day_total += cals
+        if day_total > 0:
+            burn_by_day[d] = int(round(day_total))
+    return burn_by_day
+
+
+def _resolve_nutrition_anchors_and_normal_target(
+    state: Dict[str, Any], pref_fields: Optional[Dict[str, Any]] = None
+) -> Tuple[int, int, int, int, int]:
+    """Return (base_cal, protein_anchor, default_deficit, pre_flex_today_target, active_cals)."""
+    nutrition = state.get("nutrition") if isinstance(state, dict) and isinstance(state.get("nutrition"), dict) else {}
+    anchors = resolve_goal_nutrition_anchors(pref_fields) if pref_fields else None
+    if anchors is not None:
+        base_cal, protein_anchor = anchors
+    else:
+        raw_base = _finite_float(nutrition.get("base_calorie_target"))
+        if raw_base is None or raw_base <= 0:
+            raw_base = _finite_float(nutrition.get("calorie_target"))
+        raw_prot = _finite_float(
+            nutrition.get("base_protein_target_g")
+            if nutrition.get("base_protein_target_g") is not None
+            else nutrition.get("protein_target_g")
+        )
+        base_cal = int(round(raw_base)) if (raw_base is not None and raw_base > 0) else 2092
+        protein_anchor = int(round(raw_prot)) if (raw_prot is not None and raw_prot > 0) else 200
+
+    raw_def = _finite_float(nutrition.get("deficit"))
+    default_deficit = int(round(raw_def)) if (raw_def is not None and raw_def >= 0) else 350
+    garmin = state.get("garmin") if isinstance(state, dict) and isinstance(state.get("garmin"), dict) else {}
+    active_cals = int(round(max(0.0, _finite_float(garmin.get("active_calories")) or 0.0)))
+    pre_flex_today_target = int(round(base_cal + active_cals))
+    return base_cal, protein_anchor, default_deficit, pre_flex_today_target, active_cals
+
+
+def _evaluate_planned_bank(
+    plan: Optional[Dict[str, Any]],
+    by_date: Dict[date, Dict[str, int]],
+    workout_burn_map: Dict[date, int],
+    base_cal: int,
+    protein_anchor: int,
+    pre_flex_today_target: int,
+    today_date: date,
+    active_today_claim: Optional[Dict[str, Any]],
+    meal_cooldown_left: int,
+) -> Dict[str, Any]:
+    inactive = {
+        "active": False,
+        "plan_id": None,
+        "target_date": None,
+        "label": None,
+        "target_kcal": 0,
+        "actual_banked_kcal": 0,
+        "daily_deduction_today": 0,
+        "days_remaining": 0,
+        "ready_to_redeem": False,
+        "status": plan.get("status") if isinstance(plan, dict) else None,
+    }
+    if not isinstance(plan, dict) or plan.get("status") != "active":
+        return inactive
+
+    p_target = _parse_iso_date(plan.get("target_date"))
+    p_start = _parse_iso_date(plan.get("start_date")) or _parse_iso_date(plan.get("created_date"))
+    if p_target is None or p_start is None:
+        return inactive
+    if p_target < today_date:
+        inactive["status"] = "expired"
+        inactive["plan_id"] = plan.get("plan_id")
+        inactive["target_date"] = p_target.isoformat()
+        inactive["label"] = plan.get("label")
+        inactive["target_kcal"] = int(_finite_float(plan.get("target_kcal")) or 0)
+        return inactive
+
+    target_kcal = max(200, min(800, int(round(_finite_float(plan.get("target_kcal")) or 550))))
+    cap = min(200, max(50, int(round(_finite_float(plan.get("daily_deduction_cap")) or 200))))
+
+    actual_banked = 0
+    if p_start <= today_date:
+        last_completed = min(today_date - timedelta(days=1), p_target - timedelta(days=1))
+        cur_d = p_start
+        while cur_d <= last_completed:
+            rec = by_date.get(cur_d)
+            if rec is not None:
+                normal_d = base_cal + workout_burn_map.get(cur_d, 0)
+                credit_d = max(0, min(cap + 100, int(round(normal_d - rec["calories"]))))
+                actual_banked += credit_d
+            cur_d += timedelta(days=1)
+
+    days_remaining = max(0, (p_target - today_date).days)
+    daily_floor = max(1600, int(round(protein_anchor * 4 + 600)))
+    daily_deduction_today = 0
+    if days_remaining >= 1 and active_today_claim is None:
+        remaining_needed = max(0, target_kcal - actual_banked)
+        if remaining_needed > 0:
+            raw_trim = int(round(remaining_needed / float(days_remaining)))
+            safe_headroom = max(0, int(round(pre_flex_today_target - daily_floor)))
+            daily_deduction_today = max(0, min(cap, raw_trim, safe_headroom))
+
+    unlock_kcal = min(target_kcal, actual_banked)
+    is_event_day = (p_target == today_date)
+    ready_to_redeem = (
+        is_event_day
+        and active_today_claim is None
+        and meal_cooldown_left == 0
+        and unlock_kcal >= 200
+    )
+
+    return {
+        "active": True,
+        "plan_id": str(plan.get("plan_id") or ""),
+        "start_date": p_start.isoformat(),
+        "target_date": p_target.isoformat(),
+        "label": str(plan.get("label") or "") or "Planned Flex",
+        "target_kcal": target_kcal,
+        "actual_banked_kcal": int(actual_banked),
+        "daily_deduction_today": int(daily_deduction_today),
+        "days_remaining": int(days_remaining),
+        "ready_to_redeem": bool(ready_to_redeem),
+        "unlock_kcal": int(unlock_kcal) if unlock_kcal >= 200 else 0,
+        "status": "active",
+    }
+
+
+def _evaluate_flex_cooldowns(
+    history: List[Dict[str, Any]], today_date: date, now_uk: datetime
+) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any], Dict[str, Any]]:
+    active_today_claim: Optional[Dict[str, Any]] = None
+    snack_left = 0
+    meal_left = 0
+    refeed_left = 0
+    last_claim: Optional[Dict[str, Any]] = None
+    latest_shield_claim: Optional[Tuple[datetime, Dict[str, Any]]] = None
+
+    for c in history:
+        c_date = _parse_iso_date(c.get("date_str"))
+        if c_date is None or c_date > today_date:
+            continue
+        mode = c.get("mode")
+        last_claim = c
+
+        c_dt = parse_uk_datetime(c.get("claimed_at")) or datetime(
+            c_date.year, c_date.month, c_date.day, 12, 0, tzinfo=UK_TZ
+        )
+        if mode in FLEX_SHIELD_MODES and c.get("triggers_scale_shield", True):
+            if latest_shield_claim is None or c_dt >= latest_shield_claim[0]:
+                latest_shield_claim = (c_dt, c)
+
+        if c_date == today_date:
+            active_today_claim = c
+            continue
+
+        days_since = (today_date - c_date).days
+        if mode == "flex_snack":
+            snack_left = max(snack_left, 2 - days_since)
+        elif mode in ("flex_meal", "planned_flex"):
+            snack_left = max(snack_left, 3 - days_since)
+            meal_left = max(meal_left, 5 - days_since)
+            refeed_left = max(refeed_left, 5 - days_since)
+        elif mode == "refeed_day":
+            snack_left = max(snack_left, 3 - days_since)
+            meal_left = max(meal_left, 5 - days_since)
+            refeed_left = max(refeed_left, 12 - days_since)
+
+    scale_shield: Dict[str, Any] = {
+        "active": False,
+        "claim_mode": None,
+        "claimed_at": None,
+        "hours_remaining": 0,
+        "note": "",
+    }
+    if latest_shield_claim is not None:
+        s_dt, s_rec = latest_shield_claim
+        elapsed_h = (now_uk - s_dt).total_seconds() / 3600.0
+        if -0.05 <= elapsed_h <= 48.0:
+            clamped_elapsed = max(0.0, elapsed_h)
+            hrs_rem = max(1, int(math.ceil(48.0 - clamped_elapsed)))
+            scale_shield = {
+                "active": True,
+                "claim_mode": s_rec.get("mode"),
+                "claimed_at": s_rec.get("claimed_at"),
+                "hours_remaining": min(48, hrs_rem),
+                "note": _FLEX_SCALE_SHIELD_NOTE,
+            }
+
+    cooldown = {
+        "flex_snack_days_left": int(max(0, snack_left)),
+        "flex_meal_days_left": int(max(0, meal_left)),
+        "refeed_day_days_left": int(max(0, refeed_left)),
+        "last_claim": last_claim,
+    }
+    return active_today_claim, cooldown, scale_shield
+
+
+def compute_flex_refeed_status(
+    state: Dict[str, Any],
+    renpho_rows: Optional[List[Dict[str, Any]]] = None,
+    nutrition_rows: Optional[List[Dict[str, Any]]] = None,
+    sessions: Optional[List[Dict[str, Any]]] = None,
+    manual_acts: Optional[List[Dict[str, Any]]] = None,
+    bio_rows: Optional[List[Dict[str, Any]]] = None,
+    adaptive_tdee: Optional[Dict[str, Any]] = None,
+    overreaching: Optional[Dict[str, Any]] = None,
+    flex_history: Optional[List[Dict[str, Any]]] = None,
+    flex_plan: Optional[Dict[str, Any]] = None,
+    today_str: Optional[str] = None,
+    now_uk: Optional[datetime] = None,
+    conn=None,
+) -> Dict[str, Any]:
+    """Compute Earned Flex, Refeed, Planned Banking, and 48h Scale Shield status."""
+    safe_state = state if isinstance(state, dict) else {}
+    now = now_uk or uk_now()
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UK_TZ)
+    else:
+        now = now.astimezone(UK_TZ)
+    today_iso = str(today_str or now.date().isoformat())[:10]
+    today_date = _parse_iso_date(today_iso) or now.date()
+    today_iso = today_date.isoformat()
+
+    pref_fields: Dict[str, Any] = {}
+    need_db = (
+        nutrition_rows is None
+        or sessions is None
+        or manual_acts is None
+        or flex_history is None
+        or flex_plan is None
+        or (adaptive_tdee is None and renpho_rows is None)
+        or (overreaching is None and bio_rows is None)
+    )
+    if need_db:
+        if conn is not None:
+            if renpho_rows is None:
+                renpho_rows = db.get_renpho_history(days=21, conn=conn)
+            if sessions is None:
+                sessions = db.get_workout_sessions(days=35, conn=conn)
+            if manual_acts is None:
+                manual_acts = db.get_manual_activities(days=35, conn=conn)
+            if nutrition_rows is None:
+                nutrition_rows = db.get_daily_nutrition(days=21, conn=conn)
+            if bio_rows is None:
+                bio_rows = db.get_daily_biometrics(days=28, conn=conn)
+            if flex_history is None:
+                flex_history = load_flex_history(conn=conn)
+            if flex_plan is None:
+                flex_plan = load_flex_bank_plan(conn=conn)
+            raw_prefs = db.get_kv("client_preferences_v1", conn=conn)
+        else:
+            db.init_db()
+            with closing(db.get_connection()) as active_conn:
+                if renpho_rows is None:
+                    renpho_rows = db.get_renpho_history(days=21, conn=active_conn)
+                if sessions is None:
+                    sessions = db.get_workout_sessions(days=35, conn=active_conn)
+                if manual_acts is None:
+                    manual_acts = db.get_manual_activities(days=35, conn=active_conn)
+                if nutrition_rows is None:
+                    nutrition_rows = db.get_daily_nutrition(days=21, conn=active_conn)
+                if bio_rows is None:
+                    bio_rows = db.get_daily_biometrics(days=28, conn=active_conn)
+                if flex_history is None:
+                    flex_history = load_flex_history(conn=active_conn)
+                if flex_plan is None:
+                    flex_plan = load_flex_bank_plan(conn=active_conn)
+                raw_prefs = db.get_kv("client_preferences_v1", conn=active_conn)
+        if raw_prefs:
+            try:
+                parsed_p = json.loads(raw_prefs)
+                if isinstance(parsed_p, dict) and isinstance(parsed_p.get("fields"), dict):
+                    pref_fields = parsed_p["fields"]
+            except Exception:
+                pref_fields = {}
+    else:
+        raw_prefs = db.get_kv("client_preferences_v1", conn=conn) if conn is not None else db.get_kv("client_preferences_v1")
+        if raw_prefs:
+            try:
+                parsed_p = json.loads(raw_prefs)
+                if isinstance(parsed_p, dict) and isinstance(parsed_p.get("fields"), dict):
+                    pref_fields = parsed_p["fields"]
+            except Exception:
+                pref_fields = {}
+
+    if adaptive_tdee is None:
+        adaptive_tdee = compute_adaptive_tdee(safe_state, renpho_rows or [], nutrition_rows or [], today_iso)
+    if overreaching is None:
+        overreaching = compute_acwr_overreaching(
+            safe_state, sessions or [], manual_acts or [], bio_rows or [], today_iso
+        )
+
+    history = list(flex_history or [])
+    base_cal, protein_anchor, default_deficit, pre_flex_today_target, active_cals = (
+        _resolve_nutrition_anchors_and_normal_target(safe_state, pref_fields)
+    )
+    nutrition = safe_state.get("nutrition") if isinstance(safe_state.get("nutrition"), dict) else {}
+
+    adaptive_ready = adaptive_tdee.get("status") == "ready"
+    tdee_est = _finite_float(adaptive_tdee.get("estimated_tdee")) if adaptive_ready else None
+    nut_tdee = _finite_float(nutrition.get("tdee"))
+    if tdee_est is not None and tdee_est > 0:
+        tdee_ref = int(round(tdee_est))
+    elif nut_tdee is not None and nut_tdee >= 1400:
+        tdee_ref = int(round(nut_tdee))
+    else:
+        tdee_ref = int(round(base_cal + default_deficit))
+
+    by_date = _merge_daily_nutrition_by_date(safe_state, nutrition_rows or [])
+    workout_burn_map = _build_daily_workout_burn_map(
+        safe_state, sessions or [], manual_acts or [], today_date, win_days=14
+    )
+
+    claims_by_date: Dict[date, int] = {}
+    for c in history:
+        cd = _parse_iso_date(c.get("date_str"))
+        if cd is not None:
+            claims_by_date[cd] = max(claims_by_date.get(cd, 0), int(c.get("bonus_kcal") or 0))
+
+    protein_floor_req = int(round(0.85 * protein_anchor))
+    logged_days_7d = 0
+    clean_days_5d = 0
+    clean_days_7d = 0
+    clean_days_14d = 0
+    banked_7d_sum = 0.0
+    day_chips: List[Dict[str, Any]] = []
+
+    for offset in range(14, 0, -1):
+        d = today_date - timedelta(days=offset)
+        rec = by_date.get(d)
+        if rec is None:
+            day_state = "unlogged"
+            cals_d = 0
+            prot_d = 0
+        else:
+            cals_d = rec["calories"]
+            prot_d = rec["protein_g"]
+            claim_bonus_d = claims_by_date.get(d, 0)
+            w_burn_d = workout_burn_map.get(d, 0)
+            if claim_bonus_d > 0:
+                daily_ceiling_d = min(tdee_ref + 150, int(round(base_cal + w_burn_d + claim_bonus_d + 100)))
+            elif w_burn_d == 0 and tdee_ref > base_cal + 350:
+                daily_ceiling_d = min(int(round(base_cal + 250)), int(round(tdee_ref - 100)))
+            else:
+                daily_ceiling_d = int(round(base_cal + w_burn_d + 100))
+                if adaptive_ready and tdee_ref >= base_cal:
+                    daily_ceiling_d = min(daily_ceiling_d, max(1600, int(round(tdee_ref + w_burn_d - 50))))
+
+            is_clean = (cals_d <= daily_ceiling_d) and (prot_d >= protein_floor_req)
+            day_state = "clean" if is_clean else "over"
+            if is_clean:
+                clean_days_14d += 1
+                if offset <= 7:
+                    clean_days_7d += 1
+                if offset <= 5:
+                    clean_days_5d += 1
+            if offset <= 7:
+                logged_days_7d += 1
+                day_tdee_d = float(tdee_ref)
+                if not adaptive_ready and w_burn_d > 0:
+                    day_tdee_d = max(day_tdee_d, float(base_cal + default_deficit + w_burn_d))
+                day_delta = max(-500.0, min(day_tdee_d - 800.0, day_tdee_d - float(cals_d)))
+                banked_7d_sum += day_delta
+
+        if offset <= 7:
+            day_chips.append({
+                "date": d.isoformat(),
+                "state": day_state,
+                "calories": cals_d,
+                "protein_g": prot_d,
+            })
+
+    banked_7d_kcal = int(round(max(0.0, banked_7d_sum)))
+    active_today_claim, cooldown, scale_shield = _evaluate_flex_cooldowns(history, today_date, now)
+    planned_bank = _evaluate_planned_bank(
+        flex_plan,
+        by_date=by_date,
+        workout_burn_map=workout_burn_map,
+        base_cal=base_cal,
+        protein_anchor=protein_anchor,
+        pre_flex_today_target=pre_flex_today_target,
+        today_date=today_date,
+        active_today_claim=active_today_claim,
+        meal_cooldown_left=cooldown["flex_meal_days_left"],
+    )
+
+    trend_wk = _finite_float(adaptive_tdee.get("weight_trend_kg_per_week")) if adaptive_ready else None
+    ov_status = str(overreaching.get("status") or "")
+    fatigued_markers = list(overreaching.get("fatigued_markers") or [])
+
+    snack_bonus = 300 if banked_7d_kcal >= 1400 else (250 if banked_7d_kcal >= 700 else 200)
+    meal_headroom = max(400, (tdee_ref + 150) - base_cal)
+    meal_bonus = min(650, max(400, min(550 if banked_7d_kcal < 2200 else 650, meal_headroom)))
+    refeed_bonus = max(300, min(600, tdee_ref - base_cal))
+
+    eligible_modes: List[str] = []
+    tier_bonuses: Dict[str, int] = {}
+    recommended_mode: Optional[str] = None
+    suggested_bonus_kcal = 0
+    status_label = "building"
+    reason = ""
+
+    if active_today_claim is not None:
+        status_label = "claimed_today"
+        recommended_mode = str(active_today_claim.get("mode"))
+        suggested_bonus_kcal = int(active_today_claim.get("bonus_kcal") or 0)
+        reason = f"Today's {_flex_mode_label(recommended_mode, suggested_bonus_kcal)} is active with protein anchor locked."
+    elif planned_bank["active"] and planned_bank["days_remaining"] >= 1:
+        status_label = "banking_in_progress"
+        ded = planned_bank["daily_deduction_today"]
+        banked = planned_bank["actual_banked_kcal"]
+        tgt = planned_bank["target_kcal"]
+        # Emergency Refeed override when dropping fast AND showing multiple fatigue markers
+        emergency_refeed = (
+            clean_days_14d >= 10
+            and cooldown["refeed_day_days_left"] == 0
+            and trend_wk is not None
+            and trend_wk <= -0.75
+            and len(fatigued_markers) >= 2
+        )
+        if emergency_refeed:
+            eligible_modes.append("refeed_day")
+            tier_bonuses["refeed_day"] = refeed_bonus
+            recommended_mode = "refeed_day"
+            suggested_bonus_kcal = refeed_bonus
+            status_label = "unlocked"
+            reason = (
+                f"Rapid scale drop ({trend_wk:.2f} kg/wk) with fatigue markers triggered a priority "
+                f"Maintenance Refeed (+{refeed_bonus} kcal) over planned banking."
+            )
+        else:
+            if (
+                active_cals >= 700
+                and banked_7d_kcal >= 1000
+                and cooldown["flex_snack_days_left"] == 0
+            ):
+                eligible_modes.append("flex_snack")
+                tier_bonuses["flex_snack"] = snack_bonus
+                recommended_mode = "flex_snack"
+                suggested_bonus_kcal = snack_bonus
+            lbl = planned_bank["label"]
+            d_left = planned_bank["days_remaining"]
+            reason = (
+                f"Banking +{tgt} kcal for {lbl} ({planned_bank['target_date']}, {d_left}d left): "
+                f"{banked} kcal earned so far, -{ded} kcal/day active trim. Earned Flex Meal paused to prevent double-dipping."
+            )
+    else:
+        # Check planned_flex event day redemption
+        if planned_bank["active"] and planned_bank["days_remaining"] == 0:
+            if planned_bank["ready_to_redeem"]:
+                eligible_modes.append("planned_flex")
+                tier_bonuses["planned_flex"] = planned_bank["unlock_kcal"]
+
+        # Tier 1: Flex Snack
+        snack_cond = (clean_days_5d >= 3) or (active_cals >= 500 and clean_days_7d >= 3)
+        if snack_cond and cooldown["flex_snack_days_left"] == 0:
+            eligible_modes.append("flex_snack")
+            tier_bonuses["flex_snack"] = snack_bonus
+
+        # Tier 2: Flex Meal
+        trend_ok_for_meal = (not adaptive_ready) or (trend_wk is not None and trend_wk <= -0.10)
+        meal_cond = (
+            clean_days_7d >= 5
+            and logged_days_7d >= 5
+            and banked_7d_kcal >= 1750
+            and trend_ok_for_meal
+        )
+        if meal_cond and cooldown["flex_meal_days_left"] == 0:
+            eligible_modes.append("flex_meal")
+            tier_bonuses["flex_meal"] = meal_bonus
+
+        # Tier 3: Structured Maintenance Refeed Day
+        phys_need = (
+            (adaptive_ready and trend_wk is not None and trend_wk <= -0.65)
+            or (ov_status in ("caution", "deload_recommended"))
+            or (len(fatigued_markers) >= 1)
+        )
+        refeed_cond = (clean_days_14d >= 10) and phys_need
+        if refeed_cond and cooldown["refeed_day_days_left"] == 0:
+            eligible_modes.append("refeed_day")
+            tier_bonuses["refeed_day"] = refeed_bonus
+
+        # Pick highest priority eligible tier
+        for candidate in ("planned_flex", "refeed_day", "flex_meal", "flex_snack"):
+            if candidate in eligible_modes:
+                recommended_mode = candidate
+                suggested_bonus_kcal = tier_bonuses[candidate]
+                break
+
+        if planned_bank["active"] and planned_bank["days_remaining"] == 0 and not planned_bank["ready_to_redeem"]:
+            reason = (
+                f"Planned event day ({planned_bank['label']}) only banked {planned_bank['actual_banked_kcal']} kcal "
+                f"from completed logs (requires >=200 kcal)."
+            )
+
+        if recommended_mode is not None:
+            status_label = "unlocked"
+            if recommended_mode == "planned_flex":
+                reason = (
+                    f"{planned_bank['label']} unlocked: +{suggested_bonus_kcal} kcal earned from completed savings days "
+                    f"(protein anchor locked at {protein_anchor}g)."
+                )
+            elif recommended_mode == "refeed_day":
+                reason = (
+                    f"{clean_days_14d}/14 clean days with recovery/loss demand — Maintenance Refeed Day "
+                    f"(+{suggested_bonus_kcal} kcal high-carb boost) unlocked."
+                )
+            elif recommended_mode == "flex_meal":
+                reason = (
+                    f"{clean_days_7d}/7 clean logged days and ~{banked_7d_kcal:,} kcal banked — Flex Meal "
+                    f"(+{suggested_bonus_kcal} kcal) unlocked with protein anchor locked."
+                )
+            else:
+                reason = (
+                    f"{clean_days_5d}/5 recent clean days — Flex Snack (+{suggested_bonus_kcal} kcal) unlocked."
+                )
+        elif logged_days_7d < 3:
+            status_label = "insufficient_data"
+            reason = "Log 3+ completed MyNetDiary days (>=800 kcal) to calibrate your Earned Flex meter."
+        elif (
+            (snack_cond and cooldown["flex_snack_days_left"] > 0)
+            or (meal_cond and cooldown["flex_meal_days_left"] > 0)
+            or (refeed_cond and cooldown["refeed_day_days_left"] > 0)
+        ):
+            status_label = "cooldown"
+            reason = (
+                f"Recent flex/refeed cooldown active (Snack: {cooldown['flex_snack_days_left']}d • "
+                f"Meal: {cooldown['flex_meal_days_left']}d)."
+            )
+        else:
+            status_label = "building"
+            needed_clean = max(0, 3 - clean_days_5d)
+            reason = (
+                f"{clean_days_7d}/7 clean days & {banked_7d_kcal:,} kcal banked — "
+                f"{needed_clean} more clean day(s) in window to unlock Flex Snack (5/7 for Flex Meal)."
+                if needed_clean > 0
+                else f"{clean_days_7d}/7 clean days & {banked_7d_kcal:,} kcal banked — hit 5/7 clean days & 1,750 kcal bank for Flex Meal."
+            )
+
+    active_deduction = planned_bank["daily_deduction_today"] if planned_bank["active"] else 0
+    return {
+        "date": today_iso,
+        "status": status_label,
+        "recommended_mode": recommended_mode,
+        "eligible_modes": eligible_modes,
+        "tier_bonuses": tier_bonuses,
+        "suggested_bonus_kcal": int(suggested_bonus_kcal),
+        "tdee_ref": int(tdee_ref),
+        "streak": {
+            "logged_days_7d": int(logged_days_7d),
+            "clean_days_5d": int(clean_days_5d),
+            "clean_days_7d": int(clean_days_7d),
+            "clean_days_14d": int(clean_days_14d),
+            "banked_7d_kcal": int(banked_7d_kcal),
+            "day_chips": day_chips,
+        },
+        "cooldown": cooldown,
+        "active_today": {
+            "active": bool(active_today_claim is not None),
+            "claim_id": active_today_claim.get("claim_id") if active_today_claim else None,
+            "mode": active_today_claim.get("mode") if active_today_claim else None,
+            "bonus_kcal": int(active_today_claim.get("bonus_kcal") or 0) if active_today_claim else 0,
+            "deduction_kcal": int(active_deduction),
+        },
+        "planned_bank": planned_bank,
+        "scale_shield": scale_shield,
+        "reason": reason,
+    }
+
+
+def _format_bank_deduction_label(plan: Dict[str, Any], deduction: int) -> str:
+    raw_lbl = str(plan.get("label") or "").strip()
+    t_date = str(plan.get("target_date") or "")[:10]
+    if raw_lbl:
+        return f"Banking -{deduction} kcal ({raw_lbl})"
+    return f"Banking -{deduction} kcal ({t_date})"
+
+
+def compute_active_flex_delta(
+    state: Dict[str, Any],
+    target_date_str: str,
+    normal_calories: int,
+    protein_g: int,
+    carbs_g: int,
+    fat_g: int,
+    now_uk: Optional[datetime] = None,
+    conn=None,
+) -> Optional[Dict[str, Any]]:
+    """Compute today's net flex/bank adjustment without mutating protein targets."""
+    target_date = _parse_iso_date(target_date_str)
+    if target_date is None:
+        return None
+    target_iso = target_date.isoformat()
+
+    history = load_flex_history(conn=conn)
+    plan = load_flex_bank_plan(conn=conn)
+    if not history and not plan:
+        return None
+
+    today_claim = None
+    for c in history:
+        if c.get("date_str") == target_iso:
+            today_claim = c
+
+    if today_claim is not None:
+        mode = str(today_claim["mode"])
+        bonus = int(today_claim["bonus_kcal"])
+        c_share, f_share = _FLEX_MACRO_SPLITS.get(mode, (0.65, 0.35))
+        carb_delta = int(round((bonus * c_share) / 4.0))
+        fat_delta = int(round((bonus * f_share) / 9.0))
+        return {
+            "date": target_iso,
+            "type": "claim",
+            "mode": mode,
+            "adjustment_kcal": bonus,
+            "carb_delta_g": carb_delta,
+            "fat_delta_g": fat_delta,
+            "label": str(today_claim.get("label") or _flex_mode_label(mode, bonus)),
+            "claim_id": today_claim.get("claim_id"),
+            "plan_id": today_claim.get("plan_id"),
+        }
+
+    if not isinstance(plan, dict) or plan.get("status") != "active":
+        return None
+
+    p_target = _parse_iso_date(plan.get("target_date"))
+    p_start = _parse_iso_date(plan.get("start_date")) or _parse_iso_date(plan.get("created_date"))
+    if p_target is None or p_start is None or not (p_start <= target_date < p_target):
+        return None
+
+    if conn is not None:
+        nutrition_rows = db.get_daily_nutrition(days=21, conn=conn)
+        sessions = db.get_workout_sessions(days=35, conn=conn)
+        manual_acts = db.get_manual_activities(days=35, conn=conn)
+    else:
+        db.init_db()
+        with closing(db.get_connection()) as active_conn:
+            nutrition_rows = db.get_daily_nutrition(days=21, conn=active_conn)
+            sessions = db.get_workout_sessions(days=35, conn=active_conn)
+            manual_acts = db.get_manual_activities(days=35, conn=active_conn)
+
+    base_cal, protein_anchor, _, _, _ = _resolve_nutrition_anchors_and_normal_target(state)
+    by_date = _merge_daily_nutrition_by_date(state, nutrition_rows)
+    workout_burn_map = _build_daily_workout_burn_map(state, sessions, manual_acts, target_date, win_days=14)
+    bank = _evaluate_planned_bank(
+        plan,
+        by_date=by_date,
+        workout_burn_map=workout_burn_map,
+        base_cal=base_cal,
+        protein_anchor=max(protein_anchor, protein_g),
+        pre_flex_today_target=normal_calories,
+        today_date=target_date,
+        active_today_claim=None,
+        meal_cooldown_left=0,
+    )
+    deduction = int(bank.get("daily_deduction_today") or 0)
+    if deduction <= 0:
+        return None
+
+    max_carb_cut_kcal = max(0, carbs_g - 50) * 4
+    max_fat_cut_kcal = max(0, fat_g - 40) * 9
+    carb_delta = 0
+    fat_delta = 0
+    if max_carb_cut_kcal + max_fat_cut_kcal > 0:
+        carb_cut_kcal = min(max_carb_cut_kcal, int(round(deduction * 0.60)))
+        fat_cut_kcal = min(max_fat_cut_kcal, deduction - carb_cut_kcal)
+        rem_kcal = deduction - carb_cut_kcal - fat_cut_kcal
+        if rem_kcal > 0:
+            carb_cut_kcal += min(max_carb_cut_kcal - carb_cut_kcal, rem_kcal)
+        carb_delta = -int(round(carb_cut_kcal / 4.0))
+        fat_delta = -int(round(fat_cut_kcal / 9.0))
+
+    return {
+        "date": target_iso,
+        "type": "bank_deduction",
+        "mode": "planned_bank",
+        "adjustment_kcal": -deduction,
+        "carb_delta_g": carb_delta,
+        "fat_delta_g": fat_delta,
+        "label": _format_bank_deduction_label(plan, deduction),
+        "claim_id": None,
+        "plan_id": plan.get("plan_id"),
+    }
+
+
+def claim_flex_refeed(
+    state: Dict[str, Any],
+    mode: str,
+    bonus_kcal: Optional[int] = None,
+    now_uk: Optional[datetime] = None,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Validate eligibility & cooldowns, persist claim, and recalculate today's nutrition."""
+    req_mode = str(mode or "").strip()
+    if req_mode not in FLEX_VALID_MODES:
+        raise FlexRuleError(f"Unsupported flex mode '{req_mode}'", status_code=422)
+
+    now = now_uk or uk_now()
+    today_iso = now.date().isoformat()
+    status_obj = compute_flex_refeed_status(state, today_str=today_iso, now_uk=now)
+
+    if status_obj["active_today"]["active"]:
+        raise FlexRuleError("A Flex/Refeed boost is already active today.", status_code=409)
+    if req_mode not in status_obj["eligible_modes"]:
+        raise FlexRuleError(
+            status_obj.get("reason") or f"Mode '{req_mode}' is not eligible right now.",
+            status_code=409,
+        )
+
+    tier_ceiling = int(status_obj["tier_bonuses"].get(req_mode) or status_obj.get("suggested_bonus_kcal") or 250)
+    if bonus_kcal is not None:
+        if bonus_kcal < 200 or bonus_kcal > 800:
+            raise FlexRuleError("bonus_kcal must be between 200 and 800 kcal.", status_code=422)
+        resolved_bonus = min(int(bonus_kcal), tier_ceiling)
+        if resolved_bonus < 200:
+            resolved_bonus = tier_ceiling
+    else:
+        resolved_bonus = tier_ceiling
+
+    c_share, f_share = _FLEX_MACRO_SPLITS.get(req_mode, (0.65, 0.35))
+    claim_id = f"flx_{today_iso.replace('-', '')}_{uuid.uuid4().hex[:6]}"
+    plan_id = None
+    source = "earned"
+    plan = load_flex_bank_plan()
+    if req_mode == "planned_flex" and isinstance(plan, dict) and plan.get("status") == "active":
+        plan_id = plan.get("plan_id")
+        source = "planned_bank"
+        plan["status"] = "claimed"
+        plan["claimed_id"] = claim_id
+        plan["claimed_date"] = today_iso
+        plan["updated_at"] = now.isoformat()
+        save_flex_bank_plan(plan)
+
+    claim_record = {
+        "claim_id": claim_id,
+        "date_str": today_iso,
+        "claimed_at": now.isoformat(),
+        "mode": req_mode,
+        "bonus_kcal": int(resolved_bonus),
+        "carb_share": c_share,
+        "fat_share": f_share,
+        "triggers_scale_shield": bool(req_mode in FLEX_SHIELD_MODES),
+        "plan_id": plan_id,
+        "source": source,
+        "label": (
+            f"{plan['label']} (+{resolved_bonus} kcal)"
+            if (req_mode == "planned_flex" and isinstance(plan, dict) and plan.get("label"))
+            else _flex_mode_label(req_mode, resolved_bonus)
+        ),
+    }
+
+    history = load_flex_history()
+    history.append(claim_record)
+    save_flex_history(history)
+
+    recalculate_nutrition(state, today_iso)
+    fresh_status = compute_flex_refeed_status(state, today_str=today_iso, now_uk=now)
+    return claim_record, fresh_status
+
+
+def undo_flex_refeed(
+    state: Dict[str, Any],
+    claim_id: Optional[str] = None,
+    now_uk: Optional[datetime] = None,
+) -> Tuple[str, Dict[str, Any]]:
+    """Undo a same-day Flex/Refeed claim; prior-date claims are immutable (HTTP 409)."""
+    now = now_uk or uk_now()
+    today_iso = now.date().isoformat()
+    today_date = now.date()
+    history = load_flex_history()
+
+    target_idx = None
+    target_claim = None
+    if claim_id:
+        cid = str(claim_id).strip()
+        for idx in range(len(history) - 1, -1, -1):
+            if history[idx].get("claim_id") == cid:
+                target_idx = idx
+                target_claim = history[idx]
+                break
+        if target_claim is None:
+            raise FlexRuleError("Flex claim not found.", status_code=409)
+        if target_claim.get("date_str") != today_iso:
+            raise FlexRuleError("Only today's Flex/Refeed claim can be undone.", status_code=409)
+    else:
+        for idx in range(len(history) - 1, -1, -1):
+            if history[idx].get("date_str") == today_iso:
+                target_idx = idx
+                target_claim = history[idx]
+                break
+        if target_claim is None:
+            raise FlexRuleError("No active Flex/Refeed claim to undo today.", status_code=409)
+
+    removed_id = str(target_claim.get("claim_id") or "")
+    history.pop(target_idx)
+    save_flex_history(history)
+
+    linked_plan_id = target_claim.get("plan_id")
+    if linked_plan_id:
+        plan = load_flex_bank_plan()
+        if isinstance(plan, dict) and plan.get("plan_id") == linked_plan_id and plan.get("status") == "claimed":
+            p_target = _parse_iso_date(plan.get("target_date"))
+            if p_target is not None and p_target >= today_date:
+                plan["status"] = "active"
+                plan.pop("claimed_id", None)
+                plan.pop("claimed_date", None)
+                plan["updated_at"] = now.isoformat()
+                save_flex_bank_plan(plan)
+
+    recalculate_nutrition(state, today_iso)
+    fresh_status = compute_flex_refeed_status(state, today_str=today_iso, now_uk=now)
+    return removed_id, fresh_status
+
+
+def upsert_or_cancel_flex_bank_plan(
+    state: Dict[str, Any],
+    action: str,
+    target_date: Optional[str] = None,
+    target_kcal: Optional[int] = None,
+    label: str = "",
+    now_uk: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Create/update or cancel a Planned Weekend/Event Banking schedule."""
+    act = str(action or "").strip().lower()
+    if act not in ("upsert", "cancel"):
+        raise FlexRuleError("action must be 'upsert' or 'cancel'.", status_code=422)
+
+    now = now_uk or uk_now()
+    today_date = now.date()
+    today_iso = today_date.isoformat()
+
+    if act == "cancel":
+        save_flex_bank_plan(None)
+        recalculate_nutrition(state, today_iso)
+        return compute_flex_refeed_status(state, today_str=today_iso, now_uk=now)
+
+    history = load_flex_history()
+    if any(c.get("date_str") == today_iso for c in history):
+        raise FlexRuleError(
+            "An active Flex/Refeed claim is already applied today; undo today's claim before scheduling a new bank plan.",
+            status_code=409,
+        )
+
+    parsed_target = _parse_iso_date(target_date)
+    if parsed_target is None:
+        raise FlexRuleError("Valid target_date (YYYY-MM-DD) is required.", status_code=422)
+    days_ahead = (parsed_target - today_date).days
+    if days_ahead < 1 or days_ahead > 7:
+        raise FlexRuleError("target_date must be between 1 and 7 days ahead.", status_code=422)
+
+    kcal_num = _finite_float(target_kcal)
+    if kcal_num is None or kcal_num < 200 or kcal_num > 800:
+        raise FlexRuleError("target_kcal must be between 200 and 800 kcal.", status_code=422)
+    resolved_kcal = int(round(kcal_num))
+
+    daily_cap = min(200, max(50, int(round(resolved_kcal / float(days_ahead)))))
+    existing = load_flex_bank_plan()
+    start_iso = today_iso
+    if isinstance(existing, dict) and existing.get("status") == "active":
+        ex_start = _parse_iso_date(existing.get("start_date"))
+        if ex_start is not None and ex_start <= today_date and existing.get("target_date") == parsed_target.isoformat():
+            start_iso = ex_start.isoformat()
+
+    plan_obj = {
+        "plan_id": f"fbp_{today_iso.replace('-', '')}_{uuid.uuid4().hex[:6]}",
+        "status": "active",
+        "created_date": today_iso,
+        "start_date": start_iso,
+        "target_date": parsed_target.isoformat(),
+        "target_kcal": resolved_kcal,
+        "label": str(label or "").strip()[:40],
+        "daily_deduction_cap": daily_cap,
+        "updated_at": now.isoformat(),
+    }
+    save_flex_bank_plan(plan_obj)
+    recalculate_nutrition(state, today_iso)
+    return compute_flex_refeed_status(state, today_str=today_iso, now_uk=now)

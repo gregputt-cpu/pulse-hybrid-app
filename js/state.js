@@ -131,7 +131,8 @@
                 calories_remaining: _baseCal,
                 base_protein_target_g: _baseProt,
                 protein_target_g: _baseProt,
-                protein_remaining: _baseProt
+                protein_remaining: _baseProt,
+                flex_active: null
               },
               strength_prescriptions: (_cachedLiveParsed.strength_prescriptions && typeof _cachedLiveParsed.strength_prescriptions === 'object') ? _cachedLiveParsed.strength_prescriptions : window.BAKED_LIVE_STATE.strength_prescriptions,
               mnd_history: (_cachedLiveParsed.mnd_history && typeof _cachedLiveParsed.mnd_history === 'object') ? _cachedLiveParsed.mnd_history : window.BAKED_LIVE_STATE.mnd_history,

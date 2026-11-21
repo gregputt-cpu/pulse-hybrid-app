@@ -2760,6 +2760,8 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
               renderSyncFreshnessStrip(parsed, window.BAKED_LIVE_STATE);
               renderAdaptiveTdeeCard(parsed);
               renderAcwrDeloadCard(parsed);
+              if (typeof renderFlexRefeedCard === 'function') renderFlexRefeedCard(parsed);
+              if (typeof renderPostRefeedScaleShield === 'function') renderPostRefeedScaleShield(parsed);
             }
           }
         } catch (e) {}
@@ -2787,12 +2789,16 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
           renderSyncFreshnessStrip(data, window.BAKED_LIVE_STATE);
           renderAdaptiveTdeeCard(data);
           renderAcwrDeloadCard(data);
+          if (typeof renderFlexRefeedCard === 'function') renderFlexRefeedCard(data);
+          if (typeof renderPostRefeedScaleShield === 'function') renderPostRefeedScaleShield(data);
         }
         return data;
       } catch (e) {
         renderSyncFreshnessStrip(window.PULSE_ANALYTICS_SUMMARY, window.BAKED_LIVE_STATE);
         renderAdaptiveTdeeCard(window.PULSE_ANALYTICS_SUMMARY);
         renderAcwrDeloadCard(window.PULSE_ANALYTICS_SUMMARY);
+        if (typeof renderFlexRefeedCard === 'function') renderFlexRefeedCard(window.PULSE_ANALYTICS_SUMMARY);
+        if (typeof renderPostRefeedScaleShield === 'function') renderPostRefeedScaleShield(window.PULSE_ANALYTICS_SUMMARY);
         return window.PULSE_ANALYTICS_SUMMARY;
       }
     }
@@ -3406,6 +3412,12 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
         try { renderTodayTrainingRecommendations(); } catch (e) { console.warn('[Telemetry] renderTodayTrainingRecommendations notice:', e); }
       }
       try { renderSyncFreshnessStrip(window.PULSE_ANALYTICS_SUMMARY, state); } catch (e) { console.warn('[Telemetry] renderSyncFreshnessStrip notice:', e); }
+      if (typeof renderFlexRefeedCard === 'function') {
+        try { renderFlexRefeedCard(window.PULSE_ANALYTICS_SUMMARY); } catch (e) { console.warn('[Telemetry] renderFlexRefeedCard notice:', e); }
+      }
+      if (typeof renderPostRefeedScaleShield === 'function') {
+        try { renderPostRefeedScaleShield(window.PULSE_ANALYTICS_SUMMARY); } catch (e) { console.warn('[Telemetry] renderPostRefeedScaleShield notice:', e); }
+      }
       try { fetchAnalyticsSummary(false); } catch (e) { console.warn('[Telemetry] fetchAnalyticsSummary notice:', e); }
       if (typeof renderRenphoTrendChart === 'function') {
         try { renderRenphoTrendChart({ force: false }); } catch (e) { console.warn('[Telemetry] renderRenphoTrendChart notice:', e); }

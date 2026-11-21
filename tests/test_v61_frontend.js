@@ -1793,11 +1793,11 @@ async function runAllTests() {
       assert(/id="pulseAuthError"[^>]*var\(--crimson-text\)/.test(indexHtml));
 
       for (const s of SCRIPT_ORDER) {
-        assert(indexHtml.includes(`./${s}?v=6.3`), `index.html missing ./${s}?v=6.3`);
+        assert(indexHtml.includes(`./${s}?v=6.4`), `index.html missing ./${s}?v=6.4`);
       }
-      assert(indexHtml.includes('./css/styles.css?v=6.3'));
-      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.3'), 'index.html boot splash must display v6.3');
-      assert(indexHtml.includes('Hybrid Athlete OS • v6.3'), 'index.html Settings modal must display v6.3');
+      assert(indexHtml.includes('./css/styles.css?v=6.4'));
+      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.4'), 'index.html boot splash must display v6.4');
+      assert(indexHtml.includes('Hybrid Athlete OS • v6.4'), 'index.html Settings modal must display v6.4');
       assert.strictEqual(indexHtml.includes('Hybrid Athlete OS • v6.1'), false, 'index.html must not contain stale v6.1 label');
 
       const piiRegex = /190\.5|6'3"|45yo|97\.70|97\.75|80\.99|81\.03|81\.0|98\.4|99\.85|@[^\s"']+\.com|GARMIN_TOKENS(?!_JSON)|renpho_creds(?!\.json)/;
@@ -1963,7 +1963,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.3-20261121');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.4-20261121');
       assert(swJsCode.includes('Promise.resolve(self.clients.claim()).catch(() => {})'));
       assert(swJsCode.includes('.catch(() => {})'), 'cache.put() must have .catch()');
 
@@ -1992,7 +1992,7 @@ async function runAllTests() {
       }
       await navRespPromise;
       await flushMicrotasks();
-      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.3-20261121');
+      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.4-20261121');
       assert.strictEqual(cacheBucket.has('https://pulse.local/index.html'), true, '/?tab=fuel must cache under /index.html');
 
       // Top-level dismissBootSplash & forcePulseAppReload
@@ -2399,6 +2399,195 @@ async function runAllTests() {
 
       app.localStorage.clear();
       console.log('PASS [25] Nutrition Quality Audit startMonth Fix & loadLiveState Pre-Fetch Resilience');
+    }
+
+    // [26] Earned Flex & Planned Banking UI, XSS Escaping, Scale Shield, Targets Parity & Rollover
+    {
+      app.localStorage.clear();
+
+      // 1. Unlocked Flex Meal state
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'unlocked',
+          recommended_mode: 'flex_meal',
+          eligible_modes: ['flex_snack', 'flex_meal'],
+          tier_bonuses: { flex_snack: 250, flex_meal: 550 },
+          suggested_bonus_kcal: 550,
+          tdee_ref: 2740,
+          streak: {
+            clean_days_7d: 5,
+            banked_7d_kcal: 1950,
+            day_chips: [{ date: todayIso, state: 'clean', calories: 2100, protein_g: 205 }]
+          },
+          active_today: { active: false, bonus_kcal: 0, deduction_kcal: 0 },
+          planned_bank: { active: false },
+          scale_shield: { active: false },
+          reason: '5/7 clean logged days — Flex Meal unlocked.'
+        }
+      });
+      const flexHtmlUnlocked = app.document.getElementById('flexRefeedCard').innerHTML;
+      assert(flexHtmlUnlocked.includes('Flex Meal Earned'));
+      assert(flexHtmlUnlocked.includes('Use Flex Meal (+550 kcal)'));
+
+      // 2. Banking In Progress with hostile XSS label escaped
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'banking_in_progress',
+          recommended_mode: null,
+          eligible_modes: [],
+          tier_bonuses: {},
+          tdee_ref: 2740,
+          streak: { clean_days_7d: 3, banked_7d_kcal: 900, day_chips: [] },
+          active_today: { active: false, bonus_kcal: 0, deduction_kcal: 120 },
+          planned_bank: {
+            active: true,
+            target_date: todayIso,
+            target_kcal: 600,
+            actual_banked_kcal: 240,
+            daily_deduction_today: 120,
+            days_remaining: 3,
+            label: '<img src=x onerror=alert(1)>Sat Pizza'
+          },
+          scale_shield: { active: false },
+          reason: 'Banking active.'
+        }
+      });
+      const flexHtmlBank = app.document.getElementById('flexRefeedCard').innerHTML;
+      assert.strictEqual(flexHtmlBank.includes('<img src=x'), false, 'Planned bank label must be HTML-escaped');
+      assert(flexHtmlBank.includes('&lt;img src=x onerror=alert(1)&gt;Sat Pizza'));
+      assert(flexHtmlBank.includes('Banking 3d left'));
+      assert(flexHtmlBank.includes('Cancel Plan'));
+
+      // 3. Claimed Today & Cooldown & Building states
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'claimed_today',
+          recommended_mode: 'flex_meal',
+          tier_bonuses: {},
+          tdee_ref: 2740,
+          streak: { clean_days_7d: 5, banked_7d_kcal: 1950, day_chips: [] },
+          active_today: { active: true, claim_id: 'flx_1', mode: 'flex_meal', bonus_kcal: 550 },
+          planned_bank: { active: false },
+          scale_shield: { active: true, claim_mode: 'flex_meal', hours_remaining: 48, note: 'Glycogen retention notice' },
+          reason: 'Active today.'
+        }
+      });
+      assert(app.document.getElementById('flexRefeedCard').innerHTML.includes('Undo Today'));
+
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'cooldown',
+          tier_bonuses: {},
+          tdee_ref: 2740,
+          streak: { clean_days_7d: 5, banked_7d_kcal: 1950, day_chips: [] },
+          active_today: { active: false },
+          planned_bank: { active: false },
+          scale_shield: { active: false },
+          reason: 'Cooldown active.'
+        }
+      });
+      assert(app.document.getElementById('flexRefeedCard').innerHTML.includes('Cooldown'));
+
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'building',
+          tier_bonuses: {},
+          tdee_ref: 2740,
+          streak: { clean_days_7d: 1, banked_7d_kcal: 350, day_chips: [] },
+          active_today: { active: false },
+          planned_bank: { active: false },
+          scale_shield: { active: false },
+          reason: 'Building streak.'
+        }
+      });
+      assert(app.document.getElementById('flexRefeedCard').innerHTML.includes('Building'));
+
+      // 4. 48-hour Scale Shield visibility
+      app.ctx.renderPostRefeedScaleShield({
+        flex_refeed: {
+          scale_shield: {
+            active: true,
+            claim_mode: 'flex_meal',
+            hours_remaining: 36,
+            note: 'Expected +0.5–1.2 kg water retention.'
+          }
+        }
+      });
+      assert(app.document.getElementById('postRefeedScaleShield').innerHTML.includes('Scale Shield Active'));
+      assert.strictEqual(app.document.getElementById('todayScaleShieldPill').style.display, 'inline-block');
+      assert(app.document.getElementById('todayScaleShieldPill').innerText.includes('36h'));
+
+      app.ctx.renderPostRefeedScaleShield({ flex_refeed: { scale_shield: { active: false } } });
+      assert.strictEqual(app.document.getElementById('postRefeedScaleShield').innerHTML, '');
+      assert.strictEqual(app.document.getElementById('todayScaleShieldPill').style.display, 'none');
+
+      // 5. Target parity: active +550 boost and -120 banking trim keep protein_target_g locked
+      app.eval(`
+        window.BAKED_LIVE_STATE.date = '${todayIso}';
+        window.BAKED_LIVE_STATE.garmin = { active_calories: 0, today_activities: [] };
+        window.BAKED_LIVE_STATE.nutrition = {
+          base_calorie_target: 2092,
+          calorie_target: 2642,
+          base_protein_target_g: 200,
+          protein_target_g: 200,
+          flex_active: { date: '${todayIso}', type: 'claim', mode: 'flex_meal', adjustment_kcal: 550, carb_delta_g: 89, fat_delta_g: 21, label: 'Flex Meal (+550 kcal)' }
+        };
+      `);
+      assert.strictEqual(app.ctx.getCanonicalDailyCalorieTarget(), 2642);
+      const targetsBoost = app.ctx._resolveComputedFuelTargets({ goalKey: 'recomp', dietStrategy: 'balanced' });
+      assert.strictEqual(targetsBoost.calorie_target, 2642);
+      assert.strictEqual(targetsBoost.protein_target_g, 200, 'Protein anchor must remain locked on Flex Meal boost');
+
+      app.eval(`
+        window.BAKED_LIVE_STATE.nutrition = {
+          base_calorie_target: 2092,
+          calorie_target: 1972,
+          base_protein_target_g: 200,
+          protein_target_g: 200,
+          flex_active: { date: '${todayIso}', type: 'bank_deduction', mode: 'planned_bank', adjustment_kcal: -120, carb_delta_g: -18, fat_delta_g: -5, label: 'Banking -120 kcal' }
+        };
+      `);
+      assert.strictEqual(app.ctx.getCanonicalDailyCalorieTarget(), 1972);
+      const targetsBank = app.ctx._resolveComputedFuelTargets({ goalKey: 'recomp', dietStrategy: 'balanced' });
+      assert.strictEqual(targetsBank.calorie_target, 1972);
+      assert.strictEqual(targetsBank.protein_target_g, 200, 'Protein anchor must remain locked on Banking deduction');
+
+      // 6. UK midnight rollover must clear stale flex_active
+      const staleFlexApp = createAppHarness({
+        preInitLocalStorage: {
+          pulse_cached_live_state: JSON.stringify({
+            date: '2020-01-01',
+            nutrition: {
+              base_calorie_target: 2092,
+              calorie_target: 2642,
+              base_protein_target_g: 200,
+              protein_target_g: 200,
+              flex_active: { date: '2020-01-01', adjustment_kcal: 550 }
+            }
+          })
+        }
+      });
+      try {
+        const rolledNut = staleFlexApp.eval('window.BAKED_LIVE_STATE.nutrition');
+        assert.strictEqual(rolledNut.flex_active, null, 'UK midnight rollover must clear stale nutrition.flex_active');
+        assert.strictEqual(rolledNut.calorie_target, 2092);
+      } finally {
+        staleFlexApp.cleanupTimers();
+      }
+
+      // 7. Zero hardcoded hex in new Flex & Scale Shield CSS section
+      const flexCssStart = stylesCss.indexOf('/* ==================== FLEX, REFEED & SCALE SHIELD TOKENS');
+      assert(flexCssStart > 0, 'Expected Flex CSS tokens section in css/styles.css');
+      const flexCss = stylesCss.slice(flexCssStart);
+      assert.strictEqual(/#[0-9a-fA-F]{3,8}\b/.test(flexCss), false, 'New Flex/Shield CSS must contain zero hardcoded hex colors');
+
+      app.localStorage.clear();
+      console.log('PASS [26] Earned Flex & Planned Banking UI, XSS, Scale Shield, Parity & Rollover');
     }
   } finally {
     app.cleanupTimers();

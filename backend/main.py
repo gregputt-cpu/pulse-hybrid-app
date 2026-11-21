@@ -2093,3 +2093,211 @@ def update_preferences_state(payload: ClientPreferencesPayload):
         "preferences": merged_prefs,
         "field_resolutions": resolutions,
     }
+
+
+class FlexClaimPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: str
+    bonus_kcal: Optional[int] = None
+    client_event_id: Optional[str] = None
+
+    @field_validator("mode")
+    @classmethod
+    def _val_mode(cls, v: str) -> str:
+        cleaned = str(v or "").strip()
+        if cleaned not in analytics_service.FLEX_VALID_MODES:
+            raise ValueError(f"mode must be one of {', '.join(analytics_service.FLEX_VALID_MODES)}")
+        return cleaned
+
+    @field_validator("bonus_kcal", mode="before")
+    @classmethod
+    def _val_bonus(cls, v: Any) -> Any:
+        if v is None:
+            return None
+        _reject_bool_nonfinite(v, "bonus_kcal", nonneg=True)
+        if isinstance(v, str):
+            s = v.strip()
+            if not s or not s.isdigit():
+                raise ValueError("bonus_kcal must be an integer between 200 and 800")
+            num = int(s)
+        elif isinstance(v, (int, float)):
+            if isinstance(v, float) and not v.is_integer():
+                raise ValueError("bonus_kcal must be a whole integer")
+            num = int(v)
+        else:
+            raise ValueError("bonus_kcal must be an integer between 200 and 800")
+        if num < 200 or num > 800:
+            raise ValueError("bonus_kcal must be between 200 and 800")
+        return num
+
+    @field_validator("client_event_id")
+    @classmethod
+    def _val_event_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if len(s) > 120:
+            raise ValueError("client_event_id too long")
+        return s or None
+
+
+class FlexUndoPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    claim_id: Optional[str] = None
+
+    @field_validator("claim_id")
+    @classmethod
+    def _val_cid(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if len(s) > 80:
+            raise ValueError("claim_id too long")
+        return s or None
+
+
+class FlexPlanPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: str = "upsert"
+    target_date: Optional[str] = None
+    target_kcal: Optional[int] = None
+    label: Optional[str] = ""
+
+    @field_validator("action")
+    @classmethod
+    def _val_action(cls, v: str) -> str:
+        act = str(v or "").strip().lower()
+        if act not in ("upsert", "cancel"):
+            raise ValueError("action must be 'upsert' or 'cancel'")
+        return act
+
+    @field_validator("target_date")
+    @classmethod
+    def _val_tdate(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", s):
+            raise ValueError("target_date must use YYYY-MM-DD format")
+        try:
+            datetime.strptime(s, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValueError("target_date is not a valid calendar date")
+        return s
+
+    @field_validator("target_kcal", mode="before")
+    @classmethod
+    def _val_tkcal(cls, v: Any) -> Any:
+        if v is None:
+            return None
+        _reject_bool_nonfinite(v, "target_kcal", nonneg=True)
+        if isinstance(v, str):
+            s = v.strip()
+            if not s or not s.isdigit():
+                raise ValueError("target_kcal must be an integer between 200 and 800")
+            num = int(s)
+        elif isinstance(v, (int, float)):
+            if isinstance(v, float) and not v.is_integer():
+                raise ValueError("target_kcal must be a whole integer")
+            num = int(v)
+        else:
+            raise ValueError("target_kcal must be an integer between 200 and 800")
+        if num < 200 or num > 800:
+            raise ValueError("target_kcal must be between 200 and 800")
+        return num
+
+    @field_validator("label")
+    @classmethod
+    def _val_label(cls, v: Optional[str]) -> str:
+        cleaned = strip_markup(str(v or "")).strip()
+        return cleaned[:40]
+
+
+@app.post("/api/fuel/flex/claim")
+def claim_fuel_flex(payload: FlexClaimPayload):
+    event_id = str(payload.client_event_id or "").strip()
+    try:
+        with state_store.state_lock(LIVE_STATE_PATH):
+            state = load_live_state(raise_on_corrupt=True)
+            if event_id and db.get_kv(f"idem:fuel_flex_claim:{event_id}") == "1":
+                fresh_status = analytics_service.compute_flex_refeed_status(state, today_str=uk_today_str())
+                return {
+                    "success": True,
+                    "duplicate": True,
+                    "claim": fresh_status["cooldown"].get("last_claim"),
+                    "flex_refeed": fresh_status,
+                    "state": state,
+                }
+            claim_rec, fresh_status = analytics_service.claim_flex_refeed(
+                state,
+                mode=payload.mode,
+                bonus_kcal=payload.bonus_kcal,
+            )
+            if event_id:
+                db.claim_idempotency_key("fuel_flex_claim", event_id)
+            save_live_state(state)
+        return {
+            "success": True,
+            "claim": claim_rec,
+            "flex_refeed": fresh_status,
+            "state": state,
+        }
+    except analytics_service.FlexRuleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"[Flex] Claim error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/fuel/flex/undo")
+def undo_fuel_flex(payload: Optional[FlexUndoPayload] = None):
+    claim_id = payload.claim_id if payload else None
+    try:
+        with state_store.state_lock(LIVE_STATE_PATH):
+            state = load_live_state(raise_on_corrupt=True)
+            removed_id, fresh_status = analytics_service.undo_flex_refeed(state, claim_id=claim_id)
+            save_live_state(state)
+        return {
+            "success": True,
+            "removed_claim_id": removed_id,
+            "flex_refeed": fresh_status,
+            "state": state,
+        }
+    except analytics_service.FlexRuleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"[Flex] Undo error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/fuel/flex/plan")
+def update_fuel_flex_plan(payload: FlexPlanPayload):
+    if payload.action == "upsert" and (not payload.target_date or payload.target_kcal is None):
+        raise HTTPException(status_code=422, detail="target_date and target_kcal are required for upsert")
+    try:
+        with state_store.state_lock(LIVE_STATE_PATH):
+            state = load_live_state(raise_on_corrupt=True)
+            fresh_status = analytics_service.upsert_or_cancel_flex_bank_plan(
+                state,
+                action=payload.action,
+                target_date=payload.target_date,
+                target_kcal=payload.target_kcal,
+                label=payload.label or "",
+            )
+            save_live_state(state)
+        return {
+            "success": True,
+            "flex_refeed": fresh_status,
+            "state": state,
+        }
+    except analytics_service.FlexRuleError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"[Flex] Plan error: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))

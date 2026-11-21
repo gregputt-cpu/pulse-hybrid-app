@@ -131,6 +131,24 @@
     }
     if (typeof window !== 'undefined') window.computeMacroTargets = computeMacroTargets;
 
+    function _getActiveTodayFlex() {
+      const state = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const fa = (state && state.nutrition && state.nutrition.flex_active && typeof state.nutrition.flex_active === 'object')
+        ? state.nutrition.flex_active
+        : null;
+      if (!fa) return null;
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
+      if (fa.date && todayIso && String(fa.date).slice(0, 10) !== todayIso) return null;
+      const adj = Number(fa.adjustment_kcal);
+      if (!Number.isFinite(adj) || adj === 0) return null;
+      return {
+        ...fa,
+        adjustment_kcal: Math.round(adj),
+        carb_delta_g: Math.round(Number(fa.carb_delta_g) || 0),
+        fat_delta_g: Math.round(Number(fa.fat_delta_g) || 0)
+      };
+    }
+
     function _resolveComputedFuelTargets(overrides = {}) {
       const gKey = overrides.goalKey || ((typeof currentGoalKey !== 'undefined' && currentGoalKey) ? currentGoalKey : 'recomp');
       const goalObj = (typeof athleteGoals !== 'undefined' && athleteGoals && athleteGoals[gKey]) ? athleteGoals[gKey] : null;
@@ -153,7 +171,7 @@
       if (!ccLvl) {
         try { ccLvl = currentCarbCycleLevel || localStorage.getItem('pulse_carb_cycle_level') || 'mod'; } catch (e) { ccLvl = currentCarbCycleLevel || 'mod'; }
       }
-      return computeMacroTargets({
+      const baseRes = computeMacroTargets({
         baseCalories: baseCals,
         activeCalories: activeBurn,
         baseProtein: baseProt,
@@ -163,6 +181,16 @@
         proDialMacros: proDial,
         goalKey: gKey
       });
+      const activeFlex = _getActiveTodayFlex();
+      if (activeFlex) {
+        return {
+          calorie_target: Math.max(1200, baseRes.calorie_target + activeFlex.adjustment_kcal),
+          protein_target_g: baseRes.protein_target_g,
+          carbs_target_g: Math.max(20, baseRes.carbs_target_g + activeFlex.carb_delta_g),
+          fat_target_g: Math.max(20, baseRes.fat_target_g + activeFlex.fat_delta_g)
+        };
+      }
+      return baseRes;
     }
 
     function getCanonicalDailyCalorieTarget() {
@@ -176,7 +204,9 @@
       const gKey = (typeof currentGoalKey !== 'undefined' && currentGoalKey) ? currentGoalKey : 'recomp';
       const goalBase = (n && Number(n.base_calorie_target) > 0) ? Number(n.base_calorie_target) : ((typeof athleteGoals !== 'undefined' && athleteGoals && athleteGoals[gKey] && Number(athleteGoals[gKey].calories)) || 2092);
       const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn(state) : inAppBurn;
-      return Math.max(1200, Math.round(goalBase + activeBurn));
+      const activeFlex = _getActiveTodayFlex();
+      const flexAdj = activeFlex ? activeFlex.adjustment_kcal : 0;
+      return Math.max(1200, Math.round(goalBase + activeBurn + flexAdj));
     }
     if (typeof window !== 'undefined') {
       window.getCanonicalDailyCalorieTarget = getCanonicalDailyCalorieTarget;
@@ -364,9 +394,19 @@
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+${activeBurn} active</span>`;
       const liveSt = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
-      const baseCalsVal = Math.max(0, Math.round(totalBudget - activeBurn));
+      const activeFlex = _getActiveTodayFlex();
+      const flexAdj = activeFlex ? activeFlex.adjustment_kcal : 0;
+      const baseCalsVal = Math.max(0, Math.round(totalBudget - activeBurn - flexAdj));
       const baseActiveSubEl = document.getElementById('fuelBaseActiveSub');
-      if (baseActiveSubEl) baseActiveSubEl.innerText = `Base ${baseCalsVal.toLocaleString()} + ${activeBurn.toLocaleString()} Active`;
+      if (baseActiveSubEl) {
+        if (flexAdj > 0) {
+          baseActiveSubEl.innerText = `Base ${baseCalsVal.toLocaleString()} + ${activeBurn.toLocaleString()} Active + ${flexAdj.toLocaleString()} Flex`;
+        } else if (flexAdj < 0) {
+          baseActiveSubEl.innerText = `Base ${baseCalsVal.toLocaleString()} + ${activeBurn.toLocaleString()} Active - ${Math.abs(flexAdj).toLocaleString()} Bank`;
+        } else {
+          baseActiveSubEl.innerText = `Base ${baseCalsVal.toLocaleString()} + ${activeBurn.toLocaleString()} Active`;
+        }
+      }
 
       const frEl = document.getElementById('fuelRemainingNum');
       if (frEl) {
@@ -445,6 +485,21 @@
       if (elBmr) elBmr.innerText = `${(baseCalsVal + defNum).toLocaleString()} kcal`;
       const elDeficit = document.getElementById('fuelCalcDeficit');
       if (elDeficit) elDeficit.innerText = defNum >= 0 ? `-${defNum.toLocaleString()} kcal` : `+${Math.abs(defNum).toLocaleString()} kcal`;
+      const flexRowEl = document.getElementById('fuelCalcFlexRow');
+      const flexLabelEl = document.getElementById('fuelCalcFlexLabel');
+      const flexValEl = document.getElementById('fuelCalcFlexVal');
+      if (flexRowEl) {
+        if (flexAdj !== 0) {
+          flexRowEl.style.display = 'flex';
+          if (flexLabelEl) flexLabelEl.innerText = (activeFlex && activeFlex.label) || (flexAdj > 0 ? 'Flex Boost' : 'Planned Bank Trim');
+          if (flexValEl) {
+            flexValEl.innerText = flexAdj > 0 ? `+${flexAdj.toLocaleString()} kcal` : `${flexAdj.toLocaleString()} kcal`;
+            flexValEl.style.color = flexAdj > 0 ? 'var(--emerald)' : 'var(--primary-bright)';
+          }
+        } else {
+          flexRowEl.style.display = 'none';
+        }
+      }
       const elBurn = document.getElementById('fuelCalcBurn');
       if (elBurn) elBurn.innerText = `+${activeBurn} kcal`;
       const elTarget = document.getElementById('fuelCalcTarget');
@@ -2388,6 +2443,446 @@
         loadLiveState();
       }
       renderMyNetDiaryEngine();
+    }
+
+    // ==================== EARNED FLEX, REFEED & PLANNED BANKING UI ====================
+    let _flexBankSelectedDate = '';
+    let _flexBankSelectedKcal = 550;
+    let _flexActionInFlight = false;
+
+    function _escFlex(v) {
+      return (typeof escapeHtml === 'function')
+        ? escapeHtml(v)
+        : String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function _getNextWeekdayChips(todayIso) {
+      const m = String(todayIso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const baseDate = m
+        ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+        : new Date();
+      const targets = [
+        { wd: 5, short: 'Fri' },
+        { wd: 6, short: 'Sat' },
+        { wd: 0, short: 'Sun' }
+      ];
+      return targets.map((t) => {
+        const curWd = baseDate.getUTCDay();
+        let diff = (t.wd - curWd + 7) % 7;
+        if (diff === 0) diff = 7;
+        const dObj = new Date(baseDate.getTime());
+        dObj.setUTCDate(dObj.getUTCDate() + diff);
+        const iso = dObj.toISOString().slice(0, 10);
+        const labelShort = `${t.short} (${formatShortAuditDate(iso)})`;
+        return { iso, label: labelShort, diff };
+      }).sort((a, b) => a.diff - b.diff);
+    }
+
+    function _getFlexDateBounds(todayIso) {
+      const m = String(todayIso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const base = m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : new Date();
+      const minD = new Date(base.getTime());
+      minD.setUTCDate(minD.getUTCDate() + 1);
+      const maxD = new Date(base.getTime());
+      maxD.setUTCDate(maxD.getUTCDate() + 7);
+      return { minIso: minD.toISOString().slice(0, 10), maxIso: maxD.toISOString().slice(0, 10) };
+    }
+
+    function _flexModeCtaLabel(mode, kcal) {
+      const k = Number(kcal || 0);
+      if (mode === 'planned_flex') return `🎉 Use Planned Flex (+${k} kcal)`;
+      if (mode === 'refeed_day') return `⚡ Start Maintenance Refeed (+${k} kcal)`;
+      if (mode === 'flex_meal') return `🍽 Use Flex Meal (+${k} kcal)`;
+      return `🍫 Use Flex Snack (+${k} kcal)`;
+    }
+
+    function selectFlexBankPresetDate(isoDate) {
+      _flexBankSelectedDate = String(isoDate || '').slice(0, 10);
+      const inp = document.getElementById('flexBankDateInput');
+      if (inp) inp.value = _flexBankSelectedDate;
+      document.querySelectorAll('.flex-date-preset-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-iso') === _flexBankSelectedDate);
+      });
+    }
+
+    function selectFlexBankPresetKcal(kcal) {
+      const n = Number(kcal);
+      if (Number.isFinite(n) && n >= 200 && n <= 800) {
+        _flexBankSelectedKcal = Math.round(n);
+      }
+      document.querySelectorAll('.flex-kcal-preset-btn').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.getAttribute('data-kcal')) === _flexBankSelectedKcal);
+      });
+    }
+
+    function renderFlexRefeedCard(summary) {
+      const card = document.getElementById('flexRefeedCard');
+      if (!card) return;
+      const flex = summary && summary.flex_refeed ? summary.flex_refeed : null;
+      if (!flex) {
+        card.innerHTML = `
+          <div class="flex-refeed-card">
+            <div class="flex-header-row">
+              <div class="flex-title-wrap"><span>🎯</span><span>Flex &amp; Refeed Engine</span></div>
+              <span class="flex-badge">Syncing</span>
+            </div>
+            <div class="flex-reason-copy">Sync MyNetDiary and Garmin telemetry to calculate your earned Flex &amp; Planned Banking status.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const todayIso = flex.date || ((typeof getLocalDateStr === 'function') ? getLocalDateStr() : '');
+      const status = String(flex.status || 'building');
+      const streak = flex.streak || {};
+      const plan = flex.planned_bank || {};
+      const activeToday = flex.active_today || {};
+      const shield = flex.scale_shield || {};
+      const chips = Array.isArray(streak.day_chips) ? streak.day_chips : [];
+      const weekdays = _getNextWeekdayChips(todayIso);
+      const bounds = _getFlexDateBounds(todayIso);
+
+      if (plan.active && plan.target_date) {
+        _flexBankSelectedDate = String(plan.target_date).slice(0, 10);
+        if (Number(plan.target_kcal) >= 200) _flexBankSelectedKcal = Math.round(Number(plan.target_kcal));
+      } else if (!_flexBankSelectedDate || _flexBankSelectedDate < bounds.minIso || _flexBankSelectedDate > bounds.maxIso) {
+        _flexBankSelectedDate = (weekdays.find((w) => w.label.startsWith('Sat')) || weekdays[0] || {}).iso || bounds.minIso;
+      }
+
+      let badgeText = 'Building';
+      let badgeTone = 'tone-building';
+      if (status === 'claimed_today') {
+        badgeText = 'Active Today';
+        badgeTone = 'tone-claimed';
+      } else if (status === 'unlocked') {
+        badgeText = flex.recommended_mode === 'refeed_day' ? 'Refeed Ready' : (flex.recommended_mode === 'flex_meal' ? 'Flex Meal Earned' : (flex.recommended_mode === 'planned_flex' ? 'Planned Unlocked' : 'Snack Earned'));
+        badgeTone = 'tone-unlocked';
+      } else if (status === 'banking_in_progress') {
+        badgeText = `Banking ${Number(plan.days_remaining || 0)}d left`;
+        badgeTone = 'tone-banking';
+      } else if (status === 'cooldown') {
+        badgeText = 'Cooldown';
+        badgeTone = 'tone-cooldown';
+      } else if (status === 'insufficient_data') {
+        badgeText = 'Calibrating';
+        badgeTone = 'tone-building';
+      }
+
+      const chipsHtml = chips.map((ch) => {
+        const cls = ch.state === 'clean' ? 'is-clean' : (ch.state === 'over' ? 'is-over' : '');
+        const dayNum = String(ch.date || '').slice(8, 10) || '--';
+        const titleTxt = ch.state === 'unlogged'
+          ? `${ch.date}: Unlogged (<800 kcal)`
+          : `${ch.date}: ${ch.calories} kcal • ${ch.protein_g}g P (${ch.state})`;
+        return `
+          <div class="flex-day-chip ${cls}" title="${_escFlex(titleTxt)}">
+            <span class="flex-day-chip-dot"></span>
+            <span class="flex-day-chip-lbl">${_escFlex(dayNum)}</span>
+          </div>
+        `;
+      }).join('');
+
+      let ctaHtml = '';
+      if (activeToday.active) {
+        ctaHtml = `
+          <div class="flex-actions-row">
+            <button type="button" class="flex-btn-undo" onclick="undoFlexRefeed()">✕ Undo Today's Flex (+${Number(activeToday.bonus_kcal || 0)} kcal)</button>
+          </div>
+        `;
+      } else {
+        const elig = Array.isArray(flex.eligible_modes) ? flex.eligible_modes : [];
+        const bonuses = flex.tier_bonuses || {};
+        const btns = [];
+        if (flex.recommended_mode && bonuses[flex.recommended_mode]) {
+          const recMode = flex.recommended_mode;
+          const recCls = (recMode === 'flex_meal' || recMode === 'planned_flex') ? 'flex-btn-primary is-emerald' : 'flex-btn-primary';
+          btns.push(`<button type="button" class="${recCls}" onclick="claimFlexRefeed('${_escFlex(recMode)}', ${Number(bonuses[recMode])})">${_escFlex(_flexModeCtaLabel(recMode, bonuses[recMode]))}</button>`);
+        }
+        if (elig.includes('flex_snack') && flex.recommended_mode !== 'flex_snack' && bonuses.flex_snack) {
+          btns.push(`<button type="button" class="flex-btn-ghost" onclick="claimFlexRefeed('flex_snack', ${Number(bonuses.flex_snack)})">+${Number(bonuses.flex_snack)} Snack</button>`);
+        }
+        if (btns.length > 0) {
+          ctaHtml = `<div class="flex-actions-row">${btns.join('')}</div>`;
+        }
+      }
+
+      const bankStatusLine = plan.active
+        ? `<div class="flex-reason-copy" style="margin-bottom:6px;">Active Plan: <strong>${_escFlex(plan.label || 'Planned Flex')}</strong> on <strong>${_escFlex(plan.target_date)}</strong> • Banked <strong>${Number(plan.actual_banked_kcal || 0)} / ${Number(plan.target_kcal || 0)} kcal</strong> (Trim: -${Number(plan.daily_deduction_today || 0)} kcal today).</div>`
+        : '';
+
+      const weekdayBtnsHtml = weekdays.map((w) => {
+        const act = w.iso === _flexBankSelectedDate ? 'active' : '';
+        return `<button type="button" class="flex-preset-btn flex-date-preset-btn ${act}" data-iso="${_escFlex(w.iso)}" onclick="selectFlexBankPresetDate('${_escFlex(w.iso)}')">${_escFlex(w.label)}</button>`;
+      }).join('');
+
+      const kcalBtnsHtml = [400, 550, 700].map((k) => {
+        const act = k === _flexBankSelectedKcal ? 'active' : '';
+        return `<button type="button" class="flex-preset-btn flex-kcal-preset-btn ${act}" data-kcal="${k}" onclick="selectFlexBankPresetKcal(${k})">+${k} kcal</button>`;
+      }).join('');
+
+      const existingPlanLbl = (plan.active && plan.label) ? String(plan.label) : '';
+      const cancelBtnHtml = plan.active
+        ? `<button type="button" class="flex-btn-undo" onclick="cancelFlexBankPlan()">Cancel Plan</button>`
+        : '';
+
+      const midBoxLabel = plan.active ? 'EVENT BANKED' : '7D BANK';
+      const midBoxVal = plan.active
+        ? `${Number(plan.actual_banked_kcal || 0)}/${Number(plan.target_kcal || 0)}`
+        : `${Number(streak.banked_7d_kcal || 0).toLocaleString()} kcal`;
+      const rightBoxLabel = shield.active ? 'SCALE SHIELD' : 'EST. MAINT.';
+      const rightBoxVal = shield.active ? `${Number(shield.hours_remaining || 0)}h left` : `${Number(flex.tdee_ref || 0).toLocaleString()} kcal`;
+
+      card.innerHTML = `
+        <div class="flex-refeed-card">
+          <div class="flex-header-row">
+            <div class="flex-title-wrap"><span>🎯</span><span>Earned Flex &amp; Planned Banking</span></div>
+            <span class="flex-badge ${badgeTone}">${_escFlex(badgeText)}</span>
+          </div>
+          <div class="flex-stats-grid">
+            <div class="flex-stat-box">
+              <div class="flex-stat-label">7D CLEAN</div>
+              <div class="flex-stat-val">${Number(streak.clean_days_7d || 0)} / 7</div>
+            </div>
+            <div class="flex-stat-box">
+              <div class="flex-stat-label">${midBoxLabel}</div>
+              <div class="flex-stat-val">${_escFlex(midBoxVal)}</div>
+            </div>
+            <div class="flex-stat-box">
+              <div class="flex-stat-label">${rightBoxLabel}</div>
+              <div class="flex-stat-val">${_escFlex(rightBoxVal)}</div>
+            </div>
+          </div>
+          ${chipsHtml ? `<div class="flex-streak-strip">${chipsHtml}</div>` : ''}
+          <div class="flex-reason-copy">${_escFlex(flex.reason || '')}</div>
+          ${ctaHtml}
+          <details class="flex-bank-drawer" data-details-key="fuel_flex_bank">
+            <summary>
+              <span>${plan.active ? `📅 Banking for ${_escFlex(plan.label || 'Event')} (${_escFlex(plan.target_date)})` : '📅 Plan Weekend / Event Bank'}</span>
+              <span class="accordion-chevron">▼</span>
+            </summary>
+            <div class="flex-bank-body">
+              ${bankStatusLine}
+              <div class="flex-preset-row">${weekdayBtnsHtml}</div>
+              <div class="flex-preset-row">${kcalBtnsHtml}</div>
+              <div class="flex-input-grid">
+                <input id="flexBankDateInput" type="date" class="flex-input" min="${_escFlex(bounds.minIso)}" max="${_escFlex(bounds.maxIso)}" value="${_escFlex(_flexBankSelectedDate)}" onchange="selectFlexBankPresetDate(this.value)" />
+                <input id="flexBankLabelInput" type="text" class="flex-input" maxlength="40" placeholder="Event label (e.g. Saturday Pizza)" value="${_escFlex(existingPlanLbl)}" />
+              </div>
+              <div class="flex-actions-row" style="margin-bottom:0;">
+                <button type="button" class="flex-btn-primary" onclick="saveFlexBankPlan()">${plan.active ? 'Update Banking Plan' : 'Save Banking Plan'}</button>
+                ${cancelBtnHtml}
+              </div>
+            </div>
+          </details>
+        </div>
+      `;
+    }
+
+    function renderPostRefeedScaleShield(summary) {
+      const bannerEl = document.getElementById('postRefeedScaleShield');
+      const pillEl = document.getElementById('todayScaleShieldPill');
+      const shield = summary && summary.flex_refeed && summary.flex_refeed.scale_shield
+        ? summary.flex_refeed.scale_shield
+        : null;
+      const isActive = Boolean(shield && shield.active);
+
+      if (pillEl) {
+        if (isActive) {
+          pillEl.style.display = 'inline-block';
+          pillEl.innerText = `🛡 Glycogen Shield · ${Number(shield.hours_remaining || 0)}h`;
+          pillEl.title = String(shield.note || '');
+        } else {
+          pillEl.style.display = 'none';
+          pillEl.innerText = '';
+        }
+      }
+
+      if (!bannerEl) return;
+      if (!isActive) {
+        bannerEl.innerHTML = '';
+        return;
+      }
+      const modeName = shield.claim_mode === 'refeed_day'
+        ? 'Maintenance Refeed'
+        : (shield.claim_mode === 'planned_flex' ? 'Planned Flex' : 'Flex Meal');
+      bannerEl.innerHTML = `
+        <div class="scale-shield-banner">
+          <div class="scale-shield-title">
+            <span>🛡 Post-${_escFlex(modeName)} Scale Shield Active</span>
+            <span>${Number(shield.hours_remaining || 0)}h left</span>
+          </div>
+          <div class="scale-shield-copy">${_escFlex(shield.note || '')}</div>
+        </div>
+      `;
+    }
+
+    function _syncFlexResponseState(data) {
+      if (!data || typeof data !== 'object') return;
+      if (data.flex_refeed) {
+        const nextSummary = { ...(window.PULSE_ANALYTICS_SUMMARY || {}), flex_refeed: data.flex_refeed };
+        window.PULSE_ANALYTICS_SUMMARY = nextSummary;
+        try { localStorage.setItem('pulse_analytics_summary_cache', JSON.stringify(nextSummary)); } catch (e) {}
+      }
+      if (data.state && typeof data.state === 'object') {
+        if (typeof applyLiveStateToDom === 'function') {
+          applyLiveStateToDom(data.state);
+        } else {
+          window.BAKED_LIVE_STATE = data.state;
+          renderMyNetDiaryEngine();
+        }
+      } else {
+        renderMyNetDiaryEngine();
+      }
+      renderFlexRefeedCard(window.PULSE_ANALYTICS_SUMMARY);
+      renderPostRefeedScaleShield(window.PULSE_ANALYTICS_SUMMARY);
+    }
+
+    async function claimFlexRefeed(mode, bonusKcal) {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof showToast === 'function') showToast('Reconnect to claim or schedule Flex budgets');
+        return;
+      }
+      if (_flexActionInFlight) return;
+      _flexActionInFlight = true;
+      try {
+        const bodyObj = {
+          mode: String(mode || '').trim(),
+          client_event_id: `flx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        };
+        if (bonusKcal !== undefined && bonusKcal !== null && Number.isFinite(Number(bonusKcal))) {
+          bodyObj.bonus_kcal = Math.round(Number(bonusKcal));
+        }
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/fuel/flex/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyObj),
+          timeoutMs: 10000
+        });
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok || data.success === false) {
+          if (typeof showToast === 'function') showToast(`⚠️ ${data.detail || 'Could not claim Flex boost'}`);
+          return;
+        }
+        _syncFlexResponseState(data);
+        if (typeof showToast === 'function') showToast(`✓ ${(data.claim && data.claim.label) || 'Flex boost applied'} — Protein anchor locked`);
+      } catch (e) {
+        if (typeof showToast === 'function') showToast('⚠️ Could not reach server for Flex claim');
+      } finally {
+        _flexActionInFlight = false;
+      }
+    }
+
+    async function undoFlexRefeed() {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof showToast === 'function') showToast('Reconnect to claim or schedule Flex budgets');
+        return;
+      }
+      if (_flexActionInFlight) return;
+      _flexActionInFlight = true;
+      try {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/fuel/flex/undo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+          timeoutMs: 10000
+        });
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok || data.success === false) {
+          if (typeof showToast === 'function') showToast(`⚠️ ${data.detail || 'Could not undo today’s Flex claim'}`);
+          return;
+        }
+        _syncFlexResponseState(data);
+        if (typeof showToast === 'function') showToast('✓ Today’s Flex boost reverted');
+      } catch (e) {
+        if (typeof showToast === 'function') showToast('⚠️ Could not reach server to undo Flex');
+      } finally {
+        _flexActionInFlight = false;
+      }
+    }
+
+    async function saveFlexBankPlan() {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof showToast === 'function') showToast('Reconnect to claim or schedule Flex budgets');
+        return;
+      }
+      if (_flexActionInFlight) return;
+      const dateInp = document.getElementById('flexBankDateInput');
+      const labelInp = document.getElementById('flexBankLabelInput');
+      const targetDate = (dateInp && dateInp.value) ? String(dateInp.value).trim() : _flexBankSelectedDate;
+      const label = (labelInp && labelInp.value) ? String(labelInp.value).trim().slice(0, 40) : '';
+      const targetKcal = Math.max(200, Math.min(800, Math.round(Number(_flexBankSelectedKcal) || 550)));
+      if (!targetDate) {
+        if (typeof showToast === 'function') showToast('⚠️ Pick a target date (1–7 days ahead)');
+        return;
+      }
+      _flexActionInFlight = true;
+      try {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/fuel/flex/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'upsert',
+            target_date: targetDate,
+            target_kcal: targetKcal,
+            label
+          }),
+          timeoutMs: 10000
+        });
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok || data.success === false) {
+          if (typeof showToast === 'function') showToast(`⚠️ ${data.detail || 'Could not save Banking Plan'}`);
+          return;
+        }
+        _syncFlexResponseState(data);
+        if (typeof showToast === 'function') showToast(`✓ Planned Bank active for ${targetDate} (+${targetKcal} kcal)`);
+      } catch (e) {
+        if (typeof showToast === 'function') showToast('⚠️ Could not save Banking Plan');
+      } finally {
+        _flexActionInFlight = false;
+      }
+    }
+
+    async function cancelFlexBankPlan() {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof showToast === 'function') showToast('Reconnect to claim or schedule Flex budgets');
+        return;
+      }
+      if (_flexActionInFlight) return;
+      _flexActionInFlight = true;
+      try {
+        const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+        const res = await fetcher('/api/fuel/flex/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'cancel' }),
+          timeoutMs: 10000
+        });
+        const data = res ? await res.json().catch(() => ({})) : {};
+        if (!res || !res.ok || data.success === false) {
+          if (typeof showToast === 'function') showToast(`⚠️ ${data.detail || 'Could not cancel Banking Plan'}`);
+          return;
+        }
+        _syncFlexResponseState(data);
+        if (typeof showToast === 'function') showToast('✓ Planned Banking cancelled');
+      } catch (e) {
+        if (typeof showToast === 'function') showToast('⚠️ Could not cancel Banking Plan');
+      } finally {
+        _flexActionInFlight = false;
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.renderFlexRefeedCard = renderFlexRefeedCard;
+      window.renderPostRefeedScaleShield = renderPostRefeedScaleShield;
+      window.claimFlexRefeed = claimFlexRefeed;
+      window.undoFlexRefeed = undoFlexRefeed;
+      window.saveFlexBankPlan = saveFlexBankPlan;
+      window.cancelFlexBankPlan = cancelFlexBankPlan;
+      window.selectFlexBankPresetDate = selectFlexBankPresetDate;
+      window.selectFlexBankPresetKcal = selectFlexBankPresetKcal;
     }
 
 
