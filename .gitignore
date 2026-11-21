@@ -45,8 +45,6 @@ zidq*
 /mnd_sync_service.py
 /benefits_engine.py
 
-# Node build tooling & generated mirrors
+# Node build tooling
 node_modules/
-dist/
-public/
-.vercel/
+.vercel/project.json
