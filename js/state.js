@@ -1,10 +1,88 @@
+    function getLocalDateStr(dateObj = new Date()) {
+      const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+      const safe = isNaN(d.getTime()) ? new Date() : d;
+      try {
+        return new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Europe/London',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(safe);
+      } catch (e) {
+        return `${safe.getFullYear()}-${String(safe.getMonth() + 1).padStart(2, '0')}-${String(safe.getDate()).padStart(2, '0')}`;
+      }
+    }
+    if (typeof window !== 'undefined') window.getLocalDateStr = getLocalDateStr;
+
+    let _appToastTimer = null;
+    function showToast(msg, options = {}) {
+      const opts = (options && typeof options === 'object') ? options : {};
+      const el = typeof document !== 'undefined' ? document.getElementById('appToast') : null;
+      if (!el) return;
+      if (_appToastTimer) {
+        clearTimeout(_appToastTimer);
+        _appToastTimer = null;
+      }
+      el.querySelectorAll('.toast-action-btn, .toast-msg').forEach((n) => n.remove());
+      el.textContent = '';
+
+      const msgSpan = document.createElement('span');
+      msgSpan.className = 'toast-msg';
+      msgSpan.textContent = String(msg || '');
+      el.appendChild(msgSpan);
+
+      if (opts.actionLabel && typeof opts.onAction === 'function') {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'toast-action-btn';
+        btn.textContent = String(opts.actionLabel);
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          try { opts.onAction(ev); } catch (e) {}
+          el.classList.remove('show');
+        });
+        el.appendChild(btn);
+      }
+
+      el.classList.add('show');
+      const dur = opts.durationMs !== undefined ? Number(opts.durationMs) : 2800;
+      if (dur !== 0) {
+        _appToastTimer = setTimeout(() => {
+          el.classList.remove('show');
+          _appToastTimer = null;
+        }, (Number.isFinite(dur) && dur > 0) ? dur : 2800);
+      }
+    }
+    if (typeof window !== 'undefined') window.showToast = showToast;
+
+    function _withPreservedDetails(fn) {
+      const openState = new Map();
+      if (typeof document !== 'undefined' && document.querySelectorAll) {
+        document.querySelectorAll('details[data-details-key]').forEach((d) => {
+          const k = d.getAttribute('data-details-key');
+          if (k) openState.set(k, Boolean(d.open));
+        });
+      }
+      try {
+        return typeof fn === 'function' ? fn() : undefined;
+      } finally {
+        if (typeof document !== 'undefined' && document.querySelectorAll && openState.size > 0) {
+          document.querySelectorAll('details[data-details-key]').forEach((d) => {
+            const k = d.getAttribute('data-details-key');
+            if (k && openState.has(k)) d.open = openState.get(k);
+          });
+        }
+      }
+    }
+    if (typeof window !== 'undefined') window._withPreservedDetails = _withPreservedDetails;
+
     window.BAKED_LIVE_STATE = {
       last_synced: null,
       date: null,
-      athlete: { name: "Athlete", age: 45, height_cm: 190.0, weight_kg: null, body_fat_pct: null, target_body_fat_pct: 15.0, lean_mass_kg: null, muscle_mass_kg: null, fat_to_lose_kg: null, target_weight_kg: null },
+      athlete: { name: "Athlete", age: null, height_cm: null, weight_kg: null, body_fat_pct: null, target_body_fat_pct: 15.0, lean_mass_kg: null, muscle_mass_kg: null, fat_to_lose_kg: null, target_weight_kg: null },
       garmin: { device: "Garmin Wearable", today_activities: [], recent_activities: [], steps: 0, active_calories: 0 },
       renpho: {},
-      nutrition: { calorie_target: 2092, deficit: 350, protein_target_g: 200, carbs_target_g: 251, fat_target_g: 80 },
+      nutrition: { base_calorie_target: 2092, calorie_target: 2092, deficit: 350, base_protein_target_g: 200, protein_target_g: 200, carbs_target_g: 200, fat_target_g: 55 },
       strength_prescriptions: {},
       mnd_meals: {
         breakfast: { name: "Breakfast", time: "", calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
@@ -17,21 +95,44 @@
       injuries: { lumbar: false, shoulders: false, knees: false, elbows: false, wrists: false, ankles: false, notes: "" }
     };
     try {
+      const _todayIso = getLocalDateStr();
+      const _cachedBurnRaw = localStorage.getItem('pulse_inapp_burn_today');
+      if (_cachedBurnRaw) {
+        try {
+          const _parsedBurn = JSON.parse(_cachedBurnRaw);
+          if (Array.isArray(_parsedBurn)) {
+            const _keptBurn = _parsedBurn.filter((it) => it && typeof it === 'object' && it.date === _todayIso);
+            if (_keptBurn.length > 0) localStorage.setItem('pulse_inapp_burn_today', JSON.stringify(_keptBurn));
+            else localStorage.removeItem('pulse_inapp_burn_today');
+          } else if (_parsedBurn && typeof _parsedBurn === 'object' && _parsedBurn.date !== _todayIso) {
+            localStorage.removeItem('pulse_inapp_burn_today');
+          }
+        } catch (be) {}
+      }
       const _cachedLiveRaw = localStorage.getItem('pulse_cached_live_state');
       if (_cachedLiveRaw) {
         const _cachedLiveParsed = JSON.parse(_cachedLiveRaw);
         if (_cachedLiveParsed && typeof _cachedLiveParsed === 'object' && !Array.isArray(_cachedLiveParsed)) {
-          const _now = new Date();
-          const _todayIso = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
           if (_cachedLiveParsed.date && _cachedLiveParsed.date !== _todayIso) {
             const _cachedGarmin = (_cachedLiveParsed.garmin && typeof _cachedLiveParsed.garmin === 'object') ? _cachedLiveParsed.garmin : {};
+            const _prevNut = (_cachedLiveParsed.nutrition && typeof _cachedLiveParsed.nutrition === 'object') ? _cachedLiveParsed.nutrition : window.BAKED_LIVE_STATE.nutrition;
+            const _baseCal = Number(_prevNut.base_calorie_target || _prevNut.calorie_target || 2092) || 2092;
+            const _baseProt = Number(_prevNut.base_protein_target_g || _prevNut.protein_target_g || 200) || 200;
             window.BAKED_LIVE_STATE = {
               ...window.BAKED_LIVE_STATE,
               last_synced: _cachedLiveParsed.last_synced || null,
               date: _todayIso,
               athlete: (_cachedLiveParsed.athlete && typeof _cachedLiveParsed.athlete === 'object') ? _cachedLiveParsed.athlete : window.BAKED_LIVE_STATE.athlete,
               renpho: (_cachedLiveParsed.renpho && typeof _cachedLiveParsed.renpho === 'object') ? _cachedLiveParsed.renpho : window.BAKED_LIVE_STATE.renpho,
-              nutrition: (_cachedLiveParsed.nutrition && typeof _cachedLiveParsed.nutrition === 'object') ? _cachedLiveParsed.nutrition : window.BAKED_LIVE_STATE.nutrition,
+              nutrition: {
+                ..._prevNut,
+                base_calorie_target: _baseCal,
+                calorie_target: _baseCal,
+                calories_remaining: _baseCal,
+                base_protein_target_g: _baseProt,
+                protein_target_g: _baseProt,
+                protein_remaining: _baseProt
+              },
               strength_prescriptions: (_cachedLiveParsed.strength_prescriptions && typeof _cachedLiveParsed.strength_prescriptions === 'object') ? _cachedLiveParsed.strength_prescriptions : window.BAKED_LIVE_STATE.strength_prescriptions,
               mnd_history: (_cachedLiveParsed.mnd_history && typeof _cachedLiveParsed.mnd_history === 'object') ? _cachedLiveParsed.mnd_history : window.BAKED_LIVE_STATE.mnd_history,
               injuries: (_cachedLiveParsed.injuries && typeof _cachedLiveParsed.injuries === 'object') ? _cachedLiveParsed.injuries : window.BAKED_LIVE_STATE.injuries,
@@ -40,11 +141,16 @@
                 ..._cachedGarmin,
                 steps: 0,
                 active_calories: 0,
+                inapp_burn_today: 0,
                 today_activities: [],
                 sleep_score: null,
                 sleep_duration: null,
                 body_battery: null,
-                training_readiness: null
+                training_readiness: null,
+                mnd_logged: null,
+                mnd_meals: null,
+                oauth_date: null,
+                oauth_failed_at: null
               },
               mnd_meals: window.BAKED_LIVE_STATE.mnd_meals,
               mnd_logged: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, sodium_mg: 0, water_l: 0.0 }
@@ -56,16 +162,312 @@
       }
     } catch (e) {}
     window.athleteProfile = {
-      weightKg: 98.0,
-      bodyFatPct: 17.0,
-      leanMassKg: 81.0,
+      weightKg: null,
+      bodyFatPct: null,
+      leanMassKg: null,
       targetBfPct: 15.0,
-      targetWeightKg: 95.3,
-      fatToLoseKg: 2.7,
-      restingHr: 48,
-      sleepScore: 80,
-      readiness: 78
+      targetWeightKg: null,
+      fatToLoseKg: null,
+      restingHr: null,
+      sleepScore: null,
+      readiness: null
     };
+    window.PULSE_ANALYTICS_SUMMARY = null;
+    window._pulsePrefTimers = {};
+
+    const PULSE_PREF_MAP = {
+      goal_key: { lsKey: 'pulse_current_goal', json: false },
+      custom_goal_macros: { lsKey: 'pulse_custom_goal_macros', json: true },
+      diet_strategy: { lsKey: 'pulse_diet_strategy', json: false },
+      carb_cycle_level: { lsKey: 'pulse_carb_cycle_level', json: false },
+      fasting_protocol: { lsKey: 'pulse_fasting_protocol', json: false },
+      fasting_timer_state: { lsKey: 'pulse_fasting_timer_state', json: true },
+      equipment_profile: { lsKey: 'pulse_equipment_profile', json: true },
+      conditioning_progression: { lsKey: 'pulse_conditioning_progression', json: true },
+      pro_dial_macros: { lsKey: 'pulse_pro_dial_macros', json: true }
+    };
+    const PULSE_PREF_TIMESTAMPS_KEY = 'pulse_pref_timestamps_v1';
+
+    function _readPrefTimestamps() {
+      try {
+        const raw = localStorage.getItem(PULSE_PREF_TIMESTAMPS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {}
+      return {};
+    }
+
+    function _writePrefTimestamps(map) {
+      try {
+        localStorage.setItem(PULSE_PREF_TIMESTAMPS_KEY, JSON.stringify(map || {}));
+      } catch (e) {}
+    }
+
+    function _readLocalPrefValue(key) {
+      const spec = PULSE_PREF_MAP[key];
+      if (!spec) return undefined;
+      try {
+        const raw = localStorage.getItem(spec.lsKey);
+        if (raw === null || raw === undefined) return undefined;
+        return spec.json ? JSON.parse(raw) : raw;
+      } catch (e) {
+        return undefined;
+      }
+    }
+
+    function _writeLocalPrefValue(key, val) {
+      const spec = PULSE_PREF_MAP[key];
+      if (!spec || val === undefined || val === null) return;
+      try {
+        localStorage.setItem(spec.lsKey, spec.json ? JSON.stringify(val) : String(val));
+      } catch (e) {}
+    }
+
+    function _getQueuedPrefKeys() {
+      const queued = new Set();
+      try {
+        const queue = _readOfflineQueue();
+        queue.forEach((it) => {
+          if (it && it.endpoint === '/api/preferences/state' && it.body && it.body.fields && typeof it.body.fields === 'object') {
+            Object.keys(it.body.fields).forEach((k) => queued.add(k));
+          }
+        });
+      } catch (e) {}
+      return queued;
+    }
+
+    function _applyHydratedPrefToUi(key, val, opts = { fromBoot: true }) {
+      const callOpts = (opts && typeof opts === 'object') ? { fromBoot: true, ...opts } : { fromBoot: true };
+      try {
+        if (key === 'custom_goal_macros' && typeof setCustomGoalMacros === 'function') {
+          setCustomGoalMacros(val, callOpts);
+        } else if (key === 'goal_key' && typeof selectGoal === 'function') {
+          selectGoal(val, callOpts);
+        } else if (key === 'pro_dial_macros') {
+          if (val && typeof val === 'object') {
+            const pSlider = typeof document !== 'undefined' ? document.getElementById('sliderProtein') : null;
+            const fSlider = typeof document !== 'undefined' ? document.getElementById('sliderFat') : null;
+            if (pSlider && val.protein !== undefined) pSlider.value = String(val.protein);
+            if (fSlider && val.fat_pct !== undefined) fSlider.value = String(val.fat_pct);
+            if (typeof updateProDial === 'function') updateProDial(callOpts);
+            if (typeof renderMyNetDiaryEngine === 'function') renderMyNetDiaryEngine();
+          }
+        } else if (key === 'diet_strategy' && typeof selectDietStrategy === 'function') {
+          selectDietStrategy(val, callOpts);
+        } else if (key === 'carb_cycle_level' && typeof setCarbCycleLevel === 'function') {
+          setCarbCycleLevel(val, callOpts);
+        } else if (key === 'fasting_protocol' && typeof setFastingProtocol === 'function') {
+          setFastingProtocol(val, callOpts);
+        } else if (key === 'fasting_timer_state' && typeof initFastingTimer === 'function') {
+          initFastingTimer();
+        } else if (key === 'equipment_profile' && typeof applyEquipmentProfile === 'function') {
+          applyEquipmentProfile(val, callOpts);
+        } else if (key === 'conditioning_progression' && typeof renderCurrentExercise === 'function') {
+          renderCurrentExercise();
+        }
+      } catch (e) {}
+    }
+
+    let _pendingPrefFields = {};
+    let _prefDebounceTimer = null;
+    let _prefFlushChain = Promise.resolve(null);
+
+    async function _flushPendingPrefPatch(immediateFields = null) {
+      const runFlush = async () => {
+        const patchFields = immediateFields ? { ..._pendingPrefFields, ...immediateFields } : { ..._pendingPrefFields };
+        _pendingPrefFields = {};
+        const keys = Object.keys(patchFields);
+        if (keys.length === 0) return null;
+
+        const payload = { fields: patchFields };
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          enqueueOfflineWrite('/api/preferences/state', payload, 'POST');
+          return null;
+        }
+
+        try {
+          const res = await pulseApiFetch('/api/preferences/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            timeoutMs: 4000,
+            promptAuthOn401: false
+          });
+          if (!res || !res.ok) {
+            if (_shouldQueueOfflineResponse(res)) {
+              enqueueOfflineWrite('/api/preferences/state', payload, 'POST');
+            }
+            return null;
+          }
+          const data = await res.json();
+          const serverFields = (data && data.preferences && data.preferences.fields) ? data.preferences.fields : {};
+          const resolutions = (data && data.field_resolutions) ? data.field_resolutions : {};
+          const tsMap = _readPrefTimestamps();
+          let anyUpdated = false;
+          Object.entries(resolutions).forEach(([k, status]) => {
+            if (status === 'server_newer' && serverFields[k] && serverFields[k].value !== undefined) {
+              _writeLocalPrefValue(k, serverFields[k].value);
+              tsMap[k] = Number(serverFields[k].updated_at_ms) || Date.now();
+              _applyHydratedPrefToUi(k, serverFields[k].value, { fromBoot: true });
+              anyUpdated = true;
+            }
+          });
+          if (anyUpdated) _writePrefTimestamps(tsMap);
+          return data;
+        } catch (e) {
+          enqueueOfflineWrite('/api/preferences/state', payload, 'POST');
+          return null;
+        }
+      };
+      _prefFlushChain = _prefFlushChain.then(runFlush, runFlush);
+      return _prefFlushChain;
+    }
+
+    function syncClientPreferencesToCloud(fieldKeyOrMap, immediate = false) {
+      const tsMap = _readPrefTimestamps();
+      const nowMs = Date.now();
+      const patch = {};
+
+      if (typeof fieldKeyOrMap === 'string') {
+        if (PULSE_PREF_MAP[fieldKeyOrMap]) {
+          const val = _readLocalPrefValue(fieldKeyOrMap);
+          if (val !== undefined) {
+            tsMap[fieldKeyOrMap] = nowMs;
+            patch[fieldKeyOrMap] = { value: val, updated_at_ms: nowMs };
+          }
+        }
+      } else if (fieldKeyOrMap && typeof fieldKeyOrMap === 'object') {
+        Object.entries(fieldKeyOrMap).forEach(([k, v]) => {
+          if (!PULSE_PREF_MAP[k] || v === undefined) return;
+          if (v && typeof v === 'object' && Object.prototype.hasOwnProperty.call(v, 'value') && Object.prototype.hasOwnProperty.call(v, 'updated_at_ms')) {
+            patch[k] = { value: v.value, updated_at_ms: Number(v.updated_at_ms) || nowMs };
+            tsMap[k] = patch[k].updated_at_ms;
+          } else {
+            _writeLocalPrefValue(k, v);
+            tsMap[k] = nowMs;
+            patch[k] = { value: v, updated_at_ms: nowMs };
+          }
+        });
+      }
+
+      if (Object.keys(patch).length === 0) return Promise.resolve(null);
+      _writePrefTimestamps(tsMap);
+
+      if (immediate) {
+        if (_prefDebounceTimer) {
+          clearTimeout(_prefDebounceTimer);
+          _prefDebounceTimer = null;
+        }
+        return _flushPendingPrefPatch(patch);
+      }
+      Object.assign(_pendingPrefFields, patch);
+      if (_prefDebounceTimer) clearTimeout(_prefDebounceTimer);
+      _prefDebounceTimer = setTimeout(() => {
+        _prefDebounceTimer = null;
+        _flushPendingPrefPatch();
+      }, 800);
+      return Promise.resolve(null);
+    }
+    window.syncClientPreferencesToCloud = syncClientPreferencesToCloud;
+
+    async function hydrateClientPreferencesFromCloud() {
+      const queuedKeys = _getQueuedPrefKeys();
+      try {
+        const res = await pulseApiFetch('/api/preferences/state', {
+          cache: 'no-store',
+          timeoutMs: 5000,
+          promptAuthOn401: false
+        });
+        if (!res || !res.ok) return null;
+        const data = await res.json();
+        const serverFields = (data && data.preferences && data.preferences.fields) ? data.preferences.fields : {};
+        const tsMap = _readPrefTimestamps();
+        const locallyNewer = {};
+        let tsChanged = false;
+
+        // Apply custom_goal_macros before goal_key and pro_dial_macros before diet_strategy
+        const orderedKeys = [
+          'custom_goal_macros',
+          'pro_dial_macros',
+          ...Object.keys(PULSE_PREF_MAP).filter((k) => k !== 'custom_goal_macros' && k !== 'pro_dial_macros')
+        ];
+
+        const nowMs = Date.now();
+        orderedKeys.forEach((k) => {
+          if (queuedKeys.has(k) || Object.prototype.hasOwnProperty.call(_pendingPrefFields, k)) return;
+          const srv = serverFields[k];
+          const srvTs = (srv && typeof srv === 'object') ? (Number(srv.updated_at_ms) || 0) : 0;
+          const localVal = _readLocalPrefValue(k);
+          const localTs = Number(tsMap[k]) || 0;
+
+          if (srv && srv.value !== undefined && (srvTs > localTs || localVal === undefined)) {
+            _writeLocalPrefValue(k, srv.value);
+            tsMap[k] = srvTs || nowMs;
+            tsChanged = true;
+            _applyHydratedPrefToUi(k, srv.value, { fromBoot: true });
+          } else if (localVal !== undefined && (localTs > srvTs || (srv === undefined && localTs === 0))) {
+            const effTs = localTs > 0 ? localTs : nowMs;
+            tsMap[k] = effTs;
+            tsChanged = true;
+            locallyNewer[k] = { value: localVal, updated_at_ms: effTs };
+          }
+        });
+
+        if (tsChanged) _writePrefTimestamps(tsMap);
+        if (Object.keys(locallyNewer).length > 0) {
+          syncClientPreferencesToCloud(locallyNewer, true);
+        }
+        return data;
+      } catch (e) {
+        return null;
+      }
+    }
+    window.hydrateClientPreferencesFromCloud = hydrateClientPreferencesFromCloud;
+
+    function _purgeClientTelemetryCaches() {
+      try {
+        localStorage.removeItem('pulse_cached_live_state');
+        localStorage.removeItem('pulse_analytics_summary_cache');
+        localStorage.removeItem('pulse_garmin_today_backup');
+      } catch (e) {}
+      try {
+        if (typeof navigator !== 'undefined' && navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'PULSE_PURGE_API_CACHE' });
+        }
+      } catch (e) {}
+      try {
+        if (typeof caches !== 'undefined' && caches.keys) {
+          caches.keys().then((keys) =>
+            Promise.all(
+              keys.map((k) =>
+                caches.open(k).then((cache) =>
+                  cache.keys().then((reqs) =>
+                    Promise.all(
+                      reqs
+                        .filter((r) => {
+                          try { return new URL(r.url).pathname.startsWith('/api/'); } catch (e) { return false; }
+                        })
+                        .map((r) => cache.delete(r))
+                    )
+                  )
+                )
+              )
+            )
+          ).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    async function logoutPulseSession() {
+      _purgeClientTelemetryCaches();
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      if (typeof showToast === 'function') showToast('Signed out — local cache cleared');
+    }
+    window.logoutPulseSession = logoutPulseSession;
 
     // Security utilities: HTML escaping (XSS mitigation) & legacy token cleanup
     function escapeHtml(value) {
@@ -97,6 +499,7 @@
               window._pulseAuthDismissedAt = 0;
               return true;
             }
+            _purgeClientTelemetryCaches();
           }
           const modal = document.getElementById('pulseAuthModal');
           const inputEl = document.getElementById('pulseAuthSecretInput');
@@ -118,6 +521,8 @@
             if (loginRes.ok) {
               window._pulseAuthDismissedAt = 0;
               if (typeof flushOfflineQueue === 'function') setTimeout(() => flushOfflineQueue(), 50);
+              if (typeof hydrateClientPreferencesFromCloud === 'function') setTimeout(() => hydrateClientPreferencesFromCloud(), 100);
+              if (typeof fetchAnalyticsSummary === 'function') setTimeout(() => fetchAnalyticsSummary(true), 150);
               return true;
             }
             return false;
@@ -151,6 +556,8 @@
               if (ok) {
                 window._pulseAuthDismissedAt = 0;
                 if (typeof flushOfflineQueue === 'function') setTimeout(() => flushOfflineQueue(), 50);
+                if (typeof hydrateClientPreferencesFromCloud === 'function') setTimeout(() => hydrateClientPreferencesFromCloud(), 100);
+                if (typeof fetchAnalyticsSummary === 'function') setTimeout(() => fetchAnalyticsSummary(true), 150);
               } else {
                 window._pulseAuthDismissedAt = Date.now();
               }
@@ -301,33 +708,78 @@
     window.pulseHaptic = pulseHaptic;
 
     // CANONICAL ACTIVE BURN ACCESSORS (Replaces broken #vitalBurn DOM scraping)
-    function getTodayInAppBurn(garminOverride) {
-      let inAppBurn = 0;
+    function _readTodayInAppBurnEntries(todayIsoOverride) {
+      const todayIso = todayIsoOverride || getLocalDateStr();
       try {
-        const now = new Date();
-        const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const rawBurn = localStorage.getItem('pulse_inapp_burn_today');
-        if (rawBurn) {
-          const parsed = JSON.parse(rawBurn);
-          if (parsed && parsed.date === todayIso) {
-            inAppBurn = Number(parsed.calories !== undefined ? parsed.calories : parsed.kcal) || 0;
+        if (!rawBurn) return [];
+        const parsed = JSON.parse(rawBurn);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((it) => it && typeof it === 'object' && it.date === todayIso && (Number(it.calories) || 0) > 0);
+        }
+        if (parsed && typeof parsed === 'object' && parsed.date === todayIso) {
+          const c = Number(parsed.calories !== undefined ? parsed.calories : parsed.kcal) || 0;
+          if (c > 0) {
+            return [{ id: parsed.id || `legacy_${todayIso}`, date: todayIso, calories: c, kind: parsed.kind || 'legacy' }];
           }
         }
-      } catch(e) {}
+      } catch (e) {}
+      return [];
+    }
 
-      // Prevent double-counting if Garmin OAuth already measured a Strength activity today
+    function _appendInAppBurnEntry(idOrObj, calories, kind = 'conditioning', dateStr = null) {
+      let id = idOrObj;
+      let rawCals = calories;
+      let rawKind = kind;
+      let rawDate = dateStr;
+      if (idOrObj && typeof idOrObj === 'object' && !Array.isArray(idOrObj)) {
+        id = idOrObj.id;
+        rawCals = idOrObj.calories;
+        rawKind = idOrObj.kind || 'conditioning';
+        rawDate = idOrObj.date || null;
+      }
+      const cals = Math.max(0, Math.round(Number(rawCals) || 0));
+      if (cals <= 0) return [];
+      const todayIso = rawDate || getLocalDateStr();
+      const entryId = String(id || _makeQueueItemId());
+      const entries = _readTodayInAppBurnEntries(todayIso);
+      const rec = { id: entryId, date: todayIso, calories: cals, kind: String(rawKind || 'conditioning') };
+      const idx = entries.findIndex((it) => String(it.id) === entryId);
+      if (idx >= 0) entries[idx] = rec;
+      else entries.push(rec);
+      try {
+        localStorage.setItem('pulse_inapp_burn_today', JSON.stringify(entries));
+      } catch (e) {}
+      return entries;
+    }
+
+    function getTodayInAppBurn(garminOverride) {
+      let inAppBurn = 0;
+      const todayIso = getLocalDateStr();
+      const entries = _readTodayInAppBurnEntries(todayIso);
+
       try {
         const g = garminOverride || (window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin) || null;
-        if (g && g.source === 'garmin_oauth') {
-          const todayActs = Array.isArray(g.today_activities) ? g.today_activities : [];
-          const hasGarminStrength = todayActs.some(a => {
+        const todayActs = (g && Array.isArray(g.today_activities)) ? g.today_activities : [];
+        const syncedIds = new Set();
+        todayActs.forEach((a) => {
+          if (!a || typeof a !== 'object') return;
+          if (a.id !== undefined && a.id !== null) syncedIds.add(String(a.id));
+          if (a.client_event_id !== undefined && a.client_event_id !== null) syncedIds.add(String(a.client_event_id));
+        });
+        const hasGarminStrength = Boolean(
+          g && g.source === 'garmin_oauth' && todayActs.some((a) => {
             const name = (a.name || '').toLowerCase();
             const key = (a.activity_type_key || '').toLowerCase();
             return name.includes('strength') || key.includes('strength');
-          });
-          if (hasGarminStrength) inAppBurn = 0;
-        }
-      } catch(e) {}
+          })
+        );
+        entries.forEach((entry) => {
+          if (syncedIds.has(String(entry.id))) return;
+          if (hasGarminStrength && (entry.kind === 'strength' || entry.kind === 'legacy')) return;
+          inAppBurn += Number(entry.calories) || 0;
+        });
+      } catch (e) {}
       return Math.max(0, Math.round(inAppBurn));
     }
 
@@ -340,6 +792,7 @@
       return Math.max(0, Math.round(baseGarminBurn + getTodayInAppBurn(g)));
     }
     if (typeof window !== 'undefined') {
+      window._appendInAppBurnEntry = _appendInAppBurnEntry;
       window.getTodayInAppBurn = getTodayInAppBurn;
       window.getTodayActiveBurn = getTodayActiveBurn;
     }
@@ -462,12 +915,6 @@
       } catch(e) {}
     }
 
-    function getLocalDateStr(dateObj = new Date()) {
-      const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-    window.getLocalDateStr = getLocalDateStr;
-
     // Global Frontend Error Boundary & Universal Modal UX (Escape + Backdrop Close)
     if (typeof window !== 'undefined' && !window._pulseGlobalGuardsInstalled) {
       window._pulseGlobalGuardsInstalled = true;
@@ -486,14 +933,26 @@
       document.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape') {
           document.querySelectorAll('.modal-overlay.open').forEach((m) => {
-            if (m.id !== 'pulseAuthModal') m.classList.remove('open');
+            if (m.id !== 'pulseAuthModal') {
+              m.classList.remove('open');
+              if (m.id === 'injuryModal') {
+                if (typeof window.stopVoiceDictation === 'function') window.stopVoiceDictation(true);
+                if (typeof window.cancelPendingDiagnostics === 'function') window.cancelPendingDiagnostics();
+              }
+            }
           });
         }
       });
       document.addEventListener('click', (ev) => {
         const target = ev.target;
         if (target && target.classList && target.classList.contains('modal-overlay') && target.classList.contains('open')) {
-          if (target.id !== 'pulseAuthModal') target.classList.remove('open');
+          if (target.id !== 'pulseAuthModal') {
+            target.classList.remove('open');
+            if (target.id === 'injuryModal') {
+              if (typeof window.stopVoiceDictation === 'function') window.stopVoiceDictation(true);
+              if (typeof window.cancelPendingDiagnostics === 'function') window.cancelPendingDiagnostics();
+            }
+          }
         }
       });
     }
@@ -507,6 +966,10 @@
           date: getLocalDateStr(),
           preset: currentPreset,
           goal: currentGoalKey,
+          currentArchetypeKey: typeof currentArchetypeKey !== 'undefined' ? currentArchetypeKey : null,
+          currentSessionFocus: typeof currentSessionFocus !== 'undefined' ? currentSessionFocus : null,
+          kbSubMode: typeof kbSubMode !== 'undefined' ? kbSubMode : null,
+          activeSessionMeta: typeof activeSessionMeta !== 'undefined' ? activeSessionMeta : null,
           currentExIdx: currentExIdx,
           plan: activeWorkoutPlan,
           sets: sessionLoggedSets,
@@ -524,9 +987,32 @@
         if (!raw) return false;
         const session = JSON.parse(raw);
         const todayStr = getLocalDateStr();
-        if (session.date === todayStr && session.sets && Object.keys(session.sets).length > 0) {
-          sessionLoggedSets = session.sets;
-          if (session.currentExIdx !== undefined) currentExIdx = session.currentExIdx;
+        if (session && session.date === todayStr && Array.isArray(session.plan) && session.plan.length > 0) {
+          const cleanPlan = session.plan.filter((item) => item && typeof item === 'object' && item.id);
+          if (cleanPlan.length === 0) {
+            try { localStorage.removeItem('pulse_active_session'); } catch (rmErr) {}
+            return false;
+          }
+          let restoredPlan = cleanPlan;
+          if (typeof applyJointSafeSwaps === 'function') {
+            const gear = (typeof gearConfig !== 'undefined') ? gearConfig : null;
+            restoredPlan = applyJointSafeSwaps(cleanPlan, cleanPlan.length, athleteInjuries, gear);
+          }
+          if (!Array.isArray(restoredPlan) || restoredPlan.length === 0) {
+            try { localStorage.removeItem('pulse_active_session'); } catch (rmErr) {}
+            return false;
+          }
+          activeWorkoutPlan = restoredPlan;
+          sessionLoggedSets = (session.sets && typeof session.sets === 'object' && !Array.isArray(session.sets)) ? session.sets : {};
+          if (session.preset) currentPreset = session.preset;
+          if (session.goal) currentGoalKey = session.goal;
+          if (session.currentArchetypeKey && typeof currentArchetypeKey !== 'undefined') currentArchetypeKey = session.currentArchetypeKey;
+          if (session.currentSessionFocus !== undefined && typeof currentSessionFocus !== 'undefined') currentSessionFocus = session.currentSessionFocus;
+          if (session.kbSubMode && typeof kbSubMode !== 'undefined') kbSubMode = session.kbSubMode;
+          if (session.activeSessionMeta !== undefined && typeof activeSessionMeta !== 'undefined') activeSessionMeta = session.activeSessionMeta;
+          const rawIdx = Number(session.currentExIdx);
+          currentExIdx = Number.isFinite(rawIdx) ? Math.max(0, Math.min(Math.round(rawIdx), activeWorkoutPlan.length - 1)) : 0;
+          if (typeof window !== 'undefined') window._userManualArchetype = true;
           showToast('🔄 Restored in-progress workout session');
           return true;
         }
@@ -534,7 +1020,44 @@
       return false;
     }
 
+    function readTodayExerciseSwaps() {
+      const todayIso = getLocalDateStr();
+      try {
+        const raw = localStorage.getItem('pulse_today_exercise_swaps');
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          if (parsed.date && parsed.date === todayIso && parsed.swaps && typeof parsed.swaps === 'object') {
+            return parsed.swaps;
+          }
+          if (!parsed.date) {
+            localStorage.removeItem('pulse_today_exercise_swaps');
+            return {};
+          }
+          if (parsed.date !== todayIso) {
+            localStorage.removeItem('pulse_today_exercise_swaps');
+            return {};
+          }
+        }
+      } catch (e) {}
+      return {};
+    }
+
+    function writeTodayExerciseSwaps(swapsMap) {
+      try {
+        localStorage.setItem('pulse_today_exercise_swaps', JSON.stringify({
+          date: getLocalDateStr(),
+          swaps: (swapsMap && typeof swapsMap === 'object') ? swapsMap : {}
+        }));
+      } catch (e) {}
+    }
+    if (typeof window !== 'undefined') {
+      window.readTodayExerciseSwaps = readTodayExerciseSwaps;
+      window.writeTodayExerciseSwaps = writeTodayExerciseSwaps;
+    }
+
     function resetActiveSession() {
+      if (typeof stopInlineTimer === 'function') stopInlineTimer();
       sessionLoggedSets = {};
       localStorage.removeItem('pulse_active_session');
       renderCurrentExercise();
@@ -546,8 +1069,18 @@
     // ==================== BI-DIRECTIONAL BACKEND SYNC & UNIVERSAL OFFLINE WRITE QUEUE ====================
     const PULSE_OFFLINE_QUEUE_KEY = 'pulse_offline_write_queue';
     const PULSE_LEGACY_SET_QUEUE_KEY = 'pulse_offline_set_queue';
+    const PULSE_QUEUE_TTL_MS = 72 * 3600 * 1000;
+    const PULSE_QUEUE_MAX_ATTEMPTS = 10;
     let _offlineFlushInFlight = false;
     let _offlineFlushPending = false;
+
+    function _shouldQueueOfflineResponse(res) {
+      if (!res) return true;
+      if (res.ok) return false;
+      const st = Number(res.status) || 0;
+      return st === 0 || st >= 500 || st === 401 || st === 408 || st === 429;
+    }
+    if (typeof window !== 'undefined') window._shouldQueueOfflineResponse = _shouldQueueOfflineResponse;
 
     function _makeQueueItemId() {
       return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -569,8 +1102,9 @@
           if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
             legacyParsed.forEach((item) => {
               if (!item || typeof item !== 'object') return;
+              const qId = item.id || _makeQueueItemId();
               queue.push({
-                id: item.id || _makeQueueItemId(),
+                id: qId,
                 endpoint: '/api/sync_set',
                 method: 'POST',
                 body: {
@@ -578,9 +1112,12 @@
                   target_weight: item.target_weight,
                   target_reps: item.target_reps,
                   logged_weight: item.logged_weight,
-                  logged_reps: item.logged_reps
+                  logged_reps: item.logged_reps,
+                  client_event_id: qId,
+                  client_date: getLocalDateStr()
                 },
-                queued_at: item.queued_at || Date.now()
+                queued_at: item.queued_at || Date.now(),
+                attempts: Number(item.attempts) || 0
               });
             });
             localStorage.setItem(PULSE_OFFLINE_QUEUE_KEY, JSON.stringify(queue.slice(-200)));
@@ -594,12 +1131,23 @@
     function enqueueOfflineWrite(endpoint, body, method = 'POST') {
       try {
         const queue = _readOfflineQueue();
+        const itemId = _makeQueueItemId();
+        const preparedBody = (body && typeof body === 'object' && !Array.isArray(body)) ? { ...body } : {};
+        if (endpoint !== '/api/preferences/state') {
+          if (!preparedBody.client_event_id && !preparedBody.id) {
+            preparedBody.client_event_id = itemId;
+          }
+          if (!preparedBody.date && !preparedBody.client_date) {
+            preparedBody.client_date = getLocalDateStr();
+          }
+        }
         queue.push({
-          id: _makeQueueItemId(),
+          id: itemId,
           endpoint: endpoint,
           method: method || 'POST',
-          body: body,
-          queued_at: Date.now()
+          body: preparedBody,
+          queued_at: Date.now(),
+          attempts: 0
         });
         const capped = queue.slice(-200);
         localStorage.setItem(PULSE_OFFLINE_QUEUE_KEY, JSON.stringify(capped));
@@ -618,7 +1166,8 @@
         target_weight: payload.target_weight,
         target_reps: payload.target_reps,
         logged_weight: payload.logged_weight,
-        logged_reps: payload.logged_reps
+        logged_reps: payload.logged_reps,
+        client_event_id: payload.client_event_id
       }, 'POST');
     }
     window.queueOfflineSet = queueOfflineSet;
@@ -635,7 +1184,9 @@
 
       _offlineFlushInFlight = true;
       const doneIds = new Set();
+      const updatedAttempts = new Map();
       let anyAttempted = false;
+      const nowMs = Date.now();
 
       try {
         for (const item of batch) {
@@ -643,7 +1194,15 @@
             if (item && item.id) doneIds.add(item.id);
             continue;
           }
+          const queuedAt = Number(item.queued_at) || 0;
+          const prevAttempts = Number(item.attempts) || 0;
+          if ((queuedAt > 0 && (nowMs - queuedAt) > PULSE_QUEUE_TTL_MS) || prevAttempts >= PULSE_QUEUE_MAX_ATTEMPTS) {
+            if (item.id) doneIds.add(item.id);
+            continue;
+          }
           anyAttempted = true;
+          const nextAttempts = prevAttempts + 1;
+          updatedAttempts.set(item.id, nextAttempts);
           try {
             const res = await pulseApiFetch(item.endpoint, {
               method: item.method || 'POST',
@@ -652,16 +1211,26 @@
               timeoutMs: 4000,
               promptAuthOn401: false
             });
-            if (res && (res.ok || res.status === 400 || res.status === 422)) {
+            if (!res) break;
+            if (res.ok) {
+              if (item.id) doneIds.add(item.id);
+            } else if (res.status === 401 || res.status === 0) {
+              break;
+            } else if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+              if (item.id) doneIds.add(item.id);
+            } else if (nextAttempts >= PULSE_QUEUE_MAX_ATTEMPTS) {
               if (item.id) doneIds.add(item.id);
             }
           } catch (err) {
-            // Retain failed transient item in queue
+            // Network dropout / abort: stop loop immediately instead of exhausting remaining queue items
+            break;
           }
         }
 
         const latestQueue = _readOfflineQueue();
-        const remaining = latestQueue.filter((it) => it && !doneIds.has(it.id));
+        const remaining = latestQueue
+          .filter((it) => it && !doneIds.has(it.id))
+          .map((it) => (updatedAttempts.has(it.id) ? { ...it, attempts: updatedAttempts.get(it.id) } : it));
 
         if (remaining.length > 0) {
           localStorage.setItem(PULSE_OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
@@ -695,18 +1264,21 @@
     }
 
     async function syncSetToBackend(exId, targetW, targetR, loggedW, loggedR) {
+      const eventId = _makeQueueItemId();
       const payload = {
         exercise_id: exId,
         target_weight: targetW,
         target_reps: targetR,
         logged_weight: loggedW,
-        logged_reps: loggedR
+        logged_reps: loggedR,
+        client_event_id: eventId,
+        client_date: getLocalDateStr()
       };
 
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         enqueueOfflineWrite('/api/sync_set', payload, 'POST');
         if (typeof showToast === 'function') showToast('Offline — set queued for cloud sync');
-        return;
+        return { ok: false, queued: true };
       }
 
       try {
@@ -723,36 +1295,46 @@
             const syncBadge = document.getElementById('saveStatusIndicator');
             if (syncBadge) syncBadge.innerText = '✓ Synced to Engine';
             console.log('✓ Synced set to StrengthAutoregulationEngine:', data.result);
+            return { ok: true, result: data.result };
           }
-        } else {
-          enqueueOfflineWrite('/api/sync_set', payload, 'POST');
-          if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+          return { ok: true, result: data && data.result ? data.result : null };
         }
+        if (!_shouldQueueOfflineResponse(res)) {
+          if (typeof showToast === 'function') showToast('Invalid set values — check weight & reps');
+          return { ok: false, queued: false, status: res ? res.status : 0 };
+        }
+        enqueueOfflineWrite('/api/sync_set', payload, 'POST');
+        if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+        return { ok: false, queued: true };
       } catch (e) {
         enqueueOfflineWrite('/api/sync_set', payload, 'POST');
         if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
         console.log('Local backend offline/remote. Set queued in pulse_offline_write_queue LocalStorage.');
+        return { ok: false, queued: true };
       }
     }
 
     async function syncSessionToBackend(summary) {
+      const payload = (summary && typeof summary === 'object') ? { ...summary } : {};
+      if (!payload.client_event_id && !payload.id) payload.client_event_id = _makeQueueItemId();
+      if (!payload.date && !payload.client_date) payload.client_date = getLocalDateStr();
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        enqueueOfflineWrite('/api/sync_session', summary, 'POST');
+        enqueueOfflineWrite('/api/sync_session', payload, 'POST');
         return;
       }
       try {
         const res = await pulseApiFetch('/api/sync_session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(summary),
+          body: JSON.stringify(payload),
           timeoutMs: 4000,
           promptAuthOn401: true
         });
-        if (!res || !res.ok) {
-          enqueueOfflineWrite('/api/sync_session', summary, 'POST');
+        if (!res || (!res.ok && _shouldQueueOfflineResponse(res))) {
+          enqueueOfflineWrite('/api/sync_session', payload, 'POST');
         }
       } catch (e) {
-        enqueueOfflineWrite('/api/sync_session', summary, 'POST');
+        enqueueOfflineWrite('/api/sync_session', payload, 'POST');
       }
     }
 
@@ -832,7 +1414,11 @@
       elbows: false,
       wrists: false,
       ankles: false,
-      notes: ''
+      notes: '',
+      chronic_profile: {},
+      active_constraints: {},
+      last_diagnostic_summary: null,
+      updated_at_ms: 0
     };
 
     let currentGoalKey = 'recomp';

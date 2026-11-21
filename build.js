@@ -1,6 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
+let esbuild = null;
+try {
+  esbuild = require('esbuild');
+} catch (e) {
+  esbuild = null;
+}
+
 const rootDir = __dirname;
 const outputDir = path.join(rootDir, '.vercel', 'output');
 const staticDir = path.join(outputDir, 'static');
@@ -8,10 +15,15 @@ const distDir = path.join(rootDir, 'dist');
 const publicDir = path.join(rootDir, 'public');
 
 const backendStaticDir = path.join(rootDir, 'backend', 'static');
+const targetDirs = [staticDir, distDir, publicDir, backendStaticDir];
 
-for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
+for (const d of targetDirs) {
   fs.mkdirSync(d, { recursive: true });
   fs.rmSync(path.join(d, 'live_state.json'), { force: true });
+  fs.rmSync(path.join(d, 'README.md'), { force: true });
+  for (const sub of ['css', 'js']) {
+    fs.rmSync(path.join(d, sub), { recursive: true, force: true });
+  }
 }
 
 const assets = [
@@ -20,11 +32,25 @@ const assets = [
   'sw.js',
   'icon.svg',
   'icon-192.png',
-  'icon-512.png',
-  'README.md'
+  'icon-512.png'
 ];
 
 const assetDirs = ['css', 'js'];
+
+function copyOrMinifyFile(srcPath, destPath) {
+  const ext = path.extname(srcPath).toLowerCase();
+  if (esbuild && (ext === '.js' || ext === '.css')) {
+    const raw = fs.readFileSync(srcPath, 'utf8');
+    const result = esbuild.transformSync(raw, {
+      loader: ext === '.js' ? 'js' : 'css',
+      minify: true,
+      target: ext === '.js' ? 'es2020' : undefined
+    });
+    fs.writeFileSync(destPath, result.code, 'utf8');
+    return;
+  }
+  fs.copyFileSync(srcPath, destPath);
+}
 
 function copyDirRecursive(srcDir, destDir) {
   if (!fs.existsSync(srcDir)) return;
@@ -35,7 +61,7 @@ function copyDirRecursive(srcDir, destDir) {
     if (entry.isDirectory()) {
       copyDirRecursive(srcPath, destPath);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      copyOrMinifyFile(srcPath, destPath);
     }
   }
 }
@@ -43,7 +69,7 @@ function copyDirRecursive(srcDir, destDir) {
 for (const file of assets) {
   const src = path.join(rootDir, file);
   if (fs.existsSync(src)) {
-    for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
+    for (const d of targetDirs) {
       fs.copyFileSync(src, path.join(d, file));
     }
   }
@@ -52,7 +78,7 @@ for (const file of assets) {
 for (const dir of assetDirs) {
   const srcDir = path.join(rootDir, dir);
   if (fs.existsSync(srcDir)) {
-    for (const d of [staticDir, distDir, publicDir, backendStaticDir]) {
+    for (const d of targetDirs) {
       copyDirRecursive(srcDir, path.join(d, dir));
     }
   }
@@ -61,6 +87,13 @@ for (const dir of assetDirs) {
 const config = {
   version: 3,
   routes: [
+    {
+      src: '^/(?:index\\.html)?$',
+      headers: {
+        'Permissions-Policy': 'microphone=(self)'
+      },
+      continue: true
+    },
     {
       handle: 'filesystem'
     },

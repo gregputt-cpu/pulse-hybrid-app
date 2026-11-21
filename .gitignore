@@ -44,3 +44,9 @@ zidq*
 /garmin_sync_service.py
 /mnd_sync_service.py
 /benefits_engine.py
+
+# Node build tooling & generated mirrors
+node_modules/
+dist/
+public/
+.vercel/

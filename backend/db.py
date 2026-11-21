@@ -1,33 +1,57 @@
 import os
 import json
+import math
 import sqlite3
 import logging
 import threading
+from contextlib import closing, contextmanager
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-from time_utils import uk_now, uk_timestamp_str
+from typing import List, Dict, Any, Optional, Tuple
+from zoneinfo import ZoneInfo
+
+import state_store
+import time_utils
+from time_utils import UK_TZ, uk_now, uk_timestamp_str
 
 logger = logging.getLogger("pulse-db")
+SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
-DATA_DIR = os.environ.get(
-    "DATA_DIR",
-    "/data" if os.path.exists("/data") else os.path.dirname(os.path.abspath(__file__))
-)
+DATA_DIR = state_store.get_data_dir()
 DB_PATH = os.path.join(DATA_DIR, "pulse.db")
 _INIT_LOCK = threading.Lock()
 _INITIALIZED_DB_PATH: Optional[str] = None
+
+_parse_uk_ts = time_utils.parse_uk_ts
+
 
 def get_connection() -> sqlite3.Connection:
     os.makedirs(DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
     try:
-        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA busy_timeout=10000")
     except sqlite3.Error:
         pass
     return conn
+
+
+@contextmanager
+def _managed_conn(conn: Optional[sqlite3.Connection] = None):
+    if conn is not None:
+        yield conn
+        return
+    with closing(get_connection()) as active_conn:
+        try:
+            yield active_conn
+            active_conn.commit()
+        except Exception:
+            try:
+                active_conn.rollback()
+            except sqlite3.Error:
+                pass
+            raise
+
 
 def init_db(force: bool = False) -> None:
     global _INITIALIZED_DB_PATH
@@ -39,8 +63,18 @@ def init_db(force: bool = False) -> None:
         _init_db_unlocked()
         _INITIALIZED_DB_PATH = DB_PATH
 
+
+def _ensure_initialized() -> None:
+    if _INITIALIZED_DB_PATH != DB_PATH:
+        init_db()
+
+
 def _init_db_unlocked() -> None:
-    with get_connection() as conn:
+    with _managed_conn() as conn:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.Error:
+            pass
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS renpho_history (
@@ -61,9 +95,13 @@ def _init_db_unlocked() -> None:
                 exercise_id TEXT,
                 weight REAL,
                 reps INTEGER,
-                e1rm REAL
+                e1rm REAL,
+                is_warmup INTEGER DEFAULT 0
             )
         """)
+        cols = {row["name"] for row in cursor.execute("PRAGMA table_info(strength_logs)").fetchall()}
+        if "is_warmup" not in cols:
+            cursor.execute("ALTER TABLE strength_logs ADD COLUMN is_warmup INTEGER DEFAULT 0")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS hydration_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,120 +142,163 @@ def _init_db_unlocked() -> None:
                 payload_json TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS daily_biometrics (
+                date_str TEXT PRIMARY KEY,
+                sleep_score INTEGER,
+                resting_hr INTEGER,
+                body_battery INTEGER,
+                training_readiness INTEGER,
+                source TEXT,
+                updated_at TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS daily_nutrition_logs (
+                date_str TEXT PRIMARY KEY,
+                calories INTEGER,
+                protein_g INTEGER,
+                carbs_g INTEGER,
+                fat_g INTEGER,
+                source TEXT,
+                updated_at TEXT
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS diagnostic_assessments (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                date_str TEXT NOT NULL,
+                input_mode TEXT,
+                raw_text TEXT NOT NULL,
+                anatomical_region TEXT,
+                severity TEXT,
+                triage_level TEXT,
+                engine TEXT,
+                affected_joints_json TEXT,
+                report_json TEXT NOT NULL,
+                applied_to_adaptor INTEGER DEFAULT 0,
+                applied_at TEXT
+            )
+        """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_renpho_timestamp ON renpho_history(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_strength_timestamp ON strength_logs(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_strength_exercise ON strength_logs(exercise_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_hydration_date ON hydration_logs(date_str)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_timestamp ON workout_sessions(timestamp)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_activities_timestamp ON manual_activities(timestamp)")
-        conn.commit()
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_biometrics_date ON daily_biometrics(date_str)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_nutrition_date ON daily_nutrition_logs(date_str)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_diagnostics_created ON diagnostic_assessments(created_at DESC)")
 
-        # Auto-seed from renpho_seed.json if table is empty, or migrate legacy muscle % rows once
-        cursor.execute("SELECT COUNT(*) FROM renpho_history")
-        count = cursor.fetchone()[0]
         cursor.execute("SELECT value FROM kv_store WHERE key = 'migrated_renpho_muscle_kg_v1'")
-        migrated_row = cursor.fetchone()
-        seed_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renpho_seed.json")
+        if cursor.fetchone() is None:
+            cursor.execute("""
+                UPDATE renpho_history
+                SET muscle_mass_kg = ROUND(lean_mass_kg - 4.0, 2)
+                WHERE muscle_mass_kg IS NOT NULL AND muscle_mass_kg < 65
+                  AND lean_mass_kg IS NOT NULL AND lean_mass_kg > 70
+            """)
+            cursor.execute(
+                "INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('migrated_renpho_muscle_kg_v1', '1', ?)",
+                (uk_now().isoformat(),),
+            )
 
-        if count == 0 or migrated_row is None:
-            if os.path.exists(seed_path):
-                try:
-                    with open(seed_path, "r", encoding="utf-8") as f:
-                        seed_items = json.load(f)
-                    if isinstance(seed_items, list) and seed_items:
-                        _insert_renpho_records(conn, seed_items)
-                except Exception as e:
-                    logger.warning(f"[DB] Failed loading renpho_seed.json: {e}")
-            if migrated_row is None:
-                # Fix any remaining non-seed rows where skeletal muscle % (<65) was stored as muscle_mass_kg
-                cursor.execute("""
-                    UPDATE renpho_history
-                    SET muscle_mass_kg = ROUND(lean_mass_kg - 4.0, 2)
-                    WHERE muscle_mass_kg IS NOT NULL AND muscle_mass_kg < 65
-                      AND lean_mass_kg IS NOT NULL AND lean_mass_kg > 70
-                """)
-                cursor.execute(
-                    "INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('migrated_renpho_muscle_kg_v1', '1', ?)",
-                    (uk_now().isoformat(),),
-                )
-                conn.commit()
+
+def _opt_finite_round(val: Any, digits: int = 2) -> Optional[float]:
+    if val is None or isinstance(val, bool):
+        return None
+    try:
+        f = float(val)
+    except (ValueError, TypeError):
+        return None
+    if not math.isfinite(f):
+        return None
+    return round(f, digits)
+
+
+def _parse_renpho_created_at_uk(raw_val: Any) -> Optional[datetime]:
+    if not raw_val or isinstance(raw_val, bool):
+        return None
+    s = str(raw_val).strip()
+    if not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=SHANGHAI_TZ)
+        return dt.astimezone(UK_TZ)
+    except Exception:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s[:26], fmt).replace(tzinfo=SHANGHAI_TZ).astimezone(UK_TZ)
+        except Exception:
+            continue
+    return None
+
+
+def _get_item_attr(item: Any, *names: str) -> Any:
+    is_dict = isinstance(item, dict)
+    for name in names:
+        val = item.get(name) if is_dict else getattr(item, name, None)
+        if val is not None:
+            return val
+    return None
+
 
 def _insert_renpho_records(conn: sqlite3.Connection, items: List[Any]) -> int:
     records = []
-    for item in items:
-        if isinstance(item, dict):
-            raw_id = item.get("id") or item.get("raw_id")
-            ts = item.get("timeStamp") or item.get("timestamp") or 0
+    for idx, item in enumerate(items):
+        if item is None:
+            continue
+        raw_id = _get_item_attr(item, "id", "raw_id")
+        raw_ts = _get_item_attr(item, "timeStamp", "timestamp")
+        local_created = _get_item_attr(item, "localCreatedAt")
+        explicit_date = _get_item_attr(item, "date_str")
+
+        ts_sec: Optional[int] = None
+        date_str: Optional[str] = None
+
+        if raw_ts is not None and not isinstance(raw_ts, bool):
             try:
-                ts = int(ts)
-            except (ValueError, TypeError):
-                ts = 0
-            m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{uk_now().timestamp()}")
+                ts_f = float(raw_ts)
+                if math.isfinite(ts_f) and ts_f > 0:
+                    if abs(ts_f) > 1e11:
+                        ts_f /= 1000.0
+                    ts_sec = int(ts_f)
+                    date_str = uk_timestamp_str(ts_sec)
+            except (ValueError, TypeError, OverflowError):
+                ts_sec = None
 
-            if ts:
-                try:
-                    date_str = uk_timestamp_str(ts)
-                except Exception:
-                    date_str = str(item.get("date_str") or item.get("localCreatedAt") or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
-            else:
-                date_str = str(item.get("date_str") or item.get("localCreatedAt") or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
+        if ts_sec is None or date_str is None:
+            dt_uk = _parse_uk_ts(explicit_date) if explicit_date else _parse_renpho_created_at_uk(local_created)
+            if dt_uk is None and local_created and explicit_date:
+                dt_uk = _parse_renpho_created_at_uk(local_created)
+            if dt_uk is None:
+                logger.warning(f"[DB] Skipping Renpho record {idx}: unparseable timestamp/localCreatedAt")
+                continue
+            ts_sec = int(dt_uk.timestamp())
+            date_str = dt_uk.strftime("%Y-%m-%d %H:%M:%S")
 
-            w = item.get("weight_kg") if item.get("weight_kg") is not None else item.get("weight")
-            bf = item.get("body_fat_pct") if item.get("body_fat_pct") is not None else item.get("bodyfat")
-            lm = item.get("lean_mass_kg") if item.get("lean_mass_kg") is not None else item.get("fatFreeWeight")
-            bone_val = item.get("bone_mass_kg") if item.get("bone_mass_kg") is not None else item.get("bone")
-            mm = item.get("muscle_mass_kg") if item.get("muscle_mass_kg") is not None else item.get("sinew")
-            if mm is None and lm is not None and bone_val is not None:
-                try:
-                    mm = max(0.0, float(lm) - float(bone_val))
-                except (ValueError, TypeError):
-                    mm = None
-            water = item.get("water_pct") if item.get("water_pct") is not None else item.get("water")
+        w = _opt_finite_round(_get_item_attr(item, "weight_kg", "weight"), 2)
+        if w is None or w <= 0:
+            logger.warning(f"[DB] Skipping Renpho record {idx}: missing or non-positive weight")
+            continue
 
-            weight_kg = round(float(w), 2) if w is not None else None
-            body_fat_pct = round(float(bf), 2) if bf is not None else None
-            lean_mass_kg = round(float(lm), 2) if lm is not None else None
-            muscle_mass_kg = round(float(mm), 2) if mm is not None else None
-            water_pct = round(float(water), 2) if water is not None else None
+        bf = _opt_finite_round(_get_item_attr(item, "body_fat_pct", "bodyfat"), 2)
+        lm = _opt_finite_round(_get_item_attr(item, "lean_mass_kg", "fat_free_weight", "fatFreeWeight"), 2)
+        bone_val = _opt_finite_round(_get_item_attr(item, "bone_mass_kg", "bone"), 2)
+        mm = _opt_finite_round(_get_item_attr(item, "muscle_mass_kg", "sinew"), 2)
+        if mm is None and lm is not None and bone_val is not None:
+            mm = round(max(0.0, lm - bone_val), 2)
+        water = _opt_finite_round(_get_item_attr(item, "water_pct", "water"), 2)
 
-            records.append((m_id, ts, date_str, weight_kg, body_fat_pct, lean_mass_kg, muscle_mass_kg, water_pct))
-        else:
-            raw_id = getattr(item, "id", None)
-            ts = getattr(item, "timestamp", None) or getattr(item, "timeStamp", 0) or 0
-            try:
-                ts = int(ts)
-            except (ValueError, TypeError):
-                ts = 0
-            m_id = str(raw_id) if raw_id is not None and str(raw_id).strip() else (f"renpho_{ts}" if ts else f"renpho_{uk_now().timestamp()}")
+        m_id = str(raw_id).strip() if raw_id is not None and str(raw_id).strip() else f"renpho_{ts_sec}_{idx}"
+        records.append((m_id, ts_sec, date_str, w, bf, lm, mm, water))
 
-            if ts:
-                try:
-                    date_str = uk_timestamp_str(ts)
-                except Exception:
-                    date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
-            else:
-                date_str = str(getattr(item, "date_str", None) or getattr(item, "localCreatedAt", None) or uk_now().strftime("%Y-%m-%d %H:%M:%S"))
-
-            w = getattr(item, "weight_kg", None) if getattr(item, "weight_kg", None) is not None else getattr(item, "weight", None)
-            bf = getattr(item, "body_fat_pct", None) if getattr(item, "body_fat_pct", None) is not None else getattr(item, "bodyfat", None)
-            lm = getattr(item, "lean_mass_kg", None) if getattr(item, "lean_mass_kg", None) is not None else getattr(item, "fat_free_weight", None)
-            if lm is None:
-                lm = getattr(item, "fatFreeWeight", None)
-            bone_val = getattr(item, "bone_mass_kg", None) if getattr(item, "bone_mass_kg", None) is not None else getattr(item, "bone", None)
-            mm = getattr(item, "muscle_mass_kg", None) if getattr(item, "muscle_mass_kg", None) is not None else getattr(item, "sinew", None)
-            if mm is None and lm is not None and bone_val is not None:
-                try:
-                    mm = max(0.0, float(lm) - float(bone_val))
-                except (ValueError, TypeError):
-                    mm = None
-            water = getattr(item, "water_pct", None) if getattr(item, "water_pct", None) is not None else getattr(item, "water", None)
-
-            weight_kg = round(float(w), 2) if w is not None else None
-            body_fat_pct = round(float(bf), 2) if bf is not None else None
-            lean_mass_kg = round(float(lm), 2) if lm is not None else None
-            muscle_mass_kg = round(float(mm), 2) if mm is not None else None
-            water_pct = round(float(water), 2) if water is not None else None
-
-            records.append((m_id, ts, date_str, weight_kg, body_fat_pct, lean_mass_kg, muscle_mass_kg, water_pct))
+    if not records:
+        return 0
 
     query = """
         INSERT INTO renpho_history (id, timestamp, date_str, weight_kg, body_fat_pct, lean_mass_kg, muscle_mass_kg, water_pct)
@@ -236,32 +317,29 @@ def _insert_renpho_records(conn: sqlite3.Connection, items: List[Any]) -> int:
     logger.info(f"[DB] Upserted {len(records)} Renpho measurements to SQLite.")
     return len(records)
 
-# Ensure tables are created upon module import
-import json
-init_db()
 
 def upsert_renpho_measurements(items: List[Any]) -> int:
     if not items:
         return 0
-    init_db()
-    with get_connection() as conn:
+    _ensure_initialized()
+    with _managed_conn() as conn:
         return _insert_renpho_records(conn, items)
 
-def get_renpho_history(days: int = 90) -> List[Dict[str, Any]]:
-    init_db()
+
+def get_renpho_history(days: int = 90, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
     cutoff_ts = None
     query_ts = 0
     if days and days > 0:
         cutoff_ts = int((uk_now() - timedelta(days=days)).timestamp())
-        # Fetch an extra 7 days prior to cutoff so rolling averages on edge days are accurate
         query_ts = cutoff_ts - (7 * 86400)
 
-    with get_connection() as conn:
-        cursor = conn.cursor()
+    with _managed_conn(conn) as active_conn:
+        cursor = active_conn.cursor()
         if cutoff_ts is not None:
             cursor.execute(
                 "SELECT id, timestamp, date_str, weight_kg, body_fat_pct, lean_mass_kg, muscle_mass_kg, water_pct FROM renpho_history WHERE timestamp >= ? ORDER BY timestamp ASC",
-                (query_ts,)
+                (query_ts,),
             )
         else:
             cursor.execute(
@@ -269,30 +347,46 @@ def get_renpho_history(days: int = 90) -> List[Dict[str, Any]]:
             )
         rows = cursor.fetchall()
 
-    all_records = []
+    # Group and average non-null numeric fields per UK calendar date first
+    by_day: Dict[str, List[sqlite3.Row]] = {}
     for r in rows:
-        all_records.append({
-            "id": r["id"],
-            "timestamp": r["timestamp"],
-            "date_str": r["date_str"],
-            "weight_kg": r["weight_kg"],
-            "body_fat_pct": r["body_fat_pct"],
-            "lean_mass_kg": r["lean_mass_kg"],
-            "muscle_mass_kg": r["muscle_mass_kg"],
-            "water_pct": r["water_pct"]
-        })
+        dt_uk = _parse_uk_ts(r["timestamp"]) or _parse_uk_ts(r["date_str"])
+        if dt_uk is None:
+            continue
+        day_key = dt_uk.date().isoformat()
+        by_day.setdefault(day_key, []).append(r)
 
-    # Compute 7d rolling average for weight and body fat
+    daily_records: List[Tuple[Any, Dict[str, Any]]] = []
+    for day_key in sorted(by_day.keys()):
+        day_rows = by_day[day_key]
+        day_date = datetime.strptime(day_key, "%Y-%m-%d").date()
+
+        def _mean_col(col: str) -> Optional[float]:
+            vals = [float(x[col]) for x in day_rows if x[col] is not None and not isinstance(x[col], bool) and math.isfinite(float(x[col])) and float(x[col]) > 0]
+            return round(sum(vals) / len(vals), 2) if vals else None
+
+        latest_row = max(day_rows, key=lambda x: int(x["timestamp"] or 0))
+        daily_records.append((
+            day_date,
+            {
+                "id": latest_row["id"],
+                "timestamp": int(latest_row["timestamp"] or 0),
+                "date_str": str(latest_row["date_str"] or day_key),
+                "weight_kg": _mean_col("weight_kg"),
+                "body_fat_pct": _mean_col("body_fat_pct"),
+                "lean_mass_kg": _mean_col("lean_mass_kg"),
+                "muscle_mass_kg": _mean_col("muscle_mass_kg"),
+                "water_pct": _mean_col("water_pct"),
+            },
+        ))
+
+    # Compute 7-day calendar rolling average [d - 6d, d]
     computed_records = []
-    seven_days_sec = 7 * 86400
-
-    for i, r in enumerate(all_records):
-        cur_ts = r["timestamp"] or 0
+    for i, (cur_date, r) in enumerate(daily_records):
         window = [
-            x for x in all_records[:i+1]
-            if (cur_ts - (x["timestamp"] or 0)) <= seven_days_sec
+            rec for d_prev, rec in daily_records[: i + 1]
+            if 0 <= (cur_date - d_prev).days <= 6
         ]
-
         w_vals = [x["weight_kg"] for x in window if x.get("weight_kg") is not None and x["weight_kg"] > 0]
         bf_vals = [x["body_fat_pct"] for x in window if x.get("body_fat_pct") is not None and x["body_fat_pct"] > 0]
 
@@ -300,114 +394,141 @@ def get_renpho_history(days: int = 90) -> List[Dict[str, Any]]:
         r_copy["7d_avg_weight"] = round(sum(w_vals) / len(w_vals), 2) if w_vals else r["weight_kg"]
         r_copy["7d_avg_bf"] = round(sum(bf_vals) / len(bf_vals), 2) if bf_vals else r["body_fat_pct"]
 
-        if cutoff_ts is None or (cur_ts >= cutoff_ts):
+        cur_ts = r["timestamp"] or 0
+        if cutoff_ts is None or cur_ts >= cutoff_ts:
             computed_records.append(r_copy)
 
     return computed_records
 
-def log_strength_set(exercise_id: str, weight: float, reps: int, e1rm: float, timestamp: Optional[str] = None) -> int:
-    init_db()
+
+def log_strength_set(
+    exercise_id: str,
+    weight: float,
+    reps: int,
+    e1rm: float,
+    timestamp: Optional[str] = None,
+    is_warmup: bool = False,
+) -> int:
+    _ensure_initialized()
     if not timestamp:
         timestamp = uk_now().isoformat()
     query = """
-        INSERT INTO strength_logs (timestamp, exercise_id, weight, reps, e1rm)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO strength_logs (timestamp, exercise_id, weight, reps, e1rm, is_warmup)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
-    with get_connection() as conn:
+    with _managed_conn() as conn:
         cursor = conn.cursor()
-        cursor.execute(query, (timestamp, exercise_id, float(weight), int(reps), float(e1rm)))
-        conn.commit()
+        cursor.execute(query, (timestamp, exercise_id, float(weight), int(reps), float(e1rm), 1 if is_warmup else 0))
         return cursor.lastrowid
 
-def get_strength_history(days: int = 30) -> Dict[str, List[Dict[str, Any]]]:
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        if days and days > 0:
-            cutoff = (uk_now() - timedelta(days=days)).isoformat()
-            cursor.execute(
-                "SELECT id, timestamp, exercise_id, weight, reps, e1rm FROM strength_logs WHERE timestamp >= ? ORDER BY timestamp ASC",
-                (cutoff,)
-            )
-        else:
-            cursor.execute(
-                "SELECT id, timestamp, exercise_id, weight, reps, e1rm FROM strength_logs ORDER BY timestamp ASC"
-            )
-        rows = cursor.fetchall()
+
+def get_strength_history(days: int = 30, conn: Optional[sqlite3.Connection] = None) -> Dict[str, List[Dict[str, Any]]]:
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            "SELECT id, timestamp, exercise_id, weight, reps, e1rm FROM strength_logs WHERE COALESCE(is_warmup, 0) = 0"
+        ).fetchall()
+
+    cutoff_dt = (uk_now() - timedelta(days=days)) if (days and days > 0) else None
+    parsed_rows = []
+    for r in rows:
+        dt = _parse_uk_ts(r["timestamp"])
+        if cutoff_dt is not None:
+            if dt is None or dt < cutoff_dt:
+                continue
+        sort_key = (dt or datetime.min.replace(tzinfo=UK_TZ), int(r["id"] or 0))
+        parsed_rows.append((sort_key, r))
+    parsed_rows.sort(key=lambda item: item[0])
 
     grouped: Dict[str, List[Dict[str, Any]]] = {}
-    for r in rows:
+    for _, r in parsed_rows:
         ex_id = r["exercise_id"]
         grouped.setdefault(ex_id, []).append({
             "id": r["id"],
             "timestamp": r["timestamp"],
             "weight": r["weight"],
             "reps": r["reps"],
-            "e1rm": r["e1rm"]
+            "e1rm": r["e1rm"],
         })
     return grouped
 
+
 def add_hydration(date_str: str, amount_ml: int, timestamp: Optional[str] = None) -> int:
-    init_db()
+    _ensure_initialized()
     if not timestamp:
         timestamp = uk_now().isoformat()
-    with get_connection() as conn:
+    with _managed_conn() as conn:
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO hydration_logs (date_str, amount_ml, timestamp) VALUES (?, ?, ?)",
-            (date_str, int(amount_ml), timestamp)
+            (date_str, int(amount_ml), timestamp),
         )
-        cursor.execute(
+        row = cursor.execute(
             "SELECT SUM(amount_ml) as total FROM hydration_logs WHERE date_str = ?",
-            (date_str,)
-        )
-        row = cursor.fetchone()
-        conn.commit()
+            (date_str,),
+        ).fetchone()
         return int(row["total"] or 0) if row and row["total"] is not None else int(amount_ml)
 
+
 def get_hydration_total(date_str: str) -> int:
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
+    _ensure_initialized()
+    with _managed_conn() as conn:
+        row = conn.execute(
             "SELECT SUM(amount_ml) as total FROM hydration_logs WHERE date_str = ?",
-            (date_str,)
-        )
-        row = cursor.fetchone()
+            (date_str,),
+        ).fetchone()
         return int(row["total"] or 0) if row and row["total"] is not None else 0
 
+
 def set_kv(key: str, value: str) -> None:
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
+    _ensure_initialized()
+    with _managed_conn() as conn:
+        conn.execute(
             """
             INSERT INTO kv_store (key, value, updated_at)
             VALUES (?, ?, ?)
             ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
             """,
-            (key, value, uk_now().isoformat())
+            (key, value, uk_now().isoformat()),
         )
-        conn.commit()
 
-def get_kv(key: str) -> Optional[str]:
-    init_db()
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT value FROM kv_store WHERE key = ?", (key,))
-        row = cursor.fetchone()
+
+def get_kv(key: str, conn: Optional[sqlite3.Connection] = None) -> Optional[str]:
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute("SELECT value FROM kv_store WHERE key = ?", (key,)).fetchone()
         return str(row["value"]) if row and row["value"] is not None else None
 
+
+def claim_idempotency_key(scope: str, event_id: str) -> bool:
+    """Atomically claim a scoped event ID in kv_store. Returns True if newly claimed, False on duplicate."""
+    cleaned_id = str(event_id or "").strip()
+    if not cleaned_id:
+        return True
+    cleaned_scope = str(scope or "default").strip()
+    idem_key = f"idem:{cleaned_scope}:{cleaned_id}"
+    _ensure_initialized()
+    with _managed_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR IGNORE INTO kv_store (key, value, updated_at) VALUES (?, '1', ?)",
+            (idem_key, uk_now().isoformat()),
+        )
+        return cursor.rowcount == 1
+
+
 def log_workout_session(summary: Dict[str, Any]) -> int:
-    init_db()
+    if not isinstance(summary, dict):
+        raise ValueError("Workout session summary must be a dict")
+    _ensure_initialized()
     timestamp = str(summary.get("date") or uk_now().isoformat())
     preset = str(summary.get("preset") or "")
     goal = str(summary.get("goal") or "")
     exercises_completed = int(summary.get("exercisesCompleted") or 0)
     sets_logged = int(summary.get("setsLogged") or 0)
     calories = int(summary.get("calories") or 0)
-    payload_json = json.dumps(summary)
-    with get_connection() as conn:
+    payload_json = json.dumps(summary, allow_nan=False)
+    with _managed_conn() as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -416,11 +537,13 @@ def log_workout_session(summary: Dict[str, Any]) -> int:
             """,
             (timestamp, preset, goal, exercises_completed, sets_logged, calories, payload_json),
         )
-        conn.commit()
         return cursor.lastrowid
 
+
 def log_manual_activity(activity: Dict[str, Any]) -> None:
-    init_db()
+    if not isinstance(activity, dict):
+        raise ValueError("Activity payload must be a dict")
+    _ensure_initialized()
     act_id = str(activity.get("id") or int(uk_now().timestamp() * 1000))
     timestamp = str(activity.get("date") or uk_now().isoformat())
     name = str(activity.get("name") or "Activity")
@@ -429,10 +552,9 @@ def log_manual_activity(activity: Dict[str, Any]) -> None:
     calories = int(round(float(activity.get("calories") or 0)))
     avg_hr = int(round(float(activity.get("avg_hr") or 0)))
     max_hr = int(round(float(activity.get("max_hr") or 0)))
-    payload_json = json.dumps(activity)
-    with get_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
+    payload_json = json.dumps(activity, allow_nan=False)
+    with _managed_conn() as conn:
+        conn.execute(
             """
             INSERT INTO manual_activities (id, timestamp, name, sub_title, duration_min, calories, avg_hr, max_hr, payload_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -448,4 +570,403 @@ def log_manual_activity(activity: Dict[str, Any]) -> None:
             """,
             (act_id, timestamp, name, sub_title, duration_min, calories, avg_hr, max_hr, payload_json),
         )
-        conn.commit()
+
+
+def upsert_daily_biometrics(
+    date_str: str,
+    sleep_score: Optional[int] = None,
+    resting_hr: Optional[int] = None,
+    body_battery: Optional[int] = None,
+    training_readiness: Optional[int] = None,
+    source: str = "garmin",
+    overwrite_nulls: bool = False,
+) -> None:
+    if not date_str:
+        return
+    _ensure_initialized()
+    if overwrite_nulls:
+        sql = """
+            INSERT INTO daily_biometrics (date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date_str) DO UPDATE SET
+                sleep_score = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.sleep_score ELSE COALESCE(excluded.sleep_score, daily_biometrics.sleep_score) END,
+                resting_hr = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.resting_hr ELSE COALESCE(excluded.resting_hr, daily_biometrics.resting_hr) END,
+                body_battery = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.body_battery ELSE COALESCE(excluded.body_battery, daily_biometrics.body_battery) END,
+                training_readiness = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.training_readiness ELSE COALESCE(excluded.training_readiness, daily_biometrics.training_readiness) END,
+                source = excluded.source,
+                updated_at = excluded.updated_at
+        """
+    else:
+        sql = """
+            INSERT INTO daily_biometrics (date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date_str) DO UPDATE SET
+                sleep_score = COALESCE(excluded.sleep_score, daily_biometrics.sleep_score),
+                resting_hr = COALESCE(excluded.resting_hr, daily_biometrics.resting_hr),
+                body_battery = COALESCE(excluded.body_battery, daily_biometrics.body_battery),
+                training_readiness = COALESCE(excluded.training_readiness, daily_biometrics.training_readiness),
+                source = excluded.source,
+                updated_at = excluded.updated_at
+        """
+    with _managed_conn() as conn:
+        conn.execute(
+            sql,
+            (
+                str(date_str)[:10],
+                int(round(sleep_score)) if sleep_score is not None else None,
+                int(round(resting_hr)) if resting_hr is not None else None,
+                int(round(body_battery)) if body_battery is not None else None,
+                int(round(training_readiness)) if training_readiness is not None else None,
+                str(source or "garmin"),
+                uk_now().isoformat(),
+            ),
+        )
+
+
+def upsert_daily_nutrition(
+    date_str: str,
+    calories: int,
+    protein_g: int,
+    carbs_g: int,
+    fat_g: int,
+    source: str = "mnd",
+    preserve_manual: bool = False,
+) -> None:
+    if not date_str:
+        return
+    _ensure_initialized()
+    where_clause = " WHERE COALESCE(daily_nutrition_logs.source, '') != 'manual'" if preserve_manual else ""
+    sql = f"""
+        INSERT INTO daily_nutrition_logs (date_str, calories, protein_g, carbs_g, fat_g, source, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(date_str) DO UPDATE SET
+            calories = excluded.calories,
+            protein_g = excluded.protein_g,
+            carbs_g = excluded.carbs_g,
+            fat_g = excluded.fat_g,
+            source = excluded.source,
+            updated_at = excluded.updated_at{where_clause}
+    """
+    with _managed_conn() as conn:
+        conn.execute(
+            sql,
+            (
+                str(date_str)[:10],
+                max(0, int(round(float(calories or 0)))),
+                max(0, int(round(float(protein_g or 0)))),
+                max(0, int(round(float(carbs_g or 0)))),
+                max(0, int(round(float(fat_g or 0)))),
+                str(source or "mnd"),
+                uk_now().isoformat(),
+            ),
+        )
+
+
+def get_daily_biometrics(days: int = 28, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    cutoff_date = (uk_now().date() - timedelta(days=max(1, int(days)))).isoformat()
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at
+            FROM daily_biometrics
+            WHERE date_str >= ?
+            ORDER BY date_str ASC
+            """,
+            (cutoff_date,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_daily_nutrition(days: int = 21, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    cutoff_date = (uk_now().date() - timedelta(days=max(1, int(days)))).isoformat()
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT date_str, calories, protein_g, carbs_g, fat_g, source, updated_at
+            FROM daily_nutrition_logs
+            WHERE date_str >= ?
+            ORDER BY date_str ASC
+            """,
+            (cutoff_date,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_workout_sessions(days: int = 35, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    cutoff_dt = uk_now() - timedelta(days=max(1, int(days)))
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT id, timestamp, preset, goal, exercises_completed, sets_logged, calories, payload_json
+            FROM workout_sessions
+            ORDER BY id DESC
+            """
+        ).fetchall()
+    results: List[Dict[str, Any]] = []
+    for r in rows:
+        dt = _parse_uk_ts(r["timestamp"])
+        if dt is None or dt < cutoff_dt:
+            continue
+        payload: Dict[str, Any] = {}
+        if r["payload_json"]:
+            try:
+                parsed = json.loads(r["payload_json"])
+                if not isinstance(parsed, dict):
+                    logger.warning(f"[DB] Skipping workout_session id={r['id']}: payload_json is not a dict")
+                    continue
+                payload = parsed
+            except Exception as exc:
+                logger.warning(f"[DB] Skipping corrupt workout_session id={r['id']}: {exc}")
+                continue
+        results.append({
+            "id": r["id"],
+            "date_str": dt.date().isoformat(),
+            "timestamp": dt.isoformat(),
+            "preset": r["preset"],
+            "goal": r["goal"],
+            "exercises_completed": int(r["exercises_completed"] or 0),
+            "sets_logged": int(r["sets_logged"] or 0),
+            "calories": int(r["calories"] or 0),
+            "payload": payload,
+        })
+    return results
+
+
+def get_manual_activities(days: int = 35, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    cutoff_dt = uk_now() - timedelta(days=max(1, int(days)))
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT id, timestamp, name, sub_title, duration_min, calories, avg_hr, max_hr, payload_json
+            FROM manual_activities
+            ORDER BY timestamp DESC
+            """
+        ).fetchall()
+    results: List[Dict[str, Any]] = []
+    for r in rows:
+        dt = _parse_uk_ts(r["timestamp"])
+        if dt is None or dt < cutoff_dt:
+            continue
+        payload: Dict[str, Any] = {}
+        if r["payload_json"]:
+            try:
+                parsed = json.loads(r["payload_json"])
+                if not isinstance(parsed, dict):
+                    logger.warning(f"[DB] Skipping manual_activity id={r['id']}: payload_json is not a dict")
+                    continue
+                payload = parsed
+            except Exception as exc:
+                logger.warning(f"[DB] Skipping corrupt manual_activity id={r['id']}: {exc}")
+                continue
+        results.append({
+            "id": r["id"],
+            "date_str": dt.date().isoformat(),
+            "timestamp": dt.isoformat(),
+            "name": r["name"],
+            "sub_title": r["sub_title"],
+            "duration_min": float(r["duration_min"] or 0.0),
+            "calories": int(r["calories"] or 0),
+            "avg_hr": int(r["avg_hr"] or 0),
+            "max_hr": int(r["max_hr"] or 0),
+            "payload": payload,
+        })
+    return results
+
+
+def get_strength_pr_map(conn: Optional[sqlite3.Connection] = None) -> Dict[str, Dict[str, Any]]:
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT s.exercise_id, s.e1rm, s.weight, s.reps, s.timestamp
+            FROM strength_logs s
+            JOIN (
+                SELECT exercise_id, MAX(e1rm) AS max_e1rm
+                FROM strength_logs
+                WHERE weight > 0 AND reps > 0 AND e1rm IS NOT NULL AND e1rm > 0 AND COALESCE(is_warmup, 0) = 0
+                GROUP BY exercise_id
+            ) m ON s.exercise_id = m.exercise_id AND s.e1rm = m.max_e1rm
+            WHERE s.weight > 0 AND s.reps > 0 AND COALESCE(s.is_warmup, 0) = 0
+            ORDER BY s.id DESC
+            """
+        ).fetchall()
+    pr_map: Dict[str, Dict[str, Any]] = {}
+    for r in rows:
+        ex_id = r["exercise_id"]
+        if ex_id and ex_id not in pr_map:
+            pr_map[ex_id] = {
+                "e1rm": round(float(r["e1rm"]), 1),
+                "weight": float(r["weight"]),
+                "reps": int(r["reps"]),
+                "timestamp": r["timestamp"],
+            }
+    return pr_map
+
+
+def get_exercise_best_e1rm(exercise_id: str, conn: Optional[sqlite3.Connection] = None) -> Optional[float]:
+    if not exercise_id:
+        return None
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute(
+            """
+            SELECT MAX(e1rm) AS max_e1rm
+            FROM strength_logs
+            WHERE exercise_id = ? AND weight > 0 AND reps > 0 AND e1rm IS NOT NULL AND e1rm > 0 AND COALESCE(is_warmup, 0) = 0
+            """,
+            (exercise_id,),
+        ).fetchone()
+    if row and row["max_e1rm"] is not None:
+        return round(float(row["max_e1rm"]), 1)
+    return None
+
+
+def save_diagnostic_assessment(record: Dict[str, Any], conn: Optional[sqlite3.Connection] = None) -> None:
+    """Persist a diagnostic assessment and prune oldest records beyond 50 rows."""
+    if not isinstance(record, dict) or not record.get("id"):
+        raise ValueError("Diagnostic assessment record requires an id")
+    _ensure_initialized()
+    report_obj = record.get("report") if isinstance(record.get("report"), dict) else {}
+    affected = record.get("affected_joints")
+    if affected is None and isinstance(report_obj.get("adaptor_handoff"), dict):
+        affected = report_obj["adaptor_handoff"].get("affected_joints")
+    with _managed_conn(conn) as active_conn:
+        active_conn.execute(
+            """
+            INSERT INTO diagnostic_assessments (
+                id, created_at, date_str, input_mode, raw_text,
+                anatomical_region, severity, triage_level, engine,
+                affected_joints_json, report_json, applied_to_adaptor, applied_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                report_json = excluded.report_json,
+                anatomical_region = excluded.anatomical_region,
+                severity = excluded.severity,
+                triage_level = excluded.triage_level,
+                engine = excluded.engine,
+                affected_joints_json = excluded.affected_joints_json
+            """,
+            (
+                str(record["id"]),
+                str(record.get("created_at") or uk_now().isoformat()),
+                str(record.get("date_str") or uk_now().date().isoformat())[:10],
+                str(record.get("input_mode") or "text")[:32],
+                str(record.get("raw_text") or "")[:2000],
+                str(record.get("anatomical_region") or report_obj.get("anatomical_region") or "other_unspecified"),
+                str(record.get("severity") or report_obj.get("severity") or "moderate"),
+                str(record.get("triage_level") or report_obj.get("triage_level") or "amber_deload"),
+                str(record.get("engine") or report_obj.get("engine") or "deterministic_fallback"),
+                json.dumps(list(affected or []), allow_nan=False),
+                json.dumps(report_obj, allow_nan=False),
+                int(bool(record.get("applied_to_adaptor", False))),
+                record.get("applied_at"),
+            ),
+        )
+        active_conn.execute(
+            """
+            DELETE FROM diagnostic_assessments
+            WHERE id NOT IN (
+                SELECT id FROM diagnostic_assessments
+                ORDER BY created_at DESC, rowid DESC
+                LIMIT 50
+            )
+            """
+        )
+
+
+def _row_to_diagnostic_entry(row: sqlite3.Row) -> Optional[Dict[str, Any]]:
+    report = None
+    if row["report_json"]:
+        try:
+            parsed = json.loads(row["report_json"])
+            if isinstance(parsed, dict):
+                report = parsed
+        except Exception as exc:
+            logger.warning(f"[DB] Skipping corrupt diagnostic_assessment id={row['id']}: {exc}")
+            return None
+    affected_joints: List[str] = []
+    if row["affected_joints_json"]:
+        try:
+            parsed_j = json.loads(row["affected_joints_json"])
+            if isinstance(parsed_j, list):
+                affected_joints = [str(x) for x in parsed_j]
+        except Exception:
+            affected_joints = []
+    return {
+        "id": row["id"],
+        "created_at": row["created_at"],
+        "date_str": row["date_str"],
+        "input_mode": row["input_mode"],
+        "raw_text": row["raw_text"],
+        "anatomical_region": row["anatomical_region"],
+        "severity": row["severity"],
+        "triage_level": row["triage_level"],
+        "engine": row["engine"],
+        "affected_joints": affected_joints,
+        "report": report,
+        "applied_to_adaptor": bool(row["applied_to_adaptor"]),
+        "applied_at": row["applied_at"],
+    }
+
+
+def get_recent_diagnostic_assessments(limit: int = 10, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    capped = max(1, min(50, int(limit or 10)))
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT id, created_at, date_str, input_mode, raw_text,
+                   anatomical_region, severity, triage_level, engine,
+                   affected_joints_json, report_json, applied_to_adaptor, applied_at
+            FROM diagnostic_assessments
+            ORDER BY created_at DESC, rowid DESC
+            LIMIT ?
+            """,
+            (capped,),
+        ).fetchall()
+    out: List[Dict[str, Any]] = []
+    for r in rows:
+        item = _row_to_diagnostic_entry(r)
+        if item is not None:
+            out.append(item)
+    return out
+
+
+def get_diagnostic_assessment(assessment_id: str, conn: Optional[sqlite3.Connection] = None) -> Optional[Dict[str, Any]]:
+    if not assessment_id:
+        return None
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute(
+            """
+            SELECT id, created_at, date_str, input_mode, raw_text,
+                   anatomical_region, severity, triage_level, engine,
+                   affected_joints_json, report_json, applied_to_adaptor, applied_at
+            FROM diagnostic_assessments
+            WHERE id = ?
+            """,
+            (str(assessment_id),),
+        ).fetchone()
+    return _row_to_diagnostic_entry(row) if row else None
+
+
+def mark_diagnostic_applied(assessment_id: str, conn: Optional[sqlite3.Connection] = None) -> bool:
+    if not assessment_id:
+        return False
+    _ensure_initialized()
+    now_iso = uk_now().isoformat()
+    with _managed_conn(conn) as active_conn:
+        cur = active_conn.execute(
+            """
+            UPDATE diagnostic_assessments
+            SET applied_to_adaptor = 1,
+                applied_at = COALESCE(applied_at, ?)
+            WHERE id = ?
+            """,
+            (now_iso, str(assessment_id)),
+        )
+        return cur.rowcount > 0

@@ -1,1279 +1,475 @@
-// ==================== GARMIN CHARTS & TELEMETRY ENGINE ====================
+function getGarminHrZoneBreakdown(i){if(i&&i.hr_zones&&typeof i.hr_zones=="object"){const r=i.hr_zones,d=Number(r.z1??r[1]??r.zone1??0),y=Number(r.z2??r[2]??r.zone2??0),u=Number(r.z3??r[3]??r.zone3??0),M=Number(r.z4??r[4]??r.zone4??0),R=Number(r.z5??r[5]??r.zone5??0),S=d+y+u+M+R;if(S>0){const D=Math.round(d/S*100),H=Math.round(y/S*100),I=Math.round(u/S*100),L=Math.round(M/S*100),W=Math.round(R/S*100),E=f=>`${Math.floor(f/60)}m ${f%60<10?"0":""}${f%60}s`,j=[{num:5,name:"Maximum / Anaerobic",range:"> 171 bpm",pct:W,durStr:E(R),color:"#ef4444"},{num:4,name:"Threshold / Hard",range:"152\u2013171 bpm",pct:L,durStr:E(M),color:"#f59e0b"},{num:3,name:"Aerobic / Moderate",range:"133\u2013152 bpm",pct:I,durStr:E(u),color:"#10b981"},{num:2,name:"Easy / Fat Oxidation Base",range:"114\u2013133 bpm",pct:H,durStr:E(y),color:"#00F0FF"},{num:1,name:"Warm Up / Active Recovery",range:"< 114 bpm",pct:D,durStr:E(d),color:"#8b9db5"}];let c=j[0];return j.forEach(f=>{f.pct>c.pct&&(c=f)}),{zones:j,dominantZoneText:"Dominant: Z"+c.num+" ("+c.durStr+" \u2022 "+c.pct+"%)"}}}const s=i.durationMin||i.duration_min||30,a=i.avgHr||i.avg_hr||115,l=i.maxHr||i.max_hr||150,p=`${i.name||""} ${i.subTitle||i.sub_title||""}`.toLowerCase(),e=p.includes("walk")||p.includes("stroll"),N=p.includes("strength")||p.includes("barbell")||p.includes("lift")||p.includes("gym"),x=p.includes("jump")||p.includes("plyo")||p.includes("tuck");let z,g,v,T,t;e||a<95?(z=88,g=12,v=0,T=0,t=0):N?(z=22,g=48,v=22,T=8,t=0):x||l>=162?(z=10,g=25,v=35,T=22,t=8):a<=122?(z=12,g=58,v=24,T=6,t=0):a<=135?(z=8,g=28,v=46,T=15,t=3):(z=5,g=20,v=35,T=28,t=12);const n=r=>{const d=Math.round(r*60),y=Math.floor(d/60),u=d%60;return`${y}m ${u<10?"0":""}${u}s`},k=[{num:5,name:"Maximum / Anaerobic",range:"> 171 bpm",pct:t,durStr:n(s*t/100),color:"#ef4444"},{num:4,name:"Threshold / Hard",range:"152\u2013171 bpm",pct:T,durStr:n(s*T/100),color:"#f59e0b"},{num:3,name:"Aerobic / Moderate",range:"133\u2013152 bpm",pct:v,durStr:n(s*v/100),color:"#10b981"},{num:2,name:"Easy / Fat Oxidation Base",range:"114\u2013133 bpm",pct:g,durStr:n(s*g/100),color:"#00F0FF"},{num:1,name:"Warm Up / Active Recovery",range:"< 114 bpm",pct:z,durStr:n(s*z/100),color:"#8b9db5"}];let A=k[0];return k.forEach(r=>{r.pct>A.pct&&(A=r)}),{zones:k,dominantZoneText:`Dominant: Z${A.num} (${A.durStr} \u2022 ${A.pct}%)`}}function generateHrSvgChart(i){const s=i.durationMin||i.duration_min||30;let a=i.avgHr||i.avg_hr||119,l=i.maxHr||i.max_hr||151,p=[];if(Array.isArray(i.hr_samples)&&i.hr_samples.length>=5){const c=[];for(const f of i.hr_samples){let $=null;typeof f=="number"?$=f:f&&typeof f=="object"&&($=f.hr??f.bpm??f.value),$=Number($),!isNaN($)&&$>30&&$<250&&c.push($)}if(c.length>=5){if(c.length>80){const $=(c.length-1)/79;for(let F=0;F<80;F++){const w=Math.min(c.length-1,Math.round(F*$));p.push(c[w])}}else p=c.slice();const f=c.reduce(($,F)=>$+F,0);a=Math.round(f/c.length),l=Math.max(...c)}}const N=p.length===0;if(N){const f=Math.max(50,a-40);for(let $=0;$<24;$++){const F=$/23;let w;if(F<.15)w=f+15+(a-f-15)*(F/.15);else if(F<.85){const h=(F-.15)/.7,C=Math.sin(h*Math.PI*6),b=Math.exp(-Math.pow((h-.72)*8,2));w=a+C*9+b*(l-a)}else{const h=(F-.85)/.15;w=a-5-(a-f-10)*h}p.push(Math.min(l,Math.max(f,w)))}p[17]=l}const x=Math.max(40,Math.min(...p,a-30)),z=Math.max(l+12,168),g=Math.max(20,z-x),v=p.length,T=360,t=130,n=42,k=14,A=26,r=28,d=T-n-k,y=t-A-r,u=p.map((c,f)=>{const $=n+f/(v-1)*d,F=A+(1-(c-x)/g)*y;return{x:Math.round($*10)/10,y:Math.round(F*10)/10,hr:Math.round(c)}});let M=`M ${u[0].x} ${u[0].y}`;for(let c=0;c<u.length-1;c++){const f=u[c],$=u[c+1],F=(f.x+$.x)/2;M+=` Q ${f.x} ${f.y}, ${F} ${(f.y+$.y)/2}`}const R=u[u.length-1];M+=` L ${R.x} ${R.y}`;const S=`${M} L ${R.x} ${t-r} L ${u[0].x} ${t-r} Z`,D=Math.round((A+(1-(a-x)/g)*y)*10)/10;let H=0,I=p[0];p.forEach((c,f)=>{c>=I&&(I=c,H=f)});const L=u[H]||u[0],W=N?"OPTICAL SENSOR MODEL":"OPTICAL SENSOR STREAM (GARMIN)",E=`hrGrad_${String(i.id).replace(/[^a-zA-Z0-9]/g,"_")}`,j=Math.round(s/2);return`
+<svg viewBox="0 0 ${T} ${t}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
+<defs>
+<linearGradient id="${E}" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#00F0FF" stop-opacity="0.38"/>
+<stop offset="70%" stop-color="#3B82F6" stop-opacity="0.12"/>
+<stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.0"/>
+</linearGradient>
+</defs>
 
-function getGarminHrZoneBreakdown(act) {
-  // 1. Check for real Garmin HR zones in seconds
-  if (act && act.hr_zones && typeof act.hr_zones === 'object') {
-    const hz = act.hr_zones;
-    const z1 = Number(hz.z1 ?? hz['1'] ?? hz.zone1 ?? 0);
-    const z2 = Number(hz.z2 ?? hz['2'] ?? hz.zone2 ?? 0);
-    const z3 = Number(hz.z3 ?? hz['3'] ?? hz.zone3 ?? 0);
-    const z4 = Number(hz.z4 ?? hz['4'] ?? hz.zone4 ?? 0);
-    const z5 = Number(hz.z5 ?? hz['5'] ?? hz.zone5 ?? 0);
-    const totalSec = z1 + z2 + z3 + z4 + z5;
+      
+<line x1="${n}" y1="${A}" x2="${T-k}" y2="${A}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+<line x1="${n}" y1="${D}" x2="${T-k}" y2="${D}" stroke="rgba(56,189,248,0.4)" stroke-dasharray="3,3" stroke-width="1"/>
+<line x1="${n}" y1="${t-r}" x2="${T-k}" y2="${t-r}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
 
-    if (totalSec > 0) {
-      const p1 = Math.round((z1 / totalSec) * 100);
-      const p2 = Math.round((z2 / totalSec) * 100);
-      const p3 = Math.round((z3 / totalSec) * 100);
-      const p4 = Math.round((z4 / totalSec) * 100);
-      const p5 = Math.round((z5 / totalSec) * 100);
+      
+<text x="${n-4}" y="${D+4}" fill="#38bdf8" font-size="12.5" font-weight="700" text-anchor="end">${a}</text>
+<text x="${n-4}" y="${A+10}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${z}</text>
+<text x="${n-4}" y="${t-r}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${x}</text>
 
-      const formatSec = (s) => `${Math.floor(s / 60)}m ${s % 60 < 10 ? '0' : ''}${s % 60}s`;
+      
+<path d="${S}" fill="url(#${E})"/>
 
-      const zones = [
-        { num: 5, name: "Maximum / Anaerobic", range: "> 171 bpm", pct: p5, durStr: formatSec(z5), color: "#ef4444" },
-        { num: 4, name: "Threshold / Hard", range: "152–171 bpm", pct: p4, durStr: formatSec(z4), color: "#f59e0b" },
-        { num: 3, name: "Aerobic / Moderate", range: "133–152 bpm", pct: p3, durStr: formatSec(z3), color: "#10b981" },
-        { num: 2, name: "Easy / Fat Oxidation Base", range: "114–133 bpm", pct: p2, durStr: formatSec(z2), color: "#00F0FF" },
-        { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatSec(z1), color: "#64748b" }
-      ];
+      
+<path d="${M}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.5));"/>
 
-      let dominant = zones[0];
-      zones.forEach(z => { if (z.pct > dominant.pct) dominant = z; });
+      
+<text x="${n+2}" y="${A-8}" fill="${N?"var(--text-muted)":"#00F0FF"}" font-size="12.5" font-weight="800" letter-spacing="0.04em">${W}</text>
 
-      return {
-        zones,
-        dominantZoneText: 'Dominant: Z' + dominant.num + ' (' + dominant.durStr + ' • ' + dominant.pct + '%)'
-      };
-    }
-  }
+      
+<text x="${T-k}" y="${D-5}" fill="#38bdf8" font-size="12.5" font-weight="700" text-anchor="end">Avg ${a} bpm</text>
 
-  // Fallback: Existing synthetic distribution
-  const dur = act.durationMin || 30;
-  const avg = act.avgHr || 115;
-  const max = act.maxHr || 150;
-  const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
-  const isWalk = text.includes('walk') || text.includes('stroll');
-  const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('gym');
-  const isPlyo = text.includes('jump') || text.includes('plyo') || text.includes('tuck');
+      
+<circle cx="${L.x}" cy="${L.y}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(239,68,68,0.8));"/>
+<circle cx="${L.x}" cy="${L.y}" r="7" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+<text x="${L.x}" y="${Math.max(14,L.y-8)}" fill="#ef4444" font-size="12.5" font-weight="800" text-anchor="middle">Peak ${l}</text>
 
-  let p1, p2, p3, p4, p5;
-  if (isWalk || avg < 95) {
-    p1 = 88; p2 = 12; p3 = 0; p4 = 0; p5 = 0;
-  } else if (isStrength) {
-    p1 = 22; p2 = 48; p3 = 22; p4 = 8; p5 = 0;
-  } else if (isPlyo || max >= 162) {
-    p1 = 10; p2 = 25; p3 = 35; p4 = 22; p5 = 8;
-  } else if (avg <= 122) {
-    p1 = 12; p2 = 58; p3 = 24; p4 = 6; p5 = 0;
-  } else if (avg <= 135) {
-    p1 = 8; p2 = 28; p3 = 46; p4 = 15; p5 = 3;
-  } else {
-    p1 = 5; p2 = 20; p3 = 35; p4 = 28; p5 = 12;
-  }
+      
+<text x="${n}" y="${t-6}" fill="var(--text-muted)" font-size="12.5">0:00</text>
+<text x="${n+d/2}" y="${t-6}" fill="var(--text-muted)" font-size="12.5" text-anchor="middle">${j}:00</text>
+<text x="${T-k}" y="${t-6}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${s.toFixed(1)}m</text>
+</svg>
+  `}function generateZoneBarsHtml(i){const{zones:s}=getGarminHrZoneBreakdown(i);return s.map(a=>`
+<div style="display:flex; flex-direction:column; gap:2px; margin-bottom:6px;">
+<div style="display:flex; justify-content:space-between; font-size:10.5px; line-height:1.2;">
+<span style="color:#d4d4d8; font-weight:600;">
+<span style="color:${a.color}; font-weight:800;">Z${a.num}</span> ${a.name} <small style="color:var(--text-muted); font-size:9.5px;">(${a.range})</small>
+</span>
+<span style="color:#fff; font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums;">
+          ${a.durStr} <small style="color:var(--text-muted);">(${a.pct}%)</small>
+</span>
+</div>
+<div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+<div style="height:100%; width:${a.pct}%; background:${a.color}; border-radius:3px; box-shadow:0 0 6px ${a.color}66;"></div>
+</div>
+</div>
+  `).join("")}function generateTeDualGaugesHtml(i){const s=i.aerobicTe??i.aerobic_te,a=i.anaerobicTe??i.anaerobic_te,l=s!=null&&!Number.isNaN(Number(s))?Number(s):0,p=a!=null&&!Number.isNaN(Number(a))?Number(a):0,e=(z,g)=>z>=4.5?{label:"Overreaching",desc:g?"High neuromuscular & PCr fatigue":"Heavy aerobic strain requiring 48h rest",color:"#ef4444"}:z>=3.5?{label:"Highly Improving",desc:g?"Drastically expands glycolytic buffering":"Major stimulus for VO2max expansion",color:"#f59e0b"}:z>=2.5?{label:"Impacting / Building",desc:g?"Improves anaerobic work tolerance":"Stimulates aerobic base & stroke volume",color:"#10b981"}:z>=1.5?{label:"Maintaining Base",desc:g?"Minor anaerobic speed maintenance":"Maintains aerobic fitness & mitochondrial density",color:"#00F0FF"}:{label:"Minor Recovery Stimulus",desc:"Active recovery flush with negligible debt",color:"#38bdf8"},N=e(l,!1),x=e(p,!0);return`
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
+<span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Aerobic TE</span>
+<span style="font-size:15px; font-weight:700; color:${N.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${l.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
+<div style="height:100%; width:${Math.min(100,l/5*100)}%; background:${N.color}; border-radius:3px;"></div>
+</div>
+<div style="font-size:10.5px; font-weight:700; color:#fff;">${N.label}</div>
+<div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${N.desc}</div>
+</div>
 
-  const formatMinSec = (fractionMinutes) => {
-    const totalSec = Math.round(fractionMinutes * 60);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    return `${m}m ${s < 10 ? '0' : ''}${s}s`;
-  };
-
-  const zones = [
-    { num: 5, name: "Maximum / Anaerobic", range: "> 171 bpm", pct: p5, durStr: formatMinSec(dur * p5 / 100), color: "#ef4444" },
-    { num: 4, name: "Threshold / Hard", range: "152–171 bpm", pct: p4, durStr: formatMinSec(dur * p4 / 100), color: "#f59e0b" },
-    { num: 3, name: "Aerobic / Moderate", range: "133–152 bpm", pct: p3, durStr: formatMinSec(dur * p3 / 100), color: "#10b981" },
-    { num: 2, name: "Easy / Fat Oxidation Base", range: "114–133 bpm", pct: p2, durStr: formatMinSec(dur * p2 / 100), color: "#00F0FF" },
-    { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatMinSec(dur * p1 / 100), color: "#64748b" }
-  ];
-
-  let dominant = zones[0];
-  zones.forEach(z => { if (z.pct > dominant.pct) dominant = z; });
-
-  return {
-    zones,
-    dominantZoneText: `Dominant: Z${dominant.num} (${dominant.durStr} • ${dominant.pct}%)`
-  };
-}
-
-function generateHrSvgChart(act) {
-  const dur = act.durationMin || 30;
-  let avg = act.avgHr || 119;
-  let max = act.maxHr || 151;
-
-  let hrs = [];
-  const hasRealStream = Array.isArray(act.hr_samples) && act.hr_samples.length >= 5;
-
-  if (hasRealStream) {
-    const raw = [];
-    for (const item of act.hr_samples) {
-      let val = null;
-      if (typeof item === 'number') {
-        val = item;
-      } else if (item && typeof item === 'object') {
-        val = item.hr ?? item.bpm ?? item.value;
-      }
-      val = Number(val);
-      if (!isNaN(val) && val > 30 && val < 250) {
-        raw.push(val);
-      }
-    }
-
-    if (raw.length >= 5) {
-      // If stream length > 80, sample up to 80 points evenly to keep SVG crisp
-      if (raw.length > 80) {
-        const step = (raw.length - 1) / 79;
-        for (let i = 0; i < 80; i++) {
-          const idx = Math.min(raw.length - 1, Math.round(i * step));
-          hrs.push(raw[idx]);
-        }
-      } else {
-        hrs = raw.slice();
-      }
-
-      // Find actual peak and average from real stream
-      const sum = raw.reduce((acc, v) => acc + v, 0);
-      avg = Math.round(sum / raw.length);
-      max = Math.max(...raw);
-    }
-  }
-
-  const isSynthetic = (hrs.length === 0);
-  if (isSynthetic) {
-    const pointsCount = 24;
-    const minHr = Math.max(50, avg - 40);
-    for (let i = 0; i < pointsCount; i++) {
-      const progress = i / (pointsCount - 1);
-      let hr;
-      if (progress < 0.15) {
-        hr = minHr + 15 + (avg - minHr - 15) * (progress / 0.15);
-      } else if (progress < 0.85) {
-        const phase = (progress - 0.15) / 0.70;
-        const wave = Math.sin(phase * Math.PI * 6);
-        const spike = Math.exp(-Math.pow((phase - 0.72) * 8, 2));
-        hr = avg + wave * 9 + spike * (max - avg);
-      } else {
-        const coolPhase = (progress - 0.85) / 0.15;
-        hr = avg - 5 - (avg - minHr - 10) * coolPhase;
-      }
-      hrs.push(Math.min(max, Math.max(minHr, hr)));
-    }
-    hrs[17] = max;
-  }
-
-  const minHr = Math.max(40, Math.min(...hrs, avg - 30));
-  const ceilHr = Math.max(max + 12, 168);
-  const range = Math.max(20, ceilHr - minHr);
-
-  const pointsCount = hrs.length;
-  const width = 360;
-  const height = 130;
-  const padL = 34;
-  const padR = 14;
-  const padT = 18;
-  const padB = 26;
-  const chartW = width - padL - padR;
-  const chartH = height - padT - padB;
-
-  const pts = hrs.map((val, idx) => {
-    const x = padL + (idx / (pointsCount - 1)) * chartW;
-    const y = padT + (1 - (val - minHr) / range) * chartH;
-    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, hr: Math.round(val) };
-  });
-
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const curr = pts[i];
-    const next = pts[i + 1];
-    const midX = (curr.x + next.x) / 2;
-    d += ` Q ${curr.x} ${curr.y}, ${midX} ${(curr.y + next.y) / 2}`;
-  }
-  const last = pts[pts.length - 1];
-  d += ` L ${last.x} ${last.y}`;
-
-  const areaD = `${d} L ${last.x} ${height - padB} L ${pts[0].x} ${height - padB} Z`;
-  const avgY = Math.round((padT + (1 - (avg - minHr) / range) * chartH) * 10) / 10;
-
-  // Peak point marker
-  let peakIdx = 0;
-  let peakVal = hrs[0];
-  hrs.forEach((v, i) => {
-    if (v >= peakVal) {
-      peakVal = v;
-      peakIdx = i;
-    }
-  });
-  const peakPt = pts[peakIdx] || pts[0];
-
-  const streamLabel = !isSynthetic ? 'OPTICAL SENSOR STREAM (GARMIN)' : 'OPTICAL SENSOR MODEL';
-  const gradId = `hrGrad_${String(act.id).replace(/[^a-zA-Z0-9]/g, '_')}`;
-  const midMin = Math.round(dur / 2);
-
-  return `
-    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
-      <defs>
-        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.38"/>
-          <stop offset="70%" stop-color="#3B82F6" stop-opacity="0.12"/>
-          <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.0"/>
-        </linearGradient>
-      </defs>
-
-      <!-- Zone Grid Lines -->
-      <line x1="${padL}" y1="${padT}" x2="${width - padR}" y2="${padT}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-      <line x1="${padL}" y1="${avgY}" x2="${width - padR}" y2="${avgY}" stroke="rgba(56,189,248,0.4)" stroke-dasharray="3,3" stroke-width="1"/>
-      <line x1="${padL}" y1="${height - padB}" x2="${width - padR}" y2="${height - padB}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-
-      <!-- Y-Axis Ticks -->
-      <text x="${padL - 4}" y="${avgY + 3}" fill="#38bdf8" font-size="8.5" font-weight="700" text-anchor="end">${avg}</text>
-      <text x="${padL - 4}" y="${padT + 8}" fill="var(--text-muted)" font-size="8.5" text-anchor="end">${ceilHr}</text>
-      <text x="${padL - 4}" y="${height - padB}" fill="var(--text-muted)" font-size="8.5" text-anchor="end">${minHr}</text>
-
-      <!-- Shaded Area Fill -->
-      <path d="${areaD}" fill="url(#${gradId})"/>
-
-      <!-- Primary Spline Curve -->
-      <path d="${d}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.5));"/>
-
-      <!-- Stream Mode Watermark / Label -->
-      <text x="${padL + 2}" y="${padT - 6}" fill="${!isSynthetic ? '#00F0FF' : 'var(--text-muted)'}" font-size="7.5" font-weight="800" letter-spacing="0.06em">${streamLabel}</text>
-
-      <!-- Average HR Tag -->
-      <text x="${width - padR}" y="${avgY - 4}" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="end">Avg ${avg} bpm</text>
-
-      <!-- Peak HR Marker Dot & Tag -->
-      <circle cx="${peakPt.x}" cy="${peakPt.y}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(239,68,68,0.8));"/>
-      <circle cx="${peakPt.x}" cy="${peakPt.y}" r="7" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
-      <text x="${peakPt.x}" y="${Math.max(12, peakPt.y - 8)}" fill="#ef4444" font-size="9" font-weight="800" text-anchor="middle">Peak ${max}</text>
-
-      <!-- X-Axis Timeline Markers -->
-      <text x="${padL}" y="${height - 8}" fill="var(--text-muted)" font-size="9">0:00</text>
-      <text x="${padL + chartW / 2}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${midMin}:00</text>
-      <text x="${width - padR}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="end">${dur.toFixed(1)}m</text>
-    </svg>
-  `;
-}
-
-function generateZoneBarsHtml(act) {
-  const { zones } = getGarminHrZoneBreakdown(act);
-  return zones.map(z => `
-    <div style="display:flex; flex-direction:column; gap:2px; margin-bottom:6px;">
-      <div style="display:flex; justify-content:space-between; font-size:10.5px; line-height:1.2;">
-        <span style="color:#d4d4d8; font-weight:600;">
-          <span style="color:${z.color}; font-weight:800;">Z${z.num}</span> ${z.name} <small style="color:var(--text-muted); font-size:9.5px;">(${z.range})</small>
-        </span>
-        <span style="color:#fff; font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums;">
-          ${z.durStr} <small style="color:var(--text-muted);">(${z.pct}%)</small>
-        </span>
-      </div>
-      <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
-        <div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:3px; box-shadow:0 0 6px ${z.color}66;"></div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function generateTeDualGaugesHtml(act) {
-  const rawAero = act.aerobicTe ?? act.aerobic_te;
-  const rawAnaero = act.anaerobicTe ?? act.anaerobic_te;
-  const aero = (rawAero !== undefined && rawAero !== null && !Number.isNaN(Number(rawAero))) ? Number(rawAero) : 0;
-  const anaero = (rawAnaero !== undefined && rawAnaero !== null && !Number.isNaN(Number(rawAnaero))) ? Number(rawAnaero) : 0;
-
-  const getTeFeedback = (score, isAnaero) => {
-    if (score >= 4.5) return { label: "Overreaching", desc: isAnaero ? "High neuromuscular & PCr fatigue" : "Heavy aerobic strain requiring 48h rest", color: "#ef4444" };
-    if (score >= 3.5) return { label: "Highly Improving", desc: isAnaero ? "Drastically expands glycolytic buffering" : "Major stimulus for VO2max expansion", color: "#f59e0b" };
-    if (score >= 2.5) return { label: "Impacting / Building", desc: isAnaero ? "Improves anaerobic work tolerance" : "Stimulates aerobic base & stroke volume", color: "#10b981" };
-    if (score >= 1.5) return { label: "Maintaining Base", desc: isAnaero ? "Minor anaerobic speed maintenance" : "Maintains aerobic fitness & mitochondrial density", color: "#00F0FF" };
-    return { label: "Minor Recovery Stimulus", desc: "Active recovery flush with negligible debt", color: "#38bdf8" };
-  };
-
-  const aeroInfo = getTeFeedback(aero, false);
-  const anaeroInfo = getTeFeedback(anaero, true);
-
-  return `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-      <!-- AEROBIC TE -->
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
-          <span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Aerobic TE</span>
-          <span style="font-size:15px; font-weight:700; color:${aeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${aero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
-        </div>
-        <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
-          <div style="height:100%; width:${Math.min(100, (aero / 5.0) * 100)}%; background:${aeroInfo.color}; border-radius:3px;"></div>
-        </div>
-        <div style="font-size:10.5px; font-weight:700; color:#fff;">${aeroInfo.label}</div>
-        <div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${aeroInfo.desc}</div>
-      </div>
-
-      <!-- ANAEROBIC TE -->
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
-          <span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Anaerobic TE</span>
-          <span style="font-size:15px; font-weight:700; color:${anaeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${anaero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
-        </div>
-        <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
-          <div style="height:100%; width:${Math.min(100, (anaero / 5.0) * 100)}%; background:${anaeroInfo.color}; border-radius:3px;"></div>
-        </div>
-        <div style="font-size:10.5px; font-weight:700; color:#fff;">${anaeroInfo.label}</div>
-        <div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${anaeroInfo.desc}</div>
-      </div>
-    </div>
-  `;
-}
-
-// DECODER FOR GARMIN FĒNIX 8 EXERCISE SETS (milligrams/grams -> kg, TUT & rest intervals)
-function decodeGarminStrengthSets(act) {
-  const rawSets = act && Array.isArray(act.exercise_sets) ? act.exercise_sets : [];
-  if (!rawSets.length) return null;
-
-  const activeSets = [];
-  const restDurations = [];
-
-  for (let i = 0; i < rawSets.length; i++) {
-    const s = rawSets[i];
-    if (!s || typeof s !== 'object') continue;
-    const sType = String(s.set_type || '').toUpperCase();
-    const dur = Math.round(Number(s.duration || 0));
-
-    if (sType === 'REST') {
-      if (dur > 0) restDurations.push(dur);
-      continue;
-    }
-    if (sType !== 'ACTIVE') continue;
-
-    const rawWt = Number(s.weight || 0);
-    const weightKg = rawWt >= 1000
-      ? Math.round((rawWt / 1000) * 10) / 10
-      : (rawWt > 0 ? Math.round(rawWt * 10) / 10 : 0);
-
-    // Look ahead for immediate REST interval following this active set
-    let restAfterSec = 0;
-    if (i + 1 < rawSets.length && rawSets[i + 1] && String(rawSets[i + 1].set_type || '').toUpperCase() === 'REST') {
-      restAfterSec = Math.round(Number(rawSets[i + 1].duration || 0));
-    }
-
-    activeSets.push({
-      setNum: activeSets.length + 1,
-      weightKg,
-      weightLabel: weightKg > 0 ? `${weightKg}kg` : 'Bodyweight',
-      shortWeightLabel: weightKg > 0 ? `${weightKg}kg` : 'BW',
-      durationSec: dur,
-      reps: s.reps != null && Number(s.reps) > 0 ? Number(s.reps) : null,
-      exerciseName: s.exercise_name ? String(s.exercise_name).replace(/_/g, ' ') : '',
-      restAfterSec
-    });
-  }
-
-  if (!activeSets.length) return null;
-
-  const weightedSets = activeSets.filter(s => s.weightKg > 0);
-  const peakWeightKg = weightedSets.length ? Math.max(...weightedSets.map(s => s.weightKg)) : 0;
-  const peakWeightCount = peakWeightKg > 0 ? activeSets.filter(s => s.weightKg === peakWeightKg).length : 0;
-  const avgRestSec = restDurations.length
-    ? Math.round(restDurations.reduce((sum, d) => sum + d, 0) / restDurations.length)
-    : 0;
-  const totalTutSec = activeSets.reduce((sum, s) => sum + s.durationSec, 0);
-
-  // Build concise working weight summary (e.g. 1×20kg warm-up • 6×70kg working sets • 1×BW (203s core hold))
-  const groupOrder = [];
-  const groupMap = {};
-  activeSets.forEach(s => {
-    const key = s.weightKg > 0 ? String(s.weightKg) : 'BW';
-    if (!groupMap[key]) {
-      groupMap[key] = { key, weightKg: s.weightKg, count: 0, totalDur: 0 };
-      groupOrder.push(groupMap[key]);
-    }
-    groupMap[key].count += 1;
-    groupMap[key].totalDur += s.durationSec;
-  });
-
-  const workingSummaryParts = groupOrder.map(g => {
-    if (g.weightKg === 0) {
-      return `${g.count}×BW (${g.totalDur >= 60 ? `${g.totalDur}s core hold` : `${g.totalDur}s`})`;
-    }
-    if (peakWeightKg > 0 && g.weightKg < peakWeightKg) {
-      return `${g.count}×${g.weightKg}kg warm-up`;
-    }
-    if (peakWeightKg > 0 && g.weightKg === peakWeightKg) {
-      return `${g.count}×${g.weightKg}kg working ${g.count === 1 ? 'set' : 'sets'}`;
-    }
-    return `${g.count}×${g.weightKg}kg`;
-  });
-
-  return {
-    activeSets,
-    activeCount: activeSets.length,
-    peakWeightKg,
-    peakWeightCount,
-    avgRestSec,
-    totalTutSec,
-    workingSummary: workingSummaryParts.join(' • ')
-  };
-}
-window.decodeGarminStrengthSets = decodeGarminStrengthSets;
-
-// RENDER COMPLETED WORKOUTS & PHYSIOLOGICAL BENEFITS LIST (EGM OVERHAUL WITH GARMIN CHARTS)
-function renderHistoryList() {
-  const box = document.getElementById('trainViewHistory');
-  if (!box) return;
-
-  const activities = (typeof recentActivitiesData !== 'undefined' && Array.isArray(recentActivitiesData))
-    ? recentActivitiesData
-    : ((window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.garmin && Array.isArray(window.BAKED_LIVE_STATE.garmin.recent_activities))
-        ? window.BAKED_LIVE_STATE.garmin.recent_activities
-        : []);
-
-  box.innerHTML = '';
-
-  activities.forEach(act => {
-    const formatted = typeof formatActivityDisplay === 'function' ? formatActivityDisplay(act) : { isToday: false, displayDate: act.date || '' };
-    const isToday = formatted.isToday;
-    const displayDate = formatted.displayDate;
-    const egm = typeof getEgmWorkoutBreakdown === 'function' ? getEgmWorkoutBreakdown(act, isToday) : { recoveryPill: '', primaryTakeaway: '', achievements: [], stressors: [], recoveryProtocol: [] };
-    const hrZonesData = getGarminHrZoneBreakdown(act);
-
-    const hasRealSamples = Array.isArray(act.hr_samples) && act.hr_samples.length >= 5;
-    const sensorHeaderLabel = hasRealSamples ? 'OPTICAL SENSOR STREAM (GARMIN)' : 'OPTICAL SENSOR MODEL';
-
-    const matchedPulse = (typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act) : null;
-    let pulseDetailsHtml = '';
-    let pulseLoggedSummaries = [];
-    if (matchedPulse) {
-      let sessionName = matchedPulse.title || '';
-      if (!sessionName) {
-        if (matchedPulse.preset === 'gym') sessionName = 'Option A: Heavy Barbell Strength & Hinge';
-        else if (matchedPulse.preset === 'combat') sessionName = 'Option B: Hybrid Work Capacity Circuit';
-        else sessionName = 'Pulse Strength Session';
-      }
-
-      const garminStats = [
-        act.total_sets ? `${act.total_sets} Garmin Sets` : (matchedPulse.setsLogged ? `${matchedPulse.setsLogged} Sets Logged` : ''),
-        act.avgHr ? `${act.avgHr} bpm HR` : '',
-        act.calories ? `${act.calories} kcal` : ''
-      ].filter(Boolean).join(' • ');
-
-      let exerciseRows = '';
-      if (matchedPulse.details && typeof matchedPulse.details === 'object') {
-        const setsByEx = {};
-        const allEx = (typeof getAllExercises === 'function') ? getAllExercises() : [];
-        Object.values(matchedPulse.details).forEach(s => {
-          if (!s || !s.logged) return;
-          const exId = s.exercise_id || 'exercise';
-          if (!setsByEx[exId]) {
-            const exObj = allEx.find(e => e.id === exId);
-            setsByEx[exId] = {
-              name: exObj ? exObj.name : exId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-              sets: []
-            };
-          }
-          const wStr = (s.weight !== undefined && s.weight !== null && s.weight !== 'Bodyweight') ? `${s.weight}kg` : (s.weight === 'Bodyweight' ? 'BW' : '');
-          const rStr = `${s.reps || 0}r`;
-          setsByEx[exId].sets.push(wStr ? `${wStr} × ${rStr}` : rStr);
-        });
-
-        const exEntries = Object.values(setsByEx);
-        pulseLoggedSummaries = exEntries.map(e => `${e.name} (${e.sets.join(', ')})`);
-        if (exEntries.length > 0) {
-          exerciseRows = `
-            <div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
-              ${exEntries.map(e => `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 7px;">
-                  <span style="font-weight:700; color:#fff;">${e.name}:</span>
-                  <span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${e.sets.join(', ')}</span>
-                </div>
-              `).join('')}
+      
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
+<span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Anaerobic TE</span>
+<span style="font-size:15px; font-weight:700; color:${x.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${p.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
+<div style="height:100%; width:${Math.min(100,p/5*100)}%; background:${x.color}; border-radius:3px;"></div>
+</div>
+<div style="font-size:10.5px; font-weight:700; color:#fff;">${x.label}</div>
+<div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${x.desc}</div>
+</div>
+</div>
+  `}function decodeGarminStrengthSets(i){const s=i&&Array.isArray(i.exercise_sets)?i.exercise_sets:[];if(!s.length)return null;const a=[],l=[];for(let t=0;t<s.length;t++){const n=s[t];if(!n||typeof n!="object")continue;const k=String(n.set_type||"").toUpperCase(),A=Math.round(Number(n.duration||0));if(k==="REST"){A>0&&l.push(A);continue}if(k!=="ACTIVE")continue;const r=Number(n.weight||0),d=r>=1e3?Math.round(r/1e3*10)/10:r>0?Math.round(r*10)/10:0;let y=0;t+1<s.length&&s[t+1]&&String(s[t+1].set_type||"").toUpperCase()==="REST"&&(y=Math.round(Number(s[t+1].duration||0))),a.push({setNum:a.length+1,weightKg:d,weightLabel:d>0?`${d}kg`:"Bodyweight",shortWeightLabel:d>0?`${d}kg`:"BW",durationSec:A,reps:n.reps!=null&&Number(n.reps)>0?Number(n.reps):null,exerciseName:n.exercise_name?String(n.exercise_name).replace(/_/g," "):"",restAfterSec:y})}if(!a.length)return null;const p=a.filter(t=>t.weightKg>0),e=p.length?Math.max(...p.map(t=>t.weightKg)):0,N=e>0?a.filter(t=>t.weightKg===e).length:0,x=l.length?Math.round(l.reduce((t,n)=>t+n,0)/l.length):0,z=a.reduce((t,n)=>t+n.durationSec,0),g=[],v={};a.forEach(t=>{const n=t.weightKg>0?String(t.weightKg):"BW";v[n]||(v[n]={key:n,weightKg:t.weightKg,count:0,totalDur:0},g.push(v[n])),v[n].count+=1,v[n].totalDur+=t.durationSec});const T=g.map(t=>t.weightKg===0?`${t.count}\xD7BW (${t.totalDur>=60?`${t.totalDur}s core hold`:`${t.totalDur}s`})`:e>0&&t.weightKg<e?`${t.count}\xD7${t.weightKg}kg warm-up`:e>0&&t.weightKg===e?`${t.count}\xD7${t.weightKg}kg working ${t.count===1?"set":"sets"}`:`${t.count}\xD7${t.weightKg}kg`);return{activeSets:a,activeCount:a.length,peakWeightKg:e,peakWeightCount:N,avgRestSec:x,totalTutSec:z,workingSummary:T.join(" \u2022 ")}}window.decodeGarminStrengthSets=decodeGarminStrengthSets;function renderHistoryList(){const i=document.getElementById("trainViewHistory");if(!i)return;const s=typeof recentActivitiesData<"u"&&Array.isArray(recentActivitiesData)?recentActivitiesData:window.BAKED_LIVE_STATE&&window.BAKED_LIVE_STATE.garmin&&Array.isArray(window.BAKED_LIVE_STATE.garmin.recent_activities)?window.BAKED_LIVE_STATE.garmin.recent_activities:[],a=document.getElementById("btnTrainHistory");a&&(a.innerText=`Completed Log & Benefits (${s.length})`);const l=typeof escapeHtml=="function"?escapeHtml:(e=>String(e??"").replace(/[&<>"']/g,N=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[N]));i.innerHTML="";const p=typeof buildGarminPulseMatchMap=="function"?buildGarminPulseMatchMap(s):null;s.forEach(e=>{const N=typeof formatActivityDisplay=="function"?formatActivityDisplay(e):{isToday:!1,displayDate:e.date||""},x=N.isToday,z=N.displayDate,g=typeof getEgmWorkoutBreakdown=="function"?getEgmWorkoutBreakdown(e,x):{recoveryPill:"",primaryTakeaway:"",achievements:[],stressors:[],recoveryProtocol:[]},v=getGarminHrZoneBreakdown(e),T=Array.isArray(e.hr_samples)&&e.hr_samples.length>=5,t=T?"OPTICAL SENSOR STREAM (GARMIN)":"OPTICAL SENSOR MODEL",n=p?p.get(String(e.id))||null:typeof getMatchedPulseSessionForGarmin=="function"?getMatchedPulseSessionForGarmin(e,s):null;let k="",A=[];if(n){let w=n.title||"";w||(n.preset==="gym"?w="Option A: Heavy Barbell Strength & Hinge":n.preset==="combat"?w="Option B: Hybrid Work Capacity Circuit":w="Pulse Strength Session");const h=[e.total_sets?`${e.total_sets} Garmin Sets`:n.setsLogged?`${n.setsLogged} Sets Logged`:"",e.avgHr?`${e.avgHr} bpm HR`:"",e.calories?`${e.calories} kcal`:""].filter(Boolean).join(" \u2022 ");let C="";if(n.details&&typeof n.details=="object"){const b={},G=typeof getAllExercises=="function"?getAllExercises():[];Object.entries(n.details).forEach(([K,V])=>{if(!V||!V.logged)return;const q=V.exercise_id||String(K||"").replace(/_\d+$/,"")||"exercise";if(!b[q]){const X=G.find(J=>J.id===q);b[q]={name:X?X.name:q.replace(/_/g," ").replace(/\b\w/g,J=>J.toUpperCase()),sets:[]}}const B=V.weight!==void 0&&V.weight!==null&&V.weight!=="Bodyweight"?`${V.weight}kg`:V.weight==="Bodyweight"?"BW":"",Y=`${V.reps||0}r`;b[q].sets.push(B?`${B} \xD7 ${Y}`:Y)});const O=Object.values(b);A=O.map(K=>`${l(K.name)} (${l(K.sets.join(", "))})`),O.length>0&&(C=`
+<div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
+              ${O.map(K=>`
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 7px;">
+<span style="font-weight:700; color:#fff;">${l(K.name)}:</span>
+<span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${l(K.sets.join(", "))}</span>
+</div>
+              `).join("")}
+</div>
+          `)}else if(n.conditioningDrill){const b=n.conditioningDrill,G=b.totalSeconds?`${Math.round(b.totalSeconds/60)}m`:"";C=`
+<div style="margin-top:6px; font-size:10.5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px;">
+<span style="font-weight:700; color:#fff;">${l(b.name||"Conditioning")}:</span>
+<span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${l(String(b.format||"interval").toUpperCase())} \u2022 ${b.roundsCompleted||b.rounds||1} rounds ${G?`(${G})`:""}</span>
+</div>
+        `}k=`
+<div style="margin:6px 0 8px; padding:8px 10px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:9.5px; font-weight:800; background:rgba(16,185,129,0.22); border:1px solid #10b981; color:#10b981; padding:2px 6px; border-radius:4px; letter-spacing:0.04em;">\u{1F517} MATCHED WITH PULSE</span>
+<span style="font-size:11.5px; font-weight:800; color:#fff;">${l(w)}</span>
+</div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              ${h?`<span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${l(h)}</span>`:""}
+              <button type="button" class="header-pill-btn" data-act-id="${l(e.id)}" onclick="unlinkGarminPulseMatch(this.dataset.actId)" title="Unlink Pulse session from this Garmin recording" style="padding:1px 6px; font-size:9.5px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--text-secondary); cursor:pointer;">\u2715 Unlink</button>
             </div>
-          `;
-        }
-      } else if (matchedPulse.conditioningDrill) {
-        const cd = matchedPulse.conditioningDrill;
-        const durMin = cd.totalSeconds ? `${Math.round(cd.totalSeconds / 60)}m` : '';
-        exerciseRows = `
-          <div style="margin-top:6px; font-size:10.5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px;">
-            <span style="font-weight:700; color:#fff;">${cd.name || 'Conditioning'}:</span>
-            <span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${(cd.format || 'interval').toUpperCase()} • ${cd.roundsCompleted || cd.rounds || 1} rounds ${durMin ? `(${durMin})` : ''}</span>
-          </div>
-        `;
-      }
+</div>
+          ${C}
+</div>
+      `}const r=decodeGarminStrengthSets(e);let d="";if(r){const w=r.peakWeightKg>0?`Peak Load ${r.peakWeightKg}kg (${r.peakWeightCount} working ${r.peakWeightCount===1?"set":"sets"})`:"Bodyweight / Core",h=r.avgRestSec>0?` \u2022 Avg Rest ${r.avgRestSec}s`:"",C=A.length>0?`<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
+<strong style="color:#10b981;">\u{1F517} Pulse Rep Cross-Reference:</strong> ${A.join(" \u2022 ")}
+</div>`:"";d=`
+<div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
+          
+<div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
+            \u231A GARMIN F\u0112NIX 8 SET TELEMETRY: <span style="color:#fff;">${r.activeCount} Active Sets \u2022 ${l(w)}${l(h)}</span>
+</div>
+<div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
+            ${l(r.workingSummary)}
+</div>
+          
+<details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
+<summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+<span>\u{1F52C} View All ${r.activeCount} Garmin Watch Sets &amp; Rest Intervals (${r.totalTutSec}s TUT)</span>
+<span style="color:var(--text-muted);">\u25BE</span>
+</summary>
+<div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
+                ${r.activeSets.map(b=>`
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<strong style="color:#fff;">Set ${b.setNum}: ${b.weightKg===0?"BW Hold":l(b.weightLabel)}</strong>
+                      ${b.reps?`<span style="color:var(--primary); font-weight:700;">${l(b.reps)} reps</span>`:""}
+</div>
+<div style="color:var(--text-muted); margin-top:2px;">
+                      ${b.durationSec}s TUT${b.restAfterSec>0?` \u2022 ${b.restAfterSec}s Rest`:""}
+</div>
+</div>
+                `).join("")}
+</div>
+              ${C}
+</div>
+</details>
+</div>
+      `}const y=e.subTitle||e.sub_title||e.name||"Workout",M=/^(cardio|indoor_cardio|cardio_training|hiit|hiit_training|strength|strength_training|fitness_equipment)$/i.test(String(y).trim())&&n&&n.title?`${n.title} (Garmin ${y})`:y,R=e.source==="manual_app_entry",S=!n&&!R&&typeof getUnclaimedPulseSessionsForActivity=="function"?getUnclaimedPulseSessionsForActivity(e,s,p):[],D=S.length>0?`<button type="button" class="header-pill-btn" data-act-id="${l(e.id)}" data-session-key="${l(S[0]._matchKey)}" onclick="linkGarminPulseMatch(this.dataset.actId, this.dataset.sessionKey)" title="Link ${l(S[0].title||"Pulse Workout")}" style="padding:3px 8px; font-size:11px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; cursor:pointer;">\u{1F517} Link Pulse</button>`:"",H=e.durationMin??e.duration_min??0,I=e.avgHr??e.avg_hr??null,L=e.maxHr??e.max_hr??null,W=Number(e.aerobicTe??e.aerobic_te??0),E=Number(e.anaerobicTe??e.anaerobic_te??0),j=/walk|run|ruck|hike/i.test(`${e.name||""} ${y} ${e.activity_type_key||""}`),c=e.steps?Number(e.steps):j&&H?Math.round(Number(H)*91.5):0,f=e.distance_miles?Number(e.distance_miles):c>0?Number((c/1810).toFixed(2)):0,$=j&&c>0?`<span>\u2022</span><span style="color:var(--cyan); font-weight:700;">\u{1F463} ${c.toLocaleString()} activity steps${f>0?` (${f} mi)`:""}</span>`:"",F=document.createElement("div");F.className=`history-card ${x?"today-highlight":""}`,F.style.background=x?"#141a24":"#11141c",F.style.border=x?"1px solid rgba(0, 229, 255, 0.4)":"1px solid rgba(255,255,255,0.08)",F.style.borderRadius="14px",F.style.padding="12px 14px",F.innerHTML=`
+      
+<div class="history-top-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+<div>
+<div class="history-title" style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+            ${l(M)}
+</div>
+<div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+<span>${l(z)}</span>
+<span>\u2022</span>
+<span>\u23F1 ${H} min</span>
+<span>\u2022</span>
+<span style="color:var(--primary); font-weight:800;">\u{1F525} ${e.calories||0} kcal</span>
+            ${$}
+</div>
+</div>
+<div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          ${x?'<span style="font-size:10px; font-weight:900; color:var(--primary); background:rgba(0,229,255,0.15); border:1px solid rgba(0,229,255,0.3); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">TODAY</span>':""}
+          ${g.recoveryPill}
+</div>
+</div>
 
-      pulseDetailsHtml = `
-        <div style="margin:6px 0 8px; padding:8px 10px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:9.5px; font-weight:800; background:rgba(16,185,129,0.22); border:1px solid #10b981; color:#10b981; padding:2px 6px; border-radius:4px; letter-spacing:0.04em;">🔗 MATCHED WITH PULSE</span>
-              <span style="font-size:11.5px; font-weight:800; color:#fff;">${sessionName}</span>
-            </div>
-            ${garminStats ? `<span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${garminStats}</span>` : ''}
-          </div>
-          ${exerciseRows}
-        </div>
-      `;
-    }
+      ${k}
+      ${d}
 
-    const decodedSets = decodeGarminStrengthSets(act);
-    let garminStrengthSetsHtml = '';
-    if (decodedSets) {
-      const peakBadge = decodedSets.peakWeightKg > 0
-        ? `Peak Load ${decodedSets.peakWeightKg}kg (${decodedSets.peakWeightCount} working ${decodedSets.peakWeightCount === 1 ? 'set' : 'sets'})`
-        : 'Bodyweight / Core';
-      const avgRestBadge = decodedSets.avgRestSec > 0 ? ` • Avg Rest ${decodedSets.avgRestSec}s` : '';
-      const pulseCrossRefHtml = pulseLoggedSummaries.length > 0
-        ? `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
-             <strong style="color:#10b981;">🔗 Pulse Rep Cross-Reference:</strong> ${pulseLoggedSummaries.join(' • ')}
-           </div>`
-        : '';
+      
+<div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+        ${g.primaryTakeaway}
+</div>
 
-      garminStrengthSetsHtml = `
-        <div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
-          <!-- GOLDFISH STRIP -->
-          <div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
-            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${decodedSets.activeCount} Active Sets • ${peakBadge}${avgRestBadge}</span>
-          </div>
-          <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
-            ${decodedSets.workingSummary}
-          </div>
-          <!-- ELEPHANT ACCORDION -->
-          <details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
-            <summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>🔬 View All ${decodedSets.activeCount} Garmin Watch Sets &amp; Rest Intervals (${decodedSets.totalTutSec}s TUT)</span>
-              <span style="color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
-                ${decodedSets.activeSets.map(s => `
-                  <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : s.weightLabel}</strong>
-                      ${s.reps ? `<span style="color:var(--primary); font-weight:700;">${s.reps} reps</span>` : ''}
-                    </div>
-                    <div style="color:var(--text-muted); margin-top:2px;">
-                      ${s.durationSec}s TUT${s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : ''}
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-              ${pulseCrossRefHtml}
-            </div>
-          </details>
-        </div>
-      `;
-    }
+      
+<div class="history-stats-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 4px; text-align:center;">
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:var(--primary);">${e.calories||0}</div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Active Burn</div>
+</div>
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:#fff;">${I||"--"}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Avg HR</div>
+</div>
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:#38bdf8;">${L||"--"}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Peak HR</div>
+</div>
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:#a78bfa;">${W.toFixed(1)} / ${E.toFixed(1)}</div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Aerobic/Anaer</div>
+</div>
+</div>
 
-    const rawTitle = act.subTitle || act.sub_title || act.name || 'Workout';
-    const isGenericGarminTitle = /^(cardio|indoor_cardio|strength|strength_training)$/i.test(String(rawTitle).trim());
-    const displayTitle = (isGenericGarminTitle && matchedPulse && matchedPulse.title)
-      ? `${matchedPulse.title} (Garmin ${rawTitle})`
-      : rawTitle;
+      
+<div style="margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; margin-bottom:5px;">
+<span style="color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Garmin HR Intensity Zones</span>
+<span style="color:var(--primary); font-weight:700; font-family:var(--font-mono); font-size:10.5px;">${v.dominantZoneText}</span>
+</div>
+<div style="display:flex; height:6px; border-radius:3px; overflow:hidden; gap:2px; background:rgba(255,255,255,0.06);">
+          ${v.zones.filter(w=>w.pct>0).map(w=>`<div style="height:100%; width:${w.pct}%; background:${w.color}; border-radius:2px; box-shadow:0 0 4px ${w.color}88;" title="Z${w.num}: ${w.durStr} (${w.pct}%)"></div>`).join("")}
+</div>
+</div>
 
-    const normDurationMin = act.durationMin ?? act.duration_min ?? 0;
-    const normAvgHr = act.avgHr ?? act.avg_hr ?? null;
-    const normMaxHr = act.maxHr ?? act.max_hr ?? null;
-    const normAeroTe = Number(act.aerobicTe ?? act.aerobic_te ?? 0);
-    const normAnaeroTe = Number(act.anaerobicTe ?? act.anaerobic_te ?? 0);
-    const isWalkOrRunAct = /walk|run|ruck|hike/i.test(`${act.name || ''} ${rawTitle} ${act.activity_type_key || ''}`);
-    const estSteps = act.steps ? Number(act.steps) : (isWalkOrRunAct && normDurationMin ? Math.round(Number(normDurationMin) * 91.5) : 0);
-    const estMiles = act.distance_miles ? Number(act.distance_miles) : (estSteps > 0 ? Number((estSteps / 1810).toFixed(2)) : 0);
-    const actStepPillHtml = (isWalkOrRunAct && estSteps > 0)
-      ? `<span>•</span><span style="color:var(--cyan); font-weight:700;">👣 ${estSteps.toLocaleString()} activity steps${estMiles > 0 ? ` (${estMiles} mi)` : ''}</span>`
-      : '';
+      
+<div class="benefits-toggle-btn" data-act-id="${l(e.id)}" onclick="toggleBenefitAccordion(this.dataset.actId)" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
+<span>\u{1F52C} View Garmin Telemetry, Charts & Recovery (6 sections)</span>
+<span class="accordion-arrow" id="arrow_${l(e.id)}" style="transition:transform 0.2s;">\u25BE</span>
+</div>
 
-    const esc = (typeof escapeHtml === 'function' ? escapeHtml : (v => String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))));
-
-    const card = document.createElement('div');
-    card.className = `history-card ${isToday ? 'today-highlight' : ''}`;
-    card.style.background = isToday ? '#141a24' : '#11141c';
-    card.style.border = isToday ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid rgba(255,255,255,0.08)';
-    card.style.borderRadius = '14px';
-    card.style.padding = '12px 14px';
-
-    card.innerHTML = `
-      <!-- GOLDFISH LAYER (3-SECOND GLANCE) -->
-      <div class="history-top-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-        <div>
-          <div class="history-title" style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
-            ${esc(displayTitle)}
-          </div>
-          <div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-            <span>${esc(displayDate)}</span>
-            <span>•</span>
-            <span>⏱ ${normDurationMin} min</span>
-            <span>•</span>
-            <span style="color:var(--primary); font-weight:800;">🔥 ${act.calories || 0} kcal</span>
-            ${actStepPillHtml}
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-          ${isToday ? '<span style="font-size:10px; font-weight:900; color:var(--primary); background:rgba(0,229,255,0.15); border:1px solid rgba(0,229,255,0.3); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">TODAY</span>' : ''}
-          ${egm.recoveryPill}
-        </div>
-      </div>
-
-      ${pulseDetailsHtml}
-      ${garminStrengthSetsHtml}
-
-      <!-- PRIMARY GLANCEABLE TAKEAWAY -->
-      <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
-        ${egm.primaryTakeaway}
-      </div>
-
-      <!-- 4-METRIC BIOMETRIC GRID -->
-      <div class="history-stats-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 4px; text-align:center;">
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:var(--primary);">${act.calories || 0}</div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Active Burn</div>
-        </div>
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#fff;">${normAvgHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Avg HR</div>
-        </div>
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#38bdf8;">${normMaxHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Peak HR</div>
-        </div>
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#a78bfa;">${normAeroTe.toFixed(1)} / ${normAnaeroTe.toFixed(1)}</div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Aerobic/Anaer</div>
-        </div>
-      </div>
-
-      <!-- GOLDFISH: MINI 5-ZONE HR VISUAL STRIP -->
-      <div style="margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; margin-bottom:5px;">
-          <span style="color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Garmin HR Intensity Zones</span>
-          <span style="color:var(--primary); font-weight:700; font-family:var(--font-mono); font-size:10.5px;">${hrZonesData.dominantZoneText}</span>
-        </div>
-        <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; gap:2px; background:rgba(255,255,255,0.06);">
-          ${hrZonesData.zones.filter(z => z.pct > 0).map(z => `<div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:2px; box-shadow:0 0 4px ${z.color}88;" title="Z${z.num}: ${z.durStr} (${z.pct}%)"></div>`).join('')}
-        </div>
-      </div>
-
-      <!-- ELEPHANT LAYER: EXPANDABLE BENEFITS, CHARTS & RECOVERY ACCORDION -->
-      <div class="benefits-toggle-btn" data-act-id="${esc(act.id)}" onclick="toggleBenefitAccordion(this.dataset.actId)" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
-        <span>🔬 View Garmin Telemetry, Charts & Recovery (6 sections)</span>
-        <span class="accordion-arrow" id="arrow_${esc(act.id)}" style="transition:transform 0.2s;">▾</span>
-      </div>
-
-      <div class="benefits-accordion-body" id="benefit_body_${esc(act.id)}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
+<div class="benefits-accordion-body" id="benefit_body_${l(e.id)}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
         
-        <!-- SECTION 1: GARMIN HEART RATE TIME-SERIES CURVE (SVG) -->
-        <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
-              <span style="color:var(--primary);">📈</span> Heart Rate Telemetry Curve
-            </span>
-            <span style="font-size:10px; font-weight:700; color:${hasRealSamples ? 'var(--primary)' : 'var(--text-muted)'};">${sensorHeaderLabel}</span>
-          </div>
-          ${generateHrSvgChart(act)}
-        </div>
+        
+<div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+<span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+<span style="color:var(--primary);">\u{1F4C8}</span> Heart Rate Telemetry Curve
+</span>
+<span style="font-size:10px; font-weight:700; color:${T?"var(--primary)":"var(--text-muted)"};">${t}</span>
+</div>
+          ${generateHrSvgChart(e)}
+</div>
 
-        <!-- SECTION 2: GARMIN 5-ZONE HEART RATE DISTRIBUTION (HORIZONTAL BARS) -->
-        <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
-              <span style="color:#f59e0b;">📊</span> 5-Zone Physiological Intensity
-            </span>
-            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">Max HR: 190 bpm</span>
-          </div>
-          ${generateZoneBarsHtml(act)}
-        </div>
+        
+<div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+<span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+<span style="color:#f59e0b;">\u{1F4CA}</span> 5-Zone Physiological Intensity
+</span>
+<span style="font-size:10px; font-weight:700; color:var(--text-muted);">Max HR: 190 bpm</span>
+</div>
+          ${generateZoneBarsHtml(e)}
+</div>
 
-        <!-- SECTION 3: FIRSTBEAT TRAINING EFFECT (TE) DUAL GAUGES -->
-        <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
-              <span style="color:#a78bfa;">🎯</span> Firstbeat Training Effect (TE)
-            </span>
-            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">0.0 – 5.0 Scale</span>
-          </div>
-          ${generateTeDualGaugesHtml(act)}
-        </div>
+        
+<div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+<span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+<span style="color:#a78bfa;">\u{1F3AF}</span> Firstbeat Training Effect (TE)
+</span>
+<span style="font-size:10px; font-weight:700; color:var(--text-muted);">0.0 \u2013 5.0 Scale</span>
+</div>
+          ${generateTeDualGaugesHtml(e)}
+</div>
 
-        <!-- SECTION 4: ACHIEVED -->
-        <div style="border-left:2px solid var(--primary); padding-left:8px;">
-          <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-            ✓ 4. What This Workout Achieved
-          </div>
-          <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
-            ${(egm.achievements || []).map(a => `<div>${a}</div>`).join('')}
-          </div>
-        </div>
+        
+<div style="border-left:2px solid var(--primary); padding-left:8px;">
+<div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+            \u2713 4. What This Workout Achieved
+</div>
+<div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
+            ${(g.achievements||[]).map(w=>`<div>${w}</div>`).join("")}
+</div>
+</div>
 
-        <!-- SECTION 5: NEGATIVE EFFECTS & STRESSORS -->
-        <div style="border-left:2px solid #f59e0b; padding-left:8px; margin-top:2px;">
-          <div style="font-size:11px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-            ⚠️ 5. Potential Stressors & Biomechanical Impact
-          </div>
-          <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
-            ${(egm.stressors || []).map(s => `<div>${s}</div>`).join('')}
-          </div>
-        </div>
+        
+<div style="border-left:2px solid #f59e0b; padding-left:8px; margin-top:2px;">
+<div style="font-size:11px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+            \u26A0\uFE0F 5. Potential Stressors & Biomechanical Impact
+</div>
+<div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
+            ${(g.stressors||[]).map(w=>`<div>${w}</div>`).join("")}
+</div>
+</div>
 
-        <!-- SECTION 6: RECOVERY PROTOCOL & WINDOW -->
-        <div style="border-left:2px solid #38bdf8; padding-left:8px; margin-top:2px;">
-          <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
-            🛡️ 6. Recommended Recovery Protocol & Window
-          </div>
-          <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
-            ${(egm.recoveryProtocol || []).map(r => `<div>${r}</div>`).join('')}
-          </div>
-        </div>
+        
+<div style="border-left:2px solid #38bdf8; padding-left:8px; margin-top:2px;">
+<div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+            \u{1F6E1}\uFE0F 6. Recommended Recovery Protocol & Window
+</div>
+<div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
+            ${(g.recoveryProtocol||[]).map(w=>`<div>${w}</div>`).join("")}
+</div>
+</div>
 
-      </div>
+</div>
 
-      <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:10.5px; color:var(--text-muted);">Garmin Telemetry • ID: ${esc(act.id)}</span>
-        <button class="header-pill-btn" style="padding:3px 8px; font-size:11px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-secondary);" data-act-id="${esc(act.id)}" onclick="openAnnotateModal(this.dataset.actId)">
-          Annotate Notes ✎
-        </button>
-      </div>
-    `;
-    box.appendChild(card);
-  });
-}
-
-// ==================== 30-DAY RENPHO TREND SVG CHART ====================
-
-async function renderRenphoTrendChart() {
-  let records = [];
-
-  try {
-    const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/renpho/history?days=30', { promptAuthOn401: false }) : fetch('/api/renpho/history?days=30'));
-    if (res.ok) {
-      const data = await res.json();
-      records = Array.isArray(data) ? data : (data && Array.isArray(data.history) ? data.history : []);
-    }
-  } catch (err) {
-    console.warn('[RenphoChart] Fetch failed, using fallback live state:', err);
-  }
-
-  // Locate or create #renphoTrendChartContainer
-  let container = document.getElementById('renphoTrendChartContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'renphoTrendChartContainer';
-    const renphoSyncEl = document.getElementById('renphoSyncTime');
-    const renphoCard = renphoSyncEl ? renphoSyncEl.closest('.card') : (document.querySelector('#tab-body .card') || document.querySelector('.card'));
-    if (renphoCard) {
-      renphoCard.appendChild(container);
-    } else {
-      const targetMain = document.getElementById('tab-today') || document.querySelector('main') || document.body;
-      targetMain.appendChild(container);
-    }
-  }
-  if (!container) return;
-
-  container.style.marginTop = '14px';
-  container.style.paddingTop = '12px';
-  container.style.borderTop = '1px solid rgba(255,255,255,0.06)';
-
-  if (!records || records.length < 2) {
-    const baked = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
-    const rState = baked.renpho || baked.athlete || (typeof window !== 'undefined' ? window.athleteProfile : null) || {};
-    const curWt = Number(rState.weight_kg);
-    const curBf = Number(rState.body_fat_pct);
-    const curLm = Number(rState.lean_mass_kg);
-    const snapshotLine = Number.isFinite(curWt) && curWt > 0
-      ? `Latest reading: ${curWt.toFixed(2)} kg${Number.isFinite(curBf) && curBf > 0 ? ` • ${curBf.toFixed(1)}% BF` : ''}${Number.isFinite(curLm) && curLm > 0 ? ` • ${curLm.toFixed(2)} kg LBM` : ''}`
-      : 'Sync Renpho or log a manual weigh-in to begin tracking.';
-    container.innerHTML = `
-      <div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.14); border-radius:12px; padding:16px; text-align:center;">
-        <div style="font-size:12px; font-weight:800; color:#e4e4e7; margin-bottom:4px;">Need ≥ 2 weigh-ins to plot 30-day trend</div>
-        <div style="font-size:11px; color:var(--text-muted);">${snapshotLine}</div>
-      </div>`;
-    return;
-  }
-
-  // Ensure chronologically sorted
-  records = records.slice().sort((a, b) => {
-    const ta = a.timestamp || (a.date_str ? new Date(a.date_str).getTime() : 0);
-    const tb = b.timestamp || (b.date_str ? new Date(b.date_str).getTime() : 0);
-    return ta - tb;
-  });
-
-  // Map to structured points
-  const points = records.map(r => {
-    const ts = (r.timestamp ? r.timestamp * 1000 : (r.date_str ? new Date(r.date_str).getTime() : Date.now()));
-    const d = new Date(ts);
-    const dateLabel = isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}/${d.getDate()}`;
-    return {
-      ts,
-      dateLabel,
-      dateStr: r.date_str || dateLabel,
-      bf: Number(r.body_fat_pct || 0),
-      lm: Number(r.lean_mass_kg || 0),
-      wt: Number(r.weight_kg || 0)
-    };
-  }).filter(p => p.bf > 5 && p.lm > 20);
-
-  if (points.length === 0) return;
-
-  // Calculate 7-day moving averages for both metrics
-  const sevenDaysMs = 7 * 86400 * 1000;
-  points.forEach((pt, i) => {
-    const windowPts = points.slice(0, i + 1).filter(p => (pt.ts - p.ts) <= sevenDaysMs);
-    const avgBf = windowPts.reduce((s, p) => s + p.bf, 0) / windowPts.length;
-    const avgLm = windowPts.reduce((s, p) => s + p.lm, 0) / windowPts.length;
-    pt.maBf = Math.round(avgBf * 100) / 100;
-    pt.maLm = Math.round(avgLm * 100) / 100;
-  });
-
-  // Calculate Fat Loss Velocity (kg/week and %/week)
-  const firstPt = points[0];
-  const lastPt = points[points.length - 1];
-  const spanMs = Math.max(86400 * 1000, lastPt.ts - firstPt.ts);
-  const weeks = spanMs / (7 * 86400 * 1000);
-
-  const bfDelta = lastPt.bf - firstPt.bf;
-  const bfRatePerWk = bfDelta / weeks;
-
-  const firstFatKg = (firstPt.wt && firstPt.lm) ? (firstPt.wt - firstPt.lm) : (firstPt.wt * (firstPt.bf / 100));
-  const lastFatKg = (lastPt.wt && lastPt.lm) ? (lastPt.wt - lastPt.lm) : (lastPt.wt * (lastPt.bf / 100));
-  const fatKgDelta = lastFatKg - firstFatKg;
-  const fatKgRatePerWk = fatKgDelta / weeks;
-
-  const velKgStr = `${fatKgRatePerWk <= 0 ? '' : '+'}${fatKgRatePerWk.toFixed(2)} kg/wk`;
-  const velBfStr = `${bfRatePerWk <= 0 ? '' : '+'}${bfRatePerWk.toFixed(2)} %/wk`;
-
-  // Min and max for metrics
-  const allBf = points.map(p => p.bf);
-  const allLm = points.map(p => p.lm);
-  const minBfVal = Math.min(...allBf);
-  const maxBfVal = Math.max(...allBf);
-  const minLmVal = Math.min(...allLm);
-  const maxLmVal = Math.max(...allLm);
-
-  // Y-axis scaling
-  const padBf = Math.max(0.15, (maxBfVal - minBfVal) * 0.12);
-  const minBf = Math.floor((minBfVal - padBf) * 10) / 10;
-  const maxBf = Math.ceil((maxBfVal + padBf) * 10) / 10;
-  const rangeBf = Math.max(0.4, maxBf - minBf);
-
-  const padLm = Math.max(0.2, (maxLmVal - minLmVal) * 0.12);
-  const minLm = Math.floor((minLmVal - padLm) * 10) / 10;
-  const maxLm = Math.ceil((maxLmVal + padLm) * 10) / 10;
-  const rangeLm = Math.max(0.6, maxLm - minLm);
-
-  // Dimensions
-  const width = 380;
-  const height = 180;
-  const padL = 36;
-  const padR = 40;
-  const padT = 22;
-  const padB = 26;
-  const chartW = width - padL - padR;
-  const chartH = height - padT - padB;
-
-  // Compute SVG coordinates
-  const pts = points.map((p, i) => {
-    const x = Math.round((padL + (i / Math.max(1, points.length - 1)) * chartW) * 10) / 10;
-    const yBf = Math.round((padT + (1 - (p.bf - minBf) / rangeBf) * chartH) * 10) / 10;
-    const yBfMa = Math.round((padT + (1 - (p.maBf - minBf) / rangeBf) * chartH) * 10) / 10;
-    const yLm = Math.round((padT + (1 - (p.lm - minLm) / rangeLm) * chartH) * 10) / 10;
-    const yLmMa = Math.round((padT + (1 - (p.maLm - minLm) / rangeLm) * chartH) * 10) / 10;
-    return { ...p, x, yBf, yBfMa, yLm, yLmMa };
-  });
-
-  const buildPath = (coordKey) => {
-    if (pts.length === 1) return `M ${pts[0].x} ${pts[0][coordKey]}`;
-    let d = `M ${pts[0].x} ${pts[0][coordKey]}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const c = pts[i];
-      const n = pts[i + 1];
-      const midX = (c.x + n.x) / 2;
-      d += ` Q ${c.x} ${c[coordKey]}, ${midX} ${(c[coordKey] + n[coordKey]) / 2}`;
-    }
-    const last = pts[pts.length - 1];
-    d += ` L ${last.x} ${last[coordKey]}`;
-    return d;
-  };
-
-  const pathBf = buildPath('yBf');
-  const pathBfMa = buildPath('yBfMa');
-  const pathLm = buildPath('yLm');
-  const pathLmMa = buildPath('yLmMa');
-
-  const areaBf = `${pathBf} L ${pts[pts.length - 1].x} ${height - padB} L ${pts[0].x} ${height - padB} Z`;
-
-  // Grid line Y coordinates
-  const gridY1 = padT;
-  const gridY2 = Math.round((padT + chartH * 0.5) * 10) / 10;
-  const gridY3 = height - padB;
-
-  // Date timeline markers
-  const startDate = points[0].dateLabel || 'D-30';
-  const midDate = points[Math.floor(points.length / 2)].dateLabel || 'D-15';
-  const endDate = points[points.length - 1].dateLabel || 'Today';
-
-  container.innerHTML = `
-    <!-- HEADER & VELOCITY DISPLAY -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="font-size:12px;">📈</span>
-        <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
+<div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+<span style="font-size:10.5px; color:var(--text-muted);">${R?"Pulse Logged Entry":"Garmin Telemetry"} \u2022 ID: ${l(e.id)}</span>
+<div style="display:flex; align-items:center; gap:6px;">
+${D}
+<button class="header-pill-btn" style="padding:3px 8px; font-size:11px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-secondary);" data-act-id="${l(e.id)}" onclick="openAnnotateModal(this.dataset.actId)">
+          Annotate Notes \u270E
+</button>
+</div>
+</div>
+    `,i.appendChild(F)})}let _renphoHistoryCache=null,_renphoHistoryFetchedAtMs=0;async function renderRenphoTrendChart(i={}){let s=Array.isArray(_renphoHistoryCache)?_renphoHistoryCache:[];const a=!!(i&&i.force===!0),l=Date.now()-_renphoHistoryFetchedAtMs>300*1e3;if(a||s.length===0||l)try{const o=await(typeof pulseApiFetch=="function"?pulseApiFetch("/api/renpho/history?days=30",{promptAuthOn401:!1}):fetch("/api/renpho/history?days=30"));if(o&&o.ok){const m=await o.json(),_=Array.isArray(m)||m&&Array.isArray(m.history),P=Array.isArray(m)?m:m&&Array.isArray(m.history)?m.history:[];_&&(a||P.length>0||s.length===0)&&(s=P,_renphoHistoryCache=P,_renphoHistoryFetchedAtMs=Date.now(),typeof window<"u"&&(window.PULSE_RENPHO_HISTORY=P))}}catch(o){console.warn("[RenphoChart] Fetch failed, using fallback live state:",o)}try{const o=document.getElementById("bodyAvg7dWeightVal");if(o&&Array.isArray(s)&&s.length>0){const m=s[s.length-1],_=Number(m&&(m["7d_avg_weight"]??m.weight_kg));Number.isFinite(_)&&_>0&&(o.innerText=`7-Day EMA: ${_.toFixed(2)} kg`)}}catch{}let p=document.getElementById("renphoTrendChartContainer");if(!p){p=document.createElement("div"),p.id="renphoTrendChartContainer";const o=document.getElementById("renphoSyncTime"),m=o?o.closest(".card"):document.querySelector("#tab-body .card")||document.querySelector(".card");m?m.appendChild(p):(document.getElementById("tab-today")||document.querySelector("main")||document.body).appendChild(p)}if(!p)return;p.style.marginTop="14px",p.style.paddingTop="12px",p.style.borderTop="1px solid rgba(255,255,255,0.06)";const e=()=>{const o=typeof window<"u"&&window.BAKED_LIVE_STATE?window.BAKED_LIVE_STATE:{},m=o.renpho||o.athlete||(typeof window<"u"?window.athleteProfile:null)||{},_=Number(m.weight_kg),P=Number(m.body_fat_pct),Z=Number(m.lean_mass_kg),U=Number.isFinite(_)&&_>0?`Latest reading: ${_.toFixed(2)} kg${Number.isFinite(P)&&P>0?` \u2022 ${P.toFixed(1)}% BF`:""}${Number.isFinite(Z)&&Z>0?` \u2022 ${Z.toFixed(2)} kg LBM`:""}`:"Sync Renpho or log a manual weigh-in to begin tracking.";p.innerHTML=`
+<div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.14); border-radius:12px; padding:16px; text-align:center;">
+<div style="font-size:12px; font-weight:800; color:#e4e4e7; margin-bottom:4px;">Need \u2265 2 weigh-ins to plot 30-day trend</div>
+<div style="font-size:11px; color:var(--text-muted);">${U}</div>
+</div>`};if(!s||s.length<2){e();return}const N=o=>{const m=o&&o.timestamp!==void 0&&o.timestamp!==null?Number(o.timestamp):NaN;if(Number.isFinite(m)&&m>0)return m<1e11?m*1e3:m;if(o&&o.date_str){const _=new Date(o.date_str).getTime();if(Number.isFinite(_)&&_>0)return _}return 0};s=s.slice().sort((o,m)=>N(o)-N(m));const x=s.map(o=>{const m=N(o)||Date.now(),_=new Date(m),P=isNaN(_.getTime())?"":`${_.getMonth()+1}/${_.getDate()}`;return{ts:m,dateLabel:P,dateStr:o.date_str||P,bf:Number(o.body_fat_pct||0),lm:Number(o.lean_mass_kg||0),wt:Number(o.weight_kg||0)}}).filter(o=>o.bf>5&&o.lm>20);if(x.length<2){e();return}const z=7*86400*1e3;x.forEach((o,m)=>{const _=x.slice(0,m+1).filter(U=>o.ts-U.ts<=z),P=_.reduce((U,Q)=>U+Q.bf,0)/_.length,Z=_.reduce((U,Q)=>U+Q.lm,0)/_.length;o.maBf=Math.round(P*100)/100,o.maLm=Math.round(Z*100)/100});const g=x[0],v=x[x.length-1],t=Math.max(86400*1e3,v.ts-g.ts)/(7*86400*1e3),k=(v.bf-g.bf)/t,A=g.wt&&g.lm?g.wt-g.lm:g.wt*(g.bf/100),y=((v.wt&&v.lm?v.wt-v.lm:v.wt*(v.bf/100))-A)/t,u=`${y<=0?"":"+"}${y.toFixed(2)} kg/wk`,M=`${k<=0?"":"+"}${k.toFixed(2)} %/wk`,R=x.map(o=>o.bf),S=x.map(o=>o.lm),D=Math.min(...R),H=Math.max(...R),I=Math.min(...S),L=Math.max(...S),W=Math.max(.15,(H-D)*.12),E=Math.floor((D-W)*10)/10,j=Math.ceil((H+W)*10)/10,c=Math.max(.4,j-E),f=Math.max(.2,(L-I)*.12),$=Math.floor((I-f)*10)/10,F=Math.ceil((L+f)*10)/10,w=Math.max(.6,F-$),h=380,C=180,b=50,G=54,O=24,K=28,V=h-b-G,q=C-O-K,B=x.map((o,m)=>{const _=Math.round((b+m/Math.max(1,x.length-1)*V)*10)/10,P=Math.round((O+(1-(o.bf-E)/c)*q)*10)/10,Z=Math.round((O+(1-(o.maBf-E)/c)*q)*10)/10,U=Math.round((O+(1-(o.lm-$)/w)*q)*10)/10,Q=Math.round((O+(1-(o.maLm-$)/w)*q)*10)/10;return{...o,x:_,yBf:P,yBfMa:Z,yLm:U,yLmMa:Q}}),Y=o=>{if(B.length===1)return`M ${B[0].x} ${B[0][o]}`;let m=`M ${B[0].x} ${B[0][o]}`;for(let P=0;P<B.length-1;P++){const Z=B[P],U=B[P+1],Q=(Z.x+U.x)/2;m+=` Q ${Z.x} ${Z[o]}, ${Q} ${(Z[o]+U[o])/2}`}const _=B[B.length-1];return m+=` L ${_.x} ${_[o]}`,m},X=Y("yBf"),J=Y("yBfMa"),oe=Y("yLm"),re=Y("yLmMa"),ie=`${X} L ${B[B.length-1].x} ${C-K} L ${B[0].x} ${C-K} Z`,ee=O,te=Math.round((O+q*.5)*10)/10,ne=C-K,ae=x[0].dateLabel||"D-30",se=x[Math.floor(x.length/2)].dateLabel||"D-15",le=x[x.length-1].dateLabel||"Today";p.innerHTML=`
+    
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:12px;">\u{1F4C8}</span>
+<span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
           30-DAY RENPHO TREND
-        </span>
-      </div>
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Fat Velocity:</span>
-        <span style="font-size:11px; font-weight:800; color:#00F0FF; font-family:var(--font-mono); background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.3); padding:2px 7px; border-radius:4px; box-shadow:0 0 8px rgba(0,240,255,0.25);">
-          ${velKgStr} <small style="color:var(--text-secondary); font-size:9.5px; font-weight:600;">(${velBfStr})</small>
-        </span>
-      </div>
-    </div>
+</span>
+</div>
+<div style="display:flex; align-items:center; gap:5px;">
+<span style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Fat Velocity:</span>
+<span style="font-size:11px; font-weight:800; color:#00F0FF; font-family:var(--font-mono); background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.3); padding:2px 7px; border-radius:4px; box-shadow:0 0 8px rgba(0,240,255,0.25);">
+          ${u} <small style="color:var(--text-secondary); font-size:9.5px; font-weight:600;">(${M})</small>
+</span>
+</div>
+</div>
 
-    <!-- DUAL METRIC LEGEND -->
-    <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:6px; padding:0 2px;">
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="display:inline-block; width:12px; height:2.5px; background:#00F0FF; border-radius:1px; box-shadow:0 0 6px rgba(0,240,255,0.7);"></span>
-        <span style="color:#00F0FF; font-weight:700;">Body Fat %</span>
-        <span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="display:inline-block; width:12px; height:2.5px; background:#10b981; border-radius:1px; box-shadow:0 0 6px rgba(16,185,129,0.7);"></span>
-        <span style="color:#10b981; font-weight:700;">Lean Mass kg</span>
-        <span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
-      </div>
-    </div>
+    
+<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:6px; padding:0 2px;">
+<div style="display:flex; align-items:center; gap:5px;">
+<span style="display:inline-block; width:12px; height:2.5px; background:#00F0FF; border-radius:1px; box-shadow:0 0 6px rgba(0,240,255,0.7);"></span>
+<span style="color:#00F0FF; font-weight:700;">Body Fat %</span>
+<span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
+</div>
+<div style="display:flex; align-items:center; gap:5px;">
+<span style="display:inline-block; width:12px; height:2.5px; background:#10b981; border-radius:1px; box-shadow:0 0 6px rgba(16,185,129,0.7);"></span>
+<span style="color:#10b981; font-weight:700;">Lean Mass kg</span>
+<span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
+</div>
+</div>
 
-    <!-- DUAL-METRIC SVG CHART -->
-    <div style="background:linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(6,8,14,0.7) 100%); border:1px solid rgba(0,240,255,0.14); border-radius:10px; padding:8px 6px 4px; box-shadow:inset 0 0 16px rgba(0,0,0,0.4);">
-      <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
-        <defs>
-          <linearGradient id="renphoBfGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.32"/>
-            <stop offset="60%" stop-color="#00F0FF" stop-opacity="0.08"/>
-            <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.0"/>
-          </linearGradient>
-        </defs>
+    
+<div style="background:linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(6,8,14,0.7) 100%); border:1px solid rgba(0,240,255,0.14); border-radius:10px; padding:8px 6px 4px; box-shadow:inset 0 0 16px rgba(0,0,0,0.4);">
+<svg viewBox="0 0 ${h} ${C}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
+<defs>
+<linearGradient id="renphoBfGrad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#00F0FF" stop-opacity="0.32"/>
+<stop offset="60%" stop-color="#00F0FF" stop-opacity="0.08"/>
+<stop offset="100%" stop-color="#00F0FF" stop-opacity="0.0"/>
+</linearGradient>
+</defs>
 
-        <!-- Grid Lines -->
-        <line x1="${padL}" y1="${gridY1}" x2="${width - padR}" y2="${gridY1}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-        <line x1="${padL}" y1="${gridY2}" x2="${width - padR}" y2="${gridY2}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" stroke-width="1"/>
-        <line x1="${padL}" y1="${gridY3}" x2="${width - padR}" y2="${gridY3}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        
+<line x1="${b}" y1="${ee}" x2="${h-G}" y2="${ee}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+<line x1="${b}" y1="${te}" x2="${h-G}" y2="${te}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" stroke-width="1"/>
+<line x1="${b}" y1="${ne}" x2="${h-G}" y2="${ne}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
 
-        <!-- Y-Axis Ticks (Left: Cyan Body Fat %) -->
-        <text x="${padL - 4}" y="${gridY1 + 4}" fill="#00F0FF" font-size="8.5" font-weight="700" text-anchor="end">${maxBf.toFixed(1)}%</text>
-        <text x="${padL - 4}" y="${gridY2 + 3}" fill="#38bdf8" font-size="8" font-weight="600" text-anchor="end">${((maxBf + minBf) / 2).toFixed(1)}%</text>
-        <text x="${padL - 4}" y="${gridY3}" fill="#00F0FF" font-size="8.5" font-weight="700" text-anchor="end">${minBf.toFixed(1)}%</text>
+        
+<text x="${b-4}" y="${ee+4}" fill="#00F0FF" font-size="12.5" font-weight="700" text-anchor="end">${j.toFixed(1)}%</text>
+<text x="${b-4}" y="${te+4}" fill="#38bdf8" font-size="12.5" font-weight="600" text-anchor="end">${((j+E)/2).toFixed(1)}%</text>
+<text x="${b-4}" y="${ne}" fill="#00F0FF" font-size="12.5" font-weight="700" text-anchor="end">${E.toFixed(1)}%</text>
 
-        <!-- Y-Axis Ticks (Right: Emerald Lean Mass kg) -->
-        <text x="${width - padR + 4}" y="${gridY1 + 4}" fill="#10b981" font-size="8.5" font-weight="700" text-anchor="start">${maxLm.toFixed(1)}kg</text>
-        <text x="${width - padR + 4}" y="${gridY2 + 3}" fill="#34d399" font-size="8" font-weight="600" text-anchor="start">${((maxLm + minLm) / 2).toFixed(1)}kg</text>
-        <text x="${width - padR + 4}" y="${gridY3}" fill="#10b981" font-size="8.5" font-weight="700" text-anchor="start">${minLm.toFixed(1)}kg</text>
+        
+<text x="${h-G+4}" y="${ee+4}" fill="#10b981" font-size="12.5" font-weight="700" text-anchor="start">${F.toFixed(1)}kg</text>
+<text x="${h-G+4}" y="${te+4}" fill="#34d399" font-size="12.5" font-weight="600" text-anchor="start">${((F+$)/2).toFixed(1)}kg</text>
+<text x="${h-G+4}" y="${ne}" fill="#10b981" font-size="12.5" font-weight="700" text-anchor="start">${$.toFixed(1)}kg</text>
 
-        <!-- Shaded Fill for Body Fat -->
-        <path d="${areaBf}" fill="url(#renphoBfGrad)"/>
+        
+<path d="${ie}" fill="url(#renphoBfGrad)"/>
 
-        <!-- 7-day MA Dashed Lines -->
-        <path d="${pathBfMa}" fill="none" stroke="#00F0FF" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
-        <path d="${pathLmMa}" fill="none" stroke="#10b981" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
+        
+<path d="${J}" fill="none" stroke="#00F0FF" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
+<path d="${re}" fill="none" stroke="#10b981" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
 
-        <!-- Primary Solid Curves -->
-        <path d="${pathBf}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.6));"/>
-        <path d="${pathLm}" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.6));"/>
+        
+<path d="${X}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.6));"/>
+<path d="${oe}" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.6));"/>
 
-        <!-- Latest Point Markers -->
-        <circle cx="${pts[pts.length - 1].x}" cy="${pts[pts.length - 1].yBf}" r="4" fill="#00F0FF" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.9));"/>
-        <circle cx="${pts[pts.length - 1].x}" cy="${pts[pts.length - 1].yLm}" r="4" fill="#10b981" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.9));"/>
+        
+<circle cx="${B[B.length-1].x}" cy="${B[B.length-1].yBf}" r="4" fill="#00F0FF" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.9));"/>
+<circle cx="${B[B.length-1].x}" cy="${B[B.length-1].yLm}" r="4" fill="#10b981" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.9));"/>
 
-        <!-- X-Axis Timeline Markers -->
-        <text x="${padL}" y="${height - 8}" fill="var(--text-muted)" font-size="9">${startDate}</text>
-        <text x="${padL + chartW / 2}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${midDate}</text>
-        <text x="${width - padR}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="end">${endDate}</text>
-      </svg>
-    </div>
+        
+<text x="${b}" y="${C-6}" fill="var(--text-muted)" font-size="12.5">${ae}</text>
+<text x="${b+V/2}" y="${C-6}" fill="var(--text-muted)" font-size="12.5" text-anchor="middle">${se}</text>
+<text x="${h-G}" y="${C-6}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${le}</text>
+</svg>
+</div>
 
-    <!-- MIN/MAX LABELS & GLANCEABLE SUMMARY -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(0,240,255,0.18); border-radius:8px; padding:6px 8px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <span style="font-size:9.5px; color:#00F0FF; font-weight:800; text-transform:uppercase;">BF% Range</span>
-          <span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${lastPt.bf.toFixed(1)}%</span>
-        </div>
-        <div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
-          <span>Min: <strong style="color:#00F0FF;">${minBfVal.toFixed(1)}%</strong></span>
-          <span>Max: <strong style="color:#94a3b8;">${maxBfVal.toFixed(1)}%</strong></span>
-        </div>
-      </div>
+    
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(0,240,255,0.18); border-radius:8px; padding:6px 8px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+<span style="font-size:9.5px; color:#00F0FF; font-weight:800; text-transform:uppercase;">BF% Range</span>
+<span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${v.bf.toFixed(1)}%</span>
+</div>
+<div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
+<span>Min: <strong style="color:#00F0FF;">${D.toFixed(1)}%</strong></span>
+<span>Max: <strong style="color:#94a3b8;">${H.toFixed(1)}%</strong></span>
+</div>
+</div>
 
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(16,185,129,0.18); border-radius:8px; padding:6px 8px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <span style="font-size:9.5px; color:#10b981; font-weight:800; text-transform:uppercase;">Lean Mass</span>
-          <span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${lastPt.lm.toFixed(1)}kg</span>
-        </div>
-        <div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
-          <span>Min: <strong style="color:#94a3b8;">${minLmVal.toFixed(1)}kg</strong></span>
-          <span>Max: <strong style="color:#10b981;">${maxLmVal.toFixed(1)}kg</strong></span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ==================== 4-WEEK STRENGTH e1RM PROGRESSION ====================
-
-async function renderStrengthProgressionChart() {
-  let strengthHistory = {};
-  let prescriptions = {};
-
-  // Try fetching 30-day history from backend
-  try {
-    const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/strength/history?days=30', { promptAuthOn401: false }) : fetch('/api/strength/history?days=30'));
-    if (res.ok) {
-      const data = await res.json();
-      strengthHistory = (data && data.exercises) || data || {};
-    }
-  } catch (err) {
-    console.warn('[StrengthChart] Fetch failed, falling back to baked prescriptions:', err);
-  }
-
-  // Load baseline strength prescriptions from live state
-  const baked = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
-  prescriptions = baked.strength_prescriptions || (typeof window !== 'undefined' ? window.strengthPrescriptions : null) || {};
-
-  const COMPOUND_LIFTS = [
-    {
-      key: 'barbell_squat',
-      name: 'Barbell Back Squat',
-      icon: '🏋️',
-      family: 'Quad & Knee Extensor Power',
-      defaultWeight: 100.0,
-      defaultReps: 8,
-      defaultE1rm: 126.7
-    },
-    {
-      key: 'barbell_rdl',
-      name: 'Barbell Romanian Deadlift (RDL)',
-      icon: '⚡',
-      family: 'Hamstring & Glute Hinge Anchor',
-      defaultWeight: 110.0,
-      defaultReps: 8,
-      defaultE1rm: 139.3
-    },
-    {
-      key: 'barbell_floor_press',
-      name: 'Barbell Floor Press',
-      icon: '🛡️',
-      family: 'Horizontal Push / Strict Triceps Power',
-      defaultWeight: 95.0,
-      defaultReps: 6,
-      defaultE1rm: 114.0
-    },
-    {
-      key: 'barbell_pendlay_row',
-      name: 'Barbell Pendlay Row',
-      icon: '🚀',
-      family: 'Explosive Dead-Stop Lat Pull',
-      defaultWeight: 85.0,
-      defaultReps: 8,
-      defaultE1rm: 107.7
-    }
-  ];
-
-  // Locate or create #strengthProgressionContainer
-  let container = document.getElementById('strengthProgressionContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'strengthProgressionContainer';
-    const trainPrescribed = document.getElementById('trainViewPrescribed') || document.getElementById('tab-train') || document.getElementById('todayTrainingContainer');
-    if (trainPrescribed) {
-      trainPrescribed.appendChild(container);
-    } else {
-      (document.querySelector('main') || document.body).appendChild(container);
-    }
-  }
-
-  container.style.marginTop = '14px';
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = '10px';
-
-  let cardsHtml = '';
-
-  const _parseNum = (val, fallback) => {
-    if (typeof val === 'number' && Number.isFinite(val)) return val;
-    if (typeof val === 'string') {
-      const m = val.match(/-?\d+(?:\.\d+)?/);
-      if (m) return Number(m[0]);
-    }
-    const n = Number(val);
-    return Number.isFinite(n) && n > 0 ? n : fallback;
-  };
-
-  for (const lift of COMPOUND_LIFTS) {
-    const sp = prescriptions[lift.key] || {};
-    const historyLogs = strengthHistory[lift.key] || [];
-
-    const prescribedWeight = _parseNum(sp.weight, lift.defaultWeight);
-    const prescribedReps = _parseNum(sp.reps, lift.defaultReps);
-    const baselineE1rm = _parseNum(sp.e1rm, lift.defaultE1rm);
-
-    const lastLoggedWeight = _parseNum(sp.last_logged_weight ?? (historyLogs.length ? historyLogs[historyLogs.length - 1].weight : prescribedWeight), prescribedWeight);
-    const lastLoggedReps = _parseNum(sp.last_logged_reps ?? (historyLogs.length ? historyLogs[historyLogs.length - 1].reps : prescribedReps), prescribedReps);
-    const lastE1rm = _parseNum(sp.last_e1rm ?? (historyLogs.length ? historyLogs[historyLogs.length - 1].e1rm : baselineE1rm), baselineE1rm);
-
-    const isProgReady = Boolean(
-      sp.progression_ready === true ||
-      sp.status === 'progression_ready' ||
-      lastLoggedWeight > prescribedWeight ||
-      lastE1rm > baselineE1rm
-    );
-
-    // Plot only real recorded sessions (no synthetic fabricated history bars)
-    const realTail = historyLogs.slice(-4);
-    let weekValues;
-    let w4Val;
-    if (realTail.length >= 2) {
-      weekValues = realTail.map((entry, idx) => ({
-        label: idx === realTail.length - 1 ? 'Now' : `S${idx + 1}`,
-        val: Number(Number(entry.e1rm || baselineE1rm).toFixed(1)),
-        isCurrent: idx === realTail.length - 1
-      }));
-      w4Val = weekValues[weekValues.length - 1].val.toFixed(1);
-    } else {
-      const currentVal = Number((realTail.length === 1 ? realTail[0].e1rm : (isProgReady ? Math.max(lastE1rm, baselineE1rm) : baselineE1rm)).toFixed(1));
-      weekValues = [{ label: 'Now', val: currentVal, isCurrent: true }];
-      w4Val = currentVal.toFixed(1);
-    }
-
-    const minW = Math.min(...weekValues.map(w => w.val));
-    const maxW = Math.max(...weekValues.map(w => w.val));
-    const rangeW = Math.max(6, maxW - minW + 3);
-
-    const barsHtml = weekValues.map(w => {
-      const h = Math.max(12, Math.round(((w.val - (minW - 1.5)) / rangeW) * 36));
-      const isTarget = w.isCurrent && isProgReady;
-      const barStyle = isTarget
-        ? 'background:linear-gradient(180deg, #00F0FF 0%, #10b981 100%); box-shadow:0 0 10px rgba(0,240,255,0.6);'
-        : (w.isCurrent ? 'background:#38bdf8;' : 'background:rgba(255,255,255,0.18);');
-      const valColor = isTarget ? '#00F0FF' : (w.isCurrent ? '#fff' : 'var(--text-muted)');
-
-      return `
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px;">
-          <span style="font-size:9.5px; font-weight:800; font-family:var(--font-mono); color:${valColor};">${w.val}</span>
-          <div style="width:100%; max-width:32px; height:${h}px; ${barStyle} border-radius:3px;"></div>
-          <span style="font-size:9px; font-weight:700; color:${w.isCurrent ? 'var(--primary)' : 'var(--text-muted)'}; margin-top:1px;">${w.label}</span>
-        </div>
-      `;
-    }).join('');
-
-    const cardBorder = isProgReady
-      ? 'border:1px solid rgba(0,240,255,0.6); box-shadow:0 0 18px rgba(0,240,255,0.22); background:linear-gradient(135deg, rgba(0,240,255,0.06) 0%, rgba(15,23,42,0.85) 100%);'
-      : 'border:1px solid rgba(255,255,255,0.07); background:rgba(15,23,42,0.5);';
-
-    cardsHtml += `
-      <div class="strength-progression-card" style="${cardBorder} border-radius:12px; padding:12px 14px; position:relative; overflow:hidden;">
-        <!-- TOP ROW: TITLE & BADGE -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:14px;">${lift.icon}</span>
-              <strong style="color:#fff; font-size:13px; font-family:var(--font-display); letter-spacing:-0.01em;">${lift.name}</strong>
-            </div>
-            <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">
-              Prescribed: <span style="color:#e2e8f0; font-weight:700;">${prescribedWeight}kg × ${prescribedReps}</span> • ${lift.family}
-            </div>
-          </div>
-          <div>
-            ${isProgReady ? `
-              <span style="background:linear-gradient(90deg, #00F0FF, #10b981); color:#000; font-size:10px; font-weight:900; padding:3px 8px; border-radius:4px; letter-spacing:0.04em; box-shadow:0 0 10px rgba(0,240,255,0.6); display:inline-block; white-space:nowrap;">
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(16,185,129,0.18); border-radius:8px; padding:6px 8px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+<span style="font-size:9.5px; color:#10b981; font-weight:800; text-transform:uppercase;">Lean Mass</span>
+<span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${v.lm.toFixed(1)}kg</span>
+</div>
+<div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
+<span>Min: <strong style="color:#94a3b8;">${I.toFixed(1)}kg</strong></span>
+<span>Max: <strong style="color:#10b981;">${L.toFixed(1)}kg</strong></span>
+</div>
+</div>
+</div>
+  `}let _strengthHistoryCache=null,_strengthHistoryFetchedAtMs=0;async function renderStrengthProgressionChart(i={}){let s=_strengthHistoryCache&&typeof _strengthHistoryCache=="object"?_strengthHistoryCache:{},a={};const l=!!(i&&i.force===!0),p=Object.keys(s).length>0,e=Date.now()-_strengthHistoryFetchedAtMs>300*1e3;if(l||!p||e)try{const d=await(typeof pulseApiFetch=="function"?pulseApiFetch("/api/strength/history?days=30",{promptAuthOn401:!1}):fetch("/api/strength/history?days=30"));if(d&&d.ok){const y=await d.json();s=y&&y.exercises||y||{},_strengthHistoryCache=s,_strengthHistoryFetchedAtMs=Date.now()}}catch(d){console.warn("[StrengthChart] Fetch failed, falling back to baked prescriptions:",d)}a=(typeof window<"u"&&window.BAKED_LIVE_STATE?window.BAKED_LIVE_STATE:{}).strength_prescriptions||(typeof window<"u"?window.strengthPrescriptions:null)||{};const x=typeof getAllExercises=="function"?getAllExercises():[],z=(d,y,u)=>{const M=x.find(I=>I&&I.id===d),R=M?typeof M.getBaseWeight=="function"?M.getBaseWeight():M.targetWeight:NaN,S=M?typeof M.getBaseReps=="function"?M.getBaseReps():M.targetReps:NaN,D=typeof R=="number"&&Number.isFinite(R)&&R>0?R:y,H=typeof S=="number"&&Number.isFinite(S)&&S>0?S:u;return{weight:D,reps:H,e1rm:Number((D*(1+H/30)).toFixed(1))}},g=z("barbell_squat",100,8),v=z("barbell_rdl",70,8),T=z("barbell_floor_press",95,6),t=z("barbell_pendlay_row",85,8),n=[{key:"barbell_squat",name:"Barbell Back Squat",icon:"\u{1F3CB}\uFE0F",family:"Quad & Knee Extensor Power",defaultWeight:g.weight,defaultReps:g.reps,defaultE1rm:g.e1rm},{key:"barbell_rdl",name:"Barbell Romanian Deadlift (RDL)",icon:"\u26A1",family:"Hamstring & Glute Hinge Anchor",defaultWeight:v.weight,defaultReps:v.reps,defaultE1rm:v.e1rm},{key:"barbell_floor_press",name:"Barbell Floor Press",icon:"\u{1F6E1}\uFE0F",family:"Horizontal Push / Strict Triceps Power",defaultWeight:T.weight,defaultReps:T.reps,defaultE1rm:T.e1rm},{key:"barbell_pendlay_row",name:"Barbell Pendlay Row",icon:"\u{1F680}",family:"Explosive Dead-Stop Lat Pull",defaultWeight:t.weight,defaultReps:t.reps,defaultE1rm:t.e1rm}];let k=document.getElementById("strengthProgressionContainer");if(!k){k=document.createElement("div"),k.id="strengthProgressionContainer";const d=document.getElementById("trainViewPrescribed")||document.getElementById("tab-train")||document.getElementById("todayTrainingContainer");d?d.appendChild(k):(document.querySelector("main")||document.body).appendChild(k)}k.style.marginTop="14px",k.style.display="flex",k.style.flexDirection="column",k.style.gap="10px";let A="";const r=(d,y)=>{if(typeof d=="number"&&Number.isFinite(d))return d;if(typeof d=="string"){const M=d.match(/-?\d+(?:\.\d+)?/);if(M)return Number(M[0])}const u=Number(d);return Number.isFinite(u)&&u>0?u:y};for(const d of n){const y=a[d.key]||{},u=s[d.key]||[],M=r(y.weight,d.defaultWeight),R=r(y.reps,d.defaultReps),S=r(y.e1rm,d.defaultE1rm),D=r(y.last_logged_weight??(u.length?u[u.length-1].weight:M),M),H=r(y.last_logged_reps??(u.length?u[u.length-1].reps:R),R),I=r(y.last_e1rm??(u.length?u[u.length-1].e1rm:S),S),L=y.progression_ready===!0||y.status==="progression_ready"||D>M||I>S,W=u.slice(-4);let E,j;if(W.length>=2)E=W.map((h,C)=>({label:C===W.length-1?"Now":`S${C+1}`,val:Number(Number(h.e1rm||S).toFixed(1)),isCurrent:C===W.length-1})),j=E[E.length-1].val.toFixed(1);else{const h=Number(Number(W.length===1?W[0].e1rm||S:L?Math.max(I,S):S).toFixed(1));E=[{label:"Now",val:h,isCurrent:!0}],j=h.toFixed(1)}const c=Math.min(...E.map(h=>h.val)),f=Math.max(...E.map(h=>h.val)),$=Math.max(6,f-c+3),F=E.map(h=>{const C=Math.max(12,Math.round((h.val-(c-1.5))/$*36)),b=h.isCurrent&&L,G=b?"background:linear-gradient(180deg, #00F0FF 0%, #10b981 100%); box-shadow:0 0 10px rgba(0,240,255,0.6);":h.isCurrent?"background:#38bdf8;":"background:rgba(255,255,255,0.18);";return`
+<div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px;">
+<span style="font-size:9.5px; font-weight:800; font-family:var(--font-mono); color:${b?"#00F0FF":h.isCurrent?"#fff":"var(--text-muted)"};">${h.val}</span>
+<div style="width:100%; max-width:32px; height:${C}px; ${G} border-radius:3px;"></div>
+<span style="font-size:9px; font-weight:700; color:${h.isCurrent?"var(--primary)":"var(--text-muted)"}; margin-top:1px;">${h.label}</span>
+</div>
+      `}).join("");A+=`
+<div class="strength-progression-card" style="${L?"border:1px solid rgba(0,240,255,0.6); box-shadow:0 0 18px rgba(0,240,255,0.22); background:linear-gradient(135deg, rgba(0,240,255,0.06) 0%, rgba(15,23,42,0.85) 100%);":"border:1px solid rgba(255,255,255,0.07); background:rgba(15,23,42,0.5);"} border-radius:12px; padding:12px 14px; position:relative; overflow:hidden;">
+        
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+<div>
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:14px;">${d.icon}</span>
+<strong style="color:#fff; font-size:13px; font-family:var(--font-display); letter-spacing:-0.01em;">${d.name}</strong>
+</div>
+<div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">
+              Prescribed: <span style="color:#e2e8f0; font-weight:700;">${M}kg \xD7 ${R}</span> \u2022 ${d.family}
+</div>
+</div>
+<div>
+            ${L?`
+<span style="background:linear-gradient(90deg, #00F0FF, #10b981); color:#000; font-size:10px; font-weight:900; padding:3px 8px; border-radius:4px; letter-spacing:0.04em; box-shadow:0 0 10px rgba(0,240,255,0.6); display:inline-block; white-space:nowrap;">
                 +2.5 kg Ready
-              </span>
-            ` : `
-              <span style="background:rgba(255,255,255,0.06); color:var(--text-muted); font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; white-space:nowrap;">
+</span>
+            `:`
+<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; white-space:nowrap;">
                 Baseline Solid
-              </span>
+</span>
             `}
-          </div>
-        </div>
+</div>
+</div>
 
-        <!-- 2-COL TELEMETRY: LAST LOGGED LOAD & e1RM -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:7px 10px; margin-bottom:10px;">
-          <div>
-            <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Last Logged Set</div>
-            <div style="font-size:13px; font-weight:800; color:#fff; font-family:var(--font-mono); margin-top:2px;">
-              ${lastLoggedWeight}kg <small style="color:var(--text-muted); font-size:10px;">× ${lastLoggedReps} reps</small>
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Calculated e1RM</div>
-            <div style="font-size:13px; font-weight:800; color:${isProgReady ? '#00F0FF' : '#fff'}; font-family:var(--font-mono); margin-top:2px;">
-              ${w4Val} kg ${isProgReady ? `<small style="color:#10b981; font-weight:800;">(+${Math.max(2.5, Number((w4Val - baselineE1rm).toFixed(1)))}kg)</small>` : ''}
-            </div>
-          </div>
-        </div>
+        
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:7px 10px; margin-bottom:10px;">
+<div>
+<div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Last Logged Set</div>
+<div style="font-size:13px; font-weight:800; color:#fff; font-family:var(--font-mono); margin-top:2px;">
+              ${D}kg <small style="color:var(--text-muted); font-size:10px;">\xD7 ${H} reps</small>
+</div>
+</div>
+<div style="text-align:right;">
+<div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Calculated e1RM</div>
+<div style="font-size:13px; font-weight:800; color:${L?"#00F0FF":"#fff"}; font-family:var(--font-mono); margin-top:2px;">
+              ${j} kg ${L?`<small style="color:#10b981; font-weight:800;">(+${Math.max(2.5,Number((j-S).toFixed(1)))}kg)</small>`:""}
+</div>
+</div>
+</div>
 
-        <!-- 4-WEEK PROGRESSION VISUAL BARS -->
-        <div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:5px;">
-            <span style="font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">4-Week e1RM Progression Visual</span>
-            <span style="font-family:var(--font-mono); color:${isProgReady ? '#10b981' : 'var(--text-muted)'}; font-weight:700;">
-              ${isProgReady ? '✓ Progressive Overload Met' : 'Consistent Load Retention'}
-            </span>
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; background:rgba(0,0,0,0.32); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:8px 8px 6px; align-items:flex-end; height:74px;">
-            ${barsHtml}
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  container.innerHTML = `
-    <!-- MAIN SECTION HEADER -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="font-size:13px;">🏋️</span>
-        <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
+        
+<div>
+<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:5px;">
+<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">4-Week e1RM Progression Visual</span>
+<span style="font-family:var(--font-mono); color:${L?"#10b981":"var(--text-muted)"}; font-weight:700;">
+              ${L?"\u2713 Progressive Overload Met":"Consistent Load Retention"}
+</span>
+</div>
+<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; background:rgba(0,0,0,0.32); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:8px 8px 6px; align-items:flex-end; height:74px;">
+            ${F}
+</div>
+</div>
+</div>
+    `}k.innerHTML=`
+    
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:13px;">\u{1F3CB}\uFE0F</span>
+<span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
           4-WEEK COMPOUND STRENGTH e1RM PROGRESSION
-        </span>
-      </div>
-      <span style="font-size:10px; font-weight:700; color:var(--primary); font-family:var(--font-mono); background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.25); padding:2px 7px; border-radius:4px;">
+</span>
+</div>
+<span style="font-size:10px; font-weight:700; color:var(--primary); font-family:var(--font-mono); background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.25); padding:2px 7px; border-radius:4px;">
         Linear Overload
-      </span>
-    </div>
+</span>
+</div>
 
-    <!-- 4 COMPOUND LIFT CARDS -->
-    ${cardsHtml}
-  `;
-}
-
-// ==================== GLOBAL ASSIGNMENTS & AUTO-INIT ====================
-if (typeof window !== 'undefined') {
-  window.getGarminHrZoneBreakdown = getGarminHrZoneBreakdown;
-  window.generateHrSvgChart = generateHrSvgChart;
-  window.generateZoneBarsHtml = generateZoneBarsHtml;
-  window.generateTeDualGaugesHtml = generateTeDualGaugesHtml;
-  window.renderHistoryList = renderHistoryList;
-  window.renderRenphoTrendChart = renderRenphoTrendChart;
-  window.renderStrengthProgressionChart = renderStrengthProgressionChart;
-}
-
-let _pulseChartsInitInFlight = false;
-function initPulseCharts() {
-  if (_pulseChartsInitInFlight) return;
-  _pulseChartsInitInFlight = true;
-  try {
-    try {
-      if (typeof renderHistoryList === 'function' && document.getElementById('trainViewHistory')) {
-        renderHistoryList();
-      }
-    } catch (e) {
-      console.warn('[PulseCharts] renderHistoryList init warning:', e);
-    }
-    try {
-      if (typeof renderRenphoTrendChart === 'function') {
-        renderRenphoTrendChart();
-      }
-    } catch (e) {
-      console.warn('[PulseCharts] renderRenphoTrendChart init warning:', e);
-    }
-    try {
-      if (typeof renderStrengthProgressionChart === 'function') {
-        renderStrengthProgressionChart();
-      }
-    } catch (e) {
-      console.warn('[PulseCharts] renderStrengthProgressionChart init warning:', e);
-    }
-  } finally {
-    _pulseChartsInitInFlight = false;
-  }
-}
-
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initPulseCharts(), { once: true });
-  } else {
-    initPulseCharts();
-  }
-}
+    
+    ${A}
+  `}typeof window<"u"&&(window.getGarminHrZoneBreakdown=getGarminHrZoneBreakdown,window.generateHrSvgChart=generateHrSvgChart,window.generateZoneBarsHtml=generateZoneBarsHtml,window.generateTeDualGaugesHtml=generateTeDualGaugesHtml,window.renderHistoryList=renderHistoryList,window.renderRenphoTrendChart=renderRenphoTrendChart,window.renderStrengthProgressionChart=renderStrengthProgressionChart);let _pulseChartsInitInFlight=!1;function initPulseCharts(){if(!_pulseChartsInitInFlight){_pulseChartsInitInFlight=!0;try{try{typeof renderRenphoTrendChart=="function"&&renderRenphoTrendChart()}catch(i){console.warn("[PulseCharts] renderRenphoTrendChart init warning:",i)}try{typeof renderStrengthProgressionChart=="function"&&renderStrengthProgressionChart()}catch(i){console.warn("[PulseCharts] renderStrengthProgressionChart init warning:",i)}}finally{_pulseChartsInitInFlight=!1}}}typeof document<"u"&&(document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>initPulseCharts(),{once:!0}):initPulseCharts());

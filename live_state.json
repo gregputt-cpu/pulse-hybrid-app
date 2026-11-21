@@ -3,8 +3,8 @@
   "date": null,
   "athlete": {
     "name": "Athlete",
-    "age": 45,
-    "height_cm": 190.0,
+    "age": null,
+    "height_cm": null,
     "weight_kg": null,
     "body_fat_pct": null,
     "target_body_fat_pct": 15.0,
@@ -22,11 +22,13 @@
   },
   "renpho": {},
   "nutrition": {
+    "base_calorie_target": 2092,
     "calorie_target": 2092,
     "deficit": 350,
+    "base_protein_target_g": 200,
     "protein_target_g": 200,
-    "carbs_target_g": 251,
-    "fat_target_g": 80
+    "carbs_target_g": 200,
+    "fat_target_g": 55
   },
   "strength_prescriptions": {},
   "mnd_meals": {

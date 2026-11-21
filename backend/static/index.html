@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PULSE • Hybrid Athlete OS</title>
-  <link rel="manifest" href="/manifest.json?v=5.15">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=5.15">
-  <link rel="apple-touch-icon" href="/icon-192.png?v=5.15">
+  <link rel="manifest" href="/manifest.json?v=6.2">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.2">
+  <link rel="apple-touch-icon" href="/icon-192.png?v=6.2">
   <meta name="theme-color" content="#06080e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css?v=5.32">
+  <link rel="stylesheet" href="./css/styles.css?v=6.2">
 </head>
 <body>
 
@@ -45,7 +45,7 @@
       </svg>
     </div>
     <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; letter-spacing:0.22em; color:#fff; margin-top:16px; text-shadow:0 0 18px rgba(0,229,255,0.45);">PULSE</div>
-    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v5.38</div>
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.2</div>
   </div>
 
   <div class="app-screen">
@@ -107,6 +107,8 @@
           </button>
         </div>
 
+        <div id="syncFreshnessStrip" class="sync-freshness-strip"></div>
+
         <!-- HERO SECTION: CENTERED WHOOP / APPLE READINESS RING -->
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 12px 0 8px;">
           <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; color:var(--text-muted); text-transform:uppercase; margin-bottom:14px;">
@@ -130,8 +132,8 @@
               <circle id="todayDialRing" cx="80" cy="80" r="68" fill="none" stroke="url(#readinessGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="427.26" stroke-dashoffset="136.7" style="filter: drop-shadow(0 0 14px rgba(0, 240, 255, 0.5)); transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);" />
             </svg>
             <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
-              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">68</div>
-              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Moderate Readiness</div>
+              <div id="todayDialNum" style="font-size:46px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">--</div>
+              <div id="todayDialSub" style="font-size:11px; font-weight:500; color:#94A3B8; margin-top:4px; letter-spacing:0.02em;">Pending sync</div>
             </div>
           </div>
         </div>
@@ -154,11 +156,11 @@
                 <circle id="vSleepRing" cx="30" cy="30" r="25" fill="none" stroke="url(#sleepGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="37.7" style="filter:drop-shadow(0 0 4px rgba(34,211,238,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">76</span>
+                <span id="vSleep" style="font-size:17px; font-weight:700; color:#fff;">--</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Sleep</div>
-            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">7h 12m</div>
+            <div id="vSleepSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">--</div>
           </div>
 
           <!-- BODY BATTERY GAUGE (Indigo Accent) -->
@@ -176,11 +178,11 @@
                 <circle id="vitalBatteryRing" cx="30" cy="30" r="25" fill="none" stroke="url(#batteryGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="89.5" style="filter:drop-shadow(0 0 6px rgba(139,92,246,0.45));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">43%</span>
+                <span id="vitalBattery" style="font-size:16px; font-weight:700; color:#fff;">--</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Body Battery</div>
-            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Moderate</div>
+            <div id="vitalBbSub" style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">Pending</div>
           </div>
 
           <!-- RESTING HEART RATE GAUGE (Coral Accent) -->
@@ -198,7 +200,7 @@
                 <circle cx="30" cy="30" r="25" fill="none" stroke="url(#rhrGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="45" style="filter:drop-shadow(0 0 4px rgba(249,115,22,0.4));" />
               </svg>
               <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-                <span id="vitalRhrVal" style="font-size:17px; font-weight:700; color:#fff;">46</span>
+                <span id="vitalRhrVal" style="font-size:17px; font-weight:700; color:#fff;">--</span>
               </div>
             </div>
             <div style="font-size:11.5px; font-weight:700; color:#fff; margin-top:7px;">Resting HR</div>
@@ -218,7 +220,7 @@
               <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase;">RENPHO SMART SCALE DIRECT</span>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Today • 06:02</span>
+              <span style="font-size:11px; font-weight:600; color:var(--text-secondary); font-family:var(--font-mono);" id="renphoSyncTime">Pending sync</span>
               <span style="font-size:10px; font-weight:700; color:var(--cyan); background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.25); border-radius:6px; padding:1px 6px;">✎ Log</span>
             </div>
           </div>
@@ -227,7 +229,7 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:baseline;">
             <div>
               <div style="display:flex; align-items:baseline; gap:3px;">
-                <span id="vitalScale" style="font-size:28px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">97.7</span>
+                <span id="vitalScale" style="font-size:28px; font-weight:700; color:#ffffff; line-height:1; letter-spacing:-0.03em;">--</span>
                 <span style="font-size:13px; font-weight:600; color:var(--text-muted);">kg</span>
               </div>
               <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE WEIGHT</div>
@@ -235,7 +237,7 @@
 
             <div style="text-align:right;">
               <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:2px;">
-                <span id="vitalScaleSub" style="font-size:28px; font-weight:700; color:var(--primary); line-height:1; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);">17.1</span>
+                <span id="vitalScaleSub" style="font-size:28px; font-weight:700; color:var(--primary); line-height:1; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);">--</span>
                 <span style="font-size:14px; font-weight:700; color:var(--primary); text-shadow:0 0 18px rgba(0,240,255,0.45);">%</span>
               </div>
               <div style="font-size:10px; font-weight:700; letter-spacing:0.06em; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">SCALE BODY FAT</div>
@@ -243,30 +245,30 @@
           </div>
 
           <!-- 4-Pillar Renpho Bioelectrical Impedance Breakdown (Nested Mini-Boxes) -->
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
+          <div class="renpho-pillar-grid" style="display:grid; gap:6px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); text-align:center;">
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Muscle</div>
-              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoMuscleVal">53.5kg</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoMuscleVal">--</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Lean Mass</div>
-              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoLbmVal">81.0kg</div>
+              <div style="font-size:13px; font-weight:800; color:#fff; margin-top:2px;" id="renphoLbmVal">--</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Water</div>
-              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;" id="renphoWaterVal">59.9%</div>
+              <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;" id="renphoWaterVal">--</div>
             </div>
             <div class="glass-mini-box" style="padding:8px 3px;">
               <div style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Visceral</div>
-              <div style="font-size:13px; font-weight:800; color:var(--primary); margin-top:2px;" id="renphoVisceralVal">10.0</div>
+              <div style="font-size:13px; font-weight:800; color:var(--primary); margin-top:2px;" id="renphoVisceralVal">--</div>
             </div>
           </div>
 
           <!-- Recomposition Progress Bar with Multi-stop Gradient & Glow -->
           <div style="margin-top:12px;">
             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-bottom:5px;">
-              <span id="renphoMeasuredBfLabel">17.1% Scale Measured</span>
-              <span style="color:var(--primary); font-weight:700;" id="renphoGoalRunwayLabel">2.42 kg to 15.0% Goal (95.28kg)</span>
+              <span id="renphoMeasuredBfLabel">--</span>
+              <span style="color:var(--primary); font-weight:700;" id="renphoGoalRunwayLabel">Pending sync</span>
             </div>
             <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
               <div class="progress-bar-telemetry" id="renphoProgressBar" style="width:78%; height:100%; border-radius:3px;"></div>
@@ -275,12 +277,13 @@
         </div>
 
         <div class="card" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-          <div class="macro-remaining-pill" id="todayMacroRemainingPill">2,715 kcal • P: 200g • C: 251g • F: 80g left</div>
+          <div class="macro-remaining-pill" id="todayMacroRemainingPill">-- kcal • P: -- • C: -- • F: --</div>
           <button class="hydration-quick-btn" onclick="quickAddHydration(500)" title="Log +500ml Water">
             💧 +500ml (<span id="todayHydrationVal">0.0L</span>)
           </button>
         </div>
 
+        <div id="todayOverreachBanner" style="display:none;"></div>
         <!-- TODAY'S AUTOREGULATED WORKOUT RECOMMENDATIONS & RECOVERY LIFECYCLE (EGM ENGINE) -->
         <div id="todayTrainingContainer" style="display:flex; flex-direction:column; gap:10px;">
 
@@ -308,7 +311,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px rgba(0,229,255,0.4));"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
             </div>
             <div>
-              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;" id="garminBannerTitle">GARMIN FĒNIX 8 SYNCED • LIVE CLOUD</div>
+              <div style="font-size:10.5px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;" id="garminBannerTitle">GARMIN CLOUD SYNC</div>
               <div style="font-size:12px; font-weight:700; color:#fff; margin-top:1px;" id="garminBannerSub">Syncing live Garmin telemetry...</div>
             </div>
           </div>
@@ -345,7 +348,7 @@
           </div>
 
           <!-- ARCHETYPE QUICK SWITCHER -->
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:3px; margin-bottom:6px;">
+          <div class="archetype-switcher-grid" style="display:grid; gap:3px; margin-bottom:6px;">
             <button id="btnArchetype_option_a" onclick="window._userManualArchetype = true; loadDailyArchetype('option_a')" class="btn-subview active" style="font-size:10px; padding:6px 1px; text-align:center;">Option A (BB)</button>
             <button id="btnArchetype_option_kb" onclick="window._userManualArchetype = true; loadDailyArchetype('option_kb')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option KB</button>
             <button id="btnArchetype_option_b" onclick="window._userManualArchetype = true; loadDailyArchetype('option_b')" class="btn-subview" style="font-size:10px; padding:6px 1px; text-align:center;">Option B (Work)</button>
@@ -367,6 +370,7 @@
             </div>
             <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
               <div class="train-badge" id="stepCounter" style="font-size:12px; padding:2px 5px; white-space:nowrap;">Exercise 1 of 5</div>
+              <button type="button" id="btnWorkoutFocusMode" class="header-pill-btn" onclick="toggleWorkoutFocusMode()" title="Hide extra panels during sets">Focus Mode</button>
               <button onclick="resetActiveSession()" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); font-size:11.5px; padding:1.5px 4px; border-radius:4px; cursor:pointer; white-space:nowrap;" title="Reset active session">↺ Reset</button>
             </div>
           </div>
@@ -386,6 +390,7 @@
               <span id="exTarget">Prescribed: 4 Sets × 8 Reps @ 70kg</span>
               <span style="color:var(--lime);font-weight:800;" id="exRestTarget">Rest: 90s</span>
             </div>
+            <div id="exPlateCalcRow" class="plate-calc-pill" style="display:none;"></div>
 
             <div id="exActionBtnsRow" style="display:flex; gap:8px; margin:8px 0;">
               <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:5px;">⇄ Swap Exercise</button>
@@ -403,12 +408,15 @@
             <div class="set-rows-container" id="setRows"></div>
 
             <div class="autoreg-banner" id="autoregBanner">
-              <div style="display:flex; justify-content:space-between;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                 <span class="autoreg-tag" id="autoregTag">✓ AUTOREGULATION ACTIVE</span>
-                <span style="font-size:12px;color:var(--cyan);font-weight:800;" id="e1rmMetric">e1RM: 139.3kg</span>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span id="prBadgeSlot"></span>
+                  <span style="font-size:12px;color:var(--cyan);font-weight:800;" id="e1rmMetric">e1RM: --</span>
+                </div>
               </div>
-              <div class="autoreg-msg" id="autoregMessage" style="color:#fff; line-height:1.2;">Target hit cleanly. Next session load microloaded +2.5kg.</div>
-              <div class="strength-transfer-msg" id="transferMessage" style="color:var(--lime); font-size:11.5px; font-weight:700;">➔ Strength Transfer: Related push and posterior movements scaled.</div>
+              <div class="autoreg-msg" id="autoregMessage" style="color:#fff; line-height:1.2;">Log a set to activate autoregulation.</div>
+              <div class="strength-transfer-msg" id="transferMessage" style="color:var(--lime); font-size:11.5px; font-weight:700;">--</div>
             </div>
           </div>
 
@@ -432,7 +440,7 @@
             </button>
           </div>
 
-          <details class="fuel-accordion" style="margin-top:8px; background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
+          <details class="fuel-accordion" data-details-key="train_strength_progression" style="margin-top:8px; background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
             <summary style="padding:10px 13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:15px;">📈</span>
@@ -466,13 +474,13 @@
         
         <div class="timer-mode-selector">
           <button class="btn-mode active" id="tmSkip" onclick="setTimerMode('skip')">
-            Speed Rope<br><span style="font-size:11.5px;color:var(--text-dim);">45s on / 15s off</span>
+            Speed Rope<br><span style="font-size:11.5px;color:var(--text-muted);">45s on / 15s off</span>
           </button>
           <button class="btn-mode" id="tmAmrap" onclick="setTimerMode('amrap')">
-            10m AMRAP<br><span style="font-size:11.5px;color:var(--text-dim);">Max Rounds</span>
+            10m AMRAP<br><span style="font-size:11.5px;color:var(--text-muted);">Max Rounds</span>
           </button>
           <button class="btn-mode" id="tmStop" onclick="setTimerMode('stopwatch')">
-            Stopwatch<br><span style="font-size:11.5px;color:var(--text-dim);">Continuous</span>
+            Stopwatch<br><span style="font-size:11.5px;color:var(--text-muted);">Continuous</span>
           </button>
         </div>
 
@@ -492,7 +500,7 @@
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-          <button class="btn-action-primary" id="btnTimerToggle" onclick="toggleTimer()">
+          <button class="btn-action-primary timer-paused" id="btnTimerToggle" onclick="toggleTimer()">
             <span id="timerPlayIcon">▶</span> <span id="timerPlayText">START</span>
           </button>
           <button class="btn-action-primary" style="background:var(--surface-elevated); border:1px solid var(--border-bright); color:#fff;" onclick="resetTimer()">
@@ -511,7 +519,7 @@
         
         <!-- 1. SYNC & QUICK ACTIONS BAR -->
         <div class="card card-highlight" style="padding:14px 16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div class="fuel-action-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);">
             <div style="display:flex; align-items:center; gap:6px;">
               <span class="header-status-dot" style="width:6px; height:6px;"></span>
               <span id="mndConnectionStatusBadge" style="font-size:11px; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em;" onclick="openMndConnectModal()" title="Manage MyNetDiary Connection">MYNETDIARY & GARMIN SYNCED</span>
@@ -527,14 +535,14 @@
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:flex-start;">
             <div>
               <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">Daily Calorie Budget</div>
-              <div style="font-size:26px; font-weight:700; color:#fff; line-height:1.15; margin-top:2px; letter-spacing:-0.03em;" id="fuelTargetNum">2,437 <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+345 active</span></div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">Base 2,092 + Garmin Active</div>
+              <div style="font-size:26px; font-weight:700; color:#fff; line-height:1.15; margin-top:2px; letter-spacing:-0.03em;" id="fuelTargetNum">--</div>
+              <div id="fuelBaseActiveSub" style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">Base -- + Garmin Active</div>
             </div>
             <div style="text-align:right;">
               <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">Calories Remaining</div>
-              <div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1.15; margin-top:2px; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);" id="fuelRemainingNum">154 <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span></div>
+              <div style="font-size:28px; font-weight:700; color:var(--primary); line-height:1.15; margin-top:2px; letter-spacing:-0.03em; text-shadow:0 0 18px rgba(0,240,255,0.45);" id="fuelRemainingNum">--</div>
               <div style="margin-top:3px;">
-                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">✓ Protein Anchor Met (275g • +75g)</span>
+                <span id="proteinRemainingBadge" style="font-size:11px; color:var(--primary); font-weight:700;">Pending sync</span>
               </div>
             </div>
           </div>
@@ -542,16 +550,16 @@
           <!-- High-Precision Multi-Stop Gradient Progress Bar with Glow -->
           <div style="margin-top:14px;">
             <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
-              <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">2,283 kcal</strong></span>
-              <span id="intakeProgressPercent" style="color:var(--primary); font-weight:700;">94% (154 kcal Runway)</span>
+              <span style="color:var(--text-secondary);">Consumed: <strong style="color:#fff;" id="fuelConsumedText">0 kcal</strong></span>
+              <span id="intakeProgressPercent" style="color:var(--primary); font-weight:700;">0%</span>
             </div>
             <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;">
-              <div id="barIntakeConsumed" class="progress-bar-telemetry" style="width:94%; height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
+              <div id="barIntakeConsumed" class="progress-bar-telemetry" style="width:0%; height:100%; border-radius:999px; transition:width 0.4s ease;"></div>
             </div>
           </div>
 
           <!-- Progressive Disclosure: Budget Calculation Math Drawer -->
-          <details class="fuel-accordion" style="margin-top:12px; background:rgba(0,0,0,0.25);">
+          <details class="fuel-accordion" data-details-key="fuel_budget_math" style="margin-top:12px; background:rgba(0,0,0,0.25);">
             <summary style="padding:8px 10px; font-size:11.5px; color:var(--text-muted);">
               <span>📐 How your budget is calculated</span>
               <span class="accordion-chevron">▼</span>
@@ -559,33 +567,33 @@
             <div class="fuel-accordion-content" style="font-size:11.5px; padding:8px 10px 10px;">
               <div class="fuel-calc-row">
                 <span>Base Metabolism (Renpho Scale BMR)</span>
-                <strong id="fuelCalcBmr">2,101 kcal</strong>
+                <strong id="fuelCalcBmr">--</strong>
               </div>
               <div class="fuel-calc-row">
                 <span>Daily Baseline Steps & Movement (NEAT)</span>
-                <strong id="fuelCalcNeat">+292 kcal</strong>
+                <strong id="fuelCalcNeat">--</strong>
               </div>
               <div class="fuel-calc-row">
                 <span>Garmin Workout Active Burn (Cardio)</span>
-                <strong id="fuelCalcBurn" style="color:var(--primary);">+345 kcal</strong>
+                <strong id="fuelCalcBurn" style="color:var(--primary);">--</strong>
               </div>
               <div class="fuel-calc-row">
                 <span>Target Deficit for 15.0% Body Fat Goal</span>
-                <strong id="fuelCalcDeficit" style="color:var(--text-muted);">-350 kcal</strong>
+                <strong id="fuelCalcDeficit" style="color:var(--text-muted);">--</strong>
               </div>
               <div class="fuel-calc-divider"></div>
               <div class="fuel-calc-row" style="font-size:12px;">
                 <span>Total Daily Calorie Target</span>
-                <strong id="fuelCalcTarget">= 2,437 kcal</strong>
+                <strong id="fuelCalcTarget">--</strong>
               </div>
               <div class="fuel-calc-row" style="font-size:12px;">
                 <span>Food Logged Today (MyNetDiary)</span>
-                <strong id="fuelCalcConsumed">-2,283 kcal</strong>
+                <strong id="fuelCalcConsumed">--</strong>
               </div>
               <div class="fuel-calc-divider"></div>
               <div class="fuel-calc-row" style="font-size:12.5px; font-weight:700;">
                 <span style="color:var(--primary);">Remaining Energy Runway</span>
-                <strong id="fuelCalcRemaining" style="color:var(--primary);">= 154 kcal</strong>
+                <strong id="fuelCalcRemaining" style="color:var(--primary);">--</strong>
               </div>
             </div>
           </details>
@@ -596,51 +604,51 @@
           <!-- Protein Card (Cyan Accent) -->
           <div class="card glass-metric-col-cyan" style="padding:12px 10px;">
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Protein Anchor</div>
-            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroProtein">200g</div>
+            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroProtein">--</div>
             <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin:5px 0; overflow:hidden;">
-              <div id="barProtein" style="width:100%; background:linear-gradient(90deg, #00F0FF, #38BDF8); height:100%; box-shadow:0 0 8px rgba(0,240,255,0.5);"></div>
+              <div id="barProtein" style="width:0%; background:linear-gradient(90deg, #00F0FF, #38BDF8); height:100%; box-shadow:0 0 8px rgba(0,240,255,0.5);"></div>
             </div>
-            <div style="font-size:10.5px; font-weight:700; color:var(--primary);" id="macroProteinSub">275g (138%) • Anchor Met (+75g)</div>
+            <div style="font-size:10.5px; font-weight:700; color:var(--text-secondary);" id="macroProteinSub">--</div>
           </div>
 
           <!-- Carbs Card (Indigo Accent) -->
           <div class="card glass-metric-col-indigo" style="padding:12px 10px;">
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Energy Carbs</div>
-            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroCarbs">251g</div>
+            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroCarbs">--</div>
             <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin:5px 0; overflow:hidden;">
-              <div id="barCarbs" style="width:56%; background:linear-gradient(90deg, #818CF8, #A78BFA); height:100%;"></div>
+              <div id="barCarbs" style="width:0%; background:linear-gradient(90deg, #818CF8, #A78BFA); height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">121g net (140g) • 111g Left</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroCarbsSub">--</div>
           </div>
 
           <!-- Fats Card (Coral Accent) -->
           <div class="card glass-metric-col-coral" style="padding:12px 10px;">
             <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Healthy Fats</div>
-            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroFat">80g</div>
+            <div style="font-size:20px; font-weight:700; color:#fff; margin:4px 0; letter-spacing:-0.03em;" id="macroFat">--</div>
             <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:999px; margin:5px 0; overflow:hidden;">
-              <div id="barFat" style="width:91%; background:linear-gradient(90deg, #F97316, #FB923C); height:100%;"></div>
+              <div id="barFat" style="width:0%; background:linear-gradient(90deg, #F97316, #FB923C); height:100%;"></div>
             </div>
-            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">73g • 7g Left</div>
+            <div style="font-size:10.5px; color:var(--text-secondary);" id="macroFatSub">--</div>
           </div>
         </div>
 
         <!-- Hidden compatibility elements so existing scripts never throw -->
         <div style="display:none;">
-          <span id="mndCalsVal">2283</span>
-          <span id="mndCalsTarget">2437</span>
-          <span id="mndCalsRemainingBadge">154 left</span>
+          <span id="mndCalsVal">0</span>
+          <span id="mndCalsTarget">0</span>
+          <span id="mndCalsRemainingBadge">0</span>
           <div id="mndBarCals"></div>
-          <span id="mndProteinVal">275</span>
-          <span id="mndProteinRemainingBadge">Anchor Met (+75g)</span>
+          <span id="mndProteinVal">0</span>
+          <span id="mndProteinRemainingBadge">0</span>
           <div id="mndBarProtein"></div>
-          <span id="mndCarbsVal">140</span>
-          <span id="mndCarbsRemainingBadge">111g left</span>
+          <span id="mndCarbsVal">0</span>
+          <span id="mndCarbsRemainingBadge">0</span>
           <div id="mndBarCarbs"></div>
-          <span id="mndFatVal">73</span>
-          <span id="mndFatRemainingBadge">7g left</span>
+          <span id="mndFatVal">0</span>
+          <span id="mndFatRemainingBadge">0</span>
           <div id="mndBarFat"></div>
           <span id="fuelGarminEqChip"></span>
-          <span id="fuelBudgetNum">2437</span>
+          <span id="fuelBudgetNum">0</span>
         </div>
 
         <!-- 3. COACH GUIDANCE CARD (PLAIN ENGLISH ACTIONABLE ADVICE) -->
@@ -650,12 +658,13 @@
             <strong style="color:var(--primary); font-size:11px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">Daily Fuel Coach</strong>
           </div>
           <div id="mndCoachAdvice" style="font-size:12px; color:var(--text-secondary); line-height:1.45;">
-            <strong>✓ In Deficit & Protein Met!</strong> You've logged <strong>2,283 kcal</strong> and <strong>275g protein</strong> today (crushing your 200g anchor by +75g). You have <strong>154 kcal of runway remaining</strong> within your 350 kcal deficit target. Perfect execution for dropping to 15.0% body fat while protecting all 81.1kg of muscle!
+            Sync MyNetDiary or log meals to see daily guidance.
           </div>
         </div>
 
         <!-- v5.23: Nutritional Quality, Micronutrient & Food Gap Audit -->
         <div id="nutritionQualityAuditCard" style="margin-bottom: 18px;"></div>
+        <div id="macroGapCloserCard"></div>
 
         <!-- 4. CHRONOLOGICAL MEAL STREAM (CLICK TO EXPAND / COLLAPSE) -->
         <div class="card" style="padding:12px 14px; border-radius:12px;">
@@ -664,7 +673,7 @@
               <strong style="color:#fff; font-size:13px; font-weight:800; letter-spacing:0.02em;">Today's Logged Meals</strong>
               <div style="font-size:11px; color:var(--text-muted); margin-top:1px;">Tap any meal to view or remove foods</div>
             </div>
-            <span style="font-size:11px; color:var(--primary); font-weight:700; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.25); padding:2px 7px; border-radius:5px;" id="mndMealsCountBadge">2 Logged (7 Items)</span>
+            <span style="font-size:11px; color:var(--primary); font-weight:700; background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.25); padding:2px 7px; border-radius:5px;" id="mndMealsCountBadge">0 Logged</span>
           </div>
 
           <div id="mndMealsStreamContainer" style="display:flex; flex-direction:column; gap:8px;">
@@ -673,7 +682,7 @@
         </div>
 
         <!-- 5. EXPANDABLE: HYDRATION & MICRONUTRIENTS -->
-        <details class="fuel-accordion">
+        <details class="fuel-accordion" data-details-key="fuel_hydration">
           <summary>
             <div style="display:flex; align-items:center; gap:7px;">
               <span>💧</span>
@@ -688,17 +697,17 @@
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:12px; margin-bottom:4px;">
               <div style="background:var(--surface-elevated); padding:8px; border-radius:8px; border:1px solid var(--border);">
                 <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase;">Daily Water</div>
-                <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;" id="mndWaterVal">2.4L</div>
+                <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;" id="mndWaterVal">0.0L</div>
                 <div style="color:var(--text-muted); font-size:10.5px;">Target: 3.5L</div>
               </div>
               <div style="background:var(--surface-elevated); padding:8px; border-radius:8px; border:1px solid var(--border);">
                 <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase;">Dietary Fiber</div>
-                <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;" id="mndFiberVal">32g</div>
+                <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;" id="mndFiberVal">0g</div>
                 <div style="color:var(--primary); font-size:10.5px; font-weight:700;">Optimal (30g+)</div>
               </div>
               <div style="background:var(--surface-elevated); padding:8px; border-radius:8px; border:1px solid var(--border);">
                 <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase;">Sodium</div>
-                <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;" id="mndSodiumVal">1,162mg</div>
+                <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;" id="mndSodiumVal">0mg</div>
                 <div style="color:var(--text-muted); font-size:10.5px;">Well balanced</div>
               </div>
             </div>
@@ -706,19 +715,19 @@
             <div style="margin-top:4px;">
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:4px;">
                 <span style="color:var(--text-muted); font-weight:700; text-transform:uppercase;">Energy Ratio</span>
-                <span style="color:#fff; font-weight:700;" id="mndMacroRatioText">28% Protein • 48% Carbs • 24% Fat</span>
+                <span style="color:#fff; font-weight:700;" id="mndMacroRatioText">--</span>
               </div>
               <div class="macro-bar-container" style="height:5px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,0.06); display:flex;">
-                <div id="mndSplitP" style="width:28%; background:var(--primary); height:100%;"></div>
-                <div id="mndSplitC" style="width:48%; background:#fff; height:100%;"></div>
-                <div id="mndSplitF" style="width:24%; background:var(--text-muted); height:100%;"></div>
+                <div id="mndSplitP" style="width:34%; background:var(--primary); height:100%;"></div>
+                <div id="mndSplitC" style="width:33%; background:#fff; height:100%;"></div>
+                <div id="mndSplitF" style="width:33%; background:var(--text-muted); height:100%;"></div>
               </div>
             </div>
           </div>
         </details>
 
         <!-- 6. EXPANDABLE: NUTRITION STRATEGY & DIETARY PROTOCOLS -->
-        <details class="fuel-accordion">
+        <details class="fuel-accordion" data-details-key="fuel_diet_strategy">
           <summary>
             <div style="display:flex; align-items:center; gap:7px;">
               <span>⚡</span>
@@ -819,7 +828,7 @@
               <div style="background:var(--surface-elevated); padding:10px 12px; border-radius:10px; border:1px solid var(--border);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <span style="font-weight:700; font-size:12.5px; color:#fff;">Custom Macro Sliders</span>
-                  <span style="color:var(--primary); font-size:12px; font-weight:800;" id="proDialCals">2,437 kcal</span>
+                  <span style="color:var(--primary); font-size:12px; font-weight:800;" id="proDialCals">-- kcal</span>
                 </div>
                 <div class="pro-slider-row" style="margin-top:6px;">
                   <span style="width:130px; color:var(--text-muted); font-size:12px;">Protein: <strong style="color:#fff;" id="sliderValProtein">200g</strong></span>
@@ -830,7 +839,7 @@
                   <input type="range" id="sliderFat" min="15" max="65" value="30" step="1" oninput="updateProDial()">
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; background:rgba(0,0,0,0.3); padding:6px 10px; border-radius:8px; font-size:12px;">
-                  <span>Auto Carbs: <strong style="color:var(--primary); font-size:12.5px;" id="sliderValCarbs">251g</strong></span>
+                  <span>Auto Carbs: <strong style="color:var(--primary); font-size:12.5px;" id="sliderValCarbs">--</strong></span>
                   <button class="solver-size-btn" style="background:var(--primary); color:#000; font-weight:800; font-size:11px; padding:4px 10px; border-radius:5px;" onclick="applyCustomProDial()">Apply</button>
                 </div>
               </div>
@@ -853,21 +862,21 @@
           <div class="body-metrics-grid">
             <div style="background:var(--surface-elevated); padding:8px 10px; border-radius:9px; border:1px solid var(--border); text-align:center;">
               <div style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Current Scale (Renpho)</div>
-              <div style="font-size:24px; font-weight:700; color:#fff; margin-top:2px; letter-spacing:-0.03em;" id="bodyScaleWeight">98.0 <small style="font-size:13px; font-weight:500; color:var(--text-muted);">kg</small></div>
-              <div style="font-size:12px; color:var(--cyan); font-weight:700;" id="bodyScaleBf">17.2% Body Fat</div>
+              <div style="font-size:24px; font-weight:700; color:#fff; margin-top:2px; letter-spacing:-0.03em;" id="bodyScaleWeight">--</div>
+              <div style="font-size:12px; color:var(--cyan); font-weight:700;" id="bodyScaleBf">Pending sync</div>
             </div>
 
             <div style="background:var(--surface-elevated); padding:8px 10px; border-radius:9px; border:1px solid var(--border); text-align:center;">
               <div style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Target Recomposition</div>
-              <div style="font-size:24px; font-weight:700; color:var(--primary); margin-top:2px; letter-spacing:-0.03em; text-shadow:0 0 16px rgba(0,240,255,0.4);" id="bodyTargetWeightNum">95.46 <small style="font-size:13px; font-weight:500; color:var(--primary);">kg</small></div>
+              <div style="font-size:24px; font-weight:700; color:var(--primary); margin-top:2px; letter-spacing:-0.03em; text-shadow:0 0 16px rgba(0,240,255,0.4);" id="bodyTargetWeightNum">--</div>
               <div style="font-size:12px; color:var(--primary); font-weight:700;" id="bodyTargetBfNum">15.0% Body Fat</div>
             </div>
           </div>
 
           <div style="margin-top:10px;">
             <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px;">
-              <span style="color:var(--text-secondary);">Fat To Burn: <strong style="color:#fff;" id="bodyFatToBurnNum">2.54 kg (5.6 lbs)</strong></span>
-              <span style="color:var(--primary); font-weight:700;" id="bodyLeanMassProtected">Lean Mass: 81.14 kg Protected</span>
+              <span style="color:var(--text-secondary);">Fat To Burn: <strong style="color:#fff;" id="bodyFatToBurnNum">--</strong></span>
+              <span style="color:var(--primary); font-weight:700;" id="bodyLeanMassProtected">Lean Mass: Pending sync</span>
             </div>
             <div style="background:rgba(255,255,255,0.06); height:6px; border-radius:999px; overflow:hidden;">
               <div id="bodyRecompProgressBar" class="progress-bar-telemetry" style="width:68%; height:100%; border-radius:999px; background:linear-gradient(90deg, #00F0FF 0%, #3B82F6 60%, #A855F7 100%); box-shadow:0 0 10px rgba(0,240,255,0.5);"></div>
@@ -876,15 +885,17 @@
         </div>
 
         <div id="biometricSparklinesCard" class="card" style="padding:12px 14px;"></div>
+        <div id="adaptiveTdeeCard" class="card"></div>
+        <div id="acwrDeloadCard" class="card"></div>
 
         <!-- ==================== SECTION: COACH GROUNDING REALITY CHECK (EGM ACCORDION) ==================== -->
-        <details class="fuel-accordion" style="background:linear-gradient(135deg, rgba(0,240,255,0.06), rgba(15,23,42,0.85)); border:1px solid rgba(0,240,255,0.25); border-radius:14px; overflow:hidden;">
+        <details class="fuel-accordion" data-details-key="body_coach_briefing" style="background:linear-gradient(135deg, rgba(0,240,255,0.06), rgba(15,23,42,0.85)); border:1px solid rgba(0,240,255,0.25); border-radius:14px; overflow:hidden;">
           <summary style="padding:10px 13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:16px;">🧠</span>
               <div>
                 <strong style="color:var(--primary); font-size:12.5px; font-weight:800; letter-spacing:0.02em;">Coach Reality Briefing</strong>
-                <span id="coachBriefingLbm" style="font-size:11px; color:var(--text-muted); margin-left:6px;">81.1kg Pure Lean Muscle</span>
+                <span id="coachBriefingLbm" style="font-size:11px; color:var(--text-muted); margin-left:6px;">Lean Muscle Mass</span>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -892,12 +903,12 @@
               <span class="accordion-chevron">▼</span>
             </div>
           </summary>
-          <div style="padding:10px 14px 13px; font-size:12px; color:#cbd5e1; line-height:1.45; border-top:1px solid rgba(255,255,255,0.06);">
-            At <strong>190.5 cm (6'3") and 98.0 kg</strong>, standard medical BMI tables lazily categorize you as "overweight," completely failing to recognize that <strong>81.14 kg is pure fat-free lean muscle mass</strong>. You have the athletic frame of a high-level decathlete or rugby back. You are already in the top 15% for body composition and top 1% for cardiovascular stroke volume (48 bpm RHR). Your target of shedding <strong>2.54 kg fat</strong> is not a drastic cut — it is precision tuning to reveal your muscular definition while protecting your joints.
+          <div id="coachBriefingBody" style="padding:10px 14px 13px; font-size:12px; color:#cbd5e1; line-height:1.45; border-top:1px solid rgba(255,255,255,0.06);">
+            Sync Renpho scale and Garmin telemetry to unlock personalized composition analysis.
           </div>
         </details>
 
-        <details class="fuel-accordion" open style="background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
+        <details class="fuel-accordion" data-details-key="body_renpho_trend" open style="background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
           <summary style="padding:10px 13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:15px;">📉</span>
@@ -909,7 +920,7 @@
         </details>
 
         <!-- ==================== SECTION: POPULATION NORMS (EGM ACCORDION) ==================== -->
-        <details class="fuel-accordion" style="background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
+        <details class="fuel-accordion" data-details-key="body_population_norms" style="background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden;">
           <summary style="padding:10px 13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:16px;">📊</span>
@@ -919,64 +930,64 @@
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:10.5px; color:var(--primary); background:rgba(0,240,255,0.12); padding:2px 7px; border-radius:4px; font-weight:700;">Age 45 Benchmarks</span>
+              <span style="font-size:10.5px; color:var(--primary); background:rgba(0,240,255,0.12); padding:2px 7px; border-radius:4px; font-weight:700;">Adult Benchmarks</span>
               <span class="accordion-chevron">▼</span>
             </div>
           </summary>
           <div style="padding:10px 12px 12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:8px;">
-            <!-- GAUGE 1: BODY FAT (17.2% -> TOP 12%) -->
+            <!-- GAUGE 1: BODY FAT -->
             <div class="norm-gauge-row">
               <div class="norm-gauge-header">
-                <span style="font-weight:800; color:#fff;">Body Fat Percentage: <strong style="color:var(--lime);" id="normBfVal">17.2%</strong></span>
-                <span style="color:var(--lime); font-weight:900; font-size:11.5px; background:var(--lime-glow); padding:1px 6px; border-radius:4px;" id="normBfBadge">TOP 15% OF 45yo MEN</span>
+                <span style="font-weight:800; color:#fff;">Body Fat Percentage: <strong style="color:var(--lime);" id="normBfVal">--</strong></span>
+                <span style="color:var(--lime); font-weight:900; font-size:11.5px; background:var(--lime-glow); padding:1px 6px; border-radius:4px;" id="normBfBadge">--</span>
               </div>
               <div class="norm-bar-track">
                 <div class="norm-bar-fill" id="normBfBar" style="width:85%; background:linear-gradient(90deg, var(--cyan), var(--lime));"></div>
               </div>
               <div class="norm-note" id="normBfNote">
-                Average 45yo male in UK/US carries <strong>24%–28% body fat</strong>. Your 17.2% places you firmly in the fit/athletic tier. You are only <strong>2.54 kg</strong> away from your 15.0% milestone!
+                Sync Renpho telemetry to compare body composition against age norms.
               </div>
             </div>
 
-            <!-- GAUGE 2: LEAN BODY MASS (81.14 kg -> TOP 3%) -->
+            <!-- GAUGE 2: LEAN BODY MASS -->
             <div class="norm-gauge-row">
               <div class="norm-gauge-header">
-                <span style="font-weight:800; color:#fff;">Lean Body Mass: <strong id="normLbmVal" style="color:var(--cyan);">81.14 kg (178.9 lbs)</strong></span>
+                <span style="font-weight:800; color:#fff;">Lean Body Mass: <strong id="normLbmVal" style="color:var(--cyan);">--</strong></span>
                 <span style="color:var(--cyan); font-weight:900; font-size:11.5px; background:var(--cyan-glow); padding:1px 6px; border-radius:4px;">TOP 3% ELITE MUSCLE</span>
               </div>
               <div class="norm-bar-track">
                 <div class="norm-bar-fill" style="width:97%; background:var(--cyan);"></div>
               </div>
               <div class="norm-note">
-                FFMI of <strong>22.4 kg/m²</strong>. The median 45yo man has 64 kg lean mass. You carry <strong>+17.1 kg more functional lean tissue</strong> than average.
+                Lean tissue percentiles update after scale sync.
               </div>
             </div>
 
-            <!-- GAUGE 3: RESTING HEART RATE (48 bpm -> TOP 1%) -->
+            <!-- GAUGE 3: RESTING HEART RATE -->
             <div class="norm-gauge-row">
               <div class="norm-gauge-header">
-                <span style="font-weight:800; color:#fff;">Resting Heart Rate: <strong style="color:var(--cyan);">48 bpm</strong></span>
+                <span style="font-weight:800; color:#fff;">Resting Heart Rate: <strong style="color:var(--cyan);">-- bpm</strong></span>
                 <span style="color:var(--cyan); font-weight:900; font-size:11.5px; background:var(--cyan-glow); padding:1px 6px; border-radius:4px;">TOP 1% ATHLETIC BRADYCARDIA</span>
               </div>
               <div class="norm-bar-track">
                 <div class="norm-bar-fill" style="width:99%; background:linear-gradient(90deg, var(--cyan), #3b82f6);"></div>
               </div>
               <div class="norm-note">
-                Population median is <strong>70 bpm</strong>. 48 bpm (Garmin fēnix 8 measured) indicates an enlarged athletic ventricular stroke volume and superior parasympathetic tone.
+                Resting heart rate percentiles update after wearable sync.
               </div>
             </div>
 
-            <!-- GAUGE 4: VISCERAL FAT (RATING 10 -> NORMAL THRESHOLD) -->
+            <!-- GAUGE 4: VISCERAL FAT -->
             <div class="norm-gauge-row">
               <div class="norm-gauge-header">
-                <span style="font-weight:800; color:#fff;">Visceral Fat Level: <strong style="color:var(--amber);">Rating 10</strong></span>
+                <span style="font-weight:800; color:#fff;">Visceral Fat Level: <strong style="color:var(--amber);">--</strong></span>
                 <span style="color:var(--amber); font-weight:800; font-size:11.5px; background:var(--amber-glow); padding:1px 6px; border-radius:4px;">ACCEPTABLE (1–12 SCALE)</span>
               </div>
               <div class="norm-bar-track">
                 <div class="norm-bar-fill" style="width:65%; background:var(--amber);"></div>
               </div>
               <div class="norm-note">
-                Acceptable upper range. Shedding 2.54 kg fat to reach your 15% target will push visceral fat safely down to <strong>Rating 7–8</strong>, virtually eliminating arterial stiffness risk.
+                Visceral rating updates after Renpho scale sync.
               </div>
             </div>
           </div>
@@ -986,7 +997,7 @@
         <div class="card" style="padding:10px 12px;">
           <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
             <span style="font-weight:800; color:#fff;">Scale Trajectory & 7-Day EMA</span>
-            <span style="color:var(--cyan); font-weight:700;">7-Day EMA: 98.77 kg</span>
+            <span id="bodyAvg7dWeightVal" style="color:var(--cyan); font-weight:700;">7-Day EMA: --</span>
           </div>
 
           <div style="width:100%; height:80px;">
@@ -994,7 +1005,7 @@
               <line x1="10" y1="15" x2="350" y2="15" stroke="rgba(255,255,255,0.05)" />
               <line x1="10" y1="45" x2="350" y2="45" stroke="rgba(255,255,255,0.05)" />
               <line x1="10" y1="72" x2="350" y2="72" stroke="rgba(56, 189, 248, 0.4)" stroke-dasharray="3" />
-              <text x="350" y="60" fill="var(--cyan)" font-size="11" font-weight="800" text-anchor="end" id="svgGoalText">GOAL: 95.46 kg (15.0% BF)</text>
+              <text x="350" y="60" fill="var(--cyan)" font-size="11" font-weight="800" text-anchor="end" id="svgGoalText">GOAL: --</text>
               
               <path d="M 10,24 C 80,28 150,42 230,55 C 280,63 320,70 350,72 L 350,85 L 10,85 Z" fill="rgba(0,229,255,0.12)" />
               <path d="M 10,24 C 80,28 150,42 230,55 C 280,63 320,70 350,72" fill="none" stroke="var(--lime)" stroke-width="2.5" />
@@ -1011,17 +1022,17 @@
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
           <div class="card glass-metric-col-cyan" style="padding:10px 8px; text-align:center;">
             <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Muscle</div>
-            <div style="font-size:18px; font-weight:700; color:#fff; margin-top:2px; letter-spacing:-0.03em;">53.4 kg</div>
+            <div id="bodySkeletalMuscleVal" style="font-size:18px; font-weight:700; color:#fff; margin-top:2px; letter-spacing:-0.03em;">-- kg</div>
             <div style="font-size:10px; color:var(--primary); font-weight:700; margin-top:2px;">Elite Base</div>
           </div>
           <div class="card glass-metric-col-indigo" style="padding:10px 8px; text-align:center;">
             <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Visceral</div>
-            <div style="font-size:18px; font-weight:700; color:var(--amber); margin-top:2px; letter-spacing:-0.03em;">Rating 10</div>
+            <div id="bodyVisceralVal" style="font-size:18px; font-weight:700; color:var(--amber); margin-top:2px; letter-spacing:-0.03em;">--</div>
             <div style="font-size:10px; color:var(--text-secondary); margin-top:2px;">Normal (1–12)</div>
           </div>
           <div class="card glass-metric-col-coral" style="padding:10px 8px; text-align:center;">
             <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Water</div>
-            <div style="font-size:18px; font-weight:700; color:#38BDF8; margin-top:2px; letter-spacing:-0.03em;">59.8%</div>
+            <div id="bodyWaterPctVal" style="font-size:18px; font-weight:700; color:#38BDF8; margin-top:2px; letter-spacing:-0.03em;">--%</div>
             <div style="font-size:10px; color:#38BDF8; font-weight:700; margin-top:2px;">Optimal</div>
           </div>
         </div>
@@ -1107,7 +1118,7 @@
         </div>
 
         <div style="overflow-y:auto; padding:2px 0; flex:1;">
-          <div class="gear-preset-btns" style="margin-bottom:8px; display:grid; grid-template-columns:repeat(5, 1fr); gap:3px;">
+          <div class="gear-preset-btns" style="margin-bottom:8px; display:grid; gap:3px;">
             <button class="btn-preset active" id="presetGym" onclick="applyPreset('gym')" style="font-size:10.5px; padding:6px 1px; text-align:center;">Gym</button>
             <button class="btn-preset" id="presetKb_heavy" onclick="applyPreset('kb_heavy')" style="font-size:10.5px; padding:6px 1px; text-align:center; color:var(--primary); font-weight:700;">Heavy KB</button>
             <button class="btn-preset" id="presetMobile" onclick="applyPreset('mobile')" style="font-size:10.5px; padding:6px 1px; text-align:center;">Mobile</button>
@@ -1134,7 +1145,7 @@
                 <div class="gear-check">✓</div>
                 <div class="gear-name">Barbell & Plates</div>
               </div>
-              <span style="font-size:11.5px;color:var(--text-dim);">Axial</span>
+              <span style="font-size:11.5px;color:var(--text-muted);">Axial</span>
             </div>
 
             <div class="gear-pill checked" id="gear_bench" onclick="toggleGear('bench')">
@@ -1142,7 +1153,7 @@
                 <div class="gear-check">✓</div>
                 <div class="gear-name">Flat Bench</div>
               </div>
-              <span style="font-size:11.5px;color:var(--text-dim);">Studio</span>
+              <span style="font-size:11.5px;color:var(--text-muted);">Studio</span>
             </div>
 
             <div class="gear-pill checked" id="gear_dipbar" onclick="toggleGear('dipbar')">
@@ -1150,7 +1161,7 @@
                 <div class="gear-check">✓</div>
                 <div class="gear-name">Dip Bar Station</div>
               </div>
-              <span style="font-size:11.5px;color:var(--text-dim);">Push</span>
+              <span style="font-size:11.5px;color:var(--text-muted);">Push</span>
             </div>
 
             <div class="gear-pill checked" id="gear_db" onclick="toggleGear('db')">
@@ -1214,7 +1225,7 @@
                 <div class="gear-check">✓</div>
                 <div class="gear-name">Battle Ropes</div>
               </div>
-              <span style="font-size:11.5px;color:var(--text-dim);">Outdoor</span>
+              <span style="font-size:11.5px;color:var(--text-muted);">Outdoor</span>
             </div>
 
             <div class="gear-pill checked" id="gear_speedrope" onclick="toggleGear('speedrope')">
@@ -1253,7 +1264,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div>
             <strong style="font-size:15px; font-weight:800; color:#fff;">PULSE Settings</strong>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v5.38</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.1</div>
           </div>
           <span class="btn-modal-close" onclick="closeQuickSettingsModal()" style="cursor:pointer; font-size:18px; color:var(--text-muted); padding:2px 6px;">✕</span>
         </div>
@@ -1314,7 +1325,7 @@
             </button>
           </div>
 
-          <span id="hdrReadiness" style="display:none;">71 READY</span>
+          <span id="hdrReadiness" style="display:none;">--</span>
         </div>
 
         <div style="display:flex; gap:8px; margin-top:10px;">
@@ -1358,8 +1369,8 @@
               <span style="font-size:11px; color:var(--primary); background:var(--primary-dim); border:1px solid rgba(0,229,255,0.35); padding:2px 6px; border-radius:4px;" id="badge_opt_recomp">Recommended</span>
             </div>
             <div style="font-size:12px; color:#cbd5e1; line-height:1.35; margin-top:3px;">
-              Target: <strong>96.92 kg</strong> • Fat to lose: <strong>2.93 kg</strong> • <strong>200g Protein</strong> • <strong>-350 kcal</strong> deficit.<br>
-              <span style="color:var(--text-muted);">Optimizes natural testosterone, reduces visceral fat to &lt;Rating 8, protects 82.38 kg lean muscle.</span>
+              Target: <strong>15.0% Body Fat</strong> • <strong>200g Protein</strong> • <strong>-350 kcal</strong> deficit.<br>
+              <span style="color:var(--text-muted);">Optimizes natural testosterone, reduces visceral fat, and protects lean muscle mass.</span>
             </div>
           </div>
 
@@ -1418,13 +1429,13 @@
             <div class="architect-calc-grid">
               <div class="architect-calc-card">
                 <div class="architect-calc-label">Target Weight</div>
-                <div class="architect-calc-val" id="calcTargetWeight">96.92 kg</div>
-                <div style="font-size:10.5px; color:var(--text-muted);" id="calcLbmPreserved">82.38 kg Lean Mass</div>
+                <div class="architect-calc-val" id="calcTargetWeight">-- kg</div>
+                <div style="font-size:10.5px; color:var(--text-muted);" id="calcLbmPreserved">-- Lean Mass</div>
               </div>
               <div class="architect-calc-card">
                 <div class="architect-calc-label">Fat To Burn</div>
-                <div class="architect-calc-val" style="color:var(--lime);" id="calcFatToBurn">2.93 kg</div>
-                <div style="font-size:10.5px; color:var(--lime);" id="calcLbsToBurn">6.4 lbs pure fat</div>
+                <div class="architect-calc-val" style="color:var(--lime);" id="calcFatToBurn">-- kg</div>
+                <div style="font-size:10.5px; color:var(--lime);" id="calcLbsToBurn">--</div>
               </div>
             </div>
 
@@ -1452,7 +1463,7 @@
               </div>
               <input type="range" id="sliderCustomProtein" min="160" max="240" step="5" value="200" style="width:100%; accent-color:var(--cyan); margin:6px 0;" oninput="updateCustomGoalArchitect()">
               <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                <span id="dispProteinPerKg">2.43g/kg Lean Mass</span>
+                <span id="dispProteinPerKg">-- g/kg Lean Mass</span>
                 <span style="color:var(--lime);">Muscle Retention Locked</span>
               </div>
             </div>
@@ -1478,71 +1489,86 @@
 
 
     <!-- INJURY & JOINT SAFETY GUARDRAILS MODAL -->
-    <div class="modal-overlay" id="injuryModal" onclick="if(event.target === this) closeInjuryModal()">
-      <div class="modal-card" style="max-width:440px; max-height:88vh; overflow-y:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:20px;">🛡️</span>
+    <div class="modal-overlay" id="injuryModal" role="dialog" aria-modal="true" aria-labelledby="injuryModalTitle" onclick="if(event.target === this) closeInjuryModal()">
+      <div class="modal-card diag-modal-card">
+        <div class="diag-modal-header">
+          <div class="diag-modal-title-group">
+            <span class="diag-modal-icon" aria-hidden="true">🛡️</span>
             <div>
-              <strong style="font-size:14px; font-weight:900; color:#fff;">Injury & Joint Safety Guardrails</strong>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:1px;">AI Biomechanical Assessment & Autoregulated Guardrails</div>
+              <strong id="injuryModalTitle" class="diag-modal-title">Injury Diagnostics &amp; Joint Guardrails</strong>
+              <div class="diag-modal-subtitle">Multimodal Symptom Triage · 14–30d Load Context</div>
             </div>
           </div>
-          <span style="cursor:pointer; color:var(--text-muted); font-size:18px; padding:2px 6px;" onclick="closeInjuryModal()">✕</span>
+          <button type="button" class="diag-modal-close" aria-label="Close injury diagnostics modal" onclick="closeInjuryModal()">✕</button>
         </div>
 
-        <!-- SECTION 1: INTERACTIVE WRITE-IN CLINICAL SYMPTOMS & AI ASSESSMENT -->
-        <div style="background:linear-gradient(165deg, rgba(30, 41, 59, 0.55) 0%, rgba(10, 15, 29, 0.85) 100%); border:1px solid rgba(56, 189, 248, 0.25); border-top:1px solid rgba(255, 255, 255, 0.22); border-radius:12px; padding:10px 12px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <strong style="font-size:12.5px; color:#fff; display:flex; align-items:center; gap:5px;">
-              <span>📝</span> Tell Coach Greg What You're Experiencing
+        <!-- SECTION 1: MULTIMODAL SYMPTOM INPUT (VOICE DICTATION + TEXT) -->
+        <div class="diag-input-card">
+          <div class="diag-input-header">
+            <strong class="diag-input-title">
+              <span aria-hidden="true">📝</span> Describe or Dictate What Hurts
             </strong>
-            <span style="font-size:10px; color:var(--cyan); background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.3); padding:2px 6px; border-radius:4px; font-weight:800; letter-spacing:0.04em;">LIVE AI SYNTHESIS</span>
+            <button type="button" class="diag-mic-btn" id="btnDiagVoiceMic" aria-pressed="false" onclick="toggleVoiceDictation()">
+              <span aria-hidden="true">🎙️</span>
+              <span class="diag-mic-label">Dictate</span>
+            </button>
           </div>
-          <div style="font-size:11px; color:var(--text-muted); line-height:1.35; margin-bottom:8px;">
-            Coach Greg evaluates your <strong>88 Sleep Score</strong>, <strong>48 bpm RHR</strong>, <strong>98.0 kg frame</strong>, and <strong>30.7m morning cardio</strong> to formulate a targeted clinical assessment, movement contraindications, and safe exercise swaps.
+          <div class="diag-input-hint">
+            Cross-references your past 14–30d workouts, exercise stress vectors, ACWR, sleep, and existing sensitivities.
           </div>
+
+          <!-- LIVE VOICE DICTATION PREVIEW & STATUS -->
+          <div id="diagVoiceInterim" class="diag-voice-interim" aria-live="polite" style="display:none;">
+            <span class="diag-rec-dot" aria-hidden="true"></span>
+            <span id="diagVoiceInterimText" class="diag-voice-interim-text">Listening…</span>
+            <button type="button" class="diag-voice-stop-btn" onclick="stopVoiceDictation(false)">Stop</button>
+          </div>
+          <div id="diagVoiceStatus" class="diag-voice-status" aria-live="polite" style="display:none;"></div>
 
           <!-- QUICK SYMPTOM CHIPS -->
-          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
-            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Right knee patellar tendon ache after 30m morning cardio, slight twinge on stairs', 'knees')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
-              🦵 Patellar ache (Post-Cardio)
-            </button>
-            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Lower back lumbar stiffness and erector tightness on hip hinge movements', 'lumbar')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
-              🦴 Lower back tightness
-            </button>
-            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Anterior shoulder pinch during deep dip bar dips, subacromial impingement', 'shoulders')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
-              💪 Shoulder front pinch
-            </button>
-            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Triceps tendon ache near elbow tip on heavy terminal lockout pressing', 'elbows')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
-              🦾 Elbow / Tricep ache
-            </button>
-            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Achilles tendon stiffness and calf tightness after high-impact foot strikes', 'ankles')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
-              🦶 Achilles / Calf stiffness
-            </button>
-            <button type="button" class="symptom-chip" onclick="populateSymptomChip('Wrist hyperextension shear under heavy flat floor push-ups and barbell pressing', 'wrists')" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:10.5px; padding:3px 7px; border-radius:12px; cursor:pointer;">
-              ✋ Wrist extension shear
-            </button>
+          <div class="diag-chip-row">
+            <button type="button" class="symptom-chip diag-chip" onclick="populateSymptomChip('Right knee patellar tendon ache after 30m morning cardio, slight twinge on stairs', 'knees')">🦵 Patellar ache</button>
+            <button type="button" class="symptom-chip diag-chip" onclick="populateSymptomChip('Lower back lumbar stiffness and erector tightness on hip hinge movements', 'lumbar')">🦴 Lower back tightness</button>
+            <button type="button" class="symptom-chip diag-chip" onclick="populateSymptomChip('Anterior shoulder pinch during deep dip bar dips and overhead pressing', 'shoulders')">💪 Shoulder pinch</button>
+            <button type="button" class="symptom-chip diag-chip" onclick="populateSymptomChip('Triceps tendon ache near elbow tip on heavy terminal lockout pressing', 'elbows')">🦾 Elbow ache</button>
+            <button type="button" class="symptom-chip diag-chip" onclick="populateSymptomChip('Achilles tendon stiffness and calf tightness after high-impact foot strikes', 'ankles')">🦶 Achilles stiffness</button>
+            <button type="button" class="symptom-chip diag-chip" onclick="populateSymptomChip('Wrist hyperextension shear under heavy flat floor push-ups and barbell pressing', 'wrists')">✋ Wrist shear</button>
           </div>
 
-          <!-- WRITE-IN TEXTAREA -->
-          <textarea id="injuryNotesInput" rows="3" style="width:100%; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(56, 189, 248, 0.3); border-radius:8px; padding:8px 10px; color:#fff; font-size:12px; line-height:1.4; resize:vertical; outline:none; box-sizing:border-box; font-family:inherit;" placeholder="Describe what you feel (e.g., knee tendon twinge after cardio, shoulder front pinch on dips, lower back tightness on hinge)..."></textarea>
+          <!-- WRITE-IN / EDITABLE TRANSCRIPT TEXTAREA -->
+          <textarea id="injuryNotesInput" class="diag-textarea" rows="3" aria-label="Symptom description" placeholder="Type or tap Dictate (e.g., sharp pain behind my left knee after heavy kettlebell swings and jump rope yesterday)..."></textarea>
+
+          <!-- OPTIONAL PAIN & ONSET CONTEXT PILLS -->
+          <div class="diag-meta-controls">
+            <div class="diag-pill-row" id="diagPainRow" role="group" aria-label="Pain intensity">
+              <span class="diag-pill-lbl">Pain:</span>
+              <button type="button" class="diag-pill-btn" data-pain="2" onclick="setDiagPain(2)">Mild 1–3</button>
+              <button type="button" class="diag-pill-btn" data-pain="5" onclick="setDiagPain(5)">Mod 4–6</button>
+              <button type="button" class="diag-pill-btn" data-pain="8" onclick="setDiagPain(8)">Severe 7+</button>
+            </div>
+            <div class="diag-pill-row" id="diagOnsetRow" role="group" aria-label="Symptom onset">
+              <span class="diag-pill-lbl">Onset:</span>
+              <button type="button" class="diag-pill-btn" data-onset="sudden_acute" onclick="setDiagOnset('sudden_acute')">Sudden</button>
+              <button type="button" class="diag-pill-btn" data-onset="gradual_overuse" onclick="setDiagOnset('gradual_overuse')">Gradual</button>
+              <button type="button" class="diag-pill-btn" data-onset="post_workout" onclick="setDiagOnset('post_workout')">Post-Workout</button>
+            </div>
+          </div>
 
           <!-- ANALYZE ACTION BUTTON -->
-          <button type="button" class="btn-action-primary" id="btnAnalyzeInjury" onclick="analyzeAthleteInjury()" style="width:100%; margin-top:8px; min-height:42px; font-size:12.5px; background:linear-gradient(135deg, #00f0ff 0%, #3b82f6 50%, #8b5cf6 100%); color:#050914; font-weight:800; letter-spacing:0.02em; border:none; border-radius:8px; cursor:pointer; box-shadow:0 0 16px rgba(0,240,255,0.35); display:flex; align-items:center; justify-content:center; gap:6px;">
-            <span>⚡</span> ANALYZE BIOMECHANICS & AUTOREGULATE WORKOUT
+          <button type="button" class="btn-action-primary diag-analyze-btn" id="btnAnalyzeInjury" onclick="analyzeAthleteInjury()">
+            <span aria-hidden="true">⚡</span> ANALYZE BIOMECHANICS &amp; TRIAGE
           </button>
         </div>
 
-        <!-- DYNAMIC AI ASSESSMENT RESULT CARD (ELEPHANT / GOLDFISH PROTOCOL) -->
-        <div id="injuryAssessmentResult" style="display:none; margin-bottom:12px;"></div>
+        <!-- STRUCTURED DIAGNOSTIC REPORT & ONE-CLICK HANDOFF CONTAINER -->
+        <div id="injuryAssessmentResult" aria-live="polite" style="display:none; margin-bottom:12px;"></div>
 
         <!-- SECTION 2: MANUAL JOINT TOGGLES -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; margin-top:4px;">
-          <div style="font-size:12px; font-weight:800; color:#fff;">Active Joint Safety Guardrails:</div>
-          <button type="button" class="solver-size-btn" style="background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); color:var(--primary); font-size:11px; font-weight:800; padding:3px 8px; border-radius:5px; cursor:pointer; box-shadow:0 0 6px rgba(0,229,255,0.15);" onclick="clearAllInjuries()">✓ Clear All Restrictions</button>
+        <div class="diag-section-row">
+          <div class="diag-section-heading">Active Joint Safety Guardrails:</div>
+          <button type="button" class="solver-size-btn injury-clear-btn" onclick="clearAllInjuries()">✓ Clear Acute Restrictions</button>
         </div>
-        <div class="injury-tag-grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;">
+        <div class="injury-tag-grid">
           <button type="button" class="injury-tag-btn" id="inj_btn_lumbar" onclick="toggleInjury('lumbar')">
             <span>🦴</span> <strong>Lower Back / Lumbar</strong>
           </button>
@@ -1563,18 +1589,30 @@
           </button>
         </div>
 
+        <!-- COLLAPSIBLE CHRONIC / PERMANENT SENSITIVITIES LOCK -->
+        <details data-details-key="injury_chronic_profile" class="diag-details diag-chronic-details">
+          <summary class="diag-details-summary">
+            <span>🔒 Permanent / Chronic Sensitivities (Preserved on Clear)</span>
+            <span>▾</span>
+          </summary>
+          <div class="diag-details-body">
+            <div class="diag-input-hint">Mark baseline long-term sensitivities so clearing acute triage restrictions never removes them.</div>
+            <div id="diagChronicList" class="diag-chronic-grid"></div>
+          </div>
+        </details>
+
         <!-- ACTIVE SAFETY FILTER RULEBOOK PREVIEW -->
-        <div style="margin-top:10px;">
-          <div style="font-size:12px; font-weight:800; color:#fff; margin-bottom:6px;">Active Movement Restrictions & Swaps:</div>
-          <div id="injuryRulesList" style="display:flex; flex-direction:column; gap:6px; min-height:42px;">
-            <div style="font-size:11.5px; color:var(--text-muted); background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:8px; text-align:center;">
+        <div class="diag-rules-wrap">
+          <div class="diag-section-heading">Active Movement Restrictions &amp; Swaps:</div>
+          <div id="injuryRulesList" class="diag-rules-list">
+            <div class="injury-clear-card">
               All joints healthy. Full compound clearance active.
             </div>
           </div>
         </div>
 
-        <button class="btn-action-primary" style="margin-top:12px; width:100%; min-height:44px; font-size:13.5px;" onclick="saveInjuries()">
-          <span>🛡️</span> SAVE PROFILE & APPLY TO TODAY'S WORKOUTS
+        <button type="button" class="btn-action-primary diag-save-btn" onclick="saveInjuries()">
+          <span aria-hidden="true">🛡️</span> SAVE PROFILE &amp; APPLY TO TODAY'S WORKOUTS
         </button>
       </div>
     </div>
@@ -1617,7 +1655,7 @@
           <div id="garminAuthBox" style="display:flex; flex-direction:column; gap:5px;">
             <div>
               <label style="font-size:11.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Garmin Connect Account</label>
-              <input type="email" id="garminEmailInput" placeholder="your@email.com" style="width:100%; height:32px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:#fff; font-size:13.5px; padding:0 8px;">
+              <input type="email" id="garminEmailInput" placeholder="Garmin email address" style="width:100%; height:32px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:#fff; font-size:13.5px; padding:0 8px;">
             </div>
             <div>
               <label style="font-size:11.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Password (Only needed if session expired)</label>
@@ -1710,7 +1748,7 @@
           <div style="background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:8px; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <div style="font-size:11.5px; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Account Status</div>
-              <div id="mndSyncPanelStatusText" style="font-size:13px; font-weight:800; color:var(--primary); margin-top:1px;">🟢 Ready • 824 kcal & 49g P Synced Today</div>
+              <div id="mndSyncPanelStatusText" style="font-size:13px; font-weight:800; color:var(--primary); margin-top:1px;">Pending sync</div>
             </div>
             <button class="solver-size-btn" style="background:rgba(0,240,255,0.15); border-color:var(--cyan); color:var(--cyan);" onclick="openMndConnectModal()">⚙️ Settings</button>
           </div>
@@ -1783,20 +1821,20 @@
         <div class="card" style="padding:6px 8px; background:var(--surface-elevated); border:1px solid var(--border);">
           <div style="font-size:12.5px; font-weight:800; color:var(--lime); text-transform:uppercase; margin-bottom:2px; display:flex; justify-content:space-between;">
             <span>1. Central Nervous System Readiness</span>
-            <span style="color:#fff;">80 / 100 HIGH</span>
+            <span style="color:#fff;">Pending</span>
           </div>
           <div style="font-size:12.5px; color:var(--text-muted); line-height:1.3;">
-            Garmin fēnix 8 records <strong>80 Readiness</strong>, <strong>Sleep Score 81 (6h 33m duration)</strong>, <strong>Balanced HRV (49ms)</strong>, and <strong>RHR 48 bpm</strong>. Your autonomic nervous system is fully restored with low sympathetic tone. Zero recovery debt. Today is an optimal physiological window for maximal neural recruitment and heavy axial loads.
+            Evaluates your synced Garmin Training Readiness, Sleep Score, HRV status, and Resting Heart Rate to determine optimal daily neural recruitment and load tolerance.
           </div>
         </div>
 
         <div class="card" style="padding:6px 8px; background:var(--surface-elevated); border:1px solid var(--border);">
           <div style="font-size:12.5px; font-weight:800; color:var(--cyan); text-transform:uppercase; margin-bottom:2px; display:flex; justify-content:space-between;">
             <span>2. Target Recomposition Directive</span>
-            <span style="color:#fff;">15.0% BF (-2.93kg)</span>
+            <span style="color:#fff;">Active Goal</span>
           </div>
           <div style="font-size:12.5px; color:var(--text-muted); line-height:1.3;">
-            In a 350 kcal deficit (target 2,092 kcal baseline), doing light cardio or high-rep fatigue work triggers muscle catabolism. Heavy mechanical tension (RPE 7.5–8.5, 6–8 reps) is physiologically mandatory to signal myofibrillar retention (safeguarding 82.38 kg Lean Body Mass) while forcing your body to oxidize pure fat.
+            In a controlled caloric deficit, heavy mechanical tension (RPE 7.5–8.5, 6–8 reps) signals myofibrillar retention to safeguard Lean Body Mass while supporting fat oxidation.
           </div>
         </div>
 
@@ -1889,7 +1927,7 @@
         <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
           <div>
             <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:2px; font-weight:700;">MyNetDiary Email or Username:</label>
-            <input type="text" id="mndLoginUser" placeholder="your@email.com" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:13.5px; padding:6px 8px; border-radius:6px; outline:none;">
+            <input type="text" id="mndLoginUser" placeholder="Email or username" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:13.5px; padding:6px 8px; border-radius:6px; outline:none;">
           </div>
           <div>
             <label style="font-size:11.5px; color:var(--text-muted); display:block; margin-bottom:2px; font-weight:700;">Password:</label>
@@ -1900,7 +1938,7 @@
           </div>
 
           <div style="font-size:11px; color:var(--text-muted); line-height:1.2; margin-top:2px;">
-            🔒 Credentials and session tokens are encrypted and stored in persistent storage (<code style="color:var(--lime);">/shared/user/.gemini/mnd_tokens/</code>) and never lost during system restarts.
+            🔒 Credentials and session tokens are encrypted and stored in persistent server storage and never lost during system restarts.
           </div>
 
           <div id="mndConnectMsg" style="font-size:11.5px; min-height:12px; margin-top:2px;"></div>
@@ -1927,7 +1965,7 @@
         <!-- LIVE SYNC BANNER -->
         <div id="mndSyncModalBanner" style="background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.35); border-radius:7px; padding:6px 8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <div style="font-size:12px; color:#fff; line-height:1.3;">
-            <strong style="color:var(--primary);">✓ Synced Today:</strong> <span id="mndBannerSummaryText">824 kcal • 49g P • 3 Items (Breakfast)</span>
+            <strong style="color:var(--primary);">✓ Synced Today:</strong> <span id="mndBannerSummaryText">0 kcal • 0g P</span>
           </div>
           <button class="solver-size-btn" style="background:rgba(0,240,255,0.18); border-color:var(--cyan); color:var(--cyan); white-space:nowrap;" onclick="openMndConnectModal()">☁️ Cloud Account</button>
         </div>
@@ -2119,7 +2157,7 @@
         </div>
 
         <input type="number" inputmode="numeric" min="0" max="100" step="1" id="telemetryOverrideInput" style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:16px; font-weight:700; padding:8px 10px; border-radius:6px; outline:none; box-sizing:border-box;">
-        <div id="telemetryOverrideErr" style="display:none; font-size:11.5px; color:var(--danger, #ef4444); font-weight:600;"></div>
+        <div id="telemetryOverrideErr" style="display:none; font-size:11.5px; color:var(--crimson-text); font-weight:600;"></div>
 
         <div style="display:flex; gap:6px; margin-top:4px;">
           <button type="button" class="btn-action-ghost" style="flex:1; margin:0;" onclick="closeTelemetryOverrideModal()">Cancel</button>
@@ -2137,7 +2175,7 @@
         </div>
 
         <input type="password" id="pulseAuthSecretInput" autocomplete="current-password" placeholder="Access key..." style="width:100%; background:var(--surface-elevated); border:1px solid var(--border); color:#fff; font-size:14px; font-weight:600; padding:8px 10px; border-radius:6px; outline:none; box-sizing:border-box;">
-        <div id="pulseAuthError" style="display:none; font-size:11.5px; color:var(--danger, #ef4444); font-weight:600;"></div>
+        <div id="pulseAuthError" style="display:none; font-size:11.5px; color:var(--crimson-text); font-weight:600;"></div>
 
         <div style="display:flex; gap:6px; margin-top:4px;">
           <button type="button" id="pulseAuthCancelBtn" class="btn-action-ghost" style="flex:1; margin:0;">Cancel</button>
@@ -2152,11 +2190,9 @@
     </div>
 
     <div class="floating-rest-pill" id="floatingRestPill">
-      <span class="rest-pulse-dot"></span>
-      <span style="font-size:11px; font-weight:700; color:var(--text-muted);" id="floatingRestNext">Rest</span>
-      <span class="floating-rest-digits" id="floatingRestDigits">01:30</span>
-      <button class="btn-rest-adj" onclick="addRest(30)">+30s</button>
-      <button class="btn-rest-adj" onclick="skipRest()">Skip</button>
+      <div class="rest-pill-label"><span class="rest-pill-indicator"></span><span id="floatingRestNext">Next</span></div>
+      <div class="rest-pill-time"><span id="floatingRestDigits">01:30</span></div>
+      <div class="rest-pill-actions"><button type="button" class="rest-pill-btn" onclick="addRest(30)">+30s</button><button type="button" class="rest-pill-btn skip" onclick="skipRest()">Skip</button></div>
     </div>
 
     <!-- TOAST ALERT -->
@@ -2167,10 +2203,14 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=5.38"></script>
-  <script src="./js/workout-engine.js?v=5.38"></script>
-  <script src="./js/charts.js?v=5.38"></script>
-  <script src="./js/fuel-engine.js?v=5.38"></script>
-  <script src="./js/telemetry.js?v=5.38"></script>
+  <script src="./js/state.js?v=6.2"></script>
+  <script src="./js/workout-catalog.js?v=6.2"></script>
+  <script src="./js/workout-verdict.js?v=6.2"></script>
+  <script src="./js/workout-player.js?v=6.2"></script>
+  <script src="./js/workout-timers.js?v=6.2"></script>
+  <script src="./js/charts.js?v=6.2"></script>
+  <script src="./js/fuel-engine.js?v=6.2"></script>
+  <script src="./js/telemetry.js?v=6.2"></script>
+  <script src="./js/diagnostics.js?v=6.2"></script>
 </body>
 </html>

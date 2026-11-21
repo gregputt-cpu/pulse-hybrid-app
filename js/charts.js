@@ -25,7 +25,7 @@ function getGarminHrZoneBreakdown(act) {
         { num: 4, name: "Threshold / Hard", range: "152–171 bpm", pct: p4, durStr: formatSec(z4), color: "#f59e0b" },
         { num: 3, name: "Aerobic / Moderate", range: "133–152 bpm", pct: p3, durStr: formatSec(z3), color: "#10b981" },
         { num: 2, name: "Easy / Fat Oxidation Base", range: "114–133 bpm", pct: p2, durStr: formatSec(z2), color: "#00F0FF" },
-        { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatSec(z1), color: "#64748b" }
+        { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatSec(z1), color: "#8b9db5" }
       ];
 
       let dominant = zones[0];
@@ -39,10 +39,10 @@ function getGarminHrZoneBreakdown(act) {
   }
 
   // Fallback: Existing synthetic distribution
-  const dur = act.durationMin || 30;
-  const avg = act.avgHr || 115;
-  const max = act.maxHr || 150;
-  const text = `${act.name || ''} ${act.subTitle || ''}`.toLowerCase();
+  const dur = act.durationMin || act.duration_min || 30;
+  const avg = act.avgHr || act.avg_hr || 115;
+  const max = act.maxHr || act.max_hr || 150;
+  const text = `${act.name || ''} ${act.subTitle || act.sub_title || ''}`.toLowerCase();
   const isWalk = text.includes('walk') || text.includes('stroll');
   const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('gym');
   const isPlyo = text.includes('jump') || text.includes('plyo') || text.includes('tuck');
@@ -74,7 +74,7 @@ function getGarminHrZoneBreakdown(act) {
     { num: 4, name: "Threshold / Hard", range: "152–171 bpm", pct: p4, durStr: formatMinSec(dur * p4 / 100), color: "#f59e0b" },
     { num: 3, name: "Aerobic / Moderate", range: "133–152 bpm", pct: p3, durStr: formatMinSec(dur * p3 / 100), color: "#10b981" },
     { num: 2, name: "Easy / Fat Oxidation Base", range: "114–133 bpm", pct: p2, durStr: formatMinSec(dur * p2 / 100), color: "#00F0FF" },
-    { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatMinSec(dur * p1 / 100), color: "#64748b" }
+    { num: 1, name: "Warm Up / Active Recovery", range: "< 114 bpm", pct: p1, durStr: formatMinSec(dur * p1 / 100), color: "#8b9db5" }
   ];
 
   let dominant = zones[0];
@@ -87,9 +87,9 @@ function getGarminHrZoneBreakdown(act) {
 }
 
 function generateHrSvgChart(act) {
-  const dur = act.durationMin || 30;
-  let avg = act.avgHr || 119;
-  let max = act.maxHr || 151;
+  const dur = act.durationMin || act.duration_min || 30;
+  let avg = act.avgHr || act.avg_hr || 119;
+  let max = act.maxHr || act.max_hr || 151;
 
   let hrs = [];
   const hasRealStream = Array.isArray(act.hr_samples) && act.hr_samples.length >= 5;
@@ -158,10 +158,10 @@ function generateHrSvgChart(act) {
   const pointsCount = hrs.length;
   const width = 360;
   const height = 130;
-  const padL = 34;
+  const padL = 42;
   const padR = 14;
-  const padT = 18;
-  const padB = 26;
+  const padT = 26;
+  const padB = 28;
   const chartW = width - padL - padR;
   const chartH = height - padT - padB;
 
@@ -200,66 +200,66 @@ function generateHrSvgChart(act) {
   const midMin = Math.round(dur / 2);
 
   return `
-    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
-      <defs>
-        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.38"/>
-          <stop offset="70%" stop-color="#3B82F6" stop-opacity="0.12"/>
-          <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.0"/>
-        </linearGradient>
-      </defs>
+<svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
+<defs>
+<linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#00F0FF" stop-opacity="0.38"/>
+<stop offset="70%" stop-color="#3B82F6" stop-opacity="0.12"/>
+<stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.0"/>
+</linearGradient>
+</defs>
 
-      <!-- Zone Grid Lines -->
-      <line x1="${padL}" y1="${padT}" x2="${width - padR}" y2="${padT}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-      <line x1="${padL}" y1="${avgY}" x2="${width - padR}" y2="${avgY}" stroke="rgba(56,189,248,0.4)" stroke-dasharray="3,3" stroke-width="1"/>
-      <line x1="${padL}" y1="${height - padB}" x2="${width - padR}" y2="${height - padB}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+      
+<line x1="${padL}" y1="${padT}" x2="${width - padR}" y2="${padT}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+<line x1="${padL}" y1="${avgY}" x2="${width - padR}" y2="${avgY}" stroke="rgba(56,189,248,0.4)" stroke-dasharray="3,3" stroke-width="1"/>
+<line x1="${padL}" y1="${height - padB}" x2="${width - padR}" y2="${height - padB}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
 
-      <!-- Y-Axis Ticks -->
-      <text x="${padL - 4}" y="${avgY + 3}" fill="#38bdf8" font-size="8.5" font-weight="700" text-anchor="end">${avg}</text>
-      <text x="${padL - 4}" y="${padT + 8}" fill="var(--text-muted)" font-size="8.5" text-anchor="end">${ceilHr}</text>
-      <text x="${padL - 4}" y="${height - padB}" fill="var(--text-muted)" font-size="8.5" text-anchor="end">${minHr}</text>
+      
+<text x="${padL - 4}" y="${avgY + 4}" fill="#38bdf8" font-size="12.5" font-weight="700" text-anchor="end">${avg}</text>
+<text x="${padL - 4}" y="${padT + 10}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${ceilHr}</text>
+<text x="${padL - 4}" y="${height - padB}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${minHr}</text>
 
-      <!-- Shaded Area Fill -->
-      <path d="${areaD}" fill="url(#${gradId})"/>
+      
+<path d="${areaD}" fill="url(#${gradId})"/>
 
-      <!-- Primary Spline Curve -->
-      <path d="${d}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.5));"/>
+      
+<path d="${d}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.5));"/>
 
-      <!-- Stream Mode Watermark / Label -->
-      <text x="${padL + 2}" y="${padT - 6}" fill="${!isSynthetic ? '#00F0FF' : 'var(--text-muted)'}" font-size="7.5" font-weight="800" letter-spacing="0.06em">${streamLabel}</text>
+      
+<text x="${padL + 2}" y="${padT - 8}" fill="${!isSynthetic ? '#00F0FF' : 'var(--text-muted)'}" font-size="12.5" font-weight="800" letter-spacing="0.04em">${streamLabel}</text>
 
-      <!-- Average HR Tag -->
-      <text x="${width - padR}" y="${avgY - 4}" fill="#38bdf8" font-size="9" font-weight="700" text-anchor="end">Avg ${avg} bpm</text>
+      
+<text x="${width - padR}" y="${avgY - 5}" fill="#38bdf8" font-size="12.5" font-weight="700" text-anchor="end">Avg ${avg} bpm</text>
 
-      <!-- Peak HR Marker Dot & Tag -->
-      <circle cx="${peakPt.x}" cy="${peakPt.y}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(239,68,68,0.8));"/>
-      <circle cx="${peakPt.x}" cy="${peakPt.y}" r="7" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
-      <text x="${peakPt.x}" y="${Math.max(12, peakPt.y - 8)}" fill="#ef4444" font-size="9" font-weight="800" text-anchor="middle">Peak ${max}</text>
+      
+<circle cx="${peakPt.x}" cy="${peakPt.y}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(239,68,68,0.8));"/>
+<circle cx="${peakPt.x}" cy="${peakPt.y}" r="7" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.6"/>
+<text x="${peakPt.x}" y="${Math.max(14, peakPt.y - 8)}" fill="#ef4444" font-size="12.5" font-weight="800" text-anchor="middle">Peak ${max}</text>
 
-      <!-- X-Axis Timeline Markers -->
-      <text x="${padL}" y="${height - 8}" fill="var(--text-muted)" font-size="9">0:00</text>
-      <text x="${padL + chartW / 2}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${midMin}:00</text>
-      <text x="${width - padR}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="end">${dur.toFixed(1)}m</text>
-    </svg>
+      
+<text x="${padL}" y="${height - 6}" fill="var(--text-muted)" font-size="12.5">0:00</text>
+<text x="${padL + chartW / 2}" y="${height - 6}" fill="var(--text-muted)" font-size="12.5" text-anchor="middle">${midMin}:00</text>
+<text x="${width - padR}" y="${height - 6}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${dur.toFixed(1)}m</text>
+</svg>
   `;
 }
 
 function generateZoneBarsHtml(act) {
   const { zones } = getGarminHrZoneBreakdown(act);
   return zones.map(z => `
-    <div style="display:flex; flex-direction:column; gap:2px; margin-bottom:6px;">
-      <div style="display:flex; justify-content:space-between; font-size:10.5px; line-height:1.2;">
-        <span style="color:#d4d4d8; font-weight:600;">
-          <span style="color:${z.color}; font-weight:800;">Z${z.num}</span> ${z.name} <small style="color:var(--text-muted); font-size:9.5px;">(${z.range})</small>
-        </span>
-        <span style="color:#fff; font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums;">
+<div style="display:flex; flex-direction:column; gap:2px; margin-bottom:6px;">
+<div style="display:flex; justify-content:space-between; font-size:10.5px; line-height:1.2;">
+<span style="color:#d4d4d8; font-weight:600;">
+<span style="color:${z.color}; font-weight:800;">Z${z.num}</span> ${z.name} <small style="color:var(--text-muted); font-size:9.5px;">(${z.range})</small>
+</span>
+<span style="color:#fff; font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums;">
           ${z.durStr} <small style="color:var(--text-muted);">(${z.pct}%)</small>
-        </span>
-      </div>
-      <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
-        <div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:3px; box-shadow:0 0 6px ${z.color}66;"></div>
-      </div>
-    </div>
+</span>
+</div>
+<div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+<div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:3px; box-shadow:0 0 6px ${z.color}66;"></div>
+</div>
+</div>
   `).join('');
 }
 
@@ -281,33 +281,33 @@ function generateTeDualGaugesHtml(act) {
   const anaeroInfo = getTeFeedback(anaero, true);
 
   return `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-      <!-- AEROBIC TE -->
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
-          <span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Aerobic TE</span>
-          <span style="font-size:15px; font-weight:700; color:${aeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${aero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
-        </div>
-        <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
-          <div style="height:100%; width:${Math.min(100, (aero / 5.0) * 100)}%; background:${aeroInfo.color}; border-radius:3px;"></div>
-        </div>
-        <div style="font-size:10.5px; font-weight:700; color:#fff;">${aeroInfo.label}</div>
-        <div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${aeroInfo.desc}</div>
-      </div>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+      
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
+<span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Aerobic TE</span>
+<span style="font-size:15px; font-weight:700; color:${aeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${aero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
+<div style="height:100%; width:${Math.min(100, (aero / 5.0) * 100)}%; background:${aeroInfo.color}; border-radius:3px;"></div>
+</div>
+<div style="font-size:10.5px; font-weight:700; color:#fff;">${aeroInfo.label}</div>
+<div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${aeroInfo.desc}</div>
+</div>
 
-      <!-- ANAEROBIC TE -->
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
-          <span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Anaerobic TE</span>
-          <span style="font-size:15px; font-weight:700; color:${anaeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${anaero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
-        </div>
-        <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
-          <div style="height:100%; width:${Math.min(100, (anaero / 5.0) * 100)}%; background:${anaeroInfo.color}; border-radius:3px;"></div>
-        </div>
-        <div style="font-size:10.5px; font-weight:700; color:#fff;">${anaeroInfo.label}</div>
-        <div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${anaeroInfo.desc}</div>
-      </div>
-    </div>
+      
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:8px 10px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline; gap:4px;">
+<span style="font-size:9.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.02em;">Anaerobic TE</span>
+<span style="font-size:15px; font-weight:700; color:${anaeroInfo.color}; font-family:'Space Grotesk',sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap;">${anaero.toFixed(1)} <small style="font-size:9.5px; color:var(--text-muted); font-weight:500;">/ 5.0</small></span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin:5px 0;">
+<div style="height:100%; width:${Math.min(100, (anaero / 5.0) * 100)}%; background:${anaeroInfo.color}; border-radius:3px;"></div>
+</div>
+<div style="font-size:10.5px; font-weight:700; color:#fff;">${anaeroInfo.label}</div>
+<div style="font-size:9.5px; color:var(--text-muted); line-height:1.3; margin-top:2px;">${anaeroInfo.desc}</div>
+</div>
+</div>
   `;
 }
 
@@ -413,7 +413,16 @@ function renderHistoryList() {
         ? window.BAKED_LIVE_STATE.garmin.recent_activities
         : []);
 
+  const histTabBtn = document.getElementById('btnTrainHistory');
+  if (histTabBtn) {
+    histTabBtn.innerText = `Completed Log & Benefits (${activities.length})`;
+  }
+
+  const esc = (typeof escapeHtml === 'function' ? escapeHtml : (v => String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))));
+
   box.innerHTML = '';
+
+  const pulseMatchMap = (typeof buildGarminPulseMatchMap === 'function') ? buildGarminPulseMatchMap(activities) : null;
 
   activities.forEach(act => {
     const formatted = typeof formatActivityDisplay === 'function' ? formatActivityDisplay(act) : { isToday: false, displayDate: act.date || '' };
@@ -425,7 +434,9 @@ function renderHistoryList() {
     const hasRealSamples = Array.isArray(act.hr_samples) && act.hr_samples.length >= 5;
     const sensorHeaderLabel = hasRealSamples ? 'OPTICAL SENSOR STREAM (GARMIN)' : 'OPTICAL SENSOR MODEL';
 
-    const matchedPulse = (typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act) : null;
+    const matchedPulse = pulseMatchMap
+      ? (pulseMatchMap.get(String(act.id)) || null)
+      : ((typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act, activities) : null);
     let pulseDetailsHtml = '';
     let pulseLoggedSummaries = [];
     if (matchedPulse) {
@@ -446,9 +457,9 @@ function renderHistoryList() {
       if (matchedPulse.details && typeof matchedPulse.details === 'object') {
         const setsByEx = {};
         const allEx = (typeof getAllExercises === 'function') ? getAllExercises() : [];
-        Object.values(matchedPulse.details).forEach(s => {
+        Object.entries(matchedPulse.details).forEach(([k, s]) => {
           if (!s || !s.logged) return;
-          const exId = s.exercise_id || 'exercise';
+          const exId = s.exercise_id || String(k || '').replace(/_\d+$/, '') || 'exercise';
           if (!setsByEx[exId]) {
             const exObj = allEx.find(e => e.id === exId);
             setsByEx[exId] = {
@@ -462,41 +473,44 @@ function renderHistoryList() {
         });
 
         const exEntries = Object.values(setsByEx);
-        pulseLoggedSummaries = exEntries.map(e => `${e.name} (${e.sets.join(', ')})`);
+        pulseLoggedSummaries = exEntries.map(e => `${esc(e.name)} (${esc(e.sets.join(', '))})`);
         if (exEntries.length > 0) {
           exerciseRows = `
-            <div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
+<div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
               ${exEntries.map(e => `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 7px;">
-                  <span style="font-weight:700; color:#fff;">${e.name}:</span>
-                  <span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${e.sets.join(', ')}</span>
-                </div>
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 7px;">
+<span style="font-weight:700; color:#fff;">${esc(e.name)}:</span>
+<span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${esc(e.sets.join(', '))}</span>
+</div>
               `).join('')}
-            </div>
+</div>
           `;
         }
       } else if (matchedPulse.conditioningDrill) {
         const cd = matchedPulse.conditioningDrill;
         const durMin = cd.totalSeconds ? `${Math.round(cd.totalSeconds / 60)}m` : '';
         exerciseRows = `
-          <div style="margin-top:6px; font-size:10.5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px;">
-            <span style="font-weight:700; color:#fff;">${cd.name || 'Conditioning'}:</span>
-            <span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${(cd.format || 'interval').toUpperCase()} • ${cd.roundsCompleted || cd.rounds || 1} rounds ${durMin ? `(${durMin})` : ''}</span>
-          </div>
+<div style="margin-top:6px; font-size:10.5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 8px;">
+<span style="font-weight:700; color:#fff;">${esc(cd.name || 'Conditioning')}:</span>
+<span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${esc(String(cd.format || 'interval').toUpperCase())} • ${cd.roundsCompleted || cd.rounds || 1} rounds ${durMin ? `(${durMin})` : ''}</span>
+</div>
         `;
       }
 
       pulseDetailsHtml = `
-        <div style="margin:6px 0 8px; padding:8px 10px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:9.5px; font-weight:800; background:rgba(16,185,129,0.22); border:1px solid #10b981; color:#10b981; padding:2px 6px; border-radius:4px; letter-spacing:0.04em;">🔗 MATCHED WITH PULSE</span>
-              <span style="font-size:11.5px; font-weight:800; color:#fff;">${sessionName}</span>
+<div style="margin:6px 0 8px; padding:8px 10px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:9.5px; font-weight:800; background:rgba(16,185,129,0.22); border:1px solid #10b981; color:#10b981; padding:2px 6px; border-radius:4px; letter-spacing:0.04em;">🔗 MATCHED WITH PULSE</span>
+<span style="font-size:11.5px; font-weight:800; color:#fff;">${esc(sessionName)}</span>
+</div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              ${garminStats ? `<span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${esc(garminStats)}</span>` : ''}
+              <button type="button" class="header-pill-btn" data-act-id="${esc(act.id)}" onclick="unlinkGarminPulseMatch(this.dataset.actId)" title="Unlink Pulse session from this Garmin recording" style="padding:1px 6px; font-size:9.5px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--text-secondary); cursor:pointer;">✕ Unlink</button>
             </div>
-            ${garminStats ? `<span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${garminStats}</span>` : ''}
-          </div>
+</div>
           ${exerciseRows}
-        </div>
+</div>
       `;
     }
 
@@ -509,51 +523,58 @@ function renderHistoryList() {
       const avgRestBadge = decodedSets.avgRestSec > 0 ? ` • Avg Rest ${decodedSets.avgRestSec}s` : '';
       const pulseCrossRefHtml = pulseLoggedSummaries.length > 0
         ? `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
-             <strong style="color:#10b981;">🔗 Pulse Rep Cross-Reference:</strong> ${pulseLoggedSummaries.join(' • ')}
-           </div>`
+<strong style="color:#10b981;">🔗 Pulse Rep Cross-Reference:</strong> ${pulseLoggedSummaries.join(' • ')}
+</div>`
         : '';
 
       garminStrengthSetsHtml = `
-        <div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
-          <!-- GOLDFISH STRIP -->
-          <div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
-            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${decodedSets.activeCount} Active Sets • ${peakBadge}${avgRestBadge}</span>
-          </div>
-          <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
-            ${decodedSets.workingSummary}
-          </div>
-          <!-- ELEPHANT ACCORDION -->
-          <details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
-            <summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-              <span>🔬 View All ${decodedSets.activeCount} Garmin Watch Sets &amp; Rest Intervals (${decodedSets.totalTutSec}s TUT)</span>
-              <span style="color:var(--text-muted);">▾</span>
-            </summary>
-            <div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
+<div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
+          
+<div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
+            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${decodedSets.activeCount} Active Sets • ${esc(peakBadge)}${esc(avgRestBadge)}</span>
+</div>
+<div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
+            ${esc(decodedSets.workingSummary)}
+</div>
+          
+<details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
+<summary style="font-size:10.5px; font-weight:700; color:var(--text-secondary); padding:6px 9px; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+<span>🔬 View All ${decodedSets.activeCount} Garmin Watch Sets &amp; Rest Intervals (${decodedSets.totalTutSec}s TUT)</span>
+<span style="color:var(--text-muted);">▾</span>
+</summary>
+<div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
                 ${decodedSets.activeSets.map(s => `
-                  <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : s.weightLabel}</strong>
-                      ${s.reps ? `<span style="color:var(--primary); font-weight:700;">${s.reps} reps</span>` : ''}
-                    </div>
-                    <div style="color:var(--text-muted); margin-top:2px;">
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : esc(s.weightLabel)}</strong>
+                      ${s.reps ? `<span style="color:var(--primary); font-weight:700;">${esc(s.reps)} reps</span>` : ''}
+</div>
+<div style="color:var(--text-muted); margin-top:2px;">
                       ${s.durationSec}s TUT${s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : ''}
-                    </div>
-                  </div>
+</div>
+</div>
                 `).join('')}
-              </div>
+</div>
               ${pulseCrossRefHtml}
-            </div>
-          </details>
-        </div>
+</div>
+</details>
+</div>
       `;
     }
 
     const rawTitle = act.subTitle || act.sub_title || act.name || 'Workout';
-    const isGenericGarminTitle = /^(cardio|indoor_cardio|strength|strength_training)$/i.test(String(rawTitle).trim());
+    const isGenericGarminTitle = /^(cardio|indoor_cardio|cardio_training|hiit|hiit_training|strength|strength_training|fitness_equipment)$/i.test(String(rawTitle).trim());
     const displayTitle = (isGenericGarminTitle && matchedPulse && matchedPulse.title)
       ? `${matchedPulse.title} (Garmin ${rawTitle})`
       : rawTitle;
+    const isManualEntry = act.source === 'manual_app_entry';
+    const unclaimedPulse = (!matchedPulse && !isManualEntry && typeof getUnclaimedPulseSessionsForActivity === 'function')
+      ? getUnclaimedPulseSessionsForActivity(act, activities, pulseMatchMap)
+      : [];
+    const linkPulseBtnHtml = unclaimedPulse.length > 0
+      ? `<button type="button" class="header-pill-btn" data-act-id="${esc(act.id)}" data-session-key="${esc(unclaimedPulse[0]._matchKey)}" onclick="linkGarminPulseMatch(this.dataset.actId, this.dataset.sessionKey)" title="Link ${esc(unclaimedPulse[0].title || 'Pulse Workout')}" style="padding:3px 8px; font-size:11px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; cursor:pointer;">🔗 Link Pulse</button>`
+      : '';
 
     const normDurationMin = act.durationMin ?? act.duration_min ?? 0;
     const normAvgHr = act.avgHr ?? act.avg_hr ?? null;
@@ -567,8 +588,6 @@ function renderHistoryList() {
       ? `<span>•</span><span style="color:var(--cyan); font-weight:700;">👣 ${estSteps.toLocaleString()} activity steps${estMiles > 0 ? ` (${estMiles} mi)` : ''}</span>`
       : '';
 
-    const esc = (typeof escapeHtml === 'function' ? escapeHtml : (v => String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))));
-
     const card = document.createElement('div');
     card.className = `history-card ${isToday ? 'today-highlight' : ''}`;
     card.style.background = isToday ? '#141a24' : '#11141c';
@@ -577,145 +596,148 @@ function renderHistoryList() {
     card.style.padding = '12px 14px';
 
     card.innerHTML = `
-      <!-- GOLDFISH LAYER (3-SECOND GLANCE) -->
-      <div class="history-top-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-        <div>
-          <div class="history-title" style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+      
+<div class="history-top-row" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+<div>
+<div class="history-title" style="font-size:14px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
             ${esc(displayTitle)}
-          </div>
-          <div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-            <span>${esc(displayDate)}</span>
-            <span>•</span>
-            <span>⏱ ${normDurationMin} min</span>
-            <span>•</span>
-            <span style="color:var(--primary); font-weight:800;">🔥 ${act.calories || 0} kcal</span>
+</div>
+<div class="history-meta-row" style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+<span>${esc(displayDate)}</span>
+<span>•</span>
+<span>⏱ ${normDurationMin} min</span>
+<span>•</span>
+<span style="color:var(--primary); font-weight:800;">🔥 ${act.calories || 0} kcal</span>
             ${actStepPillHtml}
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+</div>
+</div>
+<div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
           ${isToday ? '<span style="font-size:10px; font-weight:900; color:var(--primary); background:rgba(0,229,255,0.15); border:1px solid rgba(0,229,255,0.3); padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">TODAY</span>' : ''}
           ${egm.recoveryPill}
-        </div>
-      </div>
+</div>
+</div>
 
       ${pulseDetailsHtml}
       ${garminStrengthSetsHtml}
 
-      <!-- PRIMARY GLANCEABLE TAKEAWAY -->
-      <div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+      
+<div style="font-size:11.5px; color:#d4d4d8; line-height:1.4; margin:4px 0 8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
         ${egm.primaryTakeaway}
-      </div>
+</div>
 
-      <!-- 4-METRIC BIOMETRIC GRID -->
-      <div class="history-stats-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 4px; text-align:center;">
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:var(--primary);">${act.calories || 0}</div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Active Burn</div>
-        </div>
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#fff;">${normAvgHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Avg HR</div>
-        </div>
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#38bdf8;">${normMaxHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Peak HR</div>
-        </div>
-        <div>
-          <div class="hstat-num" style="font-size:13px; font-weight:800; color:#a78bfa;">${normAeroTe.toFixed(1)} / ${normAnaeroTe.toFixed(1)}</div>
-          <div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Aerobic/Anaer</div>
-        </div>
-      </div>
+      
+<div class="history-stats-grid" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 4px; text-align:center;">
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:var(--primary);">${act.calories || 0}</div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Active Burn</div>
+</div>
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:#fff;">${normAvgHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Avg HR</div>
+</div>
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:#38bdf8;">${normMaxHr || '--'}<small style="font-size:10px; color:var(--text-muted);">bpm</small></div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Peak HR</div>
+</div>
+<div>
+<div class="hstat-num" style="font-size:13px; font-weight:800; color:#a78bfa;">${normAeroTe.toFixed(1)} / ${normAnaeroTe.toFixed(1)}</div>
+<div class="hstat-lbl" style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase;">Aerobic/Anaer</div>
+</div>
+</div>
 
-      <!-- GOLDFISH: MINI 5-ZONE HR VISUAL STRIP -->
-      <div style="margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; margin-bottom:5px;">
-          <span style="color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Garmin HR Intensity Zones</span>
-          <span style="color:var(--primary); font-weight:700; font-family:var(--font-mono); font-size:10.5px;">${hrZonesData.dominantZoneText}</span>
-        </div>
-        <div style="display:flex; height:6px; border-radius:3px; overflow:hidden; gap:2px; background:rgba(255,255,255,0.06);">
+      
+<div style="margin-top:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:6px 10px;">
+<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; margin-bottom:5px;">
+<span style="color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Garmin HR Intensity Zones</span>
+<span style="color:var(--primary); font-weight:700; font-family:var(--font-mono); font-size:10.5px;">${hrZonesData.dominantZoneText}</span>
+</div>
+<div style="display:flex; height:6px; border-radius:3px; overflow:hidden; gap:2px; background:rgba(255,255,255,0.06);">
           ${hrZonesData.zones.filter(z => z.pct > 0).map(z => `<div style="height:100%; width:${z.pct}%; background:${z.color}; border-radius:2px; box-shadow:0 0 4px ${z.color}88;" title="Z${z.num}: ${z.durStr} (${z.pct}%)"></div>`).join('')}
-        </div>
-      </div>
+</div>
+</div>
 
-      <!-- ELEPHANT LAYER: EXPANDABLE BENEFITS, CHARTS & RECOVERY ACCORDION -->
-      <div class="benefits-toggle-btn" data-act-id="${esc(act.id)}" onclick="toggleBenefitAccordion(this.dataset.actId)" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
-        <span>🔬 View Garmin Telemetry, Charts & Recovery (6 sections)</span>
-        <span class="accordion-arrow" id="arrow_${esc(act.id)}" style="transition:transform 0.2s;">▾</span>
-      </div>
+      
+<div class="benefits-toggle-btn" data-act-id="${esc(act.id)}" onclick="toggleBenefitAccordion(this.dataset.actId)" style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:700; color:var(--cyan);">
+<span>🔬 View Garmin Telemetry, Charts & Recovery (6 sections)</span>
+<span class="accordion-arrow" id="arrow_${esc(act.id)}" style="transition:transform 0.2s;">▾</span>
+</div>
 
-      <div class="benefits-accordion-body" id="benefit_body_${esc(act.id)}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
+<div class="benefits-accordion-body" id="benefit_body_${esc(act.id)}" style="display:none; flex-direction:column; gap:10px; margin-top:8px; padding:12px; background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.08); border-radius:12px; font-size:11.5px; line-height:1.45;">
         
-        <!-- SECTION 1: GARMIN HEART RATE TIME-SERIES CURVE (SVG) -->
-        <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
-              <span style="color:var(--primary);">📈</span> Heart Rate Telemetry Curve
-            </span>
-            <span style="font-size:10px; font-weight:700; color:${hasRealSamples ? 'var(--primary)' : 'var(--text-muted)'};">${sensorHeaderLabel}</span>
-          </div>
+        
+<div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+<span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+<span style="color:var(--primary);">📈</span> Heart Rate Telemetry Curve
+</span>
+<span style="font-size:10px; font-weight:700; color:${hasRealSamples ? 'var(--primary)' : 'var(--text-muted)'};">${sensorHeaderLabel}</span>
+</div>
           ${generateHrSvgChart(act)}
-        </div>
+</div>
 
-        <!-- SECTION 2: GARMIN 5-ZONE HEART RATE DISTRIBUTION (HORIZONTAL BARS) -->
-        <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
-              <span style="color:#f59e0b;">📊</span> 5-Zone Physiological Intensity
-            </span>
-            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">Max HR: 190 bpm</span>
-          </div>
+        
+<div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+<span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+<span style="color:#f59e0b;">📊</span> 5-Zone Physiological Intensity
+</span>
+<span style="font-size:10px; font-weight:700; color:var(--text-muted);">Max HR: 190 bpm</span>
+</div>
           ${generateZoneBarsHtml(act)}
-        </div>
+</div>
 
-        <!-- SECTION 3: FIRSTBEAT TRAINING EFFECT (TE) DUAL GAUGES -->
-        <div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
-              <span style="color:#a78bfa;">🎯</span> Firstbeat Training Effect (TE)
-            </span>
-            <span style="font-size:10px; font-weight:700; color:var(--text-muted);">0.0 – 5.0 Scale</span>
-          </div>
+        
+<div style="background:linear-gradient(180deg, rgba(30,41,59,0.3) 0%, rgba(10,15,29,0.6) 100%); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+<span style="font-size:11px; font-weight:800; color:#fff; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:5px;">
+<span style="color:#a78bfa;">🎯</span> Firstbeat Training Effect (TE)
+</span>
+<span style="font-size:10px; font-weight:700; color:var(--text-muted);">0.0 – 5.0 Scale</span>
+</div>
           ${generateTeDualGaugesHtml(act)}
-        </div>
+</div>
 
-        <!-- SECTION 4: ACHIEVED -->
-        <div style="border-left:2px solid var(--primary); padding-left:8px;">
-          <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+        
+<div style="border-left:2px solid var(--primary); padding-left:8px;">
+<div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
             ✓ 4. What This Workout Achieved
-          </div>
-          <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
+</div>
+<div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
             ${(egm.achievements || []).map(a => `<div>${a}</div>`).join('')}
-          </div>
-        </div>
+</div>
+</div>
 
-        <!-- SECTION 5: NEGATIVE EFFECTS & STRESSORS -->
-        <div style="border-left:2px solid #f59e0b; padding-left:8px; margin-top:2px;">
-          <div style="font-size:11px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+        
+<div style="border-left:2px solid #f59e0b; padding-left:8px; margin-top:2px;">
+<div style="font-size:11px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
             ⚠️ 5. Potential Stressors & Biomechanical Impact
-          </div>
-          <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
+</div>
+<div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
             ${(egm.stressors || []).map(s => `<div>${s}</div>`).join('')}
-          </div>
-        </div>
+</div>
+</div>
 
-        <!-- SECTION 6: RECOVERY PROTOCOL & WINDOW -->
-        <div style="border-left:2px solid #38bdf8; padding-left:8px; margin-top:2px;">
-          <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
+        
+<div style="border-left:2px solid #38bdf8; padding-left:8px; margin-top:2px;">
+<div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px;">
             🛡️ 6. Recommended Recovery Protocol & Window
-          </div>
-          <div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
+</div>
+<div style="color:#d4d4d8; display:flex; flex-direction:column; gap:4px;">
             ${(egm.recoveryProtocol || []).map(r => `<div>${r}</div>`).join('')}
-          </div>
-        </div>
+</div>
+</div>
 
-      </div>
+</div>
 
-      <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:10.5px; color:var(--text-muted);">Garmin Telemetry • ID: ${esc(act.id)}</span>
-        <button class="header-pill-btn" style="padding:3px 8px; font-size:11px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-secondary);" data-act-id="${esc(act.id)}" onclick="openAnnotateModal(this.dataset.actId)">
+<div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+<span style="font-size:10.5px; color:var(--text-muted);">${isManualEntry ? 'Pulse Logged Entry' : 'Garmin Telemetry'} • ID: ${esc(act.id)}</span>
+<div style="display:flex; align-items:center; gap:6px;">
+${linkPulseBtnHtml}
+<button class="header-pill-btn" style="padding:3px 8px; font-size:11px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-secondary);" data-act-id="${esc(act.id)}" onclick="openAnnotateModal(this.dataset.actId)">
           Annotate Notes ✎
-        </button>
-      </div>
+</button>
+</div>
+</div>
     `;
     box.appendChild(card);
   });
@@ -723,18 +745,44 @@ function renderHistoryList() {
 
 // ==================== 30-DAY RENPHO TREND SVG CHART ====================
 
-async function renderRenphoTrendChart() {
-  let records = [];
+let _renphoHistoryCache = null;
+let _renphoHistoryFetchedAtMs = 0;
 
-  try {
-    const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/renpho/history?days=30', { promptAuthOn401: false }) : fetch('/api/renpho/history?days=30'));
-    if (res.ok) {
-      const data = await res.json();
-      records = Array.isArray(data) ? data : (data && Array.isArray(data.history) ? data.history : []);
+async function renderRenphoTrendChart(opts = {}) {
+  let records = Array.isArray(_renphoHistoryCache) ? _renphoHistoryCache : [];
+  const force = Boolean(opts && opts.force === true);
+  const isStale = (Date.now() - _renphoHistoryFetchedAtMs) > (5 * 60 * 1000);
+
+  if (force || records.length === 0 || isStale) {
+    try {
+      const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/renpho/history?days=30', { promptAuthOn401: false }) : fetch('/api/renpho/history?days=30'));
+      if (res && res.ok) {
+        const data = await res.json();
+        const hasValidList = Array.isArray(data) || (data && Array.isArray(data.history));
+        const fetched = Array.isArray(data) ? data : ((data && Array.isArray(data.history)) ? data.history : []);
+        if (hasValidList && (force || fetched.length > 0 || records.length === 0)) {
+          records = fetched;
+          _renphoHistoryCache = fetched;
+          _renphoHistoryFetchedAtMs = Date.now();
+          if (typeof window !== 'undefined') window.PULSE_RENPHO_HISTORY = fetched;
+        }
+      }
+    } catch (err) {
+      console.warn('[RenphoChart] Fetch failed, using fallback live state:', err);
     }
-  } catch (err) {
-    console.warn('[RenphoChart] Fetch failed, using fallback live state:', err);
   }
+
+  // Update Body-tab 7-Day EMA weight label from latest 7d_avg_weight
+  try {
+    const emaEl = document.getElementById('bodyAvg7dWeightVal');
+    if (emaEl && Array.isArray(records) && records.length > 0) {
+      const latestRec = records[records.length - 1];
+      const emaWt = Number(latestRec && (latestRec['7d_avg_weight'] ?? latestRec.weight_kg));
+      if (Number.isFinite(emaWt) && emaWt > 0) {
+        emaEl.innerText = `7-Day EMA: ${emaWt.toFixed(2)} kg`;
+      }
+    }
+  } catch (e) {}
 
   // Locate or create #renphoTrendChartContainer
   let container = document.getElementById('renphoTrendChartContainer');
@@ -756,7 +804,7 @@ async function renderRenphoTrendChart() {
   container.style.paddingTop = '12px';
   container.style.borderTop = '1px solid rgba(255,255,255,0.06)';
 
-  if (!records || records.length < 2) {
+  const _renderRenphoFallbackCard = () => {
     const baked = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
     const rState = baked.renpho || baked.athlete || (typeof window !== 'undefined' ? window.athleteProfile : null) || {};
     const curWt = Number(rState.weight_kg);
@@ -766,23 +814,35 @@ async function renderRenphoTrendChart() {
       ? `Latest reading: ${curWt.toFixed(2)} kg${Number.isFinite(curBf) && curBf > 0 ? ` • ${curBf.toFixed(1)}% BF` : ''}${Number.isFinite(curLm) && curLm > 0 ? ` • ${curLm.toFixed(2)} kg LBM` : ''}`
       : 'Sync Renpho or log a manual weigh-in to begin tracking.';
     container.innerHTML = `
-      <div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.14); border-radius:12px; padding:16px; text-align:center;">
-        <div style="font-size:12px; font-weight:800; color:#e4e4e7; margin-bottom:4px;">Need ≥ 2 weigh-ins to plot 30-day trend</div>
-        <div style="font-size:11px; color:var(--text-muted);">${snapshotLine}</div>
-      </div>`;
+<div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.14); border-radius:12px; padding:16px; text-align:center;">
+<div style="font-size:12px; font-weight:800; color:#e4e4e7; margin-bottom:4px;">Need ≥ 2 weigh-ins to plot 30-day trend</div>
+<div style="font-size:11px; color:var(--text-muted);">${snapshotLine}</div>
+</div>`;
+  };
+
+  if (!records || records.length < 2) {
+    _renderRenphoFallbackCard();
     return;
   }
 
+  const _normRenphoTsMs = (r) => {
+    const rawTs = r && r.timestamp !== undefined && r.timestamp !== null ? Number(r.timestamp) : NaN;
+    if (Number.isFinite(rawTs) && rawTs > 0) {
+      return rawTs < 1e11 ? rawTs * 1000 : rawTs;
+    }
+    if (r && r.date_str) {
+      const parsed = new Date(r.date_str).getTime();
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return 0;
+  };
+
   // Ensure chronologically sorted
-  records = records.slice().sort((a, b) => {
-    const ta = a.timestamp || (a.date_str ? new Date(a.date_str).getTime() : 0);
-    const tb = b.timestamp || (b.date_str ? new Date(b.date_str).getTime() : 0);
-    return ta - tb;
-  });
+  records = records.slice().sort((a, b) => _normRenphoTsMs(a) - _normRenphoTsMs(b));
 
   // Map to structured points
   const points = records.map(r => {
-    const ts = (r.timestamp ? r.timestamp * 1000 : (r.date_str ? new Date(r.date_str).getTime() : Date.now()));
+    const ts = _normRenphoTsMs(r) || Date.now();
     const d = new Date(ts);
     const dateLabel = isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}/${d.getDate()}`;
     return {
@@ -795,7 +855,10 @@ async function renderRenphoTrendChart() {
     };
   }).filter(p => p.bf > 5 && p.lm > 20);
 
-  if (points.length === 0) return;
+  if (points.length < 2) {
+    _renderRenphoFallbackCard();
+    return;
+  }
 
   // Calculate 7-day moving averages for both metrics
   const sevenDaysMs = 7 * 86400 * 1000;
@@ -846,10 +909,10 @@ async function renderRenphoTrendChart() {
   // Dimensions
   const width = 380;
   const height = 180;
-  const padL = 36;
-  const padR = 40;
-  const padT = 22;
-  const padB = 26;
+  const padL = 50;
+  const padR = 54;
+  const padT = 24;
+  const padB = 28;
   const chartW = width - padL - padR;
   const chartH = height - padT - padB;
 
@@ -895,131 +958,159 @@ async function renderRenphoTrendChart() {
   const endDate = points[points.length - 1].dateLabel || 'Today';
 
   container.innerHTML = `
-    <!-- HEADER & VELOCITY DISPLAY -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="font-size:12px;">📈</span>
-        <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
+    
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:12px;">📈</span>
+<span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
           30-DAY RENPHO TREND
-        </span>
-      </div>
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Fat Velocity:</span>
-        <span style="font-size:11px; font-weight:800; color:#00F0FF; font-family:var(--font-mono); background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.3); padding:2px 7px; border-radius:4px; box-shadow:0 0 8px rgba(0,240,255,0.25);">
+</span>
+</div>
+<div style="display:flex; align-items:center; gap:5px;">
+<span style="font-size:9.5px; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Fat Velocity:</span>
+<span style="font-size:11px; font-weight:800; color:#00F0FF; font-family:var(--font-mono); background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.3); padding:2px 7px; border-radius:4px; box-shadow:0 0 8px rgba(0,240,255,0.25);">
           ${velKgStr} <small style="color:var(--text-secondary); font-size:9.5px; font-weight:600;">(${velBfStr})</small>
-        </span>
-      </div>
-    </div>
+</span>
+</div>
+</div>
 
-    <!-- DUAL METRIC LEGEND -->
-    <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:6px; padding:0 2px;">
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="display:inline-block; width:12px; height:2.5px; background:#00F0FF; border-radius:1px; box-shadow:0 0 6px rgba(0,240,255,0.7);"></span>
-        <span style="color:#00F0FF; font-weight:700;">Body Fat %</span>
-        <span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:5px;">
-        <span style="display:inline-block; width:12px; height:2.5px; background:#10b981; border-radius:1px; box-shadow:0 0 6px rgba(16,185,129,0.7);"></span>
-        <span style="color:#10b981; font-weight:700;">Lean Mass kg</span>
-        <span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
-      </div>
-    </div>
+    
+<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:6px; padding:0 2px;">
+<div style="display:flex; align-items:center; gap:5px;">
+<span style="display:inline-block; width:12px; height:2.5px; background:#00F0FF; border-radius:1px; box-shadow:0 0 6px rgba(0,240,255,0.7);"></span>
+<span style="color:#00F0FF; font-weight:700;">Body Fat %</span>
+<span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
+</div>
+<div style="display:flex; align-items:center; gap:5px;">
+<span style="display:inline-block; width:12px; height:2.5px; background:#10b981; border-radius:1px; box-shadow:0 0 6px rgba(16,185,129,0.7);"></span>
+<span style="color:#10b981; font-weight:700;">Lean Mass kg</span>
+<span style="color:var(--text-muted); font-size:9px;">(dashed: 7d MA)</span>
+</div>
+</div>
 
-    <!-- DUAL-METRIC SVG CHART -->
-    <div style="background:linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(6,8,14,0.7) 100%); border:1px solid rgba(0,240,255,0.14); border-radius:10px; padding:8px 6px 4px; box-shadow:inset 0 0 16px rgba(0,0,0,0.4);">
-      <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
-        <defs>
-          <linearGradient id="renphoBfGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.32"/>
-            <stop offset="60%" stop-color="#00F0FF" stop-opacity="0.08"/>
-            <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.0"/>
-          </linearGradient>
-        </defs>
+    
+<div style="background:linear-gradient(180deg, rgba(15,23,42,0.4) 0%, rgba(6,8,14,0.7) 100%); border:1px solid rgba(0,240,255,0.14); border-radius:10px; padding:8px 6px 4px; box-shadow:inset 0 0 16px rgba(0,0,0,0.4);">
+<svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; overflow:visible; font-family:var(--font-mono);">
+<defs>
+<linearGradient id="renphoBfGrad" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#00F0FF" stop-opacity="0.32"/>
+<stop offset="60%" stop-color="#00F0FF" stop-opacity="0.08"/>
+<stop offset="100%" stop-color="#00F0FF" stop-opacity="0.0"/>
+</linearGradient>
+</defs>
 
-        <!-- Grid Lines -->
-        <line x1="${padL}" y1="${gridY1}" x2="${width - padR}" y2="${gridY1}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-        <line x1="${padL}" y1="${gridY2}" x2="${width - padR}" y2="${gridY2}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" stroke-width="1"/>
-        <line x1="${padL}" y1="${gridY3}" x2="${width - padR}" y2="${gridY3}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        
+<line x1="${padL}" y1="${gridY1}" x2="${width - padR}" y2="${gridY1}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+<line x1="${padL}" y1="${gridY2}" x2="${width - padR}" y2="${gridY2}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3" stroke-width="1"/>
+<line x1="${padL}" y1="${gridY3}" x2="${width - padR}" y2="${gridY3}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
 
-        <!-- Y-Axis Ticks (Left: Cyan Body Fat %) -->
-        <text x="${padL - 4}" y="${gridY1 + 4}" fill="#00F0FF" font-size="8.5" font-weight="700" text-anchor="end">${maxBf.toFixed(1)}%</text>
-        <text x="${padL - 4}" y="${gridY2 + 3}" fill="#38bdf8" font-size="8" font-weight="600" text-anchor="end">${((maxBf + minBf) / 2).toFixed(1)}%</text>
-        <text x="${padL - 4}" y="${gridY3}" fill="#00F0FF" font-size="8.5" font-weight="700" text-anchor="end">${minBf.toFixed(1)}%</text>
+        
+<text x="${padL - 4}" y="${gridY1 + 4}" fill="#00F0FF" font-size="12.5" font-weight="700" text-anchor="end">${maxBf.toFixed(1)}%</text>
+<text x="${padL - 4}" y="${gridY2 + 4}" fill="#38bdf8" font-size="12.5" font-weight="600" text-anchor="end">${((maxBf + minBf) / 2).toFixed(1)}%</text>
+<text x="${padL - 4}" y="${gridY3}" fill="#00F0FF" font-size="12.5" font-weight="700" text-anchor="end">${minBf.toFixed(1)}%</text>
 
-        <!-- Y-Axis Ticks (Right: Emerald Lean Mass kg) -->
-        <text x="${width - padR + 4}" y="${gridY1 + 4}" fill="#10b981" font-size="8.5" font-weight="700" text-anchor="start">${maxLm.toFixed(1)}kg</text>
-        <text x="${width - padR + 4}" y="${gridY2 + 3}" fill="#34d399" font-size="8" font-weight="600" text-anchor="start">${((maxLm + minLm) / 2).toFixed(1)}kg</text>
-        <text x="${width - padR + 4}" y="${gridY3}" fill="#10b981" font-size="8.5" font-weight="700" text-anchor="start">${minLm.toFixed(1)}kg</text>
+        
+<text x="${width - padR + 4}" y="${gridY1 + 4}" fill="#10b981" font-size="12.5" font-weight="700" text-anchor="start">${maxLm.toFixed(1)}kg</text>
+<text x="${width - padR + 4}" y="${gridY2 + 4}" fill="#34d399" font-size="12.5" font-weight="600" text-anchor="start">${((maxLm + minLm) / 2).toFixed(1)}kg</text>
+<text x="${width - padR + 4}" y="${gridY3}" fill="#10b981" font-size="12.5" font-weight="700" text-anchor="start">${minLm.toFixed(1)}kg</text>
 
-        <!-- Shaded Fill for Body Fat -->
-        <path d="${areaBf}" fill="url(#renphoBfGrad)"/>
+        
+<path d="${areaBf}" fill="url(#renphoBfGrad)"/>
 
-        <!-- 7-day MA Dashed Lines -->
-        <path d="${pathBfMa}" fill="none" stroke="#00F0FF" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
-        <path d="${pathLmMa}" fill="none" stroke="#10b981" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
+        
+<path d="${pathBfMa}" fill="none" stroke="#00F0FF" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
+<path d="${pathLmMa}" fill="none" stroke="#10b981" stroke-width="1.6" stroke-dasharray="4,3" opacity="0.85"/>
 
-        <!-- Primary Solid Curves -->
-        <path d="${pathBf}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.6));"/>
-        <path d="${pathLm}" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.6));"/>
+        
+<path d="${pathBf}" fill="none" stroke="#00F0FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.6));"/>
+<path d="${pathLm}" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.6));"/>
 
-        <!-- Latest Point Markers -->
-        <circle cx="${pts[pts.length - 1].x}" cy="${pts[pts.length - 1].yBf}" r="4" fill="#00F0FF" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.9));"/>
-        <circle cx="${pts[pts.length - 1].x}" cy="${pts[pts.length - 1].yLm}" r="4" fill="#10b981" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.9));"/>
+        
+<circle cx="${pts[pts.length - 1].x}" cy="${pts[pts.length - 1].yBf}" r="4" fill="#00F0FF" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(0,240,255,0.9));"/>
+<circle cx="${pts[pts.length - 1].x}" cy="${pts[pts.length - 1].yLm}" r="4" fill="#10b981" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px rgba(16,185,129,0.9));"/>
 
-        <!-- X-Axis Timeline Markers -->
-        <text x="${padL}" y="${height - 8}" fill="var(--text-muted)" font-size="9">${startDate}</text>
-        <text x="${padL + chartW / 2}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="middle">${midDate}</text>
-        <text x="${width - padR}" y="${height - 8}" fill="var(--text-muted)" font-size="9" text-anchor="end">${endDate}</text>
-      </svg>
-    </div>
+        
+<text x="${padL}" y="${height - 6}" fill="var(--text-muted)" font-size="12.5">${startDate}</text>
+<text x="${padL + chartW / 2}" y="${height - 6}" fill="var(--text-muted)" font-size="12.5" text-anchor="middle">${midDate}</text>
+<text x="${width - padR}" y="${height - 6}" fill="var(--text-muted)" font-size="12.5" text-anchor="end">${endDate}</text>
+</svg>
+</div>
 
-    <!-- MIN/MAX LABELS & GLANCEABLE SUMMARY -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(0,240,255,0.18); border-radius:8px; padding:6px 8px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <span style="font-size:9.5px; color:#00F0FF; font-weight:800; text-transform:uppercase;">BF% Range</span>
-          <span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${lastPt.bf.toFixed(1)}%</span>
-        </div>
-        <div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
-          <span>Min: <strong style="color:#00F0FF;">${minBfVal.toFixed(1)}%</strong></span>
-          <span>Max: <strong style="color:#94a3b8;">${maxBfVal.toFixed(1)}%</strong></span>
-        </div>
-      </div>
+    
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(0,240,255,0.18); border-radius:8px; padding:6px 8px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+<span style="font-size:9.5px; color:#00F0FF; font-weight:800; text-transform:uppercase;">BF% Range</span>
+<span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${lastPt.bf.toFixed(1)}%</span>
+</div>
+<div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
+<span>Min: <strong style="color:#00F0FF;">${minBfVal.toFixed(1)}%</strong></span>
+<span>Max: <strong style="color:#94a3b8;">${maxBfVal.toFixed(1)}%</strong></span>
+</div>
+</div>
 
-      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(16,185,129,0.18); border-radius:8px; padding:6px 8px;">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <span style="font-size:9.5px; color:#10b981; font-weight:800; text-transform:uppercase;">Lean Mass</span>
-          <span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${lastPt.lm.toFixed(1)}kg</span>
-        </div>
-        <div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
-          <span>Min: <strong style="color:#94a3b8;">${minLmVal.toFixed(1)}kg</strong></span>
-          <span>Max: <strong style="color:#10b981;">${maxLmVal.toFixed(1)}kg</strong></span>
-        </div>
-      </div>
-    </div>
+<div style="background:rgba(0,0,0,0.3); border:1px solid rgba(16,185,129,0.18); border-radius:8px; padding:6px 8px;">
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+<span style="font-size:9.5px; color:#10b981; font-weight:800; text-transform:uppercase;">Lean Mass</span>
+<span style="font-size:12px; font-weight:800; color:#fff; font-family:var(--font-mono);">${lastPt.lm.toFixed(1)}kg</span>
+</div>
+<div style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px; display:flex; justify-content:space-between;">
+<span>Min: <strong style="color:#94a3b8;">${minLmVal.toFixed(1)}kg</strong></span>
+<span>Max: <strong style="color:#10b981;">${maxLmVal.toFixed(1)}kg</strong></span>
+</div>
+</div>
+</div>
   `;
 }
 
 // ==================== 4-WEEK STRENGTH e1RM PROGRESSION ====================
 
-async function renderStrengthProgressionChart() {
-  let strengthHistory = {};
+let _strengthHistoryCache = null;
+let _strengthHistoryFetchedAtMs = 0;
+
+async function renderStrengthProgressionChart(opts = {}) {
+  let strengthHistory = (_strengthHistoryCache && typeof _strengthHistoryCache === 'object') ? _strengthHistoryCache : {};
   let prescriptions = {};
+  const force = Boolean(opts && opts.force === true);
+  const hasCached = Object.keys(strengthHistory).length > 0;
+  const isStale = (Date.now() - _strengthHistoryFetchedAtMs) > (5 * 60 * 1000);
 
   // Try fetching 30-day history from backend
-  try {
-    const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/strength/history?days=30', { promptAuthOn401: false }) : fetch('/api/strength/history?days=30'));
-    if (res.ok) {
-      const data = await res.json();
-      strengthHistory = (data && data.exercises) || data || {};
+  if (force || !hasCached || isStale) {
+    try {
+      const res = await (typeof pulseApiFetch === 'function' ? pulseApiFetch('/api/strength/history?days=30', { promptAuthOn401: false }) : fetch('/api/strength/history?days=30'));
+      if (res && res.ok) {
+        const data = await res.json();
+        strengthHistory = (data && data.exercises) || data || {};
+        _strengthHistoryCache = strengthHistory;
+        _strengthHistoryFetchedAtMs = Date.now();
+      }
+    } catch (err) {
+      console.warn('[StrengthChart] Fetch failed, falling back to baked prescriptions:', err);
     }
-  } catch (err) {
-    console.warn('[StrengthChart] Fetch failed, falling back to baked prescriptions:', err);
   }
 
   // Load baseline strength prescriptions from live state
   const baked = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
   prescriptions = baked.strength_prescriptions || (typeof window !== 'undefined' ? window.strengthPrescriptions : null) || {};
+
+  const _catExs = (typeof getAllExercises === 'function') ? getAllExercises() : [];
+  const _catLiftDefaults = (exId, fbW, fbR) => {
+    const found = _catExs.find(e => e && e.id === exId);
+    const rawW = found ? (typeof found.getBaseWeight === 'function' ? found.getBaseWeight() : found.targetWeight) : NaN;
+    const rawR = found ? (typeof found.getBaseReps === 'function' ? found.getBaseReps() : found.targetReps) : NaN;
+    const w = (typeof rawW === 'number' && Number.isFinite(rawW) && rawW > 0) ? rawW : fbW;
+    const r = (typeof rawR === 'number' && Number.isFinite(rawR) && rawR > 0) ? rawR : fbR;
+    return {
+      weight: w,
+      reps: r,
+      e1rm: Number((w * (1 + r / 30)).toFixed(1))
+    };
+  };
+  const _sqDef = _catLiftDefaults('barbell_squat', 100.0, 8);
+  const _rdlDef = _catLiftDefaults('barbell_rdl', 70.0, 8);
+  const _fpDef = _catLiftDefaults('barbell_floor_press', 95.0, 6);
+  const _rowDef = _catLiftDefaults('barbell_pendlay_row', 85.0, 8);
 
   const COMPOUND_LIFTS = [
     {
@@ -1027,36 +1118,36 @@ async function renderStrengthProgressionChart() {
       name: 'Barbell Back Squat',
       icon: '🏋️',
       family: 'Quad & Knee Extensor Power',
-      defaultWeight: 100.0,
-      defaultReps: 8,
-      defaultE1rm: 126.7
+      defaultWeight: _sqDef.weight,
+      defaultReps: _sqDef.reps,
+      defaultE1rm: _sqDef.e1rm
     },
     {
       key: 'barbell_rdl',
       name: 'Barbell Romanian Deadlift (RDL)',
       icon: '⚡',
       family: 'Hamstring & Glute Hinge Anchor',
-      defaultWeight: 110.0,
-      defaultReps: 8,
-      defaultE1rm: 139.3
+      defaultWeight: _rdlDef.weight,
+      defaultReps: _rdlDef.reps,
+      defaultE1rm: _rdlDef.e1rm
     },
     {
       key: 'barbell_floor_press',
       name: 'Barbell Floor Press',
       icon: '🛡️',
       family: 'Horizontal Push / Strict Triceps Power',
-      defaultWeight: 95.0,
-      defaultReps: 6,
-      defaultE1rm: 114.0
+      defaultWeight: _fpDef.weight,
+      defaultReps: _fpDef.reps,
+      defaultE1rm: _fpDef.e1rm
     },
     {
       key: 'barbell_pendlay_row',
       name: 'Barbell Pendlay Row',
       icon: '🚀',
       family: 'Explosive Dead-Stop Lat Pull',
-      defaultWeight: 85.0,
-      defaultReps: 8,
-      defaultE1rm: 107.7
+      defaultWeight: _rowDef.weight,
+      defaultReps: _rowDef.reps,
+      defaultE1rm: _rowDef.e1rm
     }
   ];
 
@@ -1121,7 +1212,7 @@ async function renderStrengthProgressionChart() {
       }));
       w4Val = weekValues[weekValues.length - 1].val.toFixed(1);
     } else {
-      const currentVal = Number((realTail.length === 1 ? realTail[0].e1rm : (isProgReady ? Math.max(lastE1rm, baselineE1rm) : baselineE1rm)).toFixed(1));
+      const currentVal = Number(Number(realTail.length === 1 ? (realTail[0].e1rm || baselineE1rm) : (isProgReady ? Math.max(lastE1rm, baselineE1rm) : baselineE1rm)).toFixed(1));
       weekValues = [{ label: 'Now', val: currentVal, isCurrent: true }];
       w4Val = currentVal.toFixed(1);
     }
@@ -1139,11 +1230,11 @@ async function renderStrengthProgressionChart() {
       const valColor = isTarget ? '#00F0FF' : (w.isCurrent ? '#fff' : 'var(--text-muted)');
 
       return `
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px;">
-          <span style="font-size:9.5px; font-weight:800; font-family:var(--font-mono); color:${valColor};">${w.val}</span>
-          <div style="width:100%; max-width:32px; height:${h}px; ${barStyle} border-radius:3px;"></div>
-          <span style="font-size:9px; font-weight:700; color:${w.isCurrent ? 'var(--primary)' : 'var(--text-muted)'}; margin-top:1px;">${w.label}</span>
-        </div>
+<div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px;">
+<span style="font-size:9.5px; font-weight:800; font-family:var(--font-mono); color:${valColor};">${w.val}</span>
+<div style="width:100%; max-width:32px; height:${h}px; ${barStyle} border-radius:3px;"></div>
+<span style="font-size:9px; font-weight:700; color:${w.isCurrent ? 'var(--primary)' : 'var(--text-muted)'}; margin-top:1px;">${w.label}</span>
+</div>
       `;
     }).join('');
 
@@ -1152,78 +1243,78 @@ async function renderStrengthProgressionChart() {
       : 'border:1px solid rgba(255,255,255,0.07); background:rgba(15,23,42,0.5);';
 
     cardsHtml += `
-      <div class="strength-progression-card" style="${cardBorder} border-radius:12px; padding:12px 14px; position:relative; overflow:hidden;">
-        <!-- TOP ROW: TITLE & BADGE -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <div>
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:14px;">${lift.icon}</span>
-              <strong style="color:#fff; font-size:13px; font-family:var(--font-display); letter-spacing:-0.01em;">${lift.name}</strong>
-            </div>
-            <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">
+<div class="strength-progression-card" style="${cardBorder} border-radius:12px; padding:12px 14px; position:relative; overflow:hidden;">
+        
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+<div>
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:14px;">${lift.icon}</span>
+<strong style="color:#fff; font-size:13px; font-family:var(--font-display); letter-spacing:-0.01em;">${lift.name}</strong>
+</div>
+<div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">
               Prescribed: <span style="color:#e2e8f0; font-weight:700;">${prescribedWeight}kg × ${prescribedReps}</span> • ${lift.family}
-            </div>
-          </div>
-          <div>
+</div>
+</div>
+<div>
             ${isProgReady ? `
-              <span style="background:linear-gradient(90deg, #00F0FF, #10b981); color:#000; font-size:10px; font-weight:900; padding:3px 8px; border-radius:4px; letter-spacing:0.04em; box-shadow:0 0 10px rgba(0,240,255,0.6); display:inline-block; white-space:nowrap;">
+<span style="background:linear-gradient(90deg, #00F0FF, #10b981); color:#000; font-size:10px; font-weight:900; padding:3px 8px; border-radius:4px; letter-spacing:0.04em; box-shadow:0 0 10px rgba(0,240,255,0.6); display:inline-block; white-space:nowrap;">
                 +2.5 kg Ready
-              </span>
+</span>
             ` : `
-              <span style="background:rgba(255,255,255,0.06); color:var(--text-muted); font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; white-space:nowrap;">
+<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); font-size:9.5px; font-weight:700; padding:2px 7px; border-radius:4px; display:inline-block; white-space:nowrap;">
                 Baseline Solid
-              </span>
+</span>
             `}
-          </div>
-        </div>
+</div>
+</div>
 
-        <!-- 2-COL TELEMETRY: LAST LOGGED LOAD & e1RM -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:7px 10px; margin-bottom:10px;">
-          <div>
-            <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Last Logged Set</div>
-            <div style="font-size:13px; font-weight:800; color:#fff; font-family:var(--font-mono); margin-top:2px;">
+        
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:7px 10px; margin-bottom:10px;">
+<div>
+<div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Last Logged Set</div>
+<div style="font-size:13px; font-weight:800; color:#fff; font-family:var(--font-mono); margin-top:2px;">
               ${lastLoggedWeight}kg <small style="color:var(--text-muted); font-size:10px;">× ${lastLoggedReps} reps</small>
-            </div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Calculated e1RM</div>
-            <div style="font-size:13px; font-weight:800; color:${isProgReady ? '#00F0FF' : '#fff'}; font-family:var(--font-mono); margin-top:2px;">
+</div>
+</div>
+<div style="text-align:right;">
+<div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Calculated e1RM</div>
+<div style="font-size:13px; font-weight:800; color:${isProgReady ? '#00F0FF' : '#fff'}; font-family:var(--font-mono); margin-top:2px;">
               ${w4Val} kg ${isProgReady ? `<small style="color:#10b981; font-weight:800;">(+${Math.max(2.5, Number((w4Val - baselineE1rm).toFixed(1)))}kg)</small>` : ''}
-            </div>
-          </div>
-        </div>
+</div>
+</div>
+</div>
 
-        <!-- 4-WEEK PROGRESSION VISUAL BARS -->
-        <div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:5px;">
-            <span style="font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">4-Week e1RM Progression Visual</span>
-            <span style="font-family:var(--font-mono); color:${isProgReady ? '#10b981' : 'var(--text-muted)'}; font-weight:700;">
+        
+<div>
+<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--text-muted); margin-bottom:5px;">
+<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">4-Week e1RM Progression Visual</span>
+<span style="font-family:var(--font-mono); color:${isProgReady ? '#10b981' : 'var(--text-muted)'}; font-weight:700;">
               ${isProgReady ? '✓ Progressive Overload Met' : 'Consistent Load Retention'}
-            </span>
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; background:rgba(0,0,0,0.32); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:8px 8px 6px; align-items:flex-end; height:74px;">
+</span>
+</div>
+<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; background:rgba(0,0,0,0.32); border:1px solid rgba(255,255,255,0.04); border-radius:8px; padding:8px 8px 6px; align-items:flex-end; height:74px;">
             ${barsHtml}
-          </div>
-        </div>
-      </div>
+</div>
+</div>
+</div>
     `;
   }
 
   container.innerHTML = `
-    <!-- MAIN SECTION HEADER -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-      <div style="display:flex; align-items:center; gap:6px;">
-        <span style="font-size:13px;">🏋️</span>
-        <span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
+    
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+<div style="display:flex; align-items:center; gap:6px;">
+<span style="font-size:13px;">🏋️</span>
+<span style="font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:#fff; text-transform:uppercase;">
           4-WEEK COMPOUND STRENGTH e1RM PROGRESSION
-        </span>
-      </div>
-      <span style="font-size:10px; font-weight:700; color:var(--primary); font-family:var(--font-mono); background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.25); padding:2px 7px; border-radius:4px;">
+</span>
+</div>
+<span style="font-size:10px; font-weight:700; color:var(--primary); font-family:var(--font-mono); background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.25); padding:2px 7px; border-radius:4px;">
         Linear Overload
-      </span>
-    </div>
+</span>
+</div>
 
-    <!-- 4 COMPOUND LIFT CARDS -->
+    
     ${cardsHtml}
   `;
 }
@@ -1244,13 +1335,6 @@ function initPulseCharts() {
   if (_pulseChartsInitInFlight) return;
   _pulseChartsInitInFlight = true;
   try {
-    try {
-      if (typeof renderHistoryList === 'function' && document.getElementById('trainViewHistory')) {
-        renderHistoryList();
-      }
-    } catch (e) {
-      console.warn('[PulseCharts] renderHistoryList init warning:', e);
-    }
     try {
       if (typeof renderRenphoTrendChart === 'function') {
         renderRenphoTrendChart();

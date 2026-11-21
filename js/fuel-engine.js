@@ -53,18 +53,128 @@
       "meals": _createEmptyMndMeals()
     };
 
+    function _readFuelJsonPref(lsKey) {
+      try {
+        const raw = localStorage.getItem(lsKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') return parsed;
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function computeMacroTargets({
+      baseCalories = 2092,
+      activeCalories = 0,
+      baseProtein = 200,
+      dietStrategy = 'balanced',
+      carbCycleLevel = 'mod',
+      customGoalMacros = null,
+      proDialMacros = null,
+      goalKey = null
+    } = {}) {
+      const nBaseCals = Number(baseCalories);
+      const bCals = (baseCalories !== null && baseCalories !== undefined && Number.isFinite(nBaseCals) && nBaseCals > 0) ? nBaseCals : 2092;
+      const nActCals = Number(activeCalories);
+      const aCals = (activeCalories !== null && activeCalories !== undefined && Number.isFinite(nActCals)) ? Math.max(0, nActCals) : 0;
+      const nBaseProt = Number(baseProtein);
+      const bProt = (baseProtein !== null && baseProtein !== undefined && Number.isFinite(nBaseProt) && nBaseProt > 0) ? nBaseProt : 200;
+
+      const calorieTarget = Math.round(bCals + aCals);
+
+      let proteinTarget = null;
+      if (dietStrategy === 'custom' && proDialMacros && typeof proDialMacros === 'object') {
+        const pdP = Number(proDialMacros.protein);
+        if (Number.isFinite(pdP) && pdP > 0) proteinTarget = Math.round(pdP);
+      }
+      if (proteinTarget === null && goalKey === 'custom' && customGoalMacros && typeof customGoalMacros === 'object') {
+        const cgP = Number(customGoalMacros.protein);
+        if (Number.isFinite(cgP) && cgP > 0) proteinTarget = Math.round(cgP);
+      }
+      if (proteinTarget === null) proteinTarget = Math.round(bProt);
+
+      const remCals = Math.max(0, calorieTarget - proteinTarget * 4);
+      const strategy = String(dietStrategy || 'balanced').trim().toLowerCase();
+
+      let carbsG;
+      let fatG;
+      if (strategy === 'lowcarb') {
+        carbsG = 75;
+        fatG = Math.max(40, Math.round(Math.max(0, remCals - 75 * 4) / 9));
+      } else if (strategy === 'carbcycle') {
+        const carbMap = { high: 300, mod: 200, low: 80 };
+        const lvl = String(carbCycleLevel || 'mod').trim().toLowerCase();
+        carbsG = carbMap[lvl] !== undefined ? carbMap[lvl] : 200;
+        fatG = Math.max(30, Math.round(Math.max(0, remCals - carbsG * 4) / 9));
+      } else if (strategy === 'fasting') {
+        carbsG = Math.max(50, Math.round((remCals * 0.55) / 4));
+        fatG = Math.max(35, Math.round((remCals * 0.45) / 9));
+      } else if (strategy === 'custom') {
+        const rawFp = (proDialMacros && typeof proDialMacros === 'object' && proDialMacros.fat_pct !== undefined && proDialMacros.fat_pct !== null)
+          ? Number(proDialMacros.fat_pct)
+          : NaN;
+        const fatPct = Number.isFinite(rawFp) ? Math.max(15, Math.min(65, rawFp)) : 30;
+        fatG = Math.max(20, Math.round((calorieTarget * (fatPct / 100)) / 9));
+        carbsG = Math.max(20, Math.round((calorieTarget - proteinTarget * 4 - calorieTarget * (fatPct / 100)) / 4));
+      } else {
+        carbsG = Math.max(50, Math.round((remCals * 0.62) / 4));
+        fatG = Math.max(30, Math.round((remCals * 0.38) / 9));
+      }
+
+      return {
+        calorie_target: calorieTarget,
+        protein_target_g: proteinTarget,
+        carbs_target_g: carbsG,
+        fat_target_g: fatG
+      };
+    }
+    if (typeof window !== 'undefined') window.computeMacroTargets = computeMacroTargets;
+
+    function _resolveComputedFuelTargets(overrides = {}) {
+      const gKey = overrides.goalKey || ((typeof currentGoalKey !== 'undefined' && currentGoalKey) ? currentGoalKey : 'recomp');
+      const goalObj = (typeof athleteGoals !== 'undefined' && athleteGoals && athleteGoals[gKey]) ? athleteGoals[gKey] : null;
+      const state = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const n = state.nutrition || {};
+      const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn(state) : 0;
+      const customGoal = overrides.customGoalMacros !== undefined ? overrides.customGoalMacros : _readFuelJsonPref('pulse_custom_goal_macros');
+      const proDial = overrides.proDialMacros !== undefined ? overrides.proDialMacros : _readFuelJsonPref('pulse_pro_dial_macros');
+      const baseCals = (overrides.baseCalories !== undefined)
+        ? overrides.baseCalories
+        : ((Number(n.base_calorie_target) > 0) ? Number(n.base_calorie_target) : ((goalObj && Number(goalObj.calories)) || 2092));
+      const baseProt = (overrides.baseProtein !== undefined)
+        ? overrides.baseProtein
+        : ((Number(n.base_protein_target_g) > 0) ? Number(n.base_protein_target_g) : ((goalObj && Number(goalObj.protein)) || athleteProteinAnchor || 200));
+      let strat = overrides.dietStrategy;
+      if (!strat) {
+        try { strat = activeDietStrategy || localStorage.getItem('pulse_diet_strategy') || 'balanced'; } catch (e) { strat = activeDietStrategy || 'balanced'; }
+      }
+      let ccLvl = overrides.carbCycleLevel;
+      if (!ccLvl) {
+        try { ccLvl = currentCarbCycleLevel || localStorage.getItem('pulse_carb_cycle_level') || 'mod'; } catch (e) { ccLvl = currentCarbCycleLevel || 'mod'; }
+      }
+      return computeMacroTargets({
+        baseCalories: baseCals,
+        activeCalories: activeBurn,
+        baseProtein: baseProt,
+        dietStrategy: strat,
+        carbCycleLevel: ccLvl,
+        customGoalMacros: customGoal,
+        proDialMacros: proDial,
+        goalKey: gKey
+      });
+    }
+
     function getCanonicalDailyCalorieTarget() {
       const state = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
-      const todayIso = (typeof getLocalDateStr === 'function')
-        ? getLocalDateStr()
-        : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
       const n = state.nutrition || null;
       const inAppBurn = (typeof getTodayInAppBurn === 'function') ? getTodayInAppBurn(state.garmin) : 0;
       if (n && Number(n.calorie_target) > 0 && state.date === todayIso) {
         return Math.max(1200, Math.round(Number(n.calorie_target) + inAppBurn));
       }
       const gKey = (typeof currentGoalKey !== 'undefined' && currentGoalKey) ? currentGoalKey : 'recomp';
-      const goalBase = (typeof athleteGoals !== 'undefined' && athleteGoals && athleteGoals[gKey] && Number(athleteGoals[gKey].calories)) || 2092;
+      const goalBase = (n && Number(n.base_calorie_target) > 0) ? Number(n.base_calorie_target) : ((typeof athleteGoals !== 'undefined' && athleteGoals && athleteGoals[gKey] && Number(athleteGoals[gKey].calories)) || 2092);
       const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn(state) : inAppBurn;
       return Math.max(1200, Math.round(goalBase + activeBurn));
     }
@@ -80,20 +190,24 @@
     }
 
     function renderMyNetDiaryEngine() {
-      // 1. Resolve Dynamic Daily Calorie Target via canonical state accessor
       const activeBurn = (typeof getTodayActiveBurn === 'function') ? getTodayActiveBurn() : 0;
+      const computed = _resolveComputedFuelTargets();
       const totalBudget = getCanonicalDailyCalorieTarget();
       athleteDailyBudget = totalBudget;
+      athleteProteinAnchor = computed.protein_target_g;
+      if (!myNetDiaryData.targets) myNetDiaryData.targets = {};
+      myNetDiaryData.targets.calories = totalBudget;
+      myNetDiaryData.targets.protein = computed.protein_target_g;
+      myNetDiaryData.targets.carbs = computed.carbs_target_g;
+      myNetDiaryData.targets.fat = computed.fat_target_g;
 
-      const ftEl = document.getElementById('fuelTargetNum');
-      if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <small style="font-size:13.5px; color:var(--lime);">+${activeBurn} kcal</small>`;
       const fbEl = document.getElementById('fuelBudgetNum');
       if (fbEl) fbEl.innerText = totalBudget;
 
       // 2. Macro Targets
-      const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
-      const cTarget = (myNetDiaryData.targets && myNetDiaryData.targets.carbs) || 251;
-      const fTarget = (myNetDiaryData.targets && myNetDiaryData.targets.fat) || 80;
+      const pTarget = myNetDiaryData.targets.protein || 200;
+      const cTarget = myNetDiaryData.targets.carbs || 200;
+      const fTarget = myNetDiaryData.targets.fat || 55;
 
       // Current Consumed Totals
       if (!myNetDiaryData.totals) {
@@ -221,6 +335,9 @@
         fTarget
       );
 
+      // 7.6. Evening Macro & Protein Gap Closer
+      renderMacroGapCloser(totalBudget, cals, pTarget, prot);
+
       // 8. Synchronize Runway UI
       dailyLoggedCalories = cals;
       dailyLoggedProtein = prot;
@@ -246,6 +363,10 @@
 
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+${activeBurn} active</span>`;
+      const liveSt = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : {};
+      const baseCalsVal = Math.max(0, Math.round(totalBudget - activeBurn));
+      const baseActiveSubEl = document.getElementById('fuelBaseActiveSub');
+      if (baseActiveSubEl) baseActiveSubEl.innerText = `Base ${baseCalsVal.toLocaleString()} + ${activeBurn.toLocaleString()} Active`;
 
       const frEl = document.getElementById('fuelRemainingNum');
       if (frEl) {
@@ -317,8 +438,13 @@
       if (barF) barF.style.width = `${Math.min(100, Math.round((fats / fTarget) * 100))}%`;
 
       // Update Progressive Disclosure Math Drawer
+      const defRaw = (liveSt && liveSt.nutrition && liveSt.nutrition.deficit !== undefined && liveSt.nutrition.deficit !== null)
+        ? Number(liveSt.nutrition.deficit) : 350;
+      const defNum = Number.isFinite(defRaw) ? Math.round(defRaw) : 350;
       const elBmr = document.getElementById('fuelCalcBmr');
-      if (elBmr) elBmr.innerText = '2,101 kcal';
+      if (elBmr) elBmr.innerText = `${(baseCalsVal + defNum).toLocaleString()} kcal`;
+      const elDeficit = document.getElementById('fuelCalcDeficit');
+      if (elDeficit) elDeficit.innerText = defNum >= 0 ? `-${defNum.toLocaleString()} kcal` : `+${Math.abs(defNum).toLocaleString()} kcal`;
       const elBurn = document.getElementById('fuelCalcBurn');
       if (elBurn) elBurn.innerText = `+${activeBurn} kcal`;
       const elTarget = document.getElementById('fuelCalcTarget');
@@ -357,26 +483,26 @@
         const mealCard = document.createElement('div');
         mealCard.className = 'meal-card-accordion';
         if (mKey === 'dinner' && !hasItems) {
-          mealCard.style.opacity = '0.65';
+          mealCard.style.borderColor = 'rgba(139, 157, 181, 0.22)';
         }
 
         let itemsHtml = '';
         if (hasItems) {
           itemsHtml = meal.items.map((item, itemIdx) => `
-            <div class="mnd-item-row" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:12px;">
-              <span style="color:#FFFFFF; font-weight:500;">${escapeHtml(item.name)}</span>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="color:var(--text-muted); font-size:11px;">${Number(item.cals) || 0} kcal</span>
-                <span style="color:var(--primary); font-weight:700; font-size:11px;">${Number(item.p) || 0}g P</span>
-                <span style="color:var(--text-muted); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:3px;" title="Remove food item" data-meal-key="${escapeHtml(mKey)}" data-item-idx="${itemIdx}" onclick="event.stopPropagation(); deleteMndMealItem(this.dataset.mealKey, Number(this.dataset.itemIdx))">✕</span>
-              </div>
-            </div>
+<div class="mnd-item-row" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:12px;">
+<span style="color:#FFFFFF; font-weight:500;">${escapeHtml(item.name)}</span>
+<div style="display:flex; align-items:center; gap:8px;">
+<span style="color:var(--text-muted); font-size:11px;">${Number(item.cals) || 0} kcal</span>
+<span style="color:var(--primary); font-weight:700; font-size:11px;">${Number(item.p) || 0}g P</span>
+<span style="color:var(--text-muted); cursor:pointer; font-size:11px; padding:2px 4px; border-radius:3px;" title="Remove food item" data-meal-key="${escapeHtml(mKey)}" data-item-idx="${itemIdx}" onclick="event.stopPropagation(); deleteMndMealItem(this.dataset.mealKey, Number(this.dataset.itemIdx))">✕</span>
+</div>
+</div>
           `).join('');
         } else {
           itemsHtml = `
-            <div style="font-size:11.5px; color:var(--text-muted); padding:6px 0; font-style:italic;">
+<div style="font-size:11.5px; color:var(--text-muted); padding:6px 0; font-style:italic;">
               ${mKey === 'dinner' ? 'Dinner pending. Auto-syncs when logged in MyNetDiary.' : 'No foods logged for this slot.'}
-            </div>
+</div>
           `;
         }
 
@@ -384,20 +510,20 @@
         const chevronRot = hasItems ? 'rotate(180deg)' : 'rotate(0deg)';
 
         mealCard.innerHTML = `
-          <div class="meal-card-header" onclick="toggleMealAccordion(this)">
-            <div style="display:flex; align-items:center; gap:7px;">
-              <span class="accordion-chevron" style="transform:${chevronRot}; font-size:10px;">▼</span>
-              <strong style="color:#fff; font-size:12.5px; font-weight:700;">${escapeHtml(meal.name)}</strong>
-              <span style="font-size:11px; color:var(--text-muted);">${meal.time ? '• ' + escapeHtml(meal.time) : ''}</span>
-            </div>
-            <div style="display:flex; gap:5px; align-items:center;">
-              <span class="macro-pill" style="color:var(--primary); font-weight:700; background:rgba(0,229,255,0.12); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.protein) || 0}g P</span>
-              <span class="macro-pill" style="color:#fff; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.calories) || 0} kcal</span>
-            </div>
-          </div>
-          <div class="meal-card-body" style="display:${isInitiallyOpen};">
+<div class="meal-card-header" onclick="toggleMealAccordion(this)">
+<div style="display:flex; align-items:center; gap:7px;">
+<span class="accordion-chevron" style="transform:${chevronRot}; font-size:10px;">▼</span>
+<strong style="color:#fff; font-size:12.5px; font-weight:700;">${escapeHtml(meal.name)}</strong>
+<span style="font-size:11px; color:var(--text-muted);">${meal.time ? '• ' + escapeHtml(meal.time) : ''}</span>
+</div>
+<div style="display:flex; gap:5px; align-items:center;">
+<span class="macro-pill" style="color:var(--primary); font-weight:700; background:rgba(0,229,255,0.12); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.protein) || 0}g P</span>
+<span class="macro-pill" style="color:#fff; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.calories) || 0} kcal</span>
+</div>
+</div>
+<div class="meal-card-body" style="display:${isInitiallyOpen};">
             ${itemsHtml}
-          </div>
+</div>
         `;
 
         container.appendChild(mealCard);
@@ -431,30 +557,22 @@
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
       const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
       const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
-      const lbmKg = (window.athleteProfile && Number(window.athleteProfile.leanMassKg))
-        ? Number(window.athleteProfile.leanMassKg).toFixed(1)
-        : '81.0';
+      const hasLbm = Boolean(window.athleteProfile && Number(window.athleteProfile.leanMassKg) > 0);
+      const lbmPhrase = hasLbm
+        ? `all ${Number(window.athleteProfile.leanMassKg).toFixed(1)}kg of lean muscle`
+        : 'all lean muscle mass';
       let advice = '';
 
       if (cals >= totalBudget && prot >= pTarget) {
-        advice = `<strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>${cals.toLocaleString()} kcal</strong> and <strong>${prot}g protein</strong> today (crushing your ${pTarget}g anchor by +${prot - pTarget}g). You've matched your active expenditure (~${Math.round(totalBudget).toLocaleString()} kcal), preserving all ${lbmKg}kg of lean muscle without gaining fat. Hydrate well tonight for tomorrow's session!`;
+        advice = `<strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>${cals.toLocaleString()} kcal</strong> and <strong>${prot}g protein</strong> today (crushing your ${pTarget}g anchor by +${prot - pTarget}g). You've matched your active expenditure (~${Math.round(totalBudget).toLocaleString()} kcal), preserving ${lbmPhrase} without gaining fat. Hydrate well tonight for tomorrow's session!`;
       } else if (protLeft > 0) {
         advice = `You have <strong>${calsLeft.toLocaleString()} kcal</strong> and <strong>${protLeft}g of protein</strong> left to reach your ${pTarget}g daily anchor. Aim for lean protein (chicken breast, egg whites, or 5% mince) to protect muscle while continuing to burn fat toward your 15% goal.`;
       } else {
-        advice = `<strong>✓ Protein Goal Reached!</strong> You've locked in your ${pTarget}g protein anchor to protect all ${lbmKg}kg of muscle. You have <strong>${calsLeft.toLocaleString()} kcal</strong> of room remaining today. Keep your evening meal or snack clean and drink plenty of water before tomorrow's workout.`;
+        const lbmShortPhrase = hasLbm ? `all ${Number(window.athleteProfile.leanMassKg).toFixed(1)}kg of muscle` : 'your lean muscle';
+        advice = `<strong>✓ Protein Goal Reached!</strong> You've locked in your ${pTarget}g protein anchor to protect ${lbmShortPhrase}. You have <strong>${calsLeft.toLocaleString()} kcal</strong> of room remaining today. Keep your evening meal or snack clean and drink plenty of water before tomorrow's workout.`;
       }
 
       el.innerHTML = advice;
-    }
-
-    function escapeAuditHtml(str) {
-      return String(str || '').replace(/[&<>"']/g, s => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      }[s]));
     }
 
     window.nutritionAuditWindowMode = window.nutritionAuditWindowMode || '10d';
@@ -488,9 +606,10 @@
         items: Array.isArray(d.items) ? d.items.slice() : []
       }));
 
+      const fallbackDate = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
       const activeDate = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.date)
         ? window.BAKED_LIVE_STATE.date
-        : (days.length > 0 ? days[days.length - 1].date : '2026-11-17');
+        : (days.length > 0 ? days[days.length - 1].date : fallbackDate);
 
       if (todayTotals && todayTotals.calories > 0 && days.length > 0) {
         const idx = days.findIndex(d => d.date === activeDate);
@@ -540,31 +659,33 @@
         ? window.nutritionAuditWindowMode
         : '10d';
 
-      const startLabel = histDays.length > 0 ? formatShortAuditDate(histDays[0].date) : 'Nov 8';
-      const endDateStr = histDays.length > 0 ? histDays[histDays.length - 1].date : '2026-11-17';
-      const endLabel = formatShortAuditDate(endDateStr);
-      const endDayNum = endLabel.split(' ')[1] || '17';
-      const startMonth = startLabel.split(' ')[0] || 'Nov';
-      const rangeBadgeLabel = startLabel.split(' ')[0] === endLabel.split(' ')[0]
-        ? `${startLabel}–${endDayNum}`
-        : `${startLabel}–${endLabel}`;
+      const fallbackToday = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
+      const endDateStr = histDays.length > 0 ? histDays[histDays.length - 1].date : fallbackToday;
+      const endLabel = formatShortAuditDate(endDateStr) || 'Today';
+      const startLabel = histDays.length > 0 ? formatShortAuditDate(histDays[0].date) : '';
+      const endDayNum = endLabel.split(' ')[1] || '';
+      const rangeBadgeLabel = histDays.length > 0
+        ? ((startLabel && startLabel.split(' ')[0] === endLabel.split(' ')[0] && endDayNum)
+          ? `${startLabel}–${endDayNum}`
+          : `${startLabel}–${endLabel}`)
+        : 'No history yet';
 
       const pillBtnStyle = (isActive) => isActive
         ? 'cursor:pointer; font-size:10.5px; font-weight:800; color:#041019; background:linear-gradient(135deg, #00e5ff, #38bdf8); border:1px solid rgba(0,229,255,0.85); padding:5px 10px; border-radius:999px; box-shadow:0 0 12px rgba(0,229,255,0.3); transition:all 0.15s ease;'
         : 'cursor:pointer; font-size:10.5px; font-weight:700; color:var(--text-secondary); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); padding:5px 10px; border-radius:999px; transition:all 0.15s ease;';
 
       const switcherHtml = `
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
-          <button type="button" onclick="setNutritionAuditWindow('10d')" style="${pillBtnStyle(mode === '10d')}">
-            📊 ${histDays.length}-Day Baseline (${rangeBadgeLabel})
-          </button>
-          <button type="button" onclick="setNutritionAuditWindow('7d')" style="${pillBtnStyle(mode === '7d')}">
+<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+<button type="button" onclick="setNutritionAuditWindow('10d')" style="${pillBtnStyle(mode === '10d')}">
+            ${histDays.length > 0 ? `📊 ${histDays.length}-Day Baseline (${rangeBadgeLabel})` : '📊 Baseline (No history yet)'}
+</button>
+<button type="button" onclick="setNutritionAuditWindow('7d')" style="${pillBtnStyle(mode === '7d')}">
             📅 Last 7 Days
-          </button>
-          <button type="button" onclick="setNutritionAuditWindow('1d')" style="${pillBtnStyle(mode === '1d')}">
+</button>
+<button type="button" onclick="setNutritionAuditWindow('1d')" style="${pillBtnStyle(mode === '1d')}">
             📍 Today Only (${endLabel})
-          </button>
-        </div>
+</button>
+</div>
       `;
 
       const safeFTarget = fTarget > 0 ? fTarget : 80;
@@ -717,16 +838,16 @@
 
         // Consistency Strip HTML (Day-by-day fat bars + micronutrient badges)
         const stripHtml = `
-          <div style="margin-bottom:12px; padding:10px 11px; border-radius:10px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-              <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
+<div style="margin-bottom:12px; padding:10px 11px; border-radius:10px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
                 📈 ${nDays}-Day Fat Floor &amp; Micronutrient Consistency (${winStart} → ${winEnd})
-              </span>
-              <span style="font-size:10px; color:var(--text-secondary);">
+</span>
+<span style="font-size:10px; color:var(--text-secondary);">
                 Target: <strong style="color:#10b981;">≥65g/80g</strong> • 🥜 Flax/Nuts • 🫐 Berries • 🥦 Veg • 🐟 Salmon • 🥚 Egg
-              </span>
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(${nDays}, minmax(26px, 1fr)); gap:5px; align-items:end; overflow-x:auto; padding-bottom:2px;">
+</span>
+</div>
+<div style="display:grid; grid-template-columns:repeat(${nDays}, minmax(0, 1fr)); gap:5px; align-items:end; overflow-x:auto; padding-bottom:2px;">
               ${windowDays.map(d => {
                 const fatVal = Math.round(Number(d.fat) || 0);
                 const barH = Math.max(10, Math.min(46, Math.round((fatVal / 85) * 46)));
@@ -748,35 +869,35 @@
                 ].filter(Boolean).join('');
                 const isTodayCol = d.date === endDateStr;
                 return `
-                  <div title="${escapeAuditHtml(d.date)}: ${Number(d.calories) || 0} kcal • P:${Number(d.protein) || 0}g C:${Number(d.carbs) || 0}g F:${fatVal}g • Fib:${Number(d.fiber) || 0}g" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px; border-radius:6px; ${isTodayCol ? 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.28);' : ''}">
-                    <span style="font-size:9.5px; font-weight:800; color:${fatColor};">${fatVal}g</span>
-                    <div style="width:100%; max-width:18px; height:48px; display:flex; align-items:flex-end; justify-content:center; background:rgba(255,255,255,0.04); border-radius:4px; overflow:hidden; position:relative;">
-                      <div style="width:100%; height:${barH}px; background:${barBg}; border-radius:3px 3px 0 0;"></div>
-                    </div>
-                    <span style="font-size:9px; font-weight:${isTodayCol ? '800' : '600'}; color:${isTodayCol ? 'var(--primary)' : 'var(--text-muted)'};">${shortD}</span>
-                    <span style="font-size:9px; line-height:1.1; min-height:11px; letter-spacing:-1px; text-align:center;">${badges || '·'}</span>
-                  </div>
+<div title="${escapeHtml(d.date)}: ${Number(d.calories) || 0} kcal • P:${Number(d.protein) || 0}g C:${Number(d.carbs) || 0}g F:${fatVal}g • Fib:${Number(d.fiber) || 0}g" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px; border-radius:6px; ${isTodayCol ? 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.28);' : ''}">
+<span style="font-size:9.5px; font-weight:800; color:${fatColor};">${fatVal}g</span>
+<div style="width:100%; max-width:18px; height:48px; display:flex; align-items:flex-end; justify-content:center; background:rgba(255,255,255,0.04); border-radius:4px; overflow:hidden; position:relative;">
+<div style="width:100%; height:${barH}px; background:${barBg}; border-radius:3px 3px 0 0;"></div>
+</div>
+<span style="font-size:9px; font-weight:${isTodayCol ? '800' : '600'}; color:${isTodayCol ? 'var(--primary)' : 'var(--text-muted)'};">${shortD}</span>
+<span style="font-size:9px; line-height:1.1; min-height:11px; letter-spacing:-1px; text-align:center;">${badges || '·'}</span>
+</div>
                 `;
               }).join('')}
-            </div>
-          </div>
+</div>
+</div>
         `;
 
         // 10-Day vs Today Reality Comparison Strip
         const todayVsAvgHtml = `
-          <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; padding:8px 11px; margin-bottom:12px; border-radius:9px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.18); font-size:11px;">
-            <div>
-              <strong style="color:var(--primary);">${nDays}-Day Avg:</strong>
-              <span style="color:#fff; font-weight:700;">${avgCals.toLocaleString()} kcal</span> •
-              <span style="color:#38bdf8; font-weight:700;">${avgP}g P</span> •
-              <span style="color:#a78bfa; font-weight:700;">${avgC}g C</span> •
-              <span style="color:${avgF < 68 ? '#fbbf24' : '#34d399'}; font-weight:700;">${avgF}g F</span> •
-              <span style="color:#34d399; font-weight:700;">${avgFib}g Fib</span>
-            </div>
-            <div style="color:var(--text-muted);">
+<div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; padding:8px 11px; margin-bottom:12px; border-radius:9px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.18); font-size:11px;">
+<div>
+<strong style="color:var(--primary);">${nDays}-Day Avg:</strong>
+<span style="color:#fff; font-weight:700;">${avgCals.toLocaleString()} kcal</span> •
+<span style="color:#38bdf8; font-weight:700;">${avgP}g P</span> •
+<span style="color:#a78bfa; font-weight:700;">${avgC}g C</span> •
+<span style="color:${avgF < 68 ? '#fbbf24' : '#34d399'}; font-weight:700;">${avgF}g F</span> •
+<span style="color:#34d399; font-weight:700;">${avgFib}g Fib</span>
+</div>
+<div style="color:var(--text-muted);">
               vs Today (${endLabel}): <strong style="color:#fff;">${cals.toLocaleString()} kcal</strong> • ${p}g P • ${f}g F • ${fiber}g Fib
-            </div>
-          </div>
+</div>
+</div>
         `;
 
         // 3 Multi-day Recommendations
@@ -785,96 +906,96 @@
         const rec3 = `<strong>3. Keep Whole-Food Density (${wholeCalPct}%) &amp; Daily Berry Routine (${berryDays.length}/${nDays}d):</strong> Your ${nDays}-day baseline is genuinely elite (<strong>${avgFib}g fiber/day</strong>, <strong>${vegDays.length}/${nDays} veg days</strong>, <strong>${avgP}g/day protein</strong>). On days like today when you swap in a <code>Flapjack</code> or skip berries, toss <strong>80g frozen blueberries/strawberries</strong> into your oats/yogurt so tendon Vitamin C never dips.`;
 
         auditEl.innerHTML = `
-          <div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-              <div style="display:flex; align-items:center; gap:7px;">
-                <span style="font-size:15px;">🧬</span>
-                <strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
-              </div>
-              <span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
+<div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+<div style="display:flex; align-items:center; gap:7px;">
+<span style="font-size:15px;">🧬</span>
+<strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
+</div>
+<span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
                 ${nDays}-Day Whole-Food: ${wholeCalPct}% • Avg Fat: ${avgF}g/${safeFTarget}g
-              </span>
-            </div>
+</span>
+</div>
 
             ${switcherHtml}
             ${todayVsAvgHtml}
             ${stripHtml}
 
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
-              <!-- Pillar 1: Healthy Fats & Omega-3s -->
-              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Fats, Nuts &amp; Omega-3s</span>
-                  <span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
-                </div>
-                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                  <div style="width:${avgFatPct}%; height:100%; background:${fatBarColor};"></div>
-                </div>
-                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
-              </div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
+              
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Fats, Nuts &amp; Omega-3s</span>
+<span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${avgFatPct}%; height:100%; background:${fatBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
+</div>
 
-              <!-- Pillar 2: Whole Food vs. Processed/Bars -->
-              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
-                  <span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
-                </div>
-                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                  <div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
-                </div>
-                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
-              </div>
+              
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
+<span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
+</div>
 
-              <!-- Pillar 3: Vitamin C, Berries & Veg Diversity -->
-              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Berries, Veg &amp; Collagen</span>
-                  <span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
-                </div>
-                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                  <div style="width:${Math.max(12, microPct)}%; height:100%; background:${vitCBarColor};"></div>
-                </div>
-                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
-              </div>
+              
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Berries, Veg &amp; Collagen</span>
+<span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${Math.max(12, microPct)}%; height:100%; background:${vitCBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
+</div>
 
-              <!-- Pillar 4: Fiber, Sugar & Saturated Fat -->
-              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                  <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber, Sugar &amp; Sat Fat</span>
-                  <span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
-                </div>
-                <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                  <div style="width:${avgFibPct}%; height:100%; background:${glyBarColor};"></div>
-                </div>
-                <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
-              </div>
-            </div>
+              
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber, Sugar &amp; Sat Fat</span>
+<span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${avgFibPct}%; height:100%; background:${glyBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
+</div>
+</div>
 
-            <div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
-              <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
+<div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
+<div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
                 🛒 ${nDays}-Day Trend Upgrades for Your Next Shop / Tomorrow
-              </div>
-              <div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
-                <div>${rec1}</div>
-                <div>${rec2}</div>
-                <div>${rec3}</div>
-              </div>
-            </div>
-          </div>
+</div>
+<div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+<div>${rec1}</div>
+<div>${rec2}</div>
+<div>${rec3}</div>
+</div>
+</div>
+</div>
         `;
         return;
       }
 
       if (allItems.length === 0 && cals <= 0) {
         auditEl.innerHTML = `
-          <div class="card" style="padding:14px; border-radius:12px; background:var(--surface); border:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
-              <strong style="color:#fff; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">🧬 Nutritional Quality &amp; Micronutrient Audit</strong>
-              <span style="font-size:10.5px; color:var(--text-muted); padding:2px 8px; border-radius:999px; background:rgba(255,255,255,0.05);">Awaiting Food Logs</span>
-            </div>
+<div class="card" style="padding:14px; border-radius:12px; background:var(--surface); border:1px solid var(--border);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+<strong style="color:#fff; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">🧬 Nutritional Quality &amp; Micronutrient Audit</strong>
+<span style="font-size:10.5px; color:var(--text-muted); padding:2px 8px; border-radius:999px; background:rgba(255,255,255,0.05);">Awaiting Food Logs</span>
+</div>
             ${switcherHtml}
-            <div style="font-size:11.5px; color:var(--text-secondary); margin-top:4px;">Sync MyNetDiary or log meals to audit healthy fats, whole-food density, tendon micronutrients, and glycemic load.</div>
-          </div>
+<div style="font-size:11.5px; color:var(--text-secondary); margin-top:4px;">Sync MyNetDiary or log meals to audit healthy fats, whole-food density, tendon micronutrients, and glycemic load.</div>
+</div>
         `;
         return;
       }
@@ -894,7 +1015,7 @@
         fatBadgeColor = '#f59e0b';
         fatBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
         const lowFatNote = ultraLowFatChoices.length > 0
-          ? ` Selecting <strong>${escapeAuditHtml(ultraLowFatChoices.slice(0, 2).join(' + '))}</strong> kept dietary fat low.`
+          ? ` Selecting <strong>${escapeHtml(ultraLowFatChoices.slice(0, 2).join(' + '))}</strong> kept dietary fat low.`
           : '';
         const curWtKg = (window.athleteProfile && Number(window.athleteProfile.weightKg)) ? `${Number(window.athleteProfile.weightKg).toFixed(1)}kg` : 'your bodyweight';
         fatBody = `At ${curWtKg}, dropping below the <strong>60–65g</strong> fat floor restricts testosterone/endocrine synthesis, joint lubrication, and fat-soluble vitamin (A, D, E, K) absorption.${lowFatNote}`;
@@ -926,13 +1047,13 @@
       const wholeCalPct = Math.max(0, 100 - procCalPct);
 
       let procBadgeText, procBadgeColor, procBarColor, procBody;
-      const procNamesPreview = processedItems.map(it => `<strong>${escapeAuditHtml(it.name)}</strong>`).join(' + ');
+      const procNamesPreview = processedItems.map(it => `<strong>${escapeHtml(it.name)}</strong>`).join(' + ');
       const highCarbBar = processedItems.find(it => it.c >= 50);
       if (procCalPct >= 35) {
         procBadgeText = `⚠️ ${procCalPct}% PACKAGED / BARS (${procCals} kcal)`;
         procBadgeColor = '#f59e0b';
         procBarColor = 'linear-gradient(90deg, #f59e0b, #fb923c)';
-        procBody = `${procNamesPreview} supply <strong>${procCals} kcal</strong> &amp; <strong>${Math.round(procProtein)}g P</strong> today.${highCarbBar ? ` Watch out for maltitol/glucose syrups, emulsifiers &amp; hidden sugars in ${escapeAuditHtml(highCarbBar.name)} (${highCarbBar.c}g carbs in 1 hit).` : ' Watch out for sugar alcohols, emulsifiers &amp; low micronutrient density.'}`;
+        procBody = `${procNamesPreview} supply <strong>${procCals} kcal</strong> &amp; <strong>${Math.round(procProtein)}g P</strong> today.${highCarbBar ? ` Watch out for maltitol/glucose syrups, emulsifiers &amp; hidden sugars in ${escapeHtml(highCarbBar.name)} (${highCarbBar.c}g carbs in 1 hit).` : ' Watch out for sugar alcohols, emulsifiers &amp; low micronutrient density.'}`;
       } else if (procCalPct >= 20) {
         procBadgeText = `ℹ️ ${wholeCalPct}% WHOLE FOODS / ${procCalPct}% SUPPLEMENTS`;
         procBadgeColor = '#38bdf8';
@@ -959,19 +1080,19 @@
         vitCBadgeColor = '#f59e0b';
         vitCBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
         const garnishNote = garnishItems.length > 0
-          ? ` Only garnish/mixed salad logged (${escapeAuditHtml(garnishItems.map(x => x.name).join(', '))}).`
+          ? ` Only garnish/mixed salad logged (${escapeHtml(garnishItems.map(x => x.name).join(', '))}).`
           : '';
         vitCBody = `Zero whole fruit, berries, citrus, kiwi, or bell peppers logged today.${garnishNote} Vitamin C (50–200mg) is a mandatory cofactor for pro-collagen synthesis in your Achilles &amp; patellar tendons after high-impact or resistance training, and boosts non-heme iron absorption from Jumbo Oats.`;
       } else if (vitCPowerItems.length === 1) {
         vitCBadgeText = `ℹ️ MODERATE MICRONUTRIENTS (1 source)`;
         vitCBadgeColor = '#38bdf8';
         vitCBarColor = 'linear-gradient(90deg, #38bdf8, #00e5ff)';
-        vitCBody = `1 high-Vitamin-C source logged (<strong>${escapeAuditHtml(vitCPowerItems[0].name)}</strong>). Add a second berry or citrus serving to maximize tendon collagen repair &amp; antioxidant recovery.`;
+        vitCBody = `1 high-Vitamin-C source logged (<strong>${escapeHtml(vitCPowerItems[0].name)}</strong>). Add a second berry or citrus serving to maximize tendon collagen repair &amp; antioxidant recovery.`;
       } else {
         vitCBadgeText = `✅ HIGH VITAMIN C & ANTIOXIDANTS`;
         vitCBadgeColor = '#10b981';
         vitCBarColor = 'linear-gradient(90deg, #10b981, #34d399)';
-        vitCBody = `${vitCPowerItems.length} Vitamin-C &amp; polyphenol powerhouses logged (${escapeAuditHtml(vitCPowerItems.map(x => x.name).slice(0, 3).join(', '))}), driving collagen cross-linking and post-training oxidative recovery.`;
+        vitCBody = `${vitCPowerItems.length} Vitamin-C &amp; polyphenol powerhouses logged (${escapeHtml(vitCPowerItems.map(x => x.name).slice(0, 3).join(', '))}), driving collagen cross-linking and post-training oxidative recovery.`;
       }
 
       // 4. Refined Sugar, Glycemic Load & Gut Fiber
@@ -991,7 +1112,7 @@
         glyBadgeText = fiber >= 30 ? `⚠️ HIGH-GI HIT • ${fiber}g FIBER` : `⚠️ HIGH GLYCEMIC SPIKE`;
         glyBadgeColor = '#f59e0b';
         glyBarColor = 'linear-gradient(90deg, #10b981, #f59e0b)';
-        glyBody = `Gut fiber is strong at <strong>${fiber}g</strong> (vs 30–40g target), but <strong>${escapeAuditHtml(bigProcessedCarbHit.name)}</strong> delivers <strong>${bigProcessedCarbHit.c}g carbs</strong> in a single processed hit (sugar load ${sugarLabel}), driving a sharper insulin/glycemic spike.`;
+        glyBody = `Gut fiber is strong at <strong>${fiber}g</strong> (vs 30–40g target), but <strong>${escapeHtml(bigProcessedCarbHit.name)}</strong> delivers <strong>${bigProcessedCarbHit.c}g carbs</strong> in a single processed hit (sugar load ${sugarLabel}), driving a sharper insulin/glycemic spike.`;
       } else if (fiber >= 30) {
         glyBadgeText = `✅ GUT FIBER ${fiber}g • STEADY GL`;
         glyBadgeColor = '#10b981';
@@ -1020,86 +1141,86 @@
         : `<strong>2. Keep Micronutrient Variety High:</strong> Great Vitamin C &amp; polyphenol coverage today — rotate colourful berries, kiwi, and bell peppers to sustain tendon collagen turnover.`;
 
       const rec3 = flapjackItem
-        ? `<strong>3. Upgrade the Flapjack / Bar Slot (${flapjackItem.c}g C in ${escapeAuditHtml(flapjackItem.name)}):</strong> You got <strong>${Math.round(procProtein)}g</strong> protein (<strong>${procCalPct}%</strong> of calories) from ${processedItems.length} bars/powders today. Keep the <code>Whey Isolate</code> post-workout, but consider swapping <code>${escapeAuditHtml(flapjackItem.name)} (${flapjackItem.cals} kcal, ${flapjackItem.c}g C)</code> for <strong>1 banana + 20g dark chocolate (85%) or 30g mixed nuts + cottage cheese/biltong</strong> to cut emulsifiers and sugar alcohols.`
+        ? `<strong>3. Upgrade the Flapjack / Bar Slot (${flapjackItem.c}g C in ${escapeHtml(flapjackItem.name)}):</strong> You got <strong>${Math.round(procProtein)}g</strong> protein (<strong>${procCalPct}%</strong> of calories) from ${processedItems.length} bars/powders today. Keep the <code>Whey Isolate</code> post-workout, but consider swapping <code>${escapeHtml(flapjackItem.name)} (${flapjackItem.cals} kcal, ${flapjackItem.c}g C)</code> for <strong>1 banana + 20g dark chocolate (85%) or 30g mixed nuts + cottage cheese/biltong</strong> to cut emulsifiers and sugar alcohols.`
         : (processedItems.length >= 2
           ? `<strong>3. Reduce Supplement &amp; Bar Reliance (${procCalPct}% kcal):</strong> Replace 1 processed bar/powder slot with <strong>cottage cheese, biltong, or whole eggs + fruit</strong> to boost micronutrients and lower emulsifier load.`
           : `<strong>3. Whole-Food Density Locked In (${wholeCalPct}%):</strong> Minimal reliance on packaged bars today. Keep evening nutrition anchored on lean whole-food protein + fibrous veg.`);
 
       auditEl.innerHTML = `
-        <div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:7px;">
-              <span style="font-size:15px;">🧬</span>
-              <strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
-            </div>
-            <span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
+<div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+<div style="display:flex; align-items:center; gap:7px;">
+<span style="font-size:15px;">🧬</span>
+<strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
+</div>
+<span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
               Today Whole-Food: ${wholeCalPct}% • Fat Floor: ${f}g/${safeFTarget}g
-            </span>
-          </div>
+</span>
+</div>
 
           ${switcherHtml}
 
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
-            <!-- Pillar 1: Healthy Fats & Omega-3s -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Healthy Fats &amp; Omega-3s</span>
-                <span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
-              </div>
-              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                <div style="width:${Math.min(100, fatPct)}%; height:100%; background:${fatBarColor};"></div>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
-            </div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
+            
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Healthy Fats &amp; Omega-3s</span>
+<span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${Math.min(100, fatPct)}%; height:100%; background:${fatBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
+</div>
 
-            <!-- Pillar 2: Whole Food vs. Processed/Bars -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
-                <span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
-              </div>
-              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                <div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
-            </div>
+            
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
+<span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
+</div>
 
-            <!-- Pillar 3: Vitamin C & Tendon Micronutrients -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Vitamin C &amp; Tendon Repair</span>
-                <span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
-              </div>
-              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                <div style="width:${Math.max(10, vitCPct)}%; height:100%; background:${vitCBarColor};"></div>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
-            </div>
+            
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Vitamin C &amp; Tendon Repair</span>
+<span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${Math.max(10, vitCPct)}%; height:100%; background:${vitCBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
+</div>
 
-            <!-- Pillar 4: Fiber & Glycemic Load -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-                <span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber &amp; Glycemic Load</span>
-                <span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
-              </div>
-              <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-                <div style="width:${fiberPct}%; height:100%; background:${glyBarColor};"></div>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
-            </div>
-          </div>
+            
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
+<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber &amp; Glycemic Load</span>
+<span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
+</div>
+<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
+<div style="width:${fiberPct}%; height:100%; background:${glyBarColor};"></div>
+</div>
+<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
+</div>
+</div>
 
-          <div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
-            <div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
+<div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
+<div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
               🛒 Smart Food Additions &amp; Swaps for Your Next Shop / Tomorrow
-            </div>
-            <div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
-              <div>${rec1}</div>
-              <div>${rec2}</div>
-              <div>${rec3}</div>
-            </div>
-          </div>
-        </div>
+</div>
+<div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+<div>${rec1}</div>
+<div>${rec2}</div>
+<div>${rec3}</div>
+</div>
+</div>
+</div>
       `;
     }
 
@@ -1337,23 +1458,31 @@
           timeoutMs: 20000
         });
 
-        if (!res || !res.ok || res.status === 404) {
-          throw new Error(`Cloud backend returned HTTP ${res ? res.status : 'offline'}`);
+        if (!res) {
+          throw new Error('Cloud backend offline');
         }
 
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch (je) {}
 
-        if (data.status === 'auth_needed' || data.requires_auth) {
+        if (data.status === 'auth_needed' || data.requires_auth || data.upstream_auth_required) {
           const syncMod = document.getElementById('syncModal');
           if (syncMod) syncMod.classList.remove('open');
           initMyNetDiaryEngine();
           openMndSyncModal();
           showToast('⚠️ MyNetDiary login required — tap "☁️ Cloud Account" to reconnect');
           beep(480, 0.14);
-        } else if (data.status === 'success' || data.success) {
+          return { ok: false, upstreamAuthRequired: true, error: data.error || 'MyNetDiary login required' };
+        }
+        if (!res.ok) {
+          throw new Error(data.error || `Cloud backend returned HTTP ${res.status}`);
+        }
+
+        if (data.status === 'success' || data.success) {
           const payload = data.totals ? data : (data.mnd || data.data || data.sync_data || data);
           applyMndSyncData(payload);
           checkMndStatus();
+          if (typeof fetchAnalyticsSummary === 'function') fetchAnalyticsSummary(true);
           closeSyncModal();
           beep(880, 0.2);
           const t = payload.totals || {};
@@ -1362,13 +1491,16 @@
           const mealCount = Object.keys(payload.meals || {}).length;
           speak(`MyNetDiary synchronized. ${cals} calories, ${prot} grams protein across ${mealCount} meal blocks.`);
           showToast(`✓ Ingested: ${cals} kcal • ${prot}g P • ${mealCount} meals`);
-        } else {
-          const syncMod = document.getElementById('syncModal');
-          if (syncMod) syncMod.classList.remove('open');
-          openMndSyncModal();
-          showToast(`⚠️ MyNetDiary sync incomplete: ${data.error || data.message || 'using cached totals'}`);
-          beep(440, 0.14);
+          return { ok: true, upstreamAuthRequired: false, error: null };
         }
+
+        const errMsg = data.error || data.message || 'using cached totals';
+        const syncMod = document.getElementById('syncModal');
+        if (syncMod) syncMod.classList.remove('open');
+        openMndSyncModal();
+        showToast(`⚠️ MyNetDiary sync incomplete: ${errMsg}`);
+        beep(440, 0.14);
+        return { ok: false, upstreamAuthRequired: false, error: errMsg };
       } catch(e) {
         // Fallback: keep local cached log visible, but surface an honest warning
         const syncMod = document.getElementById('syncModal');
@@ -1378,8 +1510,9 @@
         const savedUser = localStorage.getItem('pulse_mnd_user') || '';
         updateMndStatusBadgesUI(savedUser, Boolean(savedUser));
         beep(400, 0.16);
-        const reason = e && e.name === 'AbortError' ? 'timed out' : 'offline';
+        const reason = e && e.name === 'AbortError' ? 'timed out' : (e && e.message ? e.message : 'offline');
         showToast(`⚠️ MyNetDiary sync ${reason} — showing cached log`);
+        return { ok: false, upstreamAuthRequired: false, error: reason };
       } finally {
         if (btnHdr) {
           btnHdr.disabled = false;
@@ -1394,9 +1527,19 @@
 
     async function syncBothGarminAndMnd() {
       showToast('⚡ Running Dual-Sync: Garmin Workouts + MyNetDiary Food...');
-      await triggerGarminCloudSync();
-      await triggerMndAutoPull();
-      showToast('✓ Dual-Sync complete! Garmin & MyNetDiary updated.');
+      const gRes = (typeof triggerGarminCloudSync === 'function')
+        ? await triggerGarminCloudSync()
+        : { ok: false, upstreamAuthRequired: false, error: 'Garmin sync unavailable' };
+      const mRes = await triggerMndAutoPull();
+      if (gRes && gRes.ok && mRes && mRes.ok) {
+        showToast('✓ Dual-Sync complete! Garmin & MyNetDiary updated.');
+      } else if (gRes && gRes.ok) {
+        showToast(`✓ Garmin synced • ⚠️ MND partial failure: ${(mRes && mRes.error) || 'check credentials'}`);
+      } else if (mRes && mRes.ok) {
+        showToast(`✓ MND synced • ⚠️ Garmin partial failure: ${(gRes && gRes.error) || 'check Garmin auth'}`);
+      } else {
+        showToast(`⚠️ Sync failed — Garmin: ${(gRes && gRes.error) || 'error'} • MND: ${(mRes && mRes.error) || 'error'}`);
+      }
     }
 
     function openMndSyncModal() {
@@ -1431,12 +1574,24 @@
       beep(450, 0.05);
     }
 
-    async function syncManualMndToBackend() {
+    async function syncManualMndToBackend(extra = {}) {
+      const hasDelta = Boolean(extra && typeof extra === 'object' && (extra.logged_item || extra.remove_item));
+      const basePayload = hasDelta
+        ? { date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined) }
+        : {
+            totals: myNetDiaryData.totals || {},
+            meals: myNetDiaryData.meals || {},
+            date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined)
+          };
       const mndPayload = {
-        totals: myNetDiaryData.totals || {},
-        meals: myNetDiaryData.meals || {},
-        date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined)
+        ...basePayload,
+        ...(extra && typeof extra === 'object' ? extra : {})
       };
+      if (mndPayload.totals === null) delete mndPayload.totals;
+      if (mndPayload.meals === null) delete mndPayload.meals;
+      if (!mndPayload.client_event_id && !mndPayload.id && typeof _makeQueueItemId === 'function') {
+        mndPayload.client_event_id = _makeQueueItemId();
+      }
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
         if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
@@ -1454,9 +1609,17 @@
           if (data && data.success && data.state) {
             window.BAKED_LIVE_STATE = data.state;
           }
+          if (typeof fetchAnalyticsSummary === 'function') fetchAnalyticsSummary(true);
         } else {
-          if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
-          if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+          const shouldQueue = (typeof _shouldQueueOfflineResponse === 'function')
+            ? _shouldQueueOfflineResponse(res)
+            : (!res || res.status >= 500 || res.status === 0);
+          if (shouldQueue && typeof enqueueOfflineWrite === 'function') {
+            enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
+            if (typeof showToast === 'function') showToast('Saved locally — queued for cloud sync');
+          } else if (!shouldQueue && typeof showToast === 'function') {
+            showToast('Invalid nutrition payload — skipped cloud sync');
+          }
         }
       } catch (e) {
         if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/mnd/manual', mndPayload, 'POST');
@@ -1465,6 +1628,7 @@
     }
 
     function saveMndSyncTotals() {
+      const prevTotals = (myNetDiaryData && myNetDiaryData.totals) ? myNetDiaryData.totals : {};
       const cals = parseInt(document.getElementById('mndInputCals')?.value) || 0;
       const prot = parseInt(document.getElementById('mndInputProtein')?.value) || 0;
       const carbs = parseInt(document.getElementById('mndInputCarbs')?.value) || 0;
@@ -1474,13 +1638,16 @@
       const water = parseFloat(document.getElementById('mndInputWater')?.value) || 0.0;
 
       myNetDiaryData.totals = {
+        ...prevTotals,
         calories: cals,
         protein: prot,
         carbs: carbs,
         fat: fat,
         fiber: fiber,
         sodium: sodium,
-        water: water
+        water: water,
+        sugar_g: Number(prevTotals.sugar_g) || 0,
+        sat_fat_g: Number(prevTotals.sat_fat_g) || 0
       };
 
       saveMndToLocalStorage();
@@ -1560,22 +1727,154 @@
       }
     }
 
-    function openMndLogModal() {
-      const n = document.getElementById('mndItemName'); if (n) n.value = '';
-      const c = document.getElementById('mndItemCals'); if (c) c.value = '';
-      const p = document.getElementById('mndItemProtein'); if (p) p.value = '';
-      const cb = document.getElementById('mndItemCarbs'); if (cb) cb.value = '';
-      const f = document.getElementById('mndItemFat'); if (f) f.value = '';
-
-      const modal = document.getElementById('mndLogModal');
-      if (modal) modal.classList.add('open');
-      beep(600, 0.05);
-    }
-
     function closeMndLogModal() {
       const modal = document.getElementById('mndLogModal');
       if (modal) modal.classList.remove('open');
       beep(450, 0.05);
+    }
+
+    const MACRO_GAP_COMBOS = [
+      { id: 'whey_isolate', name: 'Whey Isolate Shake (1 Scoop)', cals: 120, p: 27, c: 2, f: 1 },
+      { id: 'prawns_rice_cakes', name: 'King Prawns + 2 Rice Cakes', cals: 160, p: 28, c: 11, f: 1 },
+      { id: 'protein_pudding', name: 'High-Protein Pudding Cup', cals: 150, p: 20, c: 12, f: 2 },
+      { id: 'egg_whites_oats', name: 'Egg White Omelette + Oats', cals: 180, p: 26, c: 14, f: 2 },
+      { id: 'cottage_berries', name: '0% Cottage Cheese + Berries', cals: 190, p: 24, c: 16, f: 3 },
+      { id: 'casein_milk', name: 'Casein Shake + Skim Milk', cals: 230, p: 34, c: 18, f: 2 },
+      { id: 'tuna_crackerbread', name: 'Tuna Chunks + 3 Crispbreads', cals: 240, p: 32, c: 19, f: 4 },
+      { id: 'chicken_rice_cakes', name: 'Chicken Breast Slices + 2 Rice Cakes', cals: 250, p: 38, c: 20, f: 2 },
+      { id: 'greek_yogurt_whey', name: '0% Greek Yogurt + Whey Isolate', cals: 280, p: 46, c: 18, f: 3 },
+      { id: 'double_whey_oats', name: 'Double Whey Isolate + Overnight Oats', cals: 390, p: 54, c: 34, f: 4 }
+    ];
+
+    function _appendSnackAndSync(category, name, cals, p, c, f, itemId = null) {
+      const cat = ['breakfast', 'lunch', 'dinner', 'snacks'].includes(category) ? category : 'snacks';
+      if (!myNetDiaryData.meals) myNetDiaryData.meals = _createEmptyMndMeals();
+      if (!myNetDiaryData.meals[cat]) {
+        myNetDiaryData.meals[cat] = {
+          name: cat === 'snacks' ? 'Snacks & Hydration' : (cat.charAt(0).toUpperCase() + cat.slice(1)),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          items: []
+        };
+      }
+      if (!Array.isArray(myNetDiaryData.meals[cat].items)) {
+        myNetDiaryData.meals[cat].items = [];
+      }
+
+      const nCals = Math.max(0, Math.round(Number(cals) || 0));
+      const nP = Math.max(0, Math.round(Number(p) || 0));
+      const nC = Math.max(0, Math.round(Number(c) || 0));
+      const nF = Math.max(0, Math.round(Number(f) || 0));
+
+      const entryId = `app_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      const itemRecord = { id: entryId, name, cals: nCals, p: nP, c: nC, f: nF };
+      if (itemId) itemRecord.combo_id = String(itemId);
+      myNetDiaryData.meals[cat].items.push(itemRecord);
+      myNetDiaryData.meals[cat].calories = (myNetDiaryData.meals[cat].calories || 0) + nCals;
+      myNetDiaryData.meals[cat].protein = (myNetDiaryData.meals[cat].protein || 0) + nP;
+      myNetDiaryData.meals[cat].carbs = (myNetDiaryData.meals[cat].carbs || 0) + nC;
+      myNetDiaryData.meals[cat].fat = (myNetDiaryData.meals[cat].fat || 0) + nF;
+
+      if (!myNetDiaryData.totals) myNetDiaryData.totals = _createEmptyMndTotals();
+      myNetDiaryData.totals.calories = (myNetDiaryData.totals.calories || 0) + nCals;
+      myNetDiaryData.totals.protein = (myNetDiaryData.totals.protein || 0) + nP;
+      myNetDiaryData.totals.carbs = (myNetDiaryData.totals.carbs || 0) + nC;
+      myNetDiaryData.totals.fat = (myNetDiaryData.totals.fat || 0) + nF;
+
+      saveMndToLocalStorage();
+      syncManualMndToBackend({
+        totals: null,
+        meals: null,
+        meal_category: cat,
+        logged_item: { id: entryId, name, cals: nCals, p: nP, c: nC, f: nF }
+      });
+      renderMyNetDiaryEngine();
+    }
+
+    function logMacroGapCombo(comboId) {
+      const combo = MACRO_GAP_COMBOS.find((item) => item.id === comboId);
+      if (!combo) return;
+      _appendSnackAndSync('snacks', combo.name, combo.cals, combo.p, combo.c, combo.f, combo.id);
+      if (typeof beep === 'function') beep(880, 0.12);
+      if (typeof showToast === 'function') showToast(`✓ Logged ${combo.name} (${combo.cals} kcal • ${combo.p}g P)`);
+    }
+    if (typeof window !== 'undefined') {
+      window.logMacroGapCombo = logMacroGapCombo;
+    }
+
+    function renderMacroGapCloser(totalBudget, cals, pTarget, prot) {
+      const card = document.getElementById('macroGapCloserCard');
+      if (!card) return;
+      const esc = (typeof escapeHtml === 'function') ? escapeHtml : (v => String(v ?? ''));
+      const escAttr = (typeof escapeAttr === 'function') ? escapeAttr : esc;
+
+      const remCals = Math.round((Number(totalBudget) || 0) - (Number(cals) || 0));
+      const remProt = Math.round((Number(pTarget) || 0) - (Number(prot) || 0));
+
+      if (remProt <= 0) {
+        card.innerHTML = `
+<div class="card" style="padding:12px 14px; border-color:rgba(16,185,129,0.4);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+<strong style="font-size:12px; color:var(--success); text-transform:uppercase; letter-spacing:0.05em;">Evening Macro & Protein Gap Closer</strong>
+<span style="font-size:11px; font-weight:800; color:var(--success);">Target Met</span>
+</div>
+<div style="font-size:12px; color:var(--text-secondary); margin-top:6px;">
+              Protein target met — prioritize hydration/fiber.
+</div>
+</div>`;
+        return;
+      }
+
+      let picks = [];
+      let modeHint = `${remProt}g P left • ${remCals > 0 ? remCals + ' kcal runway' : '+' + Math.abs(remCals) + ' kcal over budget'}`;
+      if (remCals <= 0) {
+        picks = MACRO_GAP_COMBOS
+          .filter((item) => item.cals < 200)
+          .slice()
+          .sort((a, b) => (a.cals - b.cals) || (b.p - a.p))
+          .slice(0, 3);
+      } else {
+        const withinBudget = MACRO_GAP_COMBOS.filter((item) => item.cals <= (remCals + 60));
+        const pool = withinBudget.length > 0 ? withinBudget : MACRO_GAP_COMBOS.slice();
+        picks = pool
+          .slice()
+          .sort((a, b) => {
+            const effA = Math.min(a.p, remProt) / Math.max(1, a.cals);
+            const effB = Math.min(b.p, remProt) / Math.max(1, b.cals);
+            if (Math.abs(effB - effA) > 1e-6) return effB - effA;
+            return b.p - a.p;
+          })
+          .slice(0, 3);
+        if (withinBudget.length === 0) {
+          const minPickCals = picks[0] ? Number(picks[0].cals) || 0 : 0;
+          const overBy = Math.max(1, minPickCals - remCals);
+          modeHint = `${remProt}g P left • +${overBy} kcal over budget`;
+        }
+      }
+
+      const rowsHtml = picks.map((item) => `
+<div class="gap-closer-row" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px; background:var(--surface-elevated); border:1px solid var(--border); border-radius:8px; margin-top:6px;">
+<div style="min-width:0; flex:1;">
+<div style="font-size:12.5px; font-weight:700; color:#fff;">${esc(item.name)}</div>
+<div style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;">
+              ${item.cals} kcal • <strong style="color:var(--success);">${item.p}g P</strong> • ${item.c}g C • ${item.f}g F
+</div>
+</div>
+<button type="button" class="btn-gap-log" data-combo-id="${escAttr(item.id)}" onclick="logMacroGapCombo(this.dataset.comboId)" style="min-height:44px; min-width:64px; padding:0 12px; border-radius:8px; background:var(--primary); color:#000; font-weight:900; font-size:12px; border:none; cursor:pointer;">+ Log</button>
+</div>
+      `).join('');
+
+      card.innerHTML = `
+<div class="card" style="padding:12px 14px;">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+<strong style="font-size:12px; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em;">Evening Macro Gap Closer</strong>
+<span style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">${esc(modeHint)}</span>
+</div>
+          ${rowsHtml}
+</div>`;
     }
 
     function submitMndMealItem() {
@@ -1591,25 +1890,7 @@
         return;
       }
 
-      if (!myNetDiaryData.meals) myNetDiaryData.meals = {};
-      if (!myNetDiaryData.meals[cat]) {
-        myNetDiaryData.meals[cat] = { name: cat, time: new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }), calories: 0, protein: 0, carbs: 0, fat: 0, items: [] };
-      }
-
-      myNetDiaryData.meals[cat].items.push({ name, cals, p: prot, c: carbs, f: fat });
-      myNetDiaryData.meals[cat].calories += cals;
-      myNetDiaryData.meals[cat].protein += prot;
-      myNetDiaryData.meals[cat].carbs += carbs;
-      myNetDiaryData.meals[cat].fat += fat;
-
-      myNetDiaryData.totals.calories += cals;
-      myNetDiaryData.totals.protein += prot;
-      myNetDiaryData.totals.carbs += carbs;
-      myNetDiaryData.totals.fat += fat;
-
-      saveMndToLocalStorage();
-      syncManualMndToBackend();
-      renderMyNetDiaryEngine();
+      _appendSnackAndSync(cat, name, cals, prot, carbs, fat);
       closeMndLogModal();
 
       beep(880, 0.15);
@@ -1622,20 +1903,38 @@
       if (!meal || !meal.items || !meal.items[itemIdx]) return;
 
       const item = meal.items[itemIdx];
-      meal.calories = Math.max(0, meal.calories - item.cals);
-      meal.protein = Math.max(0, meal.protein - item.p);
-      meal.carbs = Math.max(0, meal.carbs - item.c);
-      meal.fat = Math.max(0, meal.fat - item.f);
+      const rmCals = Number(item.cals) || 0;
+      const rmP = Number(item.p) || 0;
+      const rmC = Number(item.c) || 0;
+      const rmF = Number(item.f) || 0;
 
-      myNetDiaryData.totals.calories = Math.max(0, myNetDiaryData.totals.calories - item.cals);
-      myNetDiaryData.totals.protein = Math.max(0, myNetDiaryData.totals.protein - item.p);
-      myNetDiaryData.totals.carbs = Math.max(0, myNetDiaryData.totals.carbs - item.c);
-      myNetDiaryData.totals.fat = Math.max(0, myNetDiaryData.totals.fat - item.f);
+      meal.calories = Math.max(0, (Number(meal.calories) || 0) - rmCals);
+      meal.protein = Math.max(0, (Number(meal.protein) || 0) - rmP);
+      meal.carbs = Math.max(0, (Number(meal.carbs) || 0) - rmC);
+      meal.fat = Math.max(0, (Number(meal.fat) || 0) - rmF);
+
+      myNetDiaryData.totals.calories = Math.max(0, (Number(myNetDiaryData.totals.calories) || 0) - rmCals);
+      myNetDiaryData.totals.protein = Math.max(0, (Number(myNetDiaryData.totals.protein) || 0) - rmP);
+      myNetDiaryData.totals.carbs = Math.max(0, (Number(myNetDiaryData.totals.carbs) || 0) - rmC);
+      myNetDiaryData.totals.fat = Math.max(0, (Number(myNetDiaryData.totals.fat) || 0) - rmF);
 
       meal.items.splice(itemIdx, 1);
 
       saveMndToLocalStorage();
-      syncManualMndToBackend();
+      syncManualMndToBackend({
+        totals: null,
+        meals: null,
+        meal_category: mealKey,
+        remove_item: {
+          id: item.id || null,
+          meal_category: mealKey,
+          name: item.name || '',
+          cals: rmCals,
+          p: rmP,
+          c: rmC,
+          f: rmF
+        }
+      });
       renderMyNetDiaryEngine();
 
       beep(500, 0.05);
@@ -1715,7 +2014,17 @@
       renderMyNetDiaryEngine();
 
       const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
-      const payload = { amount_ml: amountMl };
+      const eventId = (typeof _makeQueueItemId === 'function') ? _makeQueueItemId() : `${Date.now()}`;
+      const payload = {
+        amount_ml: amountMl,
+        client_event_id: eventId,
+        client_date: (typeof getLocalDateStr === 'function' ? getLocalDateStr() : undefined)
+      };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (typeof enqueueOfflineWrite === 'function') enqueueOfflineWrite('/api/hydration/add', payload, 'POST');
+        showToast(`Saved +${amountMl}ml locally — queued for cloud sync`);
+        return;
+      }
       let syncedOk = false;
       try {
         const res = await fetcher('/api/hydration/add', {
@@ -1725,8 +2034,13 @@
         });
         if (res && res.ok) {
           syncedOk = true;
-        } else if (typeof enqueueOfflineWrite === 'function' && (!res || res.status >= 500 || res.status === 0)) {
-          enqueueOfflineWrite('/api/hydration/add', payload, 'POST');
+        } else {
+          const shouldQueue = (typeof _shouldQueueOfflineResponse === 'function')
+            ? _shouldQueueOfflineResponse(res)
+            : (!res || res.status >= 500 || res.status === 0);
+          if (shouldQueue && typeof enqueueOfflineWrite === 'function') {
+            enqueueOfflineWrite('/api/hydration/add', payload, 'POST');
+          }
         }
       } catch(e) {
         console.warn('Hydration offline log sync notice:', e);
@@ -1786,46 +2100,7 @@
       const carbs = Math.max(0, Math.round((remCals * 0.65) / 4));
       const fat = Math.max(0, Math.round((remCals * 0.35) / 9));
 
-      if (!myNetDiaryData.meals) myNetDiaryData.meals = {};
-      if (!myNetDiaryData.meals.snacks) {
-        myNetDiaryData.meals.snacks = {
-          name: 'Snacks & Hydration',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fat: 0,
-          items: []
-        };
-      }
-      if (!Array.isArray(myNetDiaryData.meals.snacks.items)) {
-        myNetDiaryData.meals.snacks.items = [];
-      }
-
-      myNetDiaryData.meals.snacks.items.push({
-        name: desc,
-        cals: cals,
-        p: prot,
-        c: carbs,
-        f: fat
-      });
-
-      myNetDiaryData.meals.snacks.calories = (myNetDiaryData.meals.snacks.calories || 0) + cals;
-      myNetDiaryData.meals.snacks.protein = (myNetDiaryData.meals.snacks.protein || 0) + prot;
-      myNetDiaryData.meals.snacks.carbs = (myNetDiaryData.meals.snacks.carbs || 0) + carbs;
-      myNetDiaryData.meals.snacks.fat = (myNetDiaryData.meals.snacks.fat || 0) + fat;
-
-      if (!myNetDiaryData.totals) {
-        myNetDiaryData.totals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sodium: 0, water: 0.0 };
-      }
-      myNetDiaryData.totals.calories = (myNetDiaryData.totals.calories || 0) + cals;
-      myNetDiaryData.totals.protein = (myNetDiaryData.totals.protein || 0) + prot;
-      myNetDiaryData.totals.carbs = (myNetDiaryData.totals.carbs || 0) + carbs;
-      myNetDiaryData.totals.fat = (myNetDiaryData.totals.fat || 0) + fat;
-
-      saveMndToLocalStorage();
-      syncManualMndToBackend();
-      renderMyNetDiaryEngine();
+      _appendSnackAndSync('snacks', desc, cals, prot, carbs, fat);
       closeQuickLogModal();
 
       if (typeof showToast === 'function') {
@@ -1859,36 +2134,27 @@
         localStorage.setItem('pulse_diet_strategy', key);
       } catch (e) {}
 
-      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || (typeof getCanonicalDailyCalorieTarget === 'function' ? getCanonicalDailyCalorieTarget() : 2092);
-      const prot = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
-      const remCals = Math.max(0, cals - prot * 4);
-
-      if (!myNetDiaryData.targets) {
-        myNetDiaryData.targets = { calories: cals, protein: prot, carbs: 250, fat: 70 };
-      }
-
-      if (key === 'balanced') {
-        myNetDiaryData.targets.carbs = Math.max(50, Math.round((remCals * 0.62) / 4));
-        myNetDiaryData.targets.fat = Math.max(30, Math.round((remCals * 0.38) / 9));
-      } else if (key === 'lowcarb') {
-        myNetDiaryData.targets.carbs = 75;
-        myNetDiaryData.targets.fat = Math.max(40, Math.round(Math.max(0, remCals - 75 * 4) / 9));
-      } else if (key === 'carbcycle') {
-        const carbMap = { high: 300, mod: 200, low: 80 };
-        const lvl = (typeof currentCarbCycleLevel !== 'undefined' && carbMap[currentCarbCycleLevel]) ? currentCarbCycleLevel : 'mod';
-        myNetDiaryData.targets.carbs = carbMap[lvl];
-        myNetDiaryData.targets.fat = Math.max(30, Math.round(Math.max(0, remCals - carbMap[lvl] * 4) / 9));
-      } else if (key === 'fasting') {
-        myNetDiaryData.targets.carbs = Math.max(50, Math.round((remCals * 0.55) / 4));
-        myNetDiaryData.targets.fat = Math.max(35, Math.round((remCals * 0.45) / 9));
-      }
+      const computed = _resolveComputedFuelTargets({ dietStrategy: key });
+      if (!myNetDiaryData.targets) myNetDiaryData.targets = {};
+      myNetDiaryData.targets.calories = computed.calorie_target;
+      myNetDiaryData.targets.protein = computed.protein_target_g;
+      myNetDiaryData.targets.carbs = computed.carbs_target_g;
+      myNetDiaryData.targets.fat = computed.fat_target_g;
+      athleteDailyBudget = computed.calorie_target;
+      athleteProteinAnchor = computed.protein_target_g;
 
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
+      if (typeof syncClientPreferencesToCloud === 'function') {
+        syncClientPreferencesToCloud('diet_strategy');
+      }
     }
 
-    function setCarbCycleLevel(level) {
+    function setCarbCycleLevel(level, opts = {}) {
       currentCarbCycleLevel = level;
+      try {
+        localStorage.setItem('pulse_carb_cycle_level', level);
+      } catch (e) {}
       const levelBtns = {
         'high': 'btnCcHigh',
         'mod': 'btnCcMod',
@@ -1899,20 +2165,18 @@
         if (btn) btn.classList.toggle('active', k === level);
       });
 
-      if (!myNetDiaryData.targets) {
-        myNetDiaryData.targets = {
-          calories: athleteDailyBudget || 2437,
-          protein: athleteProteinAnchor || 200,
-          carbs: 251,
-          fat: 80
-        };
-      }
-
-      const carbMap = { high: 300, mod: 200, low: 80 };
-      myNetDiaryData.targets.carbs = carbMap[level] !== undefined ? carbMap[level] : 200;
+      const computed = _resolveComputedFuelTargets({ carbCycleLevel: level });
+      if (!myNetDiaryData.targets) myNetDiaryData.targets = {};
+      myNetDiaryData.targets.calories = computed.calorie_target;
+      myNetDiaryData.targets.protein = computed.protein_target_g;
+      myNetDiaryData.targets.carbs = computed.carbs_target_g;
+      myNetDiaryData.targets.fat = computed.fat_target_g;
 
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
+      if (!(opts && opts.fromBoot) && typeof syncClientPreferencesToCloud === 'function') {
+        syncClientPreferencesToCloud('carb_cycle_level');
+      }
     }
 
     let fastingTimerRunning = false;
@@ -2021,6 +2285,9 @@
         _startFastingTicker();
       }
       updateFastingTimerDisplay();
+      if (typeof syncClientPreferencesToCloud === 'function') {
+        syncClientPreferencesToCloud('fasting_timer_state');
+      }
     }
 
     function resetFastingTimer() {
@@ -2033,6 +2300,9 @@
       fastingTimerSeconds = 0;
       if (typeof releaseWakeLockIfIdle === 'function') releaseWakeLockIfIdle();
       updateFastingTimerDisplay();
+      if (typeof syncClientPreferencesToCloud === 'function') {
+        syncClientPreferencesToCloud('fasting_timer_state');
+      }
     }
 
     if (typeof window !== 'undefined') {
@@ -2046,44 +2316,62 @@
     function updateProDial() {
       const pSlider = document.getElementById('sliderProtein');
       const fSlider = document.getElementById('sliderFat');
-      const prot = parseInt(pSlider ? pSlider.value : 200) || 200;
-      const fatPct = parseInt(fSlider ? fSlider.value : 30) || 30;
-      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || 2437;
+      const rawProt = pSlider ? Number(pSlider.value) : 200;
+      const prot = Math.max(50, Math.min(400, Number.isFinite(rawProt) && rawProt > 0 ? Math.round(rawProt) : 200));
+      const rawFp = fSlider ? Number(fSlider.value) : 30;
+      const fatPct = Math.max(15, Math.min(65, Number.isFinite(rawFp) ? Math.round(rawFp) : 30));
+      const computed = _resolveComputedFuelTargets({
+        dietStrategy: 'custom',
+        proDialMacros: { protein: prot, fat_pct: fatPct }
+      });
 
       const protValEl = document.getElementById('sliderValProtein');
       const fatValEl = document.getElementById('sliderValFat');
       const dialCalsEl = document.getElementById('proDialCals');
       const carbsValEl = document.getElementById('sliderValCarbs');
 
-      if (protValEl) protValEl.innerText = `${prot}g`;
+      if (protValEl) protValEl.innerText = `${computed.protein_target_g}g`;
       if (fatValEl) fatValEl.innerText = `${fatPct}%`;
-      if (dialCalsEl) dialCalsEl.innerText = `${cals.toLocaleString()} kcal`;
-
-      const carbs = Math.max(20, Math.round((cals - prot * 4 - cals * (fatPct / 100)) / 4));
-      if (carbsValEl) carbsValEl.innerText = `${carbs}g`;
+      if (dialCalsEl) dialCalsEl.innerText = `${computed.calorie_target.toLocaleString()} kcal`;
+      if (carbsValEl) carbsValEl.innerText = `${computed.carbs_target_g}g`;
     }
 
     function applyCustomProDial() {
       const pSlider = document.getElementById('sliderProtein');
       const fSlider = document.getElementById('sliderFat');
-      const prot = parseInt(pSlider ? pSlider.value : 200) || 200;
-      const fatPct = parseInt(fSlider ? fSlider.value : 30) || 30;
-      const cals = (myNetDiaryData.targets && myNetDiaryData.targets.calories) || athleteDailyBudget || 2437;
-      const carbs = Math.max(20, Math.round((cals - prot * 4 - cals * (fatPct / 100)) / 4));
-      const fatGrams = Math.max(20, Math.round((cals * (fatPct / 100)) / 9));
+      const rawProt = pSlider ? Number(pSlider.value) : 200;
+      const prot = Math.max(50, Math.min(400, Number.isFinite(rawProt) && rawProt > 0 ? Math.round(rawProt) : 200));
+      const rawFp = fSlider ? Number(fSlider.value) : 30;
+      const fatPct = Math.max(15, Math.min(65, Number.isFinite(rawFp) ? Math.round(rawFp) : 30));
+      const proDialMacros = { protein: prot, fat_pct: fatPct };
+
+      try {
+        localStorage.setItem('pulse_pro_dial_macros', JSON.stringify(proDialMacros));
+        localStorage.setItem('pulse_diet_strategy', 'custom');
+      } catch (e) {}
+
+      selectDietStrategy('custom', { fromBoot: true });
+      const computed = _resolveComputedFuelTargets({
+        dietStrategy: 'custom',
+        proDialMacros
+      });
 
       if (!myNetDiaryData.targets) myNetDiaryData.targets = {};
-      myNetDiaryData.targets.calories = cals;
-      myNetDiaryData.targets.protein = prot;
-      myNetDiaryData.targets.carbs = carbs;
-      myNetDiaryData.targets.fat = fatGrams;
-      athleteProteinAnchor = prot;
+      myNetDiaryData.targets.calories = computed.calorie_target;
+      myNetDiaryData.targets.protein = computed.protein_target_g;
+      myNetDiaryData.targets.carbs = computed.carbs_target_g;
+      myNetDiaryData.targets.fat = computed.fat_target_g;
+      athleteDailyBudget = computed.calorie_target;
+      athleteProteinAnchor = computed.protein_target_g;
 
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
+      if (typeof syncClientPreferencesToCloud === 'function') {
+        syncClientPreferencesToCloud({ pro_dial_macros: proDialMacros, diet_strategy: 'custom' }, true);
+      }
 
       if (typeof showToast === 'function') {
-        showToast(`✓ Targets Updated: ${prot}g P • ${carbs}g C • ${fatGrams}g F`);
+        showToast(`✓ Targets Updated: ${computed.protein_target_g}g P • ${computed.carbs_target_g}g C • ${computed.fat_target_g}g F`);
       }
     }
 
