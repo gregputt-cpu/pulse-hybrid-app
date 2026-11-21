@@ -3396,13 +3396,23 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
         }
       }
 
-      if (typeof renderMyNetDiaryEngine === 'function') renderMyNetDiaryEngine();
-      if (typeof renderHistoryList === 'function') renderHistoryList();
-      if (typeof renderTodayTrainingRecommendations === 'function') renderTodayTrainingRecommendations();
-      renderSyncFreshnessStrip(window.PULSE_ANALYTICS_SUMMARY, state);
-      fetchAnalyticsSummary(false);
-      if (typeof renderRenphoTrendChart === 'function') renderRenphoTrendChart({ force: false });
-      if (typeof renderStrengthProgressionChart === 'function') renderStrengthProgressionChart({ force: false });
+      if (typeof renderMyNetDiaryEngine === 'function') {
+        try { renderMyNetDiaryEngine(); } catch (e) { console.warn('[Telemetry] renderMyNetDiaryEngine notice:', e); }
+      }
+      if (typeof renderHistoryList === 'function') {
+        try { renderHistoryList(); } catch (e) { console.warn('[Telemetry] renderHistoryList notice:', e); }
+      }
+      if (typeof renderTodayTrainingRecommendations === 'function') {
+        try { renderTodayTrainingRecommendations(); } catch (e) { console.warn('[Telemetry] renderTodayTrainingRecommendations notice:', e); }
+      }
+      try { renderSyncFreshnessStrip(window.PULSE_ANALYTICS_SUMMARY, state); } catch (e) { console.warn('[Telemetry] renderSyncFreshnessStrip notice:', e); }
+      try { fetchAnalyticsSummary(false); } catch (e) { console.warn('[Telemetry] fetchAnalyticsSummary notice:', e); }
+      if (typeof renderRenphoTrendChart === 'function') {
+        try { renderRenphoTrendChart({ force: false }); } catch (e) { console.warn('[Telemetry] renderRenphoTrendChart notice:', e); }
+      }
+      if (typeof renderStrengthProgressionChart === 'function') {
+        try { renderStrengthProgressionChart({ force: false }); } catch (e) { console.warn('[Telemetry] renderStrengthProgressionChart notice:', e); }
+      }
       };
       if (typeof _withPreservedDetails === 'function') {
         _withPreservedDetails(_run);
@@ -3416,7 +3426,11 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
       const silent = Boolean(options && options.silent);
       // Synchronously apply local/baked state on explicit/boot calls (skip duplicate pre-fetch DOM rebuild on silent polls)
       if (!silent && typeof window.BAKED_LIVE_STATE !== 'undefined' && window.BAKED_LIVE_STATE) {
-        applyLiveStateToDom(window.BAKED_LIVE_STATE);
+        try {
+          applyLiveStateToDom(window.BAKED_LIVE_STATE);
+        } catch (preRenderErr) {
+          console.warn('[Boot] Pre-fetch cached render notice:', preRenderErr);
+        }
       }
 
       try {
@@ -3616,7 +3630,11 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
       });
 
       // Initialize Expanded Fuel & MyNetDiary Macro Engine
-      initMyNetDiaryEngine();
+      try {
+        initMyNetDiaryEngine();
+      } catch (mndInitErr) {
+        console.warn('[Boot] initMyNetDiaryEngine notice:', mndInitErr);
+      }
       try {
         const savedCustomRaw = localStorage.getItem('pulse_custom_goal_macros');
         if (savedCustomRaw && typeof setCustomGoalMacros === 'function') {

@@ -1793,9 +1793,12 @@ async function runAllTests() {
       assert(/id="pulseAuthError"[^>]*var\(--crimson-text\)/.test(indexHtml));
 
       for (const s of SCRIPT_ORDER) {
-        assert(indexHtml.includes(`./${s}?v=6.2`), `index.html missing ./${s}?v=6.2`);
+        assert(indexHtml.includes(`./${s}?v=6.3`), `index.html missing ./${s}?v=6.3`);
       }
-      assert(indexHtml.includes('./css/styles.css?v=6.2'));
+      assert(indexHtml.includes('./css/styles.css?v=6.3'));
+      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.3'), 'index.html boot splash must display v6.3');
+      assert(indexHtml.includes('Hybrid Athlete OS • v6.3'), 'index.html Settings modal must display v6.3');
+      assert.strictEqual(indexHtml.includes('Hybrid Athlete OS • v6.1'), false, 'index.html must not contain stale v6.1 label');
 
       const piiRegex = /190\.5|6'3"|45yo|97\.70|97\.75|80\.99|81\.03|81\.0|98\.4|99\.85|@[^\s"']+\.com|GARMIN_TOKENS(?!_JSON)|renpho_creds(?!\.json)/;
       assert.strictEqual(piiRegex.test(indexHtml), false, 'index.html must contain 0 PII placeholders');
@@ -1960,7 +1963,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.2-20261121');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.3-20261121');
       assert(swJsCode.includes('Promise.resolve(self.clients.claim()).catch(() => {})'));
       assert(swJsCode.includes('.catch(() => {})'), 'cache.put() must have .catch()');
 
@@ -1989,7 +1992,7 @@ async function runAllTests() {
       }
       await navRespPromise;
       await flushMicrotasks();
-      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.2-20261121');
+      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.3-20261121');
       assert.strictEqual(cacheBucket.has('https://pulse.local/index.html'), true, '/?tab=fuel must cache under /index.html');
 
       // Top-level dismissBootSplash & forcePulseAppReload
@@ -2313,6 +2316,89 @@ async function runAllTests() {
 
       app.localStorage.clear();
       console.log('PASS [24] Out-of-Bounds currentExIdx, Corrupt v5.38 Session Recovery & Boot Splash Safety');
+    }
+
+    // [25] Nutrition Quality Audit startMonth ReferenceError & loadLiveState Pre-Fetch Resilience
+    {
+      app.localStorage.clear();
+      const totals25 = { calories: 2150, protein: 195, carbs: 210, fat: 64, fiber: 34, sodium: 1800, water: 2.5 };
+      const meals25 = {
+        breakfast: { items: [{ name: 'Jumbo Oats', cals: 300, p: 10, c: 54, f: 5 }] },
+        lunch: { items: [{ name: 'Chicken Salad', cals: 500, p: 55, c: 20, f: 15 }] },
+        dinner: { items: [] },
+        snacks: { items: [] }
+      };
+
+      // 1a. Single-month multi-day flax history must render without ReferenceError and format "(Nov 12, 15)"
+      app.eval(`
+        window.nutritionAuditWindowMode = '10d';
+        window.BAKED_LIVE_STATE.date = '2026-11-16';
+        myNetDiaryData.history = {
+          days: [
+            { date: '2026-11-12', calories: 2100, protein: 190, carbs: 200, fat: 72, fiber: 35, items: [{ name: 'Cold Milled Flaxseed/Almonds', cals: 150, p: 5, c: 3, f: 13 }] },
+            { date: '2026-11-14', calories: 2050, protein: 185, carbs: 195, fat: 52, fiber: 30, items: [{ name: 'Chicken Breast', cals: 400, p: 60, c: 0, f: 8 }] },
+            { date: '2026-11-15', calories: 2200, protein: 195, carbs: 215, fat: 74, fiber: 36, items: [{ name: 'Walnuts & Flaxseed Mix', cals: 160, p: 4, c: 3, f: 14 }] },
+            { date: '2026-11-16', calories: 2150, protein: 195, carbs: 210, fat: 64, fiber: 34, items: [{ name: 'Jumbo Oats', cals: 300, p: 10, c: 54, f: 5 }] }
+          ]
+        };
+      `);
+      app.ctx.renderNutritionQualityAudit(totals25, meals25, 2150, 195, 210, 64, 34, 1800, 2.5, 2200, 195, 220, 75);
+      const auditHtmlSingle = app.document.getElementById('nutritionQualityAuditCard').innerHTML;
+      assert(auditHtmlSingle.includes('(Nov 12, 15)'), `Single-month flax dates must include "(Nov 12, 15)", got: ${auditHtmlSingle.slice(0, 500)}`);
+
+      // 1b. Cross-month flax history must include full month labels "(Oct 30, Nov 2)"
+      app.eval(`
+        window.nutritionAuditWindowMode = '10d';
+        window.BAKED_LIVE_STATE.date = '2026-11-03';
+        myNetDiaryData.history = {
+          days: [
+            { date: '2026-10-30', calories: 2100, protein: 190, carbs: 200, fat: 72, fiber: 35, items: [{ name: 'Cold Milled Flaxseed/Almonds', cals: 150, p: 5, c: 3, f: 13 }] },
+            { date: '2026-11-02', calories: 2200, protein: 195, carbs: 215, fat: 74, fiber: 36, items: [{ name: 'Walnuts & Flaxseed Mix', cals: 160, p: 4, c: 3, f: 14 }] },
+            { date: '2026-11-03', calories: 2150, protein: 195, carbs: 210, fat: 64, fiber: 34, items: [{ name: 'Jumbo Oats', cals: 300, p: 10, c: 54, f: 5 }] }
+          ]
+        };
+      `);
+      app.ctx.renderNutritionQualityAudit(totals25, meals25, 2150, 195, 210, 64, 34, 1800, 2.5, 2200, 195, 220, 75);
+      const auditHtmlCross = app.document.getElementById('nutritionQualityAuditCard').innerHTML;
+      assert(auditHtmlCross.includes('(Oct 30, Nov 2)'), `Cross-month flax dates must include "(Oct 30, Nov 2)"`);
+
+      // 2. loadLiveState() must STILL call /api/live_state even if pre-fetch render step fails
+      app.clearFetchCalls();
+      let liveStateFetched = false;
+      app.setFetchHandler(async (url) => {
+        if (String(url).includes('/api/live_state')) {
+          liveStateFetched = true;
+          return makeMockResponse({ date: todayIso, last_synced: `${todayIso}T11:00:00Z`, garmin: { training_readiness: 80 } }, { status: 200 });
+        }
+        return makeMockResponse({ success: true }, { status: 200 });
+      });
+      app.eval(`
+        window.__origRecordDailyBiometricSnapshot25 = recordDailyBiometricSnapshot;
+        window.__origRenderMyNetDiaryEngine25 = renderMyNetDiaryEngine;
+        let _snapCalls25 = 0;
+        recordDailyBiometricSnapshot = function() {
+          _snapCalls25++;
+          if (_snapCalls25 === 1) throw new Error('Simulated pre-fetch DOM/storage error');
+        };
+        renderMyNetDiaryEngine = function() {
+          throw new Error('Simulated MND render error');
+        };
+      `);
+      try {
+        await app.ctx.loadLiveState({ silent: false });
+      } finally {
+        app.eval(`
+          if (window.__origRecordDailyBiometricSnapshot25) recordDailyBiometricSnapshot = window.__origRecordDailyBiometricSnapshot25;
+          if (window.__origRenderMyNetDiaryEngine25) renderMyNetDiaryEngine = window.__origRenderMyNetDiaryEngine25;
+          delete window.__origRecordDailyBiometricSnapshot25;
+          delete window.__origRenderMyNetDiaryEngine25;
+        `);
+      }
+      assert.strictEqual(liveStateFetched, true, 'loadLiveState() must still fetch /api/live_state even when pre-fetch applyLiveStateToDom throws');
+      assert(app.getFetchCalls().some((c) => String(c.url).includes('/api/live_state')), 'Fetch log must include /api/live_state');
+
+      app.localStorage.clear();
+      console.log('PASS [25] Nutrition Quality Audit startMonth Fix & loadLiveState Pre-Fetch Resilience');
     }
   } finally {
     app.cleanupTimers();

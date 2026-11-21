@@ -746,7 +746,13 @@
           else break;
         }
 
-        const flaxDatesList = flaxDays.map(d => formatShortAuditDate(d.date).replace(`${startMonth} `, '')).join(', ');
+        const startMonth = (winStart || '').split(' ')[0] || '';
+        const flaxMonths = new Set(flaxDays.map(d => (formatShortAuditDate(d.date) || '').split(' ')[0]).filter(Boolean));
+        const flaxDatesDisplay = flaxDays.length === 0
+          ? ''
+          : (flaxMonths.size === 1 && startMonth && flaxMonths.has(startMonth)
+            ? `${startMonth} ${flaxDays.map(d => formatShortAuditDate(d.date).replace(`${startMonth} `, '')).join(', ')}`
+            : flaxDays.map(d => formatShortAuditDate(d.date)).join(', '));
         const flaxAvgFat = flaxDays.length > 0
           ? Math.round(flaxDays.reduce((s, d) => s + (Number(d.fat) || 0), 0) / flaxDays.length)
           : 0;
@@ -807,7 +813,7 @@
         const trailingSkipText = trailingFlaxSkip > 0
           ? ` (skipped last ${trailingFlaxSkip} day${trailingFlaxSkip > 1 ? 's' : ''}, dropping fat to <strong>${recentLowMin}–${recentLowMax}g</strong> on recent days)`
           : '';
-        const fatBody = `<strong>Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</strong> logged <strong>${flaxDays.length}/${nDays} days</strong>${flaxDatesList ? ` (${startMonth} ${flaxDatesList})` : ''}${trailingSkipText}. On days with it, fat reaches ~<strong>${flaxAvgFat}g+</strong> (excl. Nov 8 low-cal day, ~70g/day). <strong>Oily Fish:</strong> <strong>${fishDays.length}/${nDays} days</strong> • <strong>Whole Eggs:</strong> <strong>${eggDays.length}/${nDays} days</strong>.`;
+        const fatBody = `<strong>Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</strong> logged <strong>${flaxDays.length}/${nDays} days</strong>${flaxDatesDisplay ? ` (${flaxDatesDisplay})` : ''}${trailingSkipText}. On days with it, fat reaches ~<strong>${flaxAvgFat}g+</strong> (excl. Nov 8 low-cal day, ~70g/day). <strong>Oily Fish:</strong> <strong>${fishDays.length}/${nDays} days</strong> • <strong>Whole Eggs:</strong> <strong>${eggDays.length}/${nDays} days</strong>.`;
 
         // 2. Whole Food vs Bars Pillar (Multi-day)
         const procBadgeText = wholeCalPct >= 80
