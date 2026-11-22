@@ -12,6 +12,79 @@
     let fastingTimerInterval = null;
     let solverProteinTarget = 45;
     let activeRetailStore = 'tesco';
+    let activeFuelView = 'today';
+    let fuelMacroDisplayMode = 'remaining';
+    try {
+      const savedMacroMode = localStorage.getItem('pulse_fuel_macro_mode');
+      if (savedMacroMode === 'consumed' || savedMacroMode === 'remaining') {
+        fuelMacroDisplayMode = savedMacroMode;
+      }
+    } catch (e) {}
+    const _openMealSlots = new Set();
+
+    function switchFuelView(viewKey) {
+      const resolved = (viewKey === 'trends' || viewKey === 'plan') ? viewKey : 'today';
+      activeFuelView = resolved;
+      if (typeof window !== 'undefined') window.activeFuelView = resolved;
+      const viewMap = {
+        today: ['btnFuelToday', 'fuelViewToday'],
+        trends: ['btnFuelTrends', 'fuelViewTrends'],
+        plan: ['btnFuelPlan', 'fuelViewPlan']
+      };
+      Object.entries(viewMap).forEach(([k, [btnId, panelId]]) => {
+        const isActive = k === resolved;
+        const btn = document.getElementById(btnId);
+        const panel = document.getElementById(panelId);
+        if (btn) btn.classList.toggle('active', isActive);
+        if (panel) panel.classList.toggle('active', isActive);
+      });
+      if (typeof beep === 'function') beep(520, 0.03);
+    }
+
+    function toggleFuelMacroDisplayMode() {
+      fuelMacroDisplayMode = fuelMacroDisplayMode === 'remaining' ? 'consumed' : 'remaining';
+      try {
+        localStorage.setItem('pulse_fuel_macro_mode', fuelMacroDisplayMode);
+      } catch (e) {}
+      updateRunwayUI();
+      if (typeof beep === 'function') beep(560, 0.03);
+    }
+
+    function updateDietStrategyCopy() {
+      let strat = 'balanced';
+      try {
+        strat = activeDietStrategy || localStorage.getItem('pulse_diet_strategy') || 'balanced';
+      } catch (e) {
+        strat = activeDietStrategy || 'balanced';
+      }
+      const badgeLabels = {
+        balanced: 'BALANCED HYBRID',
+        lowcarb: 'LOW CARB',
+        carbcycle: 'CARB CYCLING',
+        fasting: 'FASTING HUB',
+        custom: 'PRO-DIAL CUSTOM'
+      };
+      const badgeEl = document.getElementById('dietStrategyBadge');
+      if (badgeEl) badgeEl.innerText = badgeLabels[strat] || 'BALANCED HYBRID';
+
+      const balTargets = _resolveComputedFuelTargets({ dietStrategy: 'balanced' });
+      const lcTargets = _resolveComputedFuelTargets({ dietStrategy: 'lowcarb' });
+      const elBalProt = document.getElementById('dietBalancedProt');
+      if (elBalProt) elBalProt.innerText = `${balTargets.protein_target_g}g`;
+      const elBalCarbs = document.getElementById('dietBalancedCarbs');
+      if (elBalCarbs) elBalCarbs.innerText = `${balTargets.carbs_target_g}g`;
+      const elLcCarbs = document.getElementById('dietLowCarbCarbs');
+      if (elLcCarbs) elLcCarbs.innerText = `${lcTargets.carbs_target_g}g`;
+      const elLcProt = document.getElementById('dietLowCarbProt');
+      if (elLcProt) elLcProt.innerText = `${lcTargets.protein_target_g}g`;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.activeFuelView = activeFuelView;
+      window.switchFuelView = switchFuelView;
+      window.toggleFuelMacroDisplayMode = toggleFuelMacroDisplayMode;
+      window.updateDietStrategyCopy = updateDietStrategyCopy;
+    }
 
     const DEFAULT_MND_10D_HISTORY = {
       "window_days": 0,
@@ -322,15 +395,32 @@
       const elSplitF = document.getElementById('mndSplitF');
       if (elSplitF) elSplitF.style.width = `${fPct}%`;
 
-      // 5. Micronutrients Strip
+      // 5. Micronutrients Strip & Today Inline Micro Strip
+      const fiberVal = Math.round(Number(myNetDiaryData.totals.fiber) || 0);
+      const sodiumVal = Math.round(Number(myNetDiaryData.totals.sodium) || 0);
+      const waterVal = Number(myNetDiaryData.totals.water || 0);
+      const waterStr = `${waterVal.toFixed(1)}L`;
+
       const elFiber = document.getElementById('mndFiberVal');
-      if (elFiber) elFiber.innerText = `${myNetDiaryData.totals.fiber || 0}g`;
+      if (elFiber) elFiber.innerText = `${fiberVal}g`;
 
       const elSodium = document.getElementById('mndSodiumVal');
-      if (elSodium) elSodium.innerText = `${(myNetDiaryData.totals.sodium || 0).toLocaleString()}mg`;
+      if (elSodium) elSodium.innerText = `${sodiumVal.toLocaleString()}mg`;
 
       const elWater = document.getElementById('mndWaterVal');
-      if (elWater) elWater.innerText = `${myNetDiaryData.totals.water || 0}L`;
+      if (elWater) elWater.innerText = `${waterVal}L`;
+
+      const elMicroWater = document.getElementById('fuelMicroWaterVal');
+      if (elMicroWater) elMicroWater.innerText = waterStr;
+
+      const elMicroFiber = document.getElementById('fuelMicroFiberVal');
+      if (elMicroFiber) elMicroFiber.innerText = `${fiberVal}g`;
+
+      const elMicroSodium = document.getElementById('fuelMicroSodiumVal');
+      if (elMicroSodium) elMicroSodium.innerText = `${sodiumVal.toLocaleString()}mg`;
+
+      const elHydSum = document.getElementById('fuelHydrationSummary');
+      if (elHydSum) elHydSum.innerText = `${waterStr} Water • ${fiberVal}g Fiber`;
 
       // Update #todayMacroRemainingPill element (Goldfish 3-second glance pill on Today tab)
       const macroPill = document.getElementById('todayMacroRemainingPill');
@@ -342,11 +432,14 @@
         }
       }
 
-      // 6. Chronological Meal Stream
+      // 6. Chronological Meal Stream (Collapsed by default)
       renderMndMealStream();
 
-      // 7. Autoregulation Coach Advice
+      // 7. Concise 1-line Coach Status
       updateMndCoachAdvice(calsLeft, protLeft, carbsLeft, fatsLeft, totalBudget);
+
+      // 7.1. Dynamic Strategy Copy
+      updateDietStrategyCopy();
 
       // 7.5. Nutritional Quality, Micronutrient & Food Gap Audit
       renderNutritionQualityAudit(
@@ -389,7 +482,7 @@
 
       const diff = totalBudget - cals;
       const remainingCals = Math.max(0, diff);
-      const pct = Math.min(100, Math.round((cals / totalBudget) * 100));
+      const pct = Math.min(100, Math.round((cals / Math.max(1, totalBudget)) * 100));
 
       const ftEl = document.getElementById('fuelTargetNum');
       if (ftEl) ftEl.innerHTML = `${totalBudget.toLocaleString()} <span style="font-size:12px; color:var(--text-muted); font-weight:500;">+${activeBurn} active</span>`;
@@ -411,7 +504,7 @@
       const frEl = document.getElementById('fuelRemainingNum');
       if (frEl) {
         if (diff <= 0) {
-          frEl.innerHTML = `0 <span style="font-size:13px; font-weight:600; color:#ff9f0a;">kcal</span>`;
+          frEl.innerHTML = `0 <span style="font-size:13px; font-weight:600; color:var(--amber);">kcal</span>`;
         } else {
           frEl.innerHTML = `${remainingCals.toLocaleString()} <span style="font-size:13px; font-weight:600; color:var(--primary);">kcal</span>`;
         }
@@ -423,7 +516,7 @@
       const ipPct = document.getElementById('intakeProgressPercent');
       if (ipPct) {
         if (diff <= 0) {
-          ipPct.innerHTML = `<span style="color:#ff9f0a; font-weight:700;">100% (Target Reached • At Maintenance)</span>`;
+          ipPct.innerHTML = `<span style="color:var(--amber); font-weight:700;">100% (Target Reached • At Maintenance)</span>`;
         } else {
           ipPct.innerText = `${pct}% (${remainingCals.toLocaleString()} kcal Runway)`;
         }
@@ -432,8 +525,8 @@
       const barIntake = document.getElementById('barIntakeConsumed');
       if (barIntake) {
         barIntake.style.width = `${pct}%`;
-        barIntake.style.background = diff <= 0 ? 'linear-gradient(90deg, #ff9f0a, #f97316)' : 'linear-gradient(90deg, #00F0FF 0%, #3B82F6 60%, #A855F7 100%)';
-        barIntake.style.boxShadow = diff <= 0 ? '0 0 12px rgba(255, 159, 10, 0.5)' : '0 0 12px rgba(0, 240, 255, 0.5)';
+        barIntake.style.background = diff <= 0 ? 'linear-gradient(90deg, var(--amber), var(--crimson-text))' : 'linear-gradient(90deg, var(--primary) 0%, var(--cyan) 60%, var(--violet-text) 100%)';
+        barIntake.style.boxShadow = diff <= 0 ? '0 0 12px var(--amber-glow)' : '0 0 12px var(--primary-dim)';
       }
 
       const pBadge = document.getElementById('proteinRemainingBadge');
@@ -447,35 +540,75 @@
         }
       }
 
+      const protLeft = Math.max(0, pTarget - prot);
+      const carbsLeft = Math.max(0, cTarget - carbs);
+      const fatsLeft = Math.max(0, fTarget - fats);
+      const pPct = pTarget > 0 ? Math.round((prot / pTarget) * 100) : 0;
+      const netCarbs = fiber > 0 ? Math.max(0, carbs - fiber) : carbs;
+      const isRemainingMode = fuelMacroDisplayMode !== 'consumed';
+
+      const hintEl = document.getElementById('fuelMacroModeHint');
+      if (hintEl) {
+        hintEl.innerText = isRemainingMode ? 'Showing Left • Tap to flip' : 'Showing Eaten • Tap to flip';
+      }
+
       const mp = document.getElementById('macroProtein');
-      if (mp) mp.innerText = `${pTarget}g`;
       const mpSub = document.getElementById('macroProteinSub');
+      if (mp) {
+        if (mp.classList) {
+          mp.classList.toggle('is-met', isRemainingMode && prot >= pTarget);
+          mp.classList.remove('is-over');
+        }
+        mp.innerText = isRemainingMode ? (prot >= pTarget ? '✓ Met' : `${protLeft}g left`) : `${prot}g`;
+      }
       if (mpSub) {
-        const pPct = Math.round((prot / pTarget) * 100);
-        mpSub.innerText = prot >= pTarget ? `${prot}g (${pPct}%) • Anchor Met (+${prot - pTarget}g)` : `${prot}g / ${pTarget}g (${pPct}%)`;
+        mpSub.innerText = isRemainingMode
+          ? (prot >= pTarget ? `${prot} / ${pTarget}g (+${prot - pTarget}g)` : `${prot} / ${pTarget}g (${pPct}%)`)
+          : (prot >= pTarget ? `✓ Met (/${pTarget}g)` : `${protLeft}g left • /${pTarget}g`);
       }
 
       const mc = document.getElementById('macroCarbs');
-      if (mc) mc.innerText = `${cTarget}g`;
       const mcSub = document.getElementById('macroCarbsSub');
+      if (mc) {
+        const carbsOver = carbs > cTarget;
+        if (mc.classList) {
+          mc.classList.remove('is-met');
+          mc.classList.toggle('is-over', isRemainingMode && carbsOver);
+        }
+        mc.innerText = isRemainingMode
+          ? (carbsOver ? `+${carbs - cTarget}g over` : `${carbsLeft}g left`)
+          : `${carbs}g`;
+      }
       if (mcSub) {
-        const netCarbs = fiber > 0 ? Math.max(0, carbs - fiber) : carbs;
-        mcSub.innerText = fiber > 0 
-          ? `${netCarbs}g net (${carbs}g) • ${Math.max(0, cTarget - carbs)}g Left` 
-          : `${carbs}g • ${Math.max(0, cTarget - carbs)}g Left`;
+        if (isRemainingMode) {
+          mcSub.innerText = fiber > 0 ? `${netCarbs}g net • ${carbs}/${cTarget}g` : `${carbs} / ${cTarget}g`;
+        } else {
+          mcSub.innerText = fiber > 0 ? `${netCarbs}g net • ${carbsLeft}g left` : `${carbsLeft}g left • /${cTarget}g`;
+        }
       }
 
       const mf = document.getElementById('macroFat');
-      if (mf) mf.innerText = `${fTarget}g`;
       const mfSub = document.getElementById('macroFatSub');
-      if (mfSub) mfSub.innerText = `${fats}g • ${Math.max(0, fTarget - fats)}g Left`;
+      if (mf) {
+        const fatOver = fats > fTarget;
+        if (mf.classList) {
+          mf.classList.remove('is-met');
+          mf.classList.toggle('is-over', isRemainingMode && fatOver);
+        }
+        mf.innerText = isRemainingMode
+          ? (fatOver ? `+${fats - fTarget}g over` : `${fatsLeft}g left`)
+          : `${fats}g`;
+      }
+      if (mfSub) {
+        mfSub.innerText = isRemainingMode ? `${fats} / ${fTarget}g` : `${fatsLeft}g left • /${fTarget}g`;
+      }
 
       const barP = document.getElementById('barProtein');
-      if (barP) barP.style.width = `${Math.min(100, Math.round((prot / pTarget) * 100))}%`;
+      if (barP) barP.style.width = `${Math.min(100, Math.round((prot / Math.max(1, pTarget)) * 100))}%`;
       const barC = document.getElementById('barCarbs');
-      if (barC) barC.style.width = `${Math.min(100, Math.round((carbs / cTarget) * 100))}%`;
+      if (barC) barC.style.width = `${Math.min(100, Math.round((carbs / Math.max(1, cTarget)) * 100))}%`;
       const barF = document.getElementById('barFat');
-      if (barF) barF.style.width = `${Math.min(100, Math.round((fats / fTarget) * 100))}%`;
+      if (barF) barF.style.width = `${Math.min(100, Math.round((fats / Math.max(1, fTarget)) * 100))}%`;
 
       // Update Progressive Disclosure Math Drawer
       const defRaw = (liveSt && liveSt.nutrition && liveSt.nutrition.deficit !== undefined && liveSt.nutrition.deficit !== null)
@@ -509,11 +642,28 @@
       const elRem = document.getElementById('fuelCalcRemaining');
       if (elRem) {
         if (diff <= 0) {
-          elRem.innerHTML = `<span style="color:#ff9f0a;">= 0 kcal (At Maintenance)</span>`;
+          elRem.innerHTML = `<span style="color:var(--amber);">= 0 kcal (At Maintenance)</span>`;
         } else {
           elRem.innerHTML = `= ${remainingCals.toLocaleString()} kcal`;
         }
       }
+    }
+
+    function _syncToggleAllMealsBtn() {
+      const btn = document.getElementById('btnToggleAllMeals');
+      if (!btn) return;
+      const loggedKeys = ['breakfast', 'lunch', 'snacks', 'dinner'].filter((k) => {
+        const m = myNetDiaryData && myNetDiaryData.meals && myNetDiaryData.meals[k];
+        return Boolean(m && Array.isArray(m.items) && m.items.length > 0);
+      });
+      if (loggedKeys.length === 0) {
+        btn.innerText = 'Expand All';
+        btn.disabled = true;
+        return;
+      }
+      btn.disabled = false;
+      const allOpen = loggedKeys.every((k) => _openMealSlots.has(k));
+      btn.innerText = allOpen ? 'Collapse All' : 'Expand All';
     }
 
     function renderMndMealStream() {
@@ -532,11 +682,14 @@
         const meal = myNetDiaryData.meals[mKey];
         if (!meal) return;
 
-        const hasItems = meal.items && meal.items.length > 0;
+        const hasItems = Boolean(meal.items && meal.items.length > 0);
         if (hasItems) loggedCount++;
+        const itemCount = hasItems ? meal.items.length : 0;
+        const isOpen = _openMealSlots.has(mKey);
 
         const mealCard = document.createElement('div');
-        mealCard.className = 'meal-card-accordion';
+        mealCard.className = isOpen ? 'meal-card-accordion is-open' : 'meal-card-accordion';
+        mealCard.setAttribute('data-meal-key', mKey);
         if (mKey === 'dinner' && !hasItems) {
           mealCard.style.borderColor = 'rgba(139, 157, 181, 0.22)';
         }
@@ -561,17 +714,18 @@
           `;
         }
 
-        const isInitiallyOpen = hasItems ? 'flex' : 'none';
-        const chevronRot = hasItems ? 'rotate(180deg)' : 'rotate(0deg)';
+        const isInitiallyOpen = isOpen ? 'flex' : 'none';
+        const chevronRot = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        const slotSummary = hasItems ? `${itemCount} item${itemCount === 1 ? '' : 's'}` : 'Pending';
 
         mealCard.innerHTML = `
 <div class="meal-card-header" onclick="toggleMealAccordion(this)">
-<div style="display:flex; align-items:center; gap:7px;">
+<div style="display:flex; align-items:center; gap:7px; min-width:0;">
 <span class="accordion-chevron" style="transform:${chevronRot}; font-size:10px;">▼</span>
 <strong style="color:#fff; font-size:12.5px; font-weight:700;">${escapeHtml(meal.name)}</strong>
-<span style="font-size:11px; color:var(--text-muted);">${meal.time ? '• ' + escapeHtml(meal.time) : ''}</span>
+<span class="fuel-meal-count-pill">${meal.time ? escapeHtml(meal.time) + ' • ' : ''}${slotSummary}</span>
 </div>
-<div style="display:flex; gap:5px; align-items:center;">
+<div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
 <span class="macro-pill" style="color:var(--primary); font-weight:700; background:rgba(0,229,255,0.12); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.protein) || 0}g P</span>
 <span class="macro-pill" style="color:#fff; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-size:11px;">${Number(meal.calories) || 0} kcal</span>
 </div>
@@ -589,20 +743,46 @@
         const pendingCount = 4 - loggedCount;
         countBadge.innerText = `${loggedCount} Logged • ${pendingCount} Pending`;
       }
+      _syncToggleAllMealsBtn();
     }
 
     function toggleMealAccordion(headerEl) {
-      const body = headerEl.nextElementSibling;
-      const chevron = headerEl.querySelector('.accordion-chevron');
-      if (body) {
-        if (body.style.display === 'none') {
-          body.style.display = 'flex';
-          if (chevron) chevron.style.transform = 'rotate(180deg)';
-        } else {
-          body.style.display = 'none';
-          if (chevron) chevron.style.transform = 'rotate(0deg)';
-        }
+      if (!headerEl) return;
+      const card = headerEl.closest ? headerEl.closest('.meal-card-accordion') : headerEl.parentElement;
+      const mKey = card && card.getAttribute ? card.getAttribute('data-meal-key') : null;
+      const body = headerEl.nextElementSibling || (card && card.querySelector ? card.querySelector('.meal-card-body') : null);
+      const chevron = headerEl.querySelector ? headerEl.querySelector('.accordion-chevron') : null;
+      const currentlyOpen = mKey
+        ? _openMealSlots.has(mKey)
+        : Boolean(body && body.style && body.style.display !== 'none');
+      const nextOpen = !currentlyOpen;
+      if (mKey) {
+        if (nextOpen) _openMealSlots.add(mKey);
+        else _openMealSlots.delete(mKey);
       }
+      if (card && card.classList) card.classList.toggle('is-open', nextOpen);
+      if (body && body.style) body.style.display = nextOpen ? 'flex' : 'none';
+      if (chevron && chevron.style) chevron.style.transform = nextOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+      _syncToggleAllMealsBtn();
+    }
+
+    function toggleAllMealAccordions() {
+      const loggedKeys = ['breakfast', 'lunch', 'snacks', 'dinner'].filter((k) => {
+        const m = myNetDiaryData && myNetDiaryData.meals && myNetDiaryData.meals[k];
+        return Boolean(m && Array.isArray(m.items) && m.items.length > 0);
+      });
+      if (loggedKeys.length === 0) return;
+      const allOpen = loggedKeys.every((k) => _openMealSlots.has(k));
+      if (allOpen) {
+        loggedKeys.forEach((k) => _openMealSlots.delete(k));
+      } else {
+        loggedKeys.forEach((k) => _openMealSlots.add(k));
+      }
+      renderMndMealStream();
+    }
+    if (typeof window !== 'undefined') {
+      window.toggleMealAccordion = toggleMealAccordion;
+      window.toggleAllMealAccordions = toggleAllMealAccordions;
     }
 
     function updateMndCoachAdvice(calsLeft, protLeft, carbsLeft, fatsLeft, totalBudget) {
@@ -612,29 +792,40 @@
       const cals = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.calories) || 0;
       const prot = (myNetDiaryData && myNetDiaryData.totals && myNetDiaryData.totals.protein) || 0;
       const pTarget = (myNetDiaryData.targets && myNetDiaryData.targets.protein) || athleteProteinAnchor || 200;
-      const hasLbm = Boolean(window.athleteProfile && Number(window.athleteProfile.leanMassKg) > 0);
-      const lbmPhrase = hasLbm
-        ? `all ${Number(window.athleteProfile.leanMassKg).toFixed(1)}kg of lean muscle`
-        : 'all lean muscle mass';
       let advice = '';
 
       if (cals >= totalBudget && prot >= pTarget) {
-        advice = `<strong>✓ Muscle Protected & Fuel Banked!</strong> You logged <strong>${cals.toLocaleString()} kcal</strong> and <strong>${prot}g protein</strong> today (crushing your ${pTarget}g anchor by +${prot - pTarget}g). You've matched your active expenditure (~${Math.round(totalBudget).toLocaleString()} kcal), preserving ${lbmPhrase} without gaining fat. Hydrate well tonight for tomorrow's session!`;
+        advice = `<strong>✓ Fuel banked &amp; ${pTarget}g protein met</strong> — focus on hydration tonight.`;
       } else if (protLeft > 0) {
-        advice = `You have <strong>${calsLeft.toLocaleString()} kcal</strong> and <strong>${protLeft}g of protein</strong> left to reach your ${pTarget}g daily anchor. Aim for lean protein (chicken breast, egg whites, or 5% mince) to protect muscle while continuing to burn fat toward your 15% goal.`;
+        advice = `Prioritize lean protein (<strong>${protLeft}g left</strong>) within your <strong>${calsLeft.toLocaleString()} kcal</strong> runway.`;
       } else {
-        const lbmShortPhrase = hasLbm ? `all ${Number(window.athleteProfile.leanMassKg).toFixed(1)}kg of muscle` : 'your lean muscle';
-        advice = `<strong>✓ Protein Goal Reached!</strong> You've locked in your ${pTarget}g protein anchor to protect ${lbmShortPhrase}. You have <strong>${calsLeft.toLocaleString()} kcal</strong> of room remaining today. Keep your evening meal or snack clean and drink plenty of water before tomorrow's workout.`;
+        advice = `<strong>✓ ${pTarget}g protein locked in</strong> — <strong>${calsLeft.toLocaleString()} kcal</strong> clean runway remaining.`;
       }
 
       el.innerHTML = advice;
     }
 
     window.nutritionAuditWindowMode = window.nutritionAuditWindowMode || '10d';
+    window.nutritionChartMetric = window.nutritionChartMetric || 'calories';
+    window.nutritionSelectedDayIso = window.nutritionSelectedDayIso || null;
 
     window.setNutritionAuditWindow = function(mode) {
       if (mode === '10d' || mode === '7d' || mode === '1d') {
         window.nutritionAuditWindowMode = mode;
+        renderMyNetDiaryEngine();
+      }
+    };
+
+    window.setNutritionChartMetric = function(metric) {
+      if (metric === 'calories' || metric === 'protein' || metric === 'fat' || metric === 'fiber') {
+        window.nutritionChartMetric = metric;
+        renderMyNetDiaryEngine();
+      }
+    };
+
+    window.selectNutritionChartDay = function(isoDate) {
+      if (isoDate) {
+        window.nutritionSelectedDayIso = String(isoDate).slice(0, 10);
         renderMyNetDiaryEngine();
       }
     };
@@ -725,25 +916,18 @@
           : `${startLabel}–${endLabel}`)
         : 'No history yet';
 
-      const pillBtnStyle = (isActive) => isActive
-        ? 'cursor:pointer; font-size:10.5px; font-weight:800; color:#041019; background:linear-gradient(135deg, #00e5ff, #38bdf8); border:1px solid rgba(0,229,255,0.85); padding:5px 10px; border-radius:999px; box-shadow:0 0 12px rgba(0,229,255,0.3); transition:all 0.15s ease;'
-        : 'cursor:pointer; font-size:10.5px; font-weight:700; color:var(--text-secondary); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); padding:5px 10px; border-radius:999px; transition:all 0.15s ease;';
-
       const switcherHtml = `
-<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
-<button type="button" onclick="setNutritionAuditWindow('10d')" style="${pillBtnStyle(mode === '10d')}">
-            ${histDays.length > 0 ? `📊 ${histDays.length}-Day Baseline (${rangeBadgeLabel})` : '📊 Baseline (No history yet)'}
-</button>
-<button type="button" onclick="setNutritionAuditWindow('7d')" style="${pillBtnStyle(mode === '7d')}">
-            📅 Last 7 Days
-</button>
-<button type="button" onclick="setNutritionAuditWindow('1d')" style="${pillBtnStyle(mode === '1d')}">
-            📍 Today Only (${endLabel})
-</button>
+<div class="fuel-window-row">
+  <button type="button" class="fuel-window-pill${mode === '10d' ? ' active' : ''}" onclick="setNutritionAuditWindow('10d')">${histDays.length > 0 ? `📊 ${histDays.length}D Baseline` : '📊 10D Baseline'}</button>
+  <button type="button" class="fuel-window-pill${mode === '7d' ? ' active' : ''}" onclick="setNutritionAuditWindow('7d')">📅 7 Days</button>
+  <button type="button" class="fuel-window-pill${mode === '1d' ? ' active' : ''}" onclick="setNutritionAuditWindow('1d')">📍 Today (${escapeHtml(endLabel)})</button>
 </div>
       `;
 
       const safeFTarget = fTarget > 0 ? fTarget : 80;
+      const safeCalTarget = calTarget > 0 ? calTarget : 2100;
+      const safePTarget = pTarget > 0 ? pTarget : 200;
+      const safeCTarget = cTarget > 0 ? cTarget : 220;
 
       // ==================== MULTI-DAY ROLLING ENGINE (10-DAY OR 7-DAY) ====================
       if (mode !== '1d' && histDays.length > 0) {
@@ -770,7 +954,6 @@
 
         // Food group matchers across days
         const flaxMixRx = /flaxseed|walnut|almond|brazil nut|q10/i;
-        const nutsSeedsBroadRx = /flaxseed|walnut|almond|brazil nut|q10|houmous/i;
         const oilyFishRx = /salmon|mackerel|sardine|trout|tuna/i;
         const wholeEggRx = /\begg\b/i;
         const eggNoodleRx = /egg\s*noodle/i;
@@ -783,13 +966,11 @@
 
         const flaxDays = windowDays.filter(d => dayHas(d, nm => flaxMixRx.test(nm)));
         const noFlaxDays = windowDays.filter(d => !dayHas(d, nm => flaxMixRx.test(nm)));
-        const broadNutDays = windowDays.filter(d => dayHas(d, nm => nutsSeedsBroadRx.test(nm)));
         const fishDays = windowDays.filter(d => dayHas(d, nm => oilyFishRx.test(nm)));
         const eggDays = windowDays.filter(d => dayHas(d, isWholeEggName));
         const berryDays = windowDays.filter(d => dayHas(d, nm => berryFruitRx.test(nm)));
         const vegDays = windowDays.filter(d => dayHas(d, nm => vegSaladRx.test(nm)));
 
-        // Trailing skipped days for Flax/Nuts and Berries
         let trailingFlaxSkip = 0;
         for (let i = windowDays.length - 1; i >= 0; i--) {
           if (!dayHas(windowDays[i], nm => flaxMixRx.test(nm))) trailingFlaxSkip++;
@@ -815,7 +996,6 @@
         const recentLowMin = recentSkippedFatVals.length > 0 ? Math.min(...recentSkippedFatVals) : 46;
         const recentLowMax = recentSkippedFatVals.length > 0 ? Math.max(...recentSkippedFatVals) : 53;
 
-        // Whole food vs processed calorie share across N days
         let estProcCals = 0;
         let barCount = 0;
         let wheyCount = 0;
@@ -847,7 +1027,6 @@
         const procCalPct = sumCals > 0 ? Math.min(100, Math.round((estProcCals / sumCals) * 100)) : 0;
         const wholeCalPct = Math.max(0, 100 - procCalPct);
 
-        // Specific veg frequency counts
         const medVegCount = windowDays.filter(d => dayHas(d, nm => /mediterranean.*roasting|roasting vegetables/i.test(nm))).length;
         const beansproutCount = windowDays.filter(d => dayHas(d, nm => /beansprout/i.test(nm))).length;
         const carrotHoumousCount = windowDays.filter(d => dayHas(d, nm => /carrot.*houmous/i.test(nm))).length;
@@ -859,189 +1038,255 @@
         const microDaysCount = windowDays.filter(d => dayHas(d, nm => berryFruitRx.test(nm)) || dayHas(d, nm => vegSaladRx.test(nm))).length;
         const microPct = Math.min(100, Math.round((microDaysCount / nDays) * 100));
 
-        // 1. Healthy Fats & Omega-3s Pillar (Multi-day)
-        const fatBadgeText = avgF < 68
-          ? `⚠️ ${avgF}g/DAY AVG (-${fatDeficitAvg}g vs ${safeFTarget}g)`
-          : `✅ ${avgF}g/DAY AVG (${safeFTarget}g TARGET)`;
-        const fatBadgeColor = avgF < 68 ? '#f59e0b' : '#10b981';
-        const fatBarColor = avgF < 68 ? 'linear-gradient(90deg, #f59e0b, #38bdf8)' : 'linear-gradient(90deg, #10b981, #34d399)';
+        // Interactive Multi-Metric Bar Chart
+        const metricMap = {
+          calories: {
+            label: 'Calories',
+            field: 'calories',
+            target: safeCalTarget,
+            targetLabel: `Target ${safeCalTarget.toLocaleString()}`,
+            isOk: (v) => v >= safeCalTarget * 0.75 && v <= safeCalTarget + 150,
+            fmt: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${Math.round(v)}`
+          },
+          protein: {
+            label: 'Protein',
+            field: 'protein',
+            target: safePTarget,
+            targetLabel: `Anchor ${safePTarget}g`,
+            isOk: (v) => v >= Math.round(safePTarget * 0.85),
+            fmt: (v) => `${Math.round(v)}g`
+          },
+          fat: {
+            label: 'Fat',
+            field: 'fat',
+            target: 65,
+            targetLabel: 'Floor 65g',
+            isOk: (v) => v >= 65,
+            fmt: (v) => `${Math.round(v)}g`
+          },
+          fiber: {
+            label: 'Fiber',
+            field: 'fiber',
+            target: 30,
+            targetLabel: 'Floor 30g',
+            isOk: (v) => v >= 30,
+            fmt: (v) => `${Math.round(v)}g`
+          }
+        };
+        const activeMetric = metricMap[window.nutritionChartMetric] ? window.nutritionChartMetric : 'calories';
+        const mCfg = metricMap[activeMetric];
+        const seriesVals = windowDays.map(d => Number(d[mCfg.field]) || 0);
+        const maxScale = Math.max(mCfg.target * 1.15, ...seriesVals, 1);
+        const refBottomPx = 18 + Math.max(4, Math.min(52, Math.round((mCfg.target / maxScale) * 52)));
+
+        const hasValidSelection = windowDays.some(d => d.date === window.nutritionSelectedDayIso);
+        const selectedIso = hasValidSelection ? window.nutritionSelectedDayIso : endDateStr;
+        const selectedDay = windowDays.find(d => d.date === selectedIso) || windowDays[windowDays.length - 1];
+
+        const selTags = [];
+        if (dayHas(selectedDay, nm => flaxMixRx.test(nm))) selTags.push('Flax/Nuts');
+        if (dayHas(selectedDay, nm => berryFruitRx.test(nm))) selTags.push('Berries');
+        if (dayHas(selectedDay, nm => vegSaladRx.test(nm))) selTags.push('Veg');
+        if (dayHas(selectedDay, nm => oilyFishRx.test(nm))) selTags.push('Fish');
+        if (dayHas(selectedDay, isWholeEggName)) selTags.push('Eggs');
+
+        const chartColsHtml = windowDays.map(d => {
+          const val = Number(d[mCfg.field]) || 0;
+          const barH = Math.max(6, Math.min(52, Math.round((val / maxScale) * 52)));
+          const ok = mCfg.isOk(val);
+          const shortD = formatShortAuditDate(d.date).replace(/^[A-Za-z]+\s+/, '');
+          const isTodayCol = d.date === endDateStr;
+          const isSelCol = d.date === selectedIso;
+          return `
+<button type="button" class="fuel-chart-col${isTodayCol ? ' is-today' : ''}${isSelCol ? ' is-selected' : ''}" onclick="selectNutritionChartDay('${escapeHtml(d.date)}')" title="${escapeHtml(d.date)}: ${Math.round(Number(d.calories) || 0)} kcal • ${Math.round(Number(d.protein) || 0)}g P">
+  <span class="fuel-chart-val">${mCfg.fmt(val)}</span>
+  <div class="fuel-chart-bar-wrap">
+    <div class="fuel-chart-bar ${ok ? 'is-ok' : 'is-warn'}" style="height:${barH}px;"></div>
+  </div>
+  <span class="fuel-chart-day-lbl">${escapeHtml(shortD)}</span>
+</button>
+          `;
+        }).join('');
+
+        const chartHtml = `
+<div class="fuel-chart-box">
+  <div class="fuel-metric-tabs">
+    <button type="button" class="fuel-metric-pill${activeMetric === 'calories' ? ' active' : ''}" onclick="setNutritionChartMetric('calories')">Calories</button>
+    <button type="button" class="fuel-metric-pill${activeMetric === 'protein' ? ' active' : ''}" onclick="setNutritionChartMetric('protein')">Protein</button>
+    <button type="button" class="fuel-metric-pill${activeMetric === 'fat' ? ' active' : ''}" onclick="setNutritionChartMetric('fat')">Fat</button>
+    <button type="button" class="fuel-metric-pill${activeMetric === 'fiber' ? ' active' : ''}" onclick="setNutritionChartMetric('fiber')">Fiber</button>
+  </div>
+  <div class="fuel-chart-plot">
+    <div class="fuel-chart-ref-line" style="bottom:${refBottomPx}px;">
+      <span class="fuel-chart-ref-label">${escapeHtml(mCfg.targetLabel)}</span>
+    </div>
+    <div class="fuel-chart-bars" style="grid-template-columns:repeat(${nDays}, minmax(0, 1fr));">
+      ${chartColsHtml}
+    </div>
+  </div>
+  <div id="fuelTrendDayInspector" class="fuel-chart-day-inspector">
+    <div><strong style="color:var(--text);">${escapeHtml(formatShortAuditDate(selectedDay.date))}:</strong> ${(Math.round(Number(selectedDay.calories) || 0)).toLocaleString()} kcal • ${Math.round(Number(selectedDay.protein) || 0)}g P • ${Math.round(Number(selectedDay.carbs) || 0)}g C • ${Math.round(Number(selectedDay.fat) || 0)}g F • ${Math.round(Number(selectedDay.fiber) || 0)}g Fib</div>
+    <div class="fuel-day-tags">${selTags.length > 0 ? selTags.map(t => `<span class="fuel-day-tag">${t}</span>`).join('') : '<span class="fuel-day-tag">Baseline</span>'}</div>
+  </div>
+</div>
+        `;
+
+        // Today vs Rolling Avg Comparison Table
+        const fmtDelta = (val, unit = '') => {
+          const r = Math.round(val * 10) / 10;
+          return `${r >= 0 ? '+' : ''}${r}${unit}`;
+        };
+        const compareTableHtml = `
+<div class="fuel-compare-table-wrap">
+  <table class="fuel-compare-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Today</th>
+        <th>${nDays}d Avg</th>
+        <th>Target</th>
+        <th>Δ Avg</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Calories</td>
+        <td>${Math.round(cals).toLocaleString()}</td>
+        <td>${avgCals.toLocaleString()}</td>
+        <td>${safeCalTarget.toLocaleString()}</td>
+        <td class="${Math.abs(avgCals - safeCalTarget) <= 250 ? 'fuel-delta-ok' : 'fuel-delta-warn'}">${fmtDelta(cals - avgCals)}</td>
+      </tr>
+      <tr>
+        <td>Protein</td>
+        <td>${Math.round(p)}g</td>
+        <td>${avgP}g</td>
+        <td>${safePTarget}g</td>
+        <td class="${avgP >= Math.round(safePTarget * 0.85) ? 'fuel-delta-ok' : 'fuel-delta-warn'}">${fmtDelta(p - avgP, 'g')}</td>
+      </tr>
+      <tr>
+        <td>Carbs</td>
+        <td>${Math.round(c)}g</td>
+        <td>${avgC}g</td>
+        <td>${safeCTarget}g</td>
+        <td>${fmtDelta(c - avgC, 'g')}</td>
+      </tr>
+      <tr>
+        <td>Fat</td>
+        <td>${Math.round(f)}g</td>
+        <td>${avgF}g</td>
+        <td>${safeFTarget}g</td>
+        <td class="${avgF >= 65 ? 'fuel-delta-ok' : 'fuel-delta-warn'}">${fmtDelta(f - avgF, 'g')}</td>
+      </tr>
+      <tr>
+        <td>Fiber</td>
+        <td>${Math.round(fiber)}g</td>
+        <td>${avgFib}g</td>
+        <td>35g</td>
+        <td class="${avgFib >= 30 ? 'fuel-delta-ok' : 'fuel-delta-warn'}">${fmtDelta(fiber - avgFib, 'g')}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+        `;
+
+        // 2x2 Quality Scorecard
+        const fatTone = avgF < 65 ? 'is-warn' : 'is-ok';
+        const procTone = wholeCalPct >= 80 ? 'is-ok' : 'is-info';
+        const vitTone = berryDays.length >= Math.ceil(nDays * 0.5) ? 'is-ok' : 'is-info';
+        const fibTone = avgFib >= 30 ? 'is-ok' : 'is-warn';
+
+        const scorecardHtml = `
+<div class="fuel-scorecard-grid">
+  <div class="fuel-score-tile">
+    <div class="fuel-score-top">
+      <span class="fuel-score-lbl">Fat &amp; Omega-3</span>
+      <span class="fuel-score-pill ${fatTone}">${avgF < 65 ? `-${fatDeficitAvg}g` : 'OK'}</span>
+    </div>
+    <div class="fuel-score-val">${avgF}g<span class="fuel-micro-target"> /${safeFTarget}g</span></div>
+    <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${fatTone}" style="width:${avgFatPct}%;"></div></div>
+    <div class="fuel-score-sub">Flax ${flaxDays.length}/${nDays}d • Fish ${fishDays.length}/${nDays}d</div>
+  </div>
+  <div class="fuel-score-tile">
+    <div class="fuel-score-top">
+      <span class="fuel-score-lbl">Whole Foods</span>
+      <span class="fuel-score-pill ${procTone}">${wholeCalPct >= 80 ? 'Elite' : `${procCalPct}% Pkg`}</span>
+    </div>
+    <div class="fuel-score-val">${wholeCalPct}%</div>
+    <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${procTone}" style="width:${wholeCalPct}%;"></div></div>
+    <div class="fuel-score-sub">Bars ${barCount}x • Whey ${wheyCount}x</div>
+  </div>
+  <div class="fuel-score-tile">
+    <div class="fuel-score-top">
+      <span class="fuel-score-lbl">Produce &amp; Vit C</span>
+      <span class="fuel-score-pill ${vitTone}">${berryDays.length}/${nDays}d Berry</span>
+    </div>
+    <div class="fuel-score-val">${vegDays.length}/${nDays}d<span class="fuel-micro-target"> Veg</span></div>
+    <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${vitTone}" style="width:${Math.max(12, microPct)}%;"></div></div>
+    <div class="fuel-score-sub">${trailingBerrySkip > 0 ? `No berries last ${trailingBerrySkip}d` : 'Steady Vit C intake'}</div>
+  </div>
+  <div class="fuel-score-tile">
+    <div class="fuel-score-top">
+      <span class="fuel-score-lbl">Gut &amp; Sugar</span>
+      <span class="fuel-score-pill ${fibTone}">${avgFib >= 30 ? 'Optimal' : 'Low'}</span>
+    </div>
+    <div class="fuel-score-val">${avgFib}g<span class="fuel-micro-target"> Fib</span></div>
+    <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${fibTone}" style="width:${avgFibPct}%;"></div></div>
+    <div class="fuel-score-sub">Sug ${avgSug}g • Sat ${avgSatF}g</div>
+  </div>
+</div>
+        `;
+
+        // Crisp 3-bullet action list (no hardcoded Nov 8!)
+        const upg1 = avgF < safeFTarget
+          ? `Lock in morning Flax/Nuts daily (${flaxDays.length}/${nDays}d logged) to lift ${avgF}g avg toward ${safeFTarget}g.`
+          : `Fat floor on target (${avgF}g/day avg across ${flaxDays.length}/${nDays} flax/nut days).`;
+        const upg2 = `Oily fish ${fishDays.length}/${nDays}d &amp; whole eggs ${eggDays.length}/${nDays}d — target 2x/wk salmon or mackerel for EPA/DHA.`;
+        const upg3 = trailingBerrySkip > 0
+          ? `Berries skipped last ${trailingBerrySkip}d — add 80g blueberries/strawberries to oats or yogurt for tendon Vitamin C.`
+          : `Strong ${wholeCalPct}% whole-food base (${vegDays.length}/${nDays}d veg) — keep berries rotating daily.`;
+
+        // Detailed Pillar Explanations (collapsed inside drawer; preserves exact flax dates formatting)
         const trailingSkipText = trailingFlaxSkip > 0
           ? ` (skipped last ${trailingFlaxSkip} day${trailingFlaxSkip > 1 ? 's' : ''}, dropping fat to <strong>${recentLowMin}–${recentLowMax}g</strong> on recent days)`
           : '';
-        const fatBody = `<strong>Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</strong> logged <strong>${flaxDays.length}/${nDays} days</strong>${flaxDatesDisplay ? ` (${flaxDatesDisplay})` : ''}${trailingSkipText}. On days with it, fat reaches ~<strong>${flaxAvgFat}g+</strong> (excl. Nov 8 low-cal day, ~70g/day). <strong>Oily Fish:</strong> <strong>${fishDays.length}/${nDays} days</strong> • <strong>Whole Eggs:</strong> <strong>${eggDays.length}/${nDays} days</strong>.`;
-
-        // 2. Whole Food vs Bars Pillar (Multi-day)
-        const procBadgeText = wholeCalPct >= 80
-          ? `✅ ${wholeCalPct}% WHOLE-FOOD BASELINE`
-          : `ℹ️ ${wholeCalPct}% WHOLE FOODS / ${procCalPct}% PACKAGED`;
-        const procBadgeColor = wholeCalPct >= 80 ? '#10b981' : '#38bdf8';
-        const procBarColor = wholeCalPct >= 80 ? 'linear-gradient(90deg, #10b981, #00e5ff)' : 'linear-gradient(90deg, #38bdf8, #00e5ff)';
-        const procBody = `Across ${nDays} days (<strong>${sumCals.toLocaleString()} kcal</strong> total • <strong>${avgCals.toLocaleString()} kcal/day</strong>, <strong>${avgP}g P/day</strong>), whole foods (Oats, 5% Mince, Chicken, 0% Greek Yogurt/Skyr, Veg, Berries, Flax/Nuts) drive <strong>~${wholeCalPct}%</strong> of energy. Bars (${barCount}x) &amp; Whey (${wheyCount}x) are only <strong>~${procCalPct}%</strong> (vs today's single-day spike).`;
-
-        // 3. Micronutrient & Polyphenol Diversity (Multi-day)
-        const vitCBadgeText = microDaysCount >= Math.ceil(nDays * 0.8)
-          ? `✅ VEG ${vegDays.length}/${nDays}d • BERRIES ${berryDays.length}/${nDays}d`
-          : `ℹ️ VEG ${vegDays.length}/${nDays}d • BERRIES ${berryDays.length}/${nDays}d`;
-        const vitCBadgeColor = berryDays.length >= Math.ceil(nDays * 0.5) ? '#10b981' : '#38bdf8';
-        const vitCBarColor = 'linear-gradient(90deg, #38bdf8, #10b981)';
+        const fatBody = `<strong>Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</strong> logged <strong>${flaxDays.length}/${nDays} days</strong>${flaxDatesDisplay ? ` (${flaxDatesDisplay})` : ''}${trailingSkipText}. On days with it, fat reaches ~<strong>${flaxAvgFat}g+</strong>/day. <strong>Oily Fish:</strong> <strong>${fishDays.length}/${nDays} days</strong> • <strong>Whole Eggs:</strong> <strong>${eggDays.length}/${nDays} days</strong>.`;
+        const procBody = `Across ${nDays} days (<strong>${sumCals.toLocaleString()} kcal</strong> total • <strong>${avgCals.toLocaleString()} kcal/day</strong>, <strong>${avgP}g P/day</strong>), whole foods drive <strong>~${wholeCalPct}%</strong> of energy. Bars (${barCount}x) &amp; Whey (${wheyCount}x) represent <strong>~${procCalPct}%</strong>.`;
         const berryGapNote = trailingBerrySkip > 0
           ? ` (0/${trailingBerrySkip} in last ${trailingBerrySkip} day${trailingBerrySkip > 1 ? 's' : ''})`
           : '';
-        const vitCBody = `<strong>Veg &amp; Salad:</strong> <strong>${vegDays.length}/${nDays} days</strong> (Med Roasting Veg ${medVegCount}x, Beansprouts ${beansproutCount}x, Carrot &amp; Houmous ${carrotHoumousCount}x). <strong>Berries &amp; Fruit:</strong> <strong>${berryDays.length}/${nDays} days</strong>${berryGapNote}. Great baseline — just keep berries in on busy days for tendon Vitamin C.`;
-
-        // 4. Fiber, Sugar & Saturated Fat (Multi-day)
-        const glyBadgeText = avgFib >= 30
-          ? `✅ ${avgFib}g/DAY FIBER • TOP-TIER GUT`
-          : `⚠️ ${avgFib}g/DAY FIBER`;
-        const glyBadgeColor = avgFib >= 30 ? '#10b981' : '#f59e0b';
-        const glyBarColor = 'linear-gradient(90deg, #10b981, #00e5ff)';
-        const glyBody = `<strong>${avgFib}g fiber/day</strong> crushes the 30–40g gut target! Sugar averages <strong>${avgSug}g/day</strong> (mostly natural lactose from Greek yogurt + berries/700g Med veg). Saturated fat is <strong>${avgSatF}g/day</strong> (<strong>${satFatSharePct}%</strong> of total fat).`;
-
-        // Consistency Strip HTML (Day-by-day fat bars + micronutrient badges)
-        const stripHtml = `
-<div style="margin-bottom:12px; padding:10px 11px; border-radius:10px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">
-                📈 ${nDays}-Day Fat Floor &amp; Micronutrient Consistency (${winStart} → ${winEnd})
-</span>
-<span style="font-size:10px; color:var(--text-secondary);">
-                Target: <strong style="color:#10b981;">≥65g/80g</strong> • 🥜 Flax/Nuts • 🫐 Berries • 🥦 Veg • 🐟 Salmon • 🥚 Egg
-</span>
-</div>
-<div style="display:grid; grid-template-columns:repeat(${nDays}, minmax(0, 1fr)); gap:5px; align-items:end; overflow-x:auto; padding-bottom:2px;">
-              ${windowDays.map(d => {
-                const fatVal = Math.round(Number(d.fat) || 0);
-                const barH = Math.max(10, Math.min(46, Math.round((fatVal / 85) * 46)));
-                const isOk = fatVal >= 65;
-                const barBg = isOk ? 'linear-gradient(180deg, #10b981, #059669)' : 'linear-gradient(180deg, #f59e0b, #d97706)';
-                const fatColor = isOk ? '#34d399' : '#fbbf24';
-                const shortD = formatShortAuditDate(d.date).replace(/^[A-Za-z]+\s+/, '');
-                const hasFlax = dayHas(d, nm => flaxMixRx.test(nm));
-                const hasBerry = dayHas(d, nm => berryFruitRx.test(nm));
-                const hasVeg = dayHas(d, nm => vegSaladRx.test(nm));
-                const hasFish = dayHas(d, nm => oilyFishRx.test(nm));
-                const hasEgg = dayHas(d, isWholeEggName);
-                const badges = [
-                  hasFlax ? '🥜' : '',
-                  hasBerry ? '🫐' : '',
-                  hasVeg ? '🥦' : '',
-                  hasFish ? '🐟' : '',
-                  hasEgg ? '🥚' : ''
-                ].filter(Boolean).join('');
-                const isTodayCol = d.date === endDateStr;
-                return `
-<div title="${escapeHtml(d.date)}: ${Number(d.calories) || 0} kcal • P:${Number(d.protein) || 0}g C:${Number(d.carbs) || 0}g F:${fatVal}g • Fib:${Number(d.fiber) || 0}g" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px; border-radius:6px; ${isTodayCol ? 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.28);' : ''}">
-<span style="font-size:9.5px; font-weight:800; color:${fatColor};">${fatVal}g</span>
-<div style="width:100%; max-width:18px; height:48px; display:flex; align-items:flex-end; justify-content:center; background:rgba(255,255,255,0.04); border-radius:4px; overflow:hidden; position:relative;">
-<div style="width:100%; height:${barH}px; background:${barBg}; border-radius:3px 3px 0 0;"></div>
-</div>
-<span style="font-size:9px; font-weight:${isTodayCol ? '800' : '600'}; color:${isTodayCol ? 'var(--primary)' : 'var(--text-muted)'};">${shortD}</span>
-<span style="font-size:9px; line-height:1.1; min-height:11px; letter-spacing:-1px; text-align:center;">${badges || '·'}</span>
-</div>
-                `;
-              }).join('')}
-</div>
-</div>
-        `;
-
-        // 10-Day vs Today Reality Comparison Strip
-        const todayVsAvgHtml = `
-<div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between; padding:8px 11px; margin-bottom:12px; border-radius:9px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.18); font-size:11px;">
-<div>
-<strong style="color:var(--primary);">${nDays}-Day Avg:</strong>
-<span style="color:#fff; font-weight:700;">${avgCals.toLocaleString()} kcal</span> •
-<span style="color:#38bdf8; font-weight:700;">${avgP}g P</span> •
-<span style="color:#a78bfa; font-weight:700;">${avgC}g C</span> •
-<span style="color:${avgF < 68 ? '#fbbf24' : '#34d399'}; font-weight:700;">${avgF}g F</span> •
-<span style="color:#34d399; font-weight:700;">${avgFib}g Fib</span>
-</div>
-<div style="color:var(--text-muted);">
-              vs Today (${endLabel}): <strong style="color:#fff;">${cals.toLocaleString()} kcal</strong> • ${p}g P • ${f}g F • ${fiber}g Fib
-</div>
-</div>
-        `;
-
-        // 3 Multi-day Recommendations
-        const rec1 = `<strong>1. Lock In Your Flaxseed/Nuts Habit Daily (+${fatDeficitAvg}g/day Fat Gap):</strong> You hit <strong>${flaxDays.length}/${nDays} days</strong> with <code>Cold Milled Flaxseed/Almonds/Brazil Nuts/Walnuts &amp; Q10</code>${trailingFlaxSkip > 0 ? ` — just restore it on days like the last ${trailingFlaxSkip} days` : ''}. Making it a daily morning Jumbo Oats non-negotiable adds Selenium, Vitamin E, Magnesium, CoQ10 &amp; ~18g healthy fats, closing your chronic <strong>${avgF}g → ${safeFTarget}g</strong> fat gap.`;
-        const rec2 = `<strong>2. Upgrade Marine Omega-3s &amp; Choline (Oily Fish ${fishDays.length}/${nDays}d • Eggs ${eggDays.length}/${nDays}d):</strong> Plant ALA from flaxseed converts <strong>&lt;10%</strong> to active EPA/DHA. Add <strong>1–2 more oily fish meals/week</strong> (<code>Hot Smoked Salmon</code>, mackerel, sardines) and <strong>2–3 whole eggs</strong> a few mornings/week for choline, Vitamin D &amp; hormone substrate.`;
-        const rec3 = `<strong>3. Keep Whole-Food Density (${wholeCalPct}%) &amp; Daily Berry Routine (${berryDays.length}/${nDays}d):</strong> Your ${nDays}-day baseline is genuinely elite (<strong>${avgFib}g fiber/day</strong>, <strong>${vegDays.length}/${nDays} veg days</strong>, <strong>${avgP}g/day protein</strong>). On days like today when you swap in a <code>Flapjack</code> or skip berries, toss <strong>80g frozen blueberries/strawberries</strong> into your oats/yogurt so tendon Vitamin C never dips.`;
+        const vitCBody = `<strong>Veg &amp; Salad:</strong> <strong>${vegDays.length}/${nDays} days</strong> (Med Roasting Veg ${medVegCount}x, Beansprouts ${beansproutCount}x, Carrot &amp; Houmous ${carrotHoumousCount}x). <strong>Berries &amp; Fruit:</strong> <strong>${berryDays.length}/${nDays} days</strong>${berryGapNote}.`;
+        const glyBody = `<strong>${avgFib}g fiber/day</strong> vs 30–40g gut target. Sugar averages <strong>${avgSug}g/day</strong> and saturated fat is <strong>${avgSatF}g/day</strong> (<strong>${satFatSharePct}%</strong> of total fat).`;
 
         auditEl.innerHTML = `
-<div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-<div style="display:flex; align-items:center; gap:7px;">
-<span style="font-size:15px;">🧬</span>
-<strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
-</div>
-<span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
-                ${nDays}-Day Whole-Food: ${wholeCalPct}% • Avg Fat: ${avgF}g/${safeFTarget}g
-</span>
-</div>
-
-            ${switcherHtml}
-            ${todayVsAvgHtml}
-            ${stripHtml}
-
-<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
-              
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Fats, Nuts &amp; Omega-3s</span>
-<span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${avgFatPct}%; height:100%; background:${fatBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
-</div>
-
-              
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
-<span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
-</div>
-
-              
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Berries, Veg &amp; Collagen</span>
-<span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${Math.max(12, microPct)}%; height:100%; background:${vitCBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
-</div>
-
-              
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber, Sugar &amp; Sat Fat</span>
-<span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${avgFibPct}%; height:100%; background:${glyBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
-</div>
-</div>
-
-<div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
-<div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
-                🛒 ${nDays}-Day Trend Upgrades for Your Next Shop / Tomorrow
-</div>
-<div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
-<div>${rec1}</div>
-<div>${rec2}</div>
-<div>${rec3}</div>
-</div>
-</div>
+<div class="fuel-audit-card">
+  <div class="fuel-audit-head">
+    <div class="fuel-audit-title"><span>🧬</span><span>Trends &amp; Quality Audit</span></div>
+    <span class="fuel-audit-range-badge">${escapeHtml(winStart)} → ${escapeHtml(winEnd)}</span>
+  </div>
+  ${switcherHtml}
+  ${chartHtml}
+  ${compareTableHtml}
+  ${scorecardHtml}
+  <div class="fuel-upgrade-box">
+    <div class="fuel-upgrade-title">🛒 ${nDays}-Day Trend Upgrades</div>
+    <div class="fuel-upgrade-list">
+      <div class="fuel-upgrade-row"><span class="fuel-upgrade-tag">Fat</span><span>${upg1}</span></div>
+      <div class="fuel-upgrade-row"><span class="fuel-upgrade-tag">Omega-3</span><span>${upg2}</span></div>
+      <div class="fuel-upgrade-row"><span class="fuel-upgrade-tag">Vit C</span><span>${upg3}</span></div>
+    </div>
+  </div>
+  <details class="fuel-accordion" data-details-key="fuel_audit_details">
+    <summary>
+      <span>📋 Detailed Pillar Notes (${nDays}-Day Breakdown)</span>
+      <span class="accordion-chevron">▼</span>
+    </summary>
+    <div class="fuel-accordion-content" style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+      <div>${fatBody}</div>
+      <div>${procBody}</div>
+      <div>${vitCBody}</div>
+      <div>${glyBody}</div>
+    </div>
+  </details>
 </div>
         `;
         return;
@@ -1049,238 +1294,195 @@
 
       if (allItems.length === 0 && cals <= 0) {
         auditEl.innerHTML = `
-<div class="card" style="padding:14px; border-radius:12px; background:var(--surface); border:1px solid var(--border);">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
-<strong style="color:#fff; font-size:12px; letter-spacing:0.05em; text-transform:uppercase;">🧬 Nutritional Quality &amp; Micronutrient Audit</strong>
-<span style="font-size:10.5px; color:var(--text-muted); padding:2px 8px; border-radius:999px; background:rgba(255,255,255,0.05);">Awaiting Food Logs</span>
-</div>
-            ${switcherHtml}
-<div style="font-size:11.5px; color:var(--text-secondary); margin-top:4px;">Sync MyNetDiary or log meals to audit healthy fats, whole-food density, tendon micronutrients, and glycemic load.</div>
+<div class="fuel-audit-card">
+  <div class="fuel-audit-head">
+    <div class="fuel-audit-title"><span>🧬</span><span>Trends &amp; Quality Audit</span></div>
+    <span class="fuel-audit-range-badge">Awaiting Food Logs</span>
+  </div>
+  ${switcherHtml}
+  <div style="font-size:11.5px; color:var(--text-secondary);">Sync MyNetDiary or log meals to unlock multi-day trend charts, fat floor tracking, and micronutrient audits.</div>
 </div>
         `;
         return;
       }
 
-      // 1. Healthy Fats, Omega-3 & Hormonal Floor (Today Only)
+      // ==================== TODAY-ONLY AUDIT VIEW ====================
       const healthyFatRx = /salmon|mackerel|sardine|trout|anchov|egg|avocado|olive oil|extra virgin|walnut|almond|macadamia|chia|flax|peanut butter|almond butter|cheese|steak|beef/i;
       const ultraLowFatRx = /fat free|0%|isolate|breast/i;
       const fatSources = allItems.filter(it => healthyFatRx.test(it.name)).map(it => it.name);
       const ultraLowFatChoices = allItems.filter(it => ultraLowFatRx.test(it.name)).map(it => it.name);
-
       const fatPct = Math.round((f / safeFTarget) * 100);
       const fatCalPct = cals > 0 ? Math.round(((f * 9) / cals) * 100) : 0;
 
-      let fatBadgeText, fatBadgeColor, fatBarColor, fatBody;
+      let fatStatusPill, fatTone, fatBody;
       if (f < 55) {
-        fatBadgeText = `⚠️ LOW FAT FLOOR (${f}g / ${safeFTarget}g • ${fatCalPct}% kcal)`;
-        fatBadgeColor = '#f59e0b';
-        fatBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
+        fatStatusPill = 'Low Floor';
+        fatTone = 'is-warn';
         const lowFatNote = ultraLowFatChoices.length > 0
-          ? ` Selecting <strong>${escapeHtml(ultraLowFatChoices.slice(0, 2).join(' + '))}</strong> kept dietary fat low.`
+          ? ` Selecting <strong>${escapeHtml(ultraLowFatChoices.slice(0, 2).join(' + '))}</strong> kept fat low.`
           : '';
         const curWtKg = (window.athleteProfile && Number(window.athleteProfile.weightKg)) ? `${Number(window.athleteProfile.weightKg).toFixed(1)}kg` : 'your bodyweight';
-        fatBody = `At ${curWtKg}, dropping below the <strong>60–65g</strong> fat floor restricts testosterone/endocrine synthesis, joint lubrication, and fat-soluble vitamin (A, D, E, K) absorption.${lowFatNote}`;
+        fatBody = `At ${curWtKg}, dropping below <strong>60–65g</strong> fat restricts endocrine synthesis &amp; fat-soluble vitamins.${lowFatNote}`;
       } else if (f <= safeFTarget + 15) {
-        fatBadgeText = `✅ OPTIMAL LIPID PROFILE (${f}g / ${safeFTarget}g)`;
-        fatBadgeColor = '#10b981';
-        fatBarColor = 'linear-gradient(90deg, #10b981, #34d399)';
-        fatBody = `Dietary fat covers <strong>${fatCalPct}%</strong> of calories (${fatSources.length} lipid source${fatSources.length === 1 ? '' : 's'} detected), supporting endocrine health and joint recovery.`;
+        fatStatusPill = 'Optimal';
+        fatTone = 'is-ok';
+        fatBody = `Dietary fat covers <strong>${fatCalPct}%</strong> of calories (${fatSources.length} lipid source${fatSources.length === 1 ? '' : 's'} detected).`;
       } else {
-        fatBadgeText = `⚠️ HIGH FAT LOAD (${f}g / ${safeFTarget}g)`;
-        fatBadgeColor = '#f59e0b';
-        fatBarColor = 'linear-gradient(90deg, #f59e0b, #f97316)';
-        fatBody = `Fat intake sits at <strong>${fatCalPct}%</strong> of daily energy (+${f - safeFTarget}g over target). Trim added oils/cheese slightly to protect your caloric deficit.`;
+        fatStatusPill = 'High';
+        fatTone = 'is-warn';
+        fatBody = `Fat intake sits at <strong>${fatCalPct}%</strong> of daily energy (+${f - safeFTarget}g over target).`;
       }
 
-      // 2. Whole-Food vs. Processed / Bar & Supplement Reliance
       const processedRx = /flap\s*jack|protein bar|cheese bar|\bbar\b|whey|isolate|powder|shake|cookie|brownie|crisp|sweet|candy|chocolate|syrup|sauce|noodle|processed/i;
-      const wholeFoodGuardRx = /\b(oats|chicken|salad|yogurt|beef|steak|eggs|fruit|veg)\b/i;
-
-      const processedItems = allItems.filter(it => {
-        if (processedRx.test(it.name)) return true;
-        if (wholeFoodGuardRx.test(it.name)) return false;
-        return false;
-      });
-
+      const processedItems = allItems.filter(it => processedRx.test(it.name));
       const procCals = processedItems.reduce((sum, it) => sum + it.cals, 0);
       const procProtein = processedItems.reduce((sum, it) => sum + it.p, 0);
       const procCalPct = cals > 0 ? Math.min(100, Math.round((procCals / cals) * 100)) : 0;
       const wholeCalPct = Math.max(0, 100 - procCalPct);
 
-      let procBadgeText, procBadgeColor, procBarColor, procBody;
+      let procStatusPill, procTone, procBody;
       const procNamesPreview = processedItems.map(it => `<strong>${escapeHtml(it.name)}</strong>`).join(' + ');
       const highCarbBar = processedItems.find(it => it.c >= 50);
       if (procCalPct >= 35) {
-        procBadgeText = `⚠️ ${procCalPct}% PACKAGED / BARS (${procCals} kcal)`;
-        procBadgeColor = '#f59e0b';
-        procBarColor = 'linear-gradient(90deg, #f59e0b, #fb923c)';
-        procBody = `${procNamesPreview} supply <strong>${procCals} kcal</strong> &amp; <strong>${Math.round(procProtein)}g P</strong> today.${highCarbBar ? ` Watch out for maltitol/glucose syrups, emulsifiers &amp; hidden sugars in ${escapeHtml(highCarbBar.name)} (${highCarbBar.c}g carbs in 1 hit).` : ' Watch out for sugar alcohols, emulsifiers &amp; low micronutrient density.'}`;
+        procStatusPill = `${procCalPct}% Pkg`;
+        procTone = 'is-warn';
+        procBody = `${procNamesPreview} supply <strong>${procCals} kcal</strong> &amp; <strong>${Math.round(procProtein)}g P</strong> today.${highCarbBar ? ` Watch hidden sugars in ${escapeHtml(highCarbBar.name)} (${highCarbBar.c}g C).` : ''}`;
       } else if (procCalPct >= 20) {
-        procBadgeText = `ℹ️ ${wholeCalPct}% WHOLE FOODS / ${procCalPct}% SUPPLEMENTS`;
-        procBadgeColor = '#38bdf8';
-        procBarColor = 'linear-gradient(90deg, #38bdf8, #00e5ff)';
-        procBody = `<strong>${wholeCalPct}%</strong> of calories come from whole foods (${processedItems.length} packaged/supplement item${processedItems.length === 1 ? '' : 's'}: ${procCals} kcal, ${Math.round(procProtein)}g P). Solid convenience balance.`;
+        procStatusPill = `${procCalPct}% Supp`;
+        procTone = 'is-info';
+        procBody = `<strong>${wholeCalPct}%</strong> whole foods (${processedItems.length} packaged item${processedItems.length === 1 ? '' : 's'}: ${procCals} kcal).`;
       } else {
-        procBadgeText = `✅ ${wholeCalPct}% WHOLE-FOOD DENSITY`;
-        procBadgeColor = '#10b981';
-        procBarColor = 'linear-gradient(90deg, #10b981, #00e5ff)';
-        procBody = `<strong>${wholeCalPct}%</strong> of today's energy comes from minimally processed whole foods (${procCals} kcal from bars/powders), maximizing micronutrient bioavailability.`;
+        procStatusPill = 'Dense';
+        procTone = 'is-ok';
+        procBody = `<strong>${wholeCalPct}%</strong> of today's energy comes from minimally processed whole foods.`;
       }
 
-      // 3. Vitamin C, Collagen & Micronutrient Diversity (Fruit / Veg / Citrus / Berries)
       const vitCAnyRx = /berr|blueberr|strawberr|raspberr|blackberr|orange|citrus|lemon|lime|kiwi|pepper|capsicum|broccoli|spinach|kale|tomato|apple|banana|mango|pineapple|fruit|veg|greens|salad/i;
       const vitCPowerRx = /kiwi|berr|blueberr|strawberr|raspberr|blackberr|orange|citrus|pepper|capsicum|broccoli/i;
       const vitCAnyItems = allItems.filter(it => vitCAnyRx.test(it.name));
       const vitCPowerItems = allItems.filter(it => vitCPowerRx.test(it.name));
       const garnishItems = vitCAnyItems.filter(it => !vitCPowerRx.test(it.name));
-
       const vitCPct = Math.min(100, Math.round((vitCPowerItems.length / 2) * 100));
-      let vitCBadgeText, vitCBadgeColor, vitCBarColor, vitCBody;
+
+      let vitStatusPill, vitTone, vitCBody;
       if (vitCPowerItems.length === 0) {
-        vitCBadgeText = `⚠️ LOW VITAMIN C & POLYPHENOLS`;
-        vitCBadgeColor = '#f59e0b';
-        vitCBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
-        const garnishNote = garnishItems.length > 0
-          ? ` Only garnish/mixed salad logged (${escapeHtml(garnishItems.map(x => x.name).join(', '))}).`
-          : '';
-        vitCBody = `Zero whole fruit, berries, citrus, kiwi, or bell peppers logged today.${garnishNote} Vitamin C (50–200mg) is a mandatory cofactor for pro-collagen synthesis in your Achilles &amp; patellar tendons after high-impact or resistance training, and boosts non-heme iron absorption from Jumbo Oats.`;
+        vitStatusPill = '0 Sources';
+        vitTone = 'is-warn';
+        const garnishNote = garnishItems.length > 0 ? ` Only garnish logged (${escapeHtml(garnishItems.map(x => x.name).join(', '))}).` : '';
+        vitCBody = `Zero berries, citrus, kiwi, or peppers logged today.${garnishNote} Vitamin C supports tendon collagen synthesis.`;
       } else if (vitCPowerItems.length === 1) {
-        vitCBadgeText = `ℹ️ MODERATE MICRONUTRIENTS (1 source)`;
-        vitCBadgeColor = '#38bdf8';
-        vitCBarColor = 'linear-gradient(90deg, #38bdf8, #00e5ff)';
-        vitCBody = `1 high-Vitamin-C source logged (<strong>${escapeHtml(vitCPowerItems[0].name)}</strong>). Add a second berry or citrus serving to maximize tendon collagen repair &amp; antioxidant recovery.`;
+        vitStatusPill = '1 Source';
+        vitTone = 'is-info';
+        vitCBody = `1 Vitamin-C source logged (<strong>${escapeHtml(vitCPowerItems[0].name)}</strong>). Add a second berry or citrus serving.`;
       } else {
-        vitCBadgeText = `✅ HIGH VITAMIN C & ANTIOXIDANTS`;
-        vitCBadgeColor = '#10b981';
-        vitCBarColor = 'linear-gradient(90deg, #10b981, #34d399)';
-        vitCBody = `${vitCPowerItems.length} Vitamin-C &amp; polyphenol powerhouses logged (${escapeHtml(vitCPowerItems.map(x => x.name).slice(0, 3).join(', '))}), driving collagen cross-linking and post-training oxidative recovery.`;
+        vitStatusPill = 'High';
+        vitTone = 'is-ok';
+        vitCBody = `${vitCPowerItems.length} Vitamin-C sources logged (${escapeHtml(vitCPowerItems.map(x => x.name).slice(0, 3).join(', '))}).`;
       }
 
-      // 4. Refined Sugar, Glycemic Load & Gut Fiber
       const loggedSugar = Number(totals && (totals.sugar_g !== undefined ? totals.sugar_g : totals.sugar)) || 0;
       const sweetCarbRx = /flap\s*jack|brownie|snickers|sweet|chocolate|sugar|honey|syrup|jam|yogurt/i;
       const estSweetCarbs = allItems
         .filter(it => sweetCarbRx.test(it.name))
         .reduce((sum, it) => sum + Math.round(it.c * (/yogurt/i.test(it.name) ? 0.55 : 0.45)), 0);
       const effectiveSugar = loggedSugar > 0 ? Math.round(loggedSugar) : estSweetCarbs;
-      const sugarLabel = loggedSugar > 0 ? `${effectiveSugar}g logged` : `~${effectiveSugar}g est.`;
+      const sugarLabel = loggedSugar > 0 ? `${effectiveSugar}g` : `~${effectiveSugar}g est.`;
       const maxSingleCarbItem = allItems.reduce((best, it) => (!best || it.c > best.c ? it : best), null);
       const bigProcessedCarbHit = allItems.find(it => processedRx.test(it.name) && it.c >= 50) || (maxSingleCarbItem && maxSingleCarbItem.c >= 80 && processedRx.test(maxSingleCarbItem.name) ? maxSingleCarbItem : null);
-
       const fiberPct = Math.min(100, Math.round((fiber / 35) * 100));
-      let glyBadgeText, glyBadgeColor, glyBarColor, glyBody;
+
+      let fibStatusPill, fibTone, glyBody;
       if (bigProcessedCarbHit) {
-        glyBadgeText = fiber >= 30 ? `⚠️ HIGH-GI HIT • ${fiber}g FIBER` : `⚠️ HIGH GLYCEMIC SPIKE`;
-        glyBadgeColor = '#f59e0b';
-        glyBarColor = 'linear-gradient(90deg, #10b981, #f59e0b)';
-        glyBody = `Gut fiber is strong at <strong>${fiber}g</strong> (vs 30–40g target), but <strong>${escapeHtml(bigProcessedCarbHit.name)}</strong> delivers <strong>${bigProcessedCarbHit.c}g carbs</strong> in a single processed hit (sugar load ${sugarLabel}), driving a sharper insulin/glycemic spike.`;
+        fibStatusPill = fiber >= 30 ? 'High-GI' : 'Spike';
+        fibTone = 'is-warn';
+        glyBody = `Fiber is <strong>${fiber}g</strong>, but <strong>${escapeHtml(bigProcessedCarbHit.name)}</strong> packs <strong>${bigProcessedCarbHit.c}g carbs</strong> (sugar ${sugarLabel}).`;
       } else if (fiber >= 30) {
-        glyBadgeText = `✅ GUT FIBER ${fiber}g • STEADY GL`;
-        glyBadgeColor = '#10b981';
-        glyBarColor = 'linear-gradient(90deg, #10b981, #00e5ff)';
-        glyBody = `<strong>${fiber}g dietary fiber</strong> hits the 30–40g microbiome target while estimated sugar stays controlled (${sugarLabel}), blunting glycemic spikes.`;
+        fibStatusPill = 'Steady';
+        fibTone = 'is-ok';
+        glyBody = `<strong>${fiber}g fiber</strong> hits the 30–40g target with controlled sugar (${sugarLabel}).`;
       } else {
-        glyBadgeText = `⚠️ LOW FIBER (${fiber}g / 30g+)`;
-        glyBadgeColor = '#f59e0b';
-        glyBarColor = 'linear-gradient(90deg, #ef4444, #f59e0b)';
-        glyBody = `Only <strong>${fiber}g fiber</strong> logged so far (sugar ${sugarLabel}). Add oats, chia/flax, berries, or fibrous greens to hit 30–40g for gut motility and satiety.`;
+        fibStatusPill = 'Low';
+        fibTone = 'is-warn';
+        glyBody = `Only <strong>${fiber}g fiber</strong> logged (sugar ${sugarLabel}). Add oats, flax, berries, or greens toward 30g+.`;
       }
 
-      // Smart Food Additions & Swaps for Next Shop / Tomorrow
       const fatDeficit = Math.max(0, 75 - f);
-      const hasFatFreeYogurt = allItems.some(it => /fat free.*yogurt|0%.*yogurt|greek yogurt/i.test(it.name));
-      const hasSalad = allItems.some(it => /salad|tikka/i.test(it.name));
-      const hasOats = allItems.some(it => /oats/i.test(it.name));
       const flapjackItem = allItems.find(it => /flap\s*jack|brownie|protein bar/i.test(it.name));
-
-      const rec1 = fatDeficit > 0
-        ? `<strong>1. Fix the Fat &amp; Omega-3 Gap (+${fatDeficit}g Fat needed):</strong> ${hasFatFreeYogurt ? 'Swap <code>Fat Free Greek Yogurt</code> for <strong>5% Greek Yogurt</strong>, or add' : 'Add'} <strong>2–3 whole eggs / ½ avocado / Cold Milled Flaxseed &amp; Nuts / 1 tbsp extra-virgin olive oil</strong>${hasSalad ? ' to your Chicken Tikka Salad' : ''}, or have <strong>salmon/mackerel</strong> 2x/week for EPA/DHA joint recovery.`
-        : `<strong>1. Maintain Omega-3 Lipid Quality:</strong> Fat target is covered (<strong>${f}g</strong>). Prioritize wild <strong>salmon/mackerel</strong>, walnuts, and extra-virgin olive oil to keep inflammation low.`;
-
-      const rec2 = vitCPowerItems.length < 2
-        ? `<strong>2. Add a Vitamin C &amp; Berry/Citrus Hit for Tendon Collagen:</strong> Add <strong>80g blueberries/strawberries</strong> into your${hasOats ? ' morning <strong>Jumbo Oats</strong> or Greek Yogurt' : ' breakfast'}, or eat <strong>1 kiwi / 1 orange / sliced red bell peppers</strong> with lunch. This directly fuels tendon collagen repair after skipping &amp; kettlebells.`
-        : `<strong>2. Keep Micronutrient Variety High:</strong> Great Vitamin C &amp; polyphenol coverage today — rotate colourful berries, kiwi, and bell peppers to sustain tendon collagen turnover.`;
-
-      const rec3 = flapjackItem
-        ? `<strong>3. Upgrade the Flapjack / Bar Slot (${flapjackItem.c}g C in ${escapeHtml(flapjackItem.name)}):</strong> You got <strong>${Math.round(procProtein)}g</strong> protein (<strong>${procCalPct}%</strong> of calories) from ${processedItems.length} bars/powders today. Keep the <code>Whey Isolate</code> post-workout, but consider swapping <code>${escapeHtml(flapjackItem.name)} (${flapjackItem.cals} kcal, ${flapjackItem.c}g C)</code> for <strong>1 banana + 20g dark chocolate (85%) or 30g mixed nuts + cottage cheese/biltong</strong> to cut emulsifiers and sugar alcohols.`
-        : (processedItems.length >= 2
-          ? `<strong>3. Reduce Supplement &amp; Bar Reliance (${procCalPct}% kcal):</strong> Replace 1 processed bar/powder slot with <strong>cottage cheese, biltong, or whole eggs + fruit</strong> to boost micronutrients and lower emulsifier load.`
-          : `<strong>3. Whole-Food Density Locked In (${wholeCalPct}%):</strong> Minimal reliance on packaged bars today. Keep evening nutrition anchored on lean whole-food protein + fibrous veg.`);
+      const upg1 = fatDeficit > 0
+        ? `Add +${fatDeficit}g fat (whole eggs, flaxseed/nuts, ½ avocado, or olive oil) for hormone &amp; joint support.`
+        : `Fat target covered (${f}g) — keep favoring salmon, walnuts, and extra-virgin olive oil.`;
+      const upg2 = vitCPowerItems.length < 2
+        ? `Add 80g berries, 1 kiwi, or bell peppers for tendon Vitamin C &amp; collagen synthesis.`
+        : `Strong Vitamin C &amp; polyphenol diversity logged today.`;
+      const upg3 = flapjackItem
+        ? `Swap <code>${escapeHtml(flapjackItem.name)}</code> (${flapjackItem.c}g C) for banana + nuts or cottage cheese next time.`
+        : `Whole-food density locked in (${wholeCalPct}%) — keep dinner anchored on lean protein + veg.`;
 
       auditEl.innerHTML = `
-<div class="card" style="padding:14px; border-radius:14px; background:linear-gradient(165deg, rgba(12,18,30,0.96), rgba(8,12,20,0.98)); border:1px solid rgba(0,229,255,0.28); box-shadow:0 8px 24px rgba(0,0,0,0.35);">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-<div style="display:flex; align-items:center; gap:7px;">
-<span style="font-size:15px;">🧬</span>
-<strong style="color:#fff; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; font-weight:800;">NUTRITIONAL QUALITY &amp; MICRONUTRIENT AUDIT</strong>
-</div>
-<span style="font-size:10.5px; font-weight:800; color:var(--primary); background:rgba(0,229,255,0.12); border:1px solid rgba(0,229,255,0.35); padding:3px 9px; border-radius:999px; letter-spacing:0.02em;">
-              Today Whole-Food: ${wholeCalPct}% • Fat Floor: ${f}g/${safeFTarget}g
-</span>
-</div>
-
-          ${switcherHtml}
-
-<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px;">
-            
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">1. Healthy Fats &amp; Omega-3s</span>
-<span style="font-size:10px; font-weight:800; color:${fatBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${fatBadgeColor}55; padding:2px 7px; border-radius:6px;">${fatBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${Math.min(100, fatPct)}%; height:100%; background:${fatBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${fatBody}</div>
-</div>
-
-            
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">2. Whole Food vs. Bars</span>
-<span style="font-size:10px; font-weight:800; color:${procBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${procBadgeColor}55; padding:2px 7px; border-radius:6px;">${procBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${wholeCalPct}%; height:100%; background:${procBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${procBody}</div>
-</div>
-
-            
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">3. Vitamin C &amp; Tendon Repair</span>
-<span style="font-size:10px; font-weight:800; color:${vitCBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${vitCBadgeColor}55; padding:2px 7px; border-radius:6px;">${vitCBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${Math.max(10, vitCPct)}%; height:100%; background:${vitCBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${vitCBody}</div>
-</div>
-
-            
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:11px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="font-size:10.5px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">4. Fiber &amp; Glycemic Load</span>
-<span style="font-size:10px; font-weight:800; color:${glyBadgeColor}; background:rgba(255,255,255,0.05); border:1px solid ${glyBadgeColor}55; padding:2px 7px; border-radius:6px;">${glyBadgeText}</span>
-</div>
-<div style="height:5px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:7px;">
-<div style="width:${fiberPct}%; height:100%; background:${glyBarColor};"></div>
-</div>
-<div style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">${glyBody}</div>
-</div>
-</div>
-
-<div style="margin-top:12px; padding:11px 12px; border-radius:10px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2);">
-<div style="font-size:11px; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:7px;">
-              🛒 Smart Food Additions &amp; Swaps for Your Next Shop / Tomorrow
-</div>
-<div style="display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
-<div>${rec1}</div>
-<div>${rec2}</div>
-<div>${rec3}</div>
-</div>
-</div>
+<div class="fuel-audit-card">
+  <div class="fuel-audit-head">
+    <div class="fuel-audit-title"><span>🧬</span><span>Today's Quality Audit</span></div>
+    <span class="fuel-audit-range-badge">${escapeHtml(endLabel)} • ${wholeCalPct}% Whole</span>
+  </div>
+  ${switcherHtml}
+  <div class="fuel-scorecard-grid">
+    <div class="fuel-score-tile">
+      <div class="fuel-score-top">
+        <span class="fuel-score-lbl">Fat Floor</span>
+        <span class="fuel-score-pill ${fatTone}">${fatStatusPill}</span>
+      </div>
+      <div class="fuel-score-val">${f}g<span class="fuel-micro-target"> /${safeFTarget}g</span></div>
+      <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${fatTone}" style="width:${Math.min(100, fatPct)}%;"></div></div>
+      <div class="fuel-score-sub">${fatCalPct}% kcal • ${fatSources.length} lipid src</div>
+    </div>
+    <div class="fuel-score-tile">
+      <div class="fuel-score-top">
+        <span class="fuel-score-lbl">Whole Foods</span>
+        <span class="fuel-score-pill ${procTone}">${procStatusPill}</span>
+      </div>
+      <div class="fuel-score-val">${wholeCalPct}%</div>
+      <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${procTone}" style="width:${wholeCalPct}%;"></div></div>
+      <div class="fuel-score-sub">${processedItems.length} packaged (${procCals} kcal)</div>
+    </div>
+    <div class="fuel-score-tile">
+      <div class="fuel-score-top">
+        <span class="fuel-score-lbl">Vit C &amp; Tendon</span>
+        <span class="fuel-score-pill ${vitTone}">${vitStatusPill}</span>
+      </div>
+      <div class="fuel-score-val">${vitCPowerItems.length}<span class="fuel-micro-target"> /2 src</span></div>
+      <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${vitTone}" style="width:${Math.max(10, vitCPct)}%;"></div></div>
+      <div class="fuel-score-sub">Sugar ${sugarLabel}</div>
+    </div>
+    <div class="fuel-score-tile">
+      <div class="fuel-score-top">
+        <span class="fuel-score-lbl">Gut Fiber</span>
+        <span class="fuel-score-pill ${fibTone}">${fibStatusPill}</span>
+      </div>
+      <div class="fuel-score-val">${fiber}g<span class="fuel-micro-target"> /35g</span></div>
+      <div class="fuel-score-bar-track"><div class="fuel-score-bar-fill ${fibTone}" style="width:${fiberPct}%;"></div></div>
+      <div class="fuel-score-sub">${fiber >= 30 ? 'Target met' : `${Math.max(0, 30 - fiber)}g to 30g floor`}</div>
+    </div>
+  </div>
+  <div class="fuel-upgrade-box">
+    <div class="fuel-upgrade-title">🛒 Today's Smart Upgrades</div>
+    <div class="fuel-upgrade-list">
+      <div class="fuel-upgrade-row"><span class="fuel-upgrade-tag">Fat</span><span>${upg1}</span></div>
+      <div class="fuel-upgrade-row"><span class="fuel-upgrade-tag">Vit C</span><span>${upg2}</span></div>
+      <div class="fuel-upgrade-row"><span class="fuel-upgrade-tag">Swap</span><span>${upg3}</span></div>
+    </div>
+  </div>
+  <details class="fuel-accordion" data-details-key="fuel_audit_details">
+    <summary>
+      <span>📋 Detailed Pillar Notes (Today)</span>
+      <span class="accordion-chevron">▼</span>
+    </summary>
+    <div class="fuel-accordion-content" style="font-size:11.5px; color:var(--text-secondary); line-height:1.45;">
+      <div>${fatBody}</div>
+      <div>${procBody}</div>
+      <div>${vitCBody}</div>
+      <div>${glyBody}</div>
+    </div>
+  </details>
 </div>
       `;
     }
@@ -2071,6 +2273,9 @@
       const elMndWater = document.getElementById('mndWaterVal');
       if (elMndWater) elMndWater.innerText = `${myNetDiaryData.totals.water}L`;
 
+      const elMicroWater = document.getElementById('fuelMicroWaterVal');
+      if (elMicroWater) elMicroWater.innerText = `${Number(myNetDiaryData.totals.water || 0).toFixed(1)}L`;
+
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
 
@@ -2188,6 +2393,7 @@
       });
 
       if (opts && opts.fromBoot === true) {
+        updateDietStrategyCopy();
         return;
       }
 
@@ -2206,6 +2412,7 @@
 
       saveMndToLocalStorage();
       renderMyNetDiaryEngine();
+      updateDietStrategyCopy();
       if (typeof syncClientPreferencesToCloud === 'function') {
         syncClientPreferencesToCloud('diet_strategy');
       }
@@ -2515,10 +2722,52 @@
       });
     }
 
+    function _updateFuelTodayFlexBanner(flex) {
+      const banner = document.getElementById('fuelTodayFlexBanner');
+      if (!banner) return;
+      if (!flex) {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        return;
+      }
+      const status = String(flex.status || 'building');
+      const activeToday = flex.active_today || {};
+      const plan = flex.planned_bank || {};
+      const bonuses = flex.tier_bonuses || {};
+      const recMode = flex.recommended_mode;
+      const recBonus = recMode && bonuses[recMode] ? Number(bonuses[recMode]) : Number(flex.suggested_bonus_kcal || 0);
+
+      let html = '';
+      if (status === 'unlocked') {
+        const modeTitle = recMode === 'refeed_day'
+          ? 'Maintenance Refeed Ready'
+          : (recMode === 'planned_flex' ? 'Planned Flex Unlocked' : (recMode === 'flex_meal' ? 'Flex Meal Earned' : 'Flex Snack Earned'));
+        html = `<div class="fuel-today-flex-banner tone-unlocked" onclick="switchFuelView('plan')"><span>🎯 ${_escFlex(modeTitle)}${recBonus > 0 ? ` (+${recBonus} kcal)` : ''}</span><span class="fuel-today-flex-cta">Claim →</span></div>`;
+      } else if (status === 'claimed_today' || activeToday.active) {
+        const bonus = Number(activeToday.bonus_kcal || 0);
+        html = `<div class="fuel-today-flex-banner tone-claimed" onclick="switchFuelView('plan')"><span>⚡ Flex Active Today${bonus > 0 ? ` (+${bonus} kcal)` : ''}</span><span class="fuel-today-flex-cta">Manage →</span></div>`;
+      } else if (status === 'banking_in_progress' && plan.active) {
+        const lbl = _escFlex(plan.label || 'Event Bank');
+        const banked = Number(plan.actual_banked_kcal || 0);
+        const target = Number(plan.target_kcal || 0);
+        const trim = Number(plan.daily_deduction_today || 0);
+        html = `<div class="fuel-today-flex-banner tone-banking" onclick="switchFuelView('plan')"><span>📅 Banking -${trim} kcal • ${lbl} (${banked}/${target})</span><span class="fuel-today-flex-cta">View →</span></div>`;
+      }
+
+      if (html) {
+        banner.style.display = 'block';
+        banner.innerHTML = html;
+      } else {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+      }
+    }
+
     function renderFlexRefeedCard(summary) {
       const card = document.getElementById('flexRefeedCard');
-      if (!card) return;
       const flex = summary && summary.flex_refeed ? summary.flex_refeed : null;
+      _updateFuelTodayFlexBanner(flex);
+      if (!card) return;
       if (!flex) {
         card.innerHTML = `
           <div class="flex-refeed-card">
@@ -2655,7 +2904,7 @@
           ${chipsHtml ? `<div class="flex-streak-strip">${chipsHtml}</div>` : ''}
           <div class="flex-reason-copy">${_escFlex(flex.reason || '')}</div>
           ${ctaHtml}
-          <details class="flex-bank-drawer" data-details-key="fuel_flex_bank">
+          <details class="flex-bank-drawer" data-details-key="fuel_flex_bank"${plan.active ? ' open' : ''}>
             <summary>
               <span>${plan.active ? `📅 Banking for ${_escFlex(plan.label || 'Event')} (${_escFlex(plan.target_date)})` : '📅 Plan Weekend / Event Bank'}</span>
               <span class="accordion-chevron">▼</span>

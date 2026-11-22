@@ -1793,11 +1793,11 @@ async function runAllTests() {
       assert(/id="pulseAuthError"[^>]*var\(--crimson-text\)/.test(indexHtml));
 
       for (const s of SCRIPT_ORDER) {
-        assert(indexHtml.includes(`./${s}?v=6.4`), `index.html missing ./${s}?v=6.4`);
+        assert(indexHtml.includes(`./${s}?v=6.5`), `index.html missing ./${s}?v=6.5`);
       }
-      assert(indexHtml.includes('./css/styles.css?v=6.4'));
-      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.4'), 'index.html boot splash must display v6.4');
-      assert(indexHtml.includes('Hybrid Athlete OS • v6.4'), 'index.html Settings modal must display v6.4');
+      assert(indexHtml.includes('./css/styles.css?v=6.5'));
+      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.5'), 'index.html boot splash must display v6.5');
+      assert(indexHtml.includes('Hybrid Athlete OS • v6.5'), 'index.html Settings modal must display v6.5');
       assert.strictEqual(indexHtml.includes('Hybrid Athlete OS • v6.1'), false, 'index.html must not contain stale v6.1 label');
 
       const piiRegex = /190\.5|6'3"|45yo|97\.70|97\.75|80\.99|81\.03|81\.0|98\.4|99\.85|@[^\s"']+\.com|GARMIN_TOKENS(?!_JSON)|renpho_creds(?!\.json)/;
@@ -1963,7 +1963,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.4-20261121');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.5-20261122');
       assert(swJsCode.includes('Promise.resolve(self.clients.claim()).catch(() => {})'));
       assert(swJsCode.includes('.catch(() => {})'), 'cache.put() must have .catch()');
 
@@ -1992,7 +1992,7 @@ async function runAllTests() {
       }
       await navRespPromise;
       await flushMicrotasks();
-      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.4-20261121');
+      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.5-20261122');
       assert.strictEqual(cacheBucket.has('https://pulse.local/index.html'), true, '/?tab=fuel must cache under /index.html');
 
       // Top-level dismissBootSplash & forcePulseAppReload
@@ -2588,6 +2588,164 @@ async function runAllTests() {
 
       app.localStorage.clear();
       console.log('PASS [26] Earned Flex & Planned Banking UI, XSS, Scale Shield, Parity & Rollover');
+    }
+
+    // [27] Fuel Tab 3-Subview Consolidation, Action-First Macros, Multi-Metric Chart & Dynamic Strategy Copy
+    {
+      app.localStorage.clear();
+
+      // 1. Subview switcher isolation from Train subviews
+      const btnTrainHist = app.document.getElementById('btnTrainHistory');
+      const btnTrainPres = app.document.getElementById('btnTrainPrescribed');
+      btnTrainHist.classList.add('active');
+      btnTrainPres.classList.remove('active');
+
+      app.ctx.switchFuelView('trends');
+      assert.strictEqual(app.document.getElementById('btnFuelTrends').classList.contains('active'), true);
+      assert.strictEqual(app.document.getElementById('fuelViewTrends').classList.contains('active'), true);
+      assert.strictEqual(app.document.getElementById('fuelViewToday').classList.contains('active'), false);
+      assert.strictEqual(btnTrainHist.classList.contains('active'), true, 'switchFuelView must not alter .train-subview-nav buttons');
+
+      app.ctx.switchFuelView('plan');
+      assert.strictEqual(app.document.getElementById('btnFuelPlan').classList.contains('active'), true);
+      assert.strictEqual(app.document.getElementById('fuelViewPlan').classList.contains('active'), true);
+      assert.strictEqual(app.document.getElementById('fuelViewTrends').classList.contains('active'), false);
+
+      app.ctx.switchFuelView('today');
+      assert.strictEqual(app.document.getElementById('btnFuelToday').classList.contains('active'), true);
+      assert.strictEqual(app.document.getElementById('fuelViewToday').classList.contains('active'), true);
+
+      // 2. Action-first macro mode (remaining default <-> consumed toggle + persistence)
+      app.eval(`
+        fuelMacroDisplayMode = 'remaining';
+        window.BAKED_LIVE_STATE.date = '${todayIso}';
+        window.BAKED_LIVE_STATE.garmin = { active_calories: 0, today_activities: [] };
+        window.BAKED_LIVE_STATE.nutrition = { base_calorie_target: 2092, calorie_target: 2092, base_protein_target_g: 200, protein_target_g: 200 };
+        myNetDiaryData = {
+          date: '${todayIso}',
+          targets: { calories: 2092, protein: 200, carbs: 200, fat: 65 },
+          totals: { calories: 1450, protein: 145, carbs: 140, fat: 40, fiber: 28, sodium: 1650, water: 1.5 },
+          history: DEFAULT_MND_10D_HISTORY,
+          meals: {
+            breakfast: { name: 'Breakfast', time: '08:00', calories: 550, protein: 45, carbs: 60, fat: 15, items: [{ name: 'Jumbo Oats', cals: 300, p: 10, c: 54, f: 5 }] },
+            lunch: { name: 'Lunch', time: '13:00', calories: 900, protein: 100, carbs: 80, fat: 25, items: [{ name: 'Chicken Breast', cals: 400, p: 70, c: 0, f: 8 }] },
+            dinner: { name: 'Dinner', time: 'Pending', calories: 0, protein: 0, carbs: 0, fat: 0, items: [] },
+            snacks: { name: 'Snacks & Hydration', time: 'Pending', calories: 0, protein: 0, carbs: 0, fat: 0, items: [] }
+          }
+        };
+      `);
+      app.ctx.renderMyNetDiaryEngine();
+      assert.strictEqual(app.document.getElementById('macroProtein').innerText, '55g left');
+      assert.strictEqual(app.document.getElementById('fuelMicroWaterVal').innerText, '1.5L');
+      assert.strictEqual(app.document.getElementById('fuelMicroFiberVal').innerText, '28g');
+      assert.strictEqual(app.document.getElementById('fuelMicroSodiumVal').innerText, '1,650mg');
+
+      app.ctx.toggleFuelMacroDisplayMode();
+      assert.strictEqual(app.localStorage.getItem('pulse_fuel_macro_mode'), 'consumed');
+      assert.strictEqual(app.document.getElementById('macroProtein').innerText, '145g');
+      app.ctx.toggleFuelMacroDisplayMode();
+      assert.strictEqual(app.localStorage.getItem('pulse_fuel_macro_mode'), 'remaining');
+
+      app.eval('myNetDiaryData.totals.protein = 205;');
+      app.ctx.updateRunwayUI();
+      assert.strictEqual(app.document.getElementById('macroProtein').innerText, '✓ Met');
+
+      // Inline hydration update
+      app.setFetchHandler(async () => makeMockResponse({ success: true }, { status: 200 }));
+      await app.ctx.quickAddHydration(500);
+      assert.strictEqual(app.document.getElementById('fuelMicroWaterVal').innerText, '2.0L');
+
+      // 3. Conditional Today Flex Banner
+      const flexBanner = app.document.getElementById('fuelTodayFlexBanner');
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'unlocked',
+          recommended_mode: 'flex_meal',
+          tier_bonuses: { flex_meal: 550 },
+          streak: { clean_days_7d: 5, banked_7d_kcal: 1900, day_chips: [] },
+          active_today: { active: false },
+          planned_bank: { active: false }
+        }
+      });
+      assert.strictEqual(flexBanner.style.display, 'block');
+      assert(flexBanner.innerHTML.includes('Flex Meal Earned (+550 kcal)'));
+
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'banking_in_progress',
+          streak: { clean_days_7d: 3, banked_7d_kcal: 800, day_chips: [] },
+          active_today: { active: false },
+          planned_bank: { active: true, target_date: todayIso, target_kcal: 600, actual_banked_kcal: 240, daily_deduction_today: 120, days_remaining: 3, label: '<b>Night</b>' }
+        }
+      });
+      assert.strictEqual(flexBanner.style.display, 'block');
+      assert.strictEqual(flexBanner.innerHTML.includes('<b>Night</b>'), false);
+      assert(flexBanner.innerHTML.includes('&lt;b&gt;Night&lt;/b&gt;'));
+
+      app.ctx.renderFlexRefeedCard({
+        flex_refeed: {
+          date: todayIso,
+          status: 'building',
+          streak: { clean_days_7d: 1, banked_7d_kcal: 200, day_chips: [] },
+          active_today: { active: false },
+          planned_bank: { active: false }
+        }
+      });
+      assert.strictEqual(flexBanner.style.display, 'none');
+      assert.strictEqual(flexBanner.innerHTML, '');
+
+      // 4. Collapsed-by-default meals + open-slot persistence + Expand/Collapse All
+      const streamEl = app.document.getElementById('mndMealsStreamContainer');
+      app.eval('_openMealSlots.clear();');
+      app.ctx.renderMndMealStream();
+      assert.strictEqual(streamEl.children.length, 4);
+      assert.strictEqual(streamEl.children[0].classList.contains('is-open'), false, 'Logged breakfast must default collapsed');
+      assert(streamEl.children[0].innerHTML.includes('style="display:none;"'));
+
+      const firstHeader = streamEl.children[0].querySelector('.meal-card-header');
+      app.ctx.toggleMealAccordion(firstHeader);
+      assert.strictEqual(streamEl.children[0].classList.contains('is-open'), true);
+      app.ctx.renderMndMealStream();
+      assert.strictEqual(streamEl.children[0].classList.contains('is-open'), true, 'Open meal slot must persist across re-renders');
+
+      app.ctx.toggleAllMealAccordions();
+      assert.strictEqual(streamEl.children[1].classList.contains('is-open'), true, 'Expand All must open all logged meals');
+      assert.strictEqual(app.document.getElementById('btnToggleAllMeals').innerText, 'Collapse All');
+      app.ctx.toggleAllMealAccordions();
+      assert.strictEqual(streamEl.children[0].classList.contains('is-open'), false, 'Collapse All must collapse logged meals');
+      assert.strictEqual(app.document.getElementById('btnToggleAllMeals').innerText, 'Expand All');
+
+      // 5. Interactive multi-metric chart, comparison table, 2x2 scorecard & clean copy
+      app.eval(`
+        window.nutritionAuditWindowMode = '10d';
+        window.BAKED_LIVE_STATE.date = '2026-11-16';
+        myNetDiaryData.history = {
+          days: [
+            { date: '2026-11-12', calories: 2100, protein: 190, carbs: 200, fat: 72, fiber: 35, items: [{ name: 'Cold Milled Flaxseed/Almonds', cals: 150, p: 5, c: 3, f: 13 }] },
+            { date: '2026-11-15', calories: 2200, protein: 195, carbs: 215, fat: 74, fiber: 36, items: [{ name: 'Walnuts & Flaxseed Mix', cals: 160, p: 4, c: 3, f: 14 }] },
+            { date: '2026-11-16', calories: 2150, protein: 195, carbs: 210, fat: 64, fiber: 34, items: [{ name: 'Jumbo Oats', cals: 300, p: 10, c: 54, f: 5 }] }
+          ]
+        };
+      `);
+      app.ctx.setNutritionChartMetric('protein');
+      app.ctx.selectNutritionChartDay('2026-11-12');
+      const auditHtml = app.document.getElementById('nutritionQualityAuditCard').innerHTML;
+      assert(auditHtml.includes('fuel-compare-table'), 'Trends view must render comparison table');
+      assert(auditHtml.includes('fuel-scorecard-grid'), 'Trends view must render 2x2 KPI scorecard');
+      assert(auditHtml.includes('Anchor 200g'), 'Protein metric chart must render Anchor target line');
+      assert(auditHtml.includes('Nov 12:'), 'Selected day inspector must reflect Nov 12');
+      assert(auditHtml.includes('(Nov 12, 15)'), 'Detailed notes drawer must preserve flax dates');
+      assert.strictEqual(auditHtml.includes('Nov 8'), false, 'Audit copy must not contain hardcoded Nov 8');
+
+      // 6. Dynamic strategy copy & badge sync
+      app.ctx.selectDietStrategy('lowcarb');
+      assert.strictEqual(app.document.getElementById('dietStrategyBadge').innerText, 'LOW CARB');
+      assert.strictEqual(app.document.getElementById('dietLowCarbCarbs').innerText, '75g');
+
+      app.localStorage.clear();
+      console.log('PASS [27] Fuel Tab 3-Subview Consolidation, Action-First Macros, Multi-Metric Chart & Dynamic Strategy Copy');
     }
   } finally {
     app.cleanupTimers();
