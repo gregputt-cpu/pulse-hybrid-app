@@ -305,7 +305,10 @@
         const toneCls = sb.tone === 'red' ? 'tone-red' : 'tone-amber';
         const reasons = Array.isArray(sb.reasons) ? sb.reasons : [];
         const ctaHtml = ep
-          ? `<button type="button" class="autonomic-tap-btn ${ep.state === 'ACUTE_EPISODE' ? 'is-acute' : 'is-recovery'}" onclick="openAutonomicModal('capture')">⏱ Open Episode Recovery Tracker</button>`
+          ? `
+            <button type="button" class="autonomic-tap-btn ${ep.state === 'ACUTE_EPISODE' ? 'is-acute' : 'is-recovery'}" onclick="openAutonomicModal('capture')">⏱ Open Episode Tracker</button>
+            <button type="button" class="autonomic-tap-btn is-calm" onclick="endEpisodeNow('${_esc(ep.id)}')">⏹ End Episode Now</button>
+          `
           : `<button type="button" class="autonomic-tap-btn is-acute" onclick="startAcuteEpisodeNow()">⚡ Log Funny Turn Now (1-Tap)</button>`;
         safetyEl.style.display = 'block';
         safetyEl.innerHTML = `
@@ -465,19 +468,19 @@
       const actionButtons = isAcute
         ? `
           <button type="button" class="autonomic-tap-btn is-recovery" onclick="updateActiveEpisode('mark_acute_end')">
-            ✓ Acute Peak Subsided (Start Recovery Check)
+            ⏸ Acute Peak Ended (Start Recovery Timer)
           </button>
-          <button type="button" class="autonomic-tap-btn is-outline" onclick="updateActiveEpisode('confirm_resolved_override')">
-            ✓ Episode Fully Cleared Now
+          <button type="button" class="autonomic-tap-btn is-calm" onclick="updateActiveEpisode('confirm_resolved_override')">
+            ⏹ End &amp; Close Episode Now
           </button>
         `
         : `
           ${!userDone
-            ? `<button type="button" class="autonomic-tap-btn is-calm" onclick="updateActiveEpisode('mark_user_recovered')">✓ I Feel Back to Normal Now</button>`
-            : `<button type="button" class="autonomic-tap-btn is-calm" disabled>✓ You Marked Feeling Normal (${_esc(_formatClockUk(ep.user_recovered_at))})</button>`}
-          ${!bioDone
-            ? `<button type="button" class="autonomic-tap-btn is-outline" onclick="updateActiveEpisode('confirm_resolved_override')">Garmin Offline / Stale — Mark Fully Resolved</button>`
-            : ''}
+            ? `<button type="button" class="autonomic-tap-btn is-recovery" onclick="updateActiveEpisode('mark_user_recovered')">✓ I Feel Normal (Wait for Garmin Stress ≤25)</button>`
+            : `<div class="autonomic-safety-copy" style="width:100%;">✓ Marked normal (${_esc(_formatClockUk(ep.user_recovered_at))}) — waiting for Garmin stress ≤25, or close immediately below:</div>`}
+          <button type="button" class="autonomic-tap-btn is-calm" onclick="updateActiveEpisode('confirm_resolved_override')">
+            ⏹ End &amp; Close Episode Now
+          </button>
         `;
 
       container.innerHTML = `
@@ -500,7 +503,7 @@
             </div>
           </div>
 
-          <div class="autonomic-safety-actions" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+          <div class="autonomic-safety-actions is-stacked" style="margin-top:10px;">
             ${actionButtons}
           </div>
         </div>
@@ -556,8 +559,9 @@
           <textarea id="epDraftNotesInput" class="autonomic-input" rows="2" placeholder="What happened right before, posture, food, warning aura..." oninput="setActiveDraftNotes(this.value)">${_esc(_draftNotes)}</textarea>
         </div>
 
-        <div style="margin-top:10px; display:flex; gap:8px;">
-          <button type="button" class="autonomic-tap-btn is-calm" style="flex:2;" onclick="saveActiveEpisodeDetails()">✓ Save Symptoms &amp; Notes</button>
+        <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+          <button type="button" class="autonomic-tap-btn is-calm" onclick="saveActiveEpisodeDetails()">✓ Save Symptoms &amp; Notes</button>
+          <button type="button" class="autonomic-tap-btn is-danger-ghost" onclick="deleteLoggedEpisode('${_esc(ep.id)}')">🗑️ Delete / Discard This Episode</button>
         </div>
       `;
       return;
@@ -567,6 +571,7 @@
     const illnessNote = ill.active_today
       ? '<div class="autonomic-safety-copy" style="margin-top:6px;">🤒 Active illness will automatically link to any logged episode today.</div>'
       : '';
+    const recentEps = (Array.isArray(auto.recent_episodes) ? auto.recent_episodes : []).slice(0, 5);
 
     container.innerHTML = `
       <div class="autonomic-risk-card risk-low" style="text-align:left;">
@@ -647,6 +652,31 @@
               <textarea id="bdNotes" class="autonomic-input" rows="2" placeholder="Context, warning signs, posture..."></textarea>
             </div>
             <button type="button" class="autonomic-tap-btn is-calm" onclick="submitBackdatedEpisode()">✓ Save Past Episode &amp; Attach ±60m Garmin Data</button>
+          </div>
+        </div>
+      ` : ''}
+
+      ${recentEps.length ? `
+        <div style="margin-top:14px;">
+          <label class="autonomic-label">Recent Logged Episodes (${recentEps.length})</label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${recentEps.map((rEp) => `
+              <div class="autonomic-episode-card">
+                <div class="autonomic-episode-head">
+                  <div>
+                    <strong style="font-size:13px; color:var(--text);">${_esc(_formatClockUk(rEp.onset_time))}</strong>
+                    <div style="font-size:11px; color:var(--text-secondary);">
+                      ${_esc(rEp.state)} • ${_esc(String(rEp.severity || 'moderate').toUpperCase())}
+                      ${rEp.total_recovery_duration_mins != null ? ` • ${rEp.total_recovery_duration_mins}m` : ''}
+                    </div>
+                  </div>
+                  <div class="autonomic-ep-actions">
+                    ${rEp.state !== 'RESOLVED' ? `<button type="button" class="autonomic-mini-btn is-calm" onclick="endEpisodeNow('${_esc(rEp.id)}')">⏹ End Now</button>` : ''}
+                    <button type="button" class="autonomic-mini-btn is-danger" onclick="deleteLoggedEpisode('${_esc(rEp.id)}')">🗑️ Delete</button>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
       ` : ''}
@@ -877,7 +907,10 @@
                       ${ep.illness_active ? ' • 🤒 Sick' : ''}
                     </div>
                   </div>
-                  <button type="button" class="autonomic-chip" style="min-height:36px; padding:4px 8px; flex:0;" onclick="deleteLoggedEpisode('${_esc(ep.id)}')" title="Delete Episode">🗑️</button>
+                  <div class="autonomic-ep-actions">
+                    ${ep.state !== 'RESOLVED' ? `<button type="button" class="autonomic-mini-btn is-calm" onclick="endEpisodeNow('${_esc(ep.id)}')">⏹ End Now</button>` : ''}
+                    <button type="button" class="autonomic-mini-btn is-danger" onclick="deleteLoggedEpisode('${_esc(ep.id)}')">🗑️ Delete</button>
+                  </div>
                 </div>
                 <div class="autonomic-tag-list" style="margin-top:6px;">
                   ${(ep.symptoms || []).map((s) => `<span class="autonomic-tag">${_esc(s.replace(/_/g, ' '))}</span>`).join('')}
@@ -1137,8 +1170,45 @@
     });
     if (action === 'confirm_resolved_override') {
       _draftSyncedEpId = null;
-      if (typeof showToast === 'function') showToast('✓ Episode marked fully resolved');
+      _stopTimer();
+      if (typeof showToast === 'function') showToast('✓ Episode ended & resolved');
+    } else if (action === 'mark_acute_end') {
+      if (typeof showToast === 'function') showToast('✓ Acute peak marked ended — recovery timer active');
+    } else if (action === 'mark_user_recovered') {
+      if (typeof showToast === 'function') showToast('✓ Feeling normal logged — tap End & Close Episode Now to finish immediately');
     }
+  }
+
+  async function endEpisodeNow(epId) {
+    const auto = getAutonomicSummary();
+    const targetId = epId || (auto.active_episode && auto.active_episode.id);
+    if (!targetId) return;
+    const nowIso = _localIsoNow();
+    const payload = {
+      id: targetId,
+      action: 'confirm_resolved_override',
+      timestamp: nowIso
+    };
+    await _postWithOfflineFallback('/api/health/episodes/update', payload, (cur) => {
+      if (cur.active_episode && cur.active_episode.id === targetId) {
+        cur.active_episode = null;
+        cur.system_state = (cur.level1 && cur.level1.active) || (cur.level2 && cur.level2.active) ? 'VULNERABILITY_ALERT' : 'IDLE';
+        cur.safety_banner.active = cur.system_state === 'VULNERABILITY_ALERT';
+      }
+      cur.recent_episodes = (cur.recent_episodes || []).map((r) => {
+        if (r.id !== targetId) return r;
+        return {
+          ...r,
+          acute_peak_end_time: r.acute_peak_end_time || nowIso,
+          user_recovered_at: r.user_recovered_at || nowIso,
+          full_recovery_time: nowIso,
+          state: 'RESOLVED'
+        };
+      });
+    });
+    _draftSyncedEpId = null;
+    _stopTimer();
+    if (typeof showToast === 'function') showToast('✓ Episode ended & resolved');
   }
 
   function saveActiveEpisodeDetails() {
@@ -1233,9 +1303,17 @@
     if (!epId) return;
     await _postWithOfflineFallback('/api/health/episodes/delete', { id: epId }, (cur) => {
       cur.recent_episodes = (cur.recent_episodes || []).filter((e) => e.id !== epId);
-      if (cur.active_episode && cur.active_episode.id === epId) cur.active_episode = null;
+      if (cur.active_episode && cur.active_episode.id === epId) {
+        cur.active_episode = null;
+        cur.system_state = (cur.level1 && cur.level1.active) || (cur.level2 && cur.level2.active) ? 'VULNERABILITY_ALERT' : 'IDLE';
+        if (cur.safety_banner) {
+          cur.safety_banner.active = cur.system_state === 'VULNERABILITY_ALERT';
+        }
+      }
     });
-    if (typeof showToast === 'function') showToast('Episode deleted');
+    _draftSyncedEpId = null;
+    _stopTimer();
+    if (typeof showToast === 'function') showToast('🗑️ Episode deleted');
   }
 
   async function dismissAutonomicSpike(spikeTsMs) {
@@ -1475,6 +1553,7 @@
     window.closeAutonomicModal = closeAutonomicModal;
     window.switchAutonomicView = switchAutonomicView;
     window.startAcuteEpisodeNow = startAcuteEpisodeNow;
+    window.endEpisodeNow = endEpisodeNow;
     window.updateActiveEpisode = updateActiveEpisode;
     window.saveActiveEpisodeDetails = saveActiveEpisodeDetails;
     window.toggleEpisodeDraftSymptom = toggleEpisodeDraftSymptom;

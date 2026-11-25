@@ -391,6 +391,10 @@ async function runTests() {
       const afterCapture = app.ctx.getAutonomicSummary();
       assert.strictEqual(afterCapture.system_state, 'ACUTE_EPISODE');
       assert(afterCapture.active_episode && afterCapture.active_episode.id.startsWith('ep_'));
+      const capHtml = app.document.getElementById('autonomicViewCapture').innerHTML;
+      assert(capHtml.includes('End &amp; Close Episode Now'), 'Active capture view must expose End & Close Episode Now button');
+      assert(capHtml.includes('Delete / Discard This Episode'), 'Active capture view must expose Delete / Discard button');
+      assert(app.document.getElementById('autonomicSafetyBanner').innerHTML.includes('End Episode Now'), 'Today banner must expose 1-tap End Episode Now button');
       const queuedRaw = JSON.parse(app.localStorage.getItem('pulse_offline_write_queue') || '[]');
       assert.strictEqual(queuedRaw.length, 1, 'Offline 1-tap capture must queue POST /api/health/episodes');
       assert.strictEqual(queuedRaw[0].endpoint, '/api/health/episodes');
@@ -404,10 +408,19 @@ async function runTests() {
 
       const afterResolve = app.ctx.getAutonomicSummary();
       assert.strictEqual(afterResolve.active_episode, null, 'Override resolution must close active episode');
+      const idleCapHtml = app.document.getElementById('autonomicViewCapture').innerHTML;
+      assert(idleCapHtml.includes('Delete'), 'Idle capture view must list recent episodes with Delete button');
       const queuedAfter = JSON.parse(app.localStorage.getItem('pulse_offline_write_queue') || '[]');
       assert.strictEqual(queuedAfter.length, 2, 'Resolution update must queue sequentially after creation');
       assert.strictEqual(queuedAfter[1].endpoint, '/api/health/episodes/update');
-      console.log('PASS [3] 1-Tap Offline Episode Capture, Sequential Offline Queueing & Resolution Override');
+
+      // Delete the logged episode offline & verify removal
+      await app.ctx.deleteLoggedEpisode(afterCapture.active_episode.id);
+      assert.strictEqual(app.ctx.getAutonomicSummary().recent_episodes.length, 0, 'Deleting episode must remove it from recent_episodes');
+      const queuedAfterDel = JSON.parse(app.localStorage.getItem('pulse_offline_write_queue') || '[]');
+      assert.strictEqual(queuedAfterDel.length, 3);
+      assert.strictEqual(queuedAfterDel[2].endpoint, '/api/health/episodes/delete');
+      console.log('PASS [3] 1-Tap Offline Episode Capture, End Now, Delete & Sequential Offline Queueing');
     }
 
     // [4] Illness Recovery Mode: Workout Verdict Rest / Return Ramp, Fuel Maintenance & 48h Scale Shield

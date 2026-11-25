@@ -4554,7 +4554,17 @@ body.workout-focus-mode .rest-bar-box.rest-active {
 
 .autonomic-safety-actions > button {
   min-height: 48px;
-  flex: 1 1 140px;
+  flex: 1 1 auto;
+}
+
+.autonomic-safety-actions.is-stacked {
+  flex-direction: column;
+  width: 100%;
+}
+
+.autonomic-safety-actions.is-stacked > button {
+  width: 100%;
+  flex: 0 0 auto;
 }
 
 .autonomic-spike-banner {
@@ -5033,6 +5043,48 @@ body.workout-focus-mode .rest-bar-box.rest-active {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-color: var(--primary);
+}
+
+.autonomic-tap-btn.is-danger-ghost {
+  min-height: 48px;
+  background: transparent;
+  border-color: var(--autonomic-red-border);
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-ep-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.autonomic-mini-btn {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-bright);
+  background: var(--autonomic-chip-bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.autonomic-mini-btn.is-danger {
+  border-color: var(--autonomic-red-border);
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-mini-btn.is-calm {
+  background: var(--autonomic-calm-bg);
+  border-color: var(--autonomic-calm-border);
+  color: var(--autonomic-calm-text);
 }
 
 @media (prefers-reduced-motion: reduce) {

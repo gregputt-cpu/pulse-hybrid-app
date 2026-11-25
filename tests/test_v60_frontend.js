@@ -1005,7 +1005,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.6-20261125');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.7-20261125');
 
       // Run install event
       const installPromises = [];
@@ -1027,20 +1027,20 @@ async function runAllTests() {
       await Promise.all(activatePromises);
       assert.strictEqual(clientsClaimCalled, true);
 
-      const cacheMap = swCaches._stores.get('pulse-hybrid-v6.6-20261125');
+      const cacheMap = swCaches._stores.get('pulse-hybrid-v6.7-20261125');
       assert(cacheMap, 'Cache bucket must exist after install');
       for (const asset of [
-        '/js/workout-catalog.js?v=6.6',
-        '/js/workout-verdict.js?v=6.6',
-        '/js/workout-player.js?v=6.6',
-        '/js/workout-timers.js?v=6.6',
-        '/js/diagnostics.js?v=6.6',
-        '/js/autonomic-tracker.js?v=6.6'
+        '/js/workout-catalog.js?v=6.7',
+        '/js/workout-verdict.js?v=6.7',
+        '/js/workout-player.js?v=6.7',
+        '/js/workout-timers.js?v=6.7',
+        '/js/diagnostics.js?v=6.7',
+        '/js/autonomic-tracker.js?v=6.7'
       ]) {
         assert(cacheMap.has(`https://pulse.local${asset}`), `STATIC_ASSETS missing ${asset}`);
       }
 
-      // Cache-First check for /js/state.js?v=6.6
+      // Cache-First check for /js/state.js?v=6.7
       let swNetworkHits = 0;
       swFetchImpl = async () => {
         swNetworkHits++;
@@ -1049,12 +1049,12 @@ async function runAllTests() {
       let respondedPromise = null;
       for (const fn of swListeners.get('fetch') || []) {
         fn({
-          request: { method: 'GET', url: 'https://pulse.local/js/state.js?v=6.6', mode: 'no-cors' },
+          request: { method: 'GET', url: 'https://pulse.local/js/state.js?v=6.7', mode: 'no-cors' },
           respondWith: (p) => { respondedPromise = p; }
         });
       }
       await respondedPromise;
-      assert.strictEqual(swNetworkHits, 0, 'Cached /js/state.js?v=6.6 must be served Cache-First without network hit');
+      assert.strictEqual(swNetworkHits, 0, 'Cached /js/state.js?v=6.7 must be served Cache-First without network hit');
 
       // /api/preferences/state must NOT be cached, while /api/analytics/summary MUST be cached
       swFetchImpl = async () => makeMockResponse({ ok: true }, { status: 200 });
@@ -1089,7 +1089,7 @@ async function runAllTests() {
       }
       await Promise.all(msgPromises);
       assert.strictEqual(cacheMap.has('https://pulse.local/api/analytics/summary'), false, 'PULSE_PURGE_API_CACHE must delete /api/analytics/summary');
-      assert.strictEqual(cacheMap.has('https://pulse.local/js/state.js?v=6.6'), true, 'PULSE_PURGE_API_CACHE must preserve /js/state.js?v=6.6');
+      assert.strictEqual(cacheMap.has('https://pulse.local/js/state.js?v=6.7'), true, 'PULSE_PURGE_API_CACHE must preserve /js/state.js?v=6.7');
 
       // Back in app context: verify logoutPulseSession()
       app.localStorage.setItem('pulse_cached_live_state', '{"a":1}');
