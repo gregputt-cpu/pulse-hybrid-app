@@ -194,6 +194,11 @@
 
     // TAB MANAGEMENT
     function switchTab(key) {
+      if (key === 'timer') {
+        switchTab('train');
+        if (typeof switchTrainView === 'function') switchTrainView('timer');
+        return;
+      }
       if (key !== 'train') _exitWorkoutFocusMode();
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -210,6 +215,9 @@
             updateArchetypeStarBadge(computeTodayWorkoutVerdict().archetypeKey);
           }
         } catch(e) {}
+      }
+      if (key === 'health' && typeof renderAutonomicUi === 'function') {
+        try { renderAutonomicUi(); } catch(e) {}
       }
     }
 

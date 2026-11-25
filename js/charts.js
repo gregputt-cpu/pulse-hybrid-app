@@ -415,7 +415,7 @@ function renderHistoryList() {
 
   const histTabBtn = document.getElementById('btnTrainHistory');
   if (histTabBtn) {
-    histTabBtn.innerText = `Completed Log & Benefits (${activities.length})`;
+    histTabBtn.innerText = `History (${activities.length})`;
   }
 
   const esc = (typeof escapeHtml === 'function' ? escapeHtml : (v => String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))));

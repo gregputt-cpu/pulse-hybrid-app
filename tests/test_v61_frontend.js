@@ -425,10 +425,10 @@ function createAppHarness(opts = {}) {
   const bodyCardEl = createMockElement('div', '', elementsById);
   bodyCardEl.classList.add('card');
 
-  const tabPanels = ['tab-today', 'tab-train', 'tab-timer', 'tab-fuel', 'tab-body']
+  const tabPanels = ['tab-today', 'tab-train', 'tab-health', 'tab-fuel', 'tab-body']
     .map((id) => elementsById.get(id))
     .filter(Boolean);
-  const navBtns = ['nav-today', 'nav-train', 'nav-timer', 'nav-fuel', 'nav-body']
+  const navBtns = ['nav-today', 'nav-train', 'nav-health', 'nav-fuel', 'nav-body']
     .map((id) => elementsById.get(id))
     .filter(Boolean);
   const goalOptionCards = ['opt_recomp', 'opt_lean_cut', 'opt_surplus', 'opt_custom']
@@ -1794,11 +1794,11 @@ async function runAllTests() {
       assert(/id="pulseAuthError"[^>]*var\(--crimson-text\)/.test(indexHtml));
 
       for (const s of SCRIPT_ORDER) {
-        assert(indexHtml.includes(`./${s}?v=6.7`), `index.html missing ./${s}?v=6.7`);
+        assert(indexHtml.includes(`./${s}?v=6.8`), `index.html missing ./${s}?v=6.8`);
       }
-      assert(indexHtml.includes('./css/styles.css?v=6.7'));
-      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.7'), 'index.html boot splash must display v6.7');
-      assert(indexHtml.includes('Hybrid Athlete OS • v6.7'), 'index.html Settings modal must display v6.7');
+      assert(indexHtml.includes('./css/styles.css?v=6.8'));
+      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.8'), 'index.html boot splash must display v6.8');
+      assert(indexHtml.includes('Hybrid Athlete OS • v6.8'), 'index.html Settings modal must display v6.8');
       assert.strictEqual(indexHtml.includes('Hybrid Athlete OS • v6.1'), false, 'index.html must not contain stale v6.1 label');
 
       const piiRegex = /190\.5|6'3"|45yo|97\.70|97\.75|80\.99|81\.03|81\.0|98\.4|99\.85|@[^\s"']+\.com|GARMIN_TOKENS(?!_JSON)|renpho_creds(?!\.json)/;
@@ -1877,7 +1877,7 @@ async function runAllTests() {
       app.ctx.renderHistoryList();
       const histBox = app.document.getElementById('trainViewHistory');
       const histHtml = histBox.children.map((c) => c.innerHTML).join('\n');
-      assert.strictEqual(app.document.getElementById('btnTrainHistory').innerText, 'Completed Log & Benefits (2)');
+      assert.strictEqual(app.document.getElementById('btnTrainHistory').innerText, 'History (2)');
       assert.strictEqual(histHtml.includes('<script>xss</script>'), false);
       assert(histHtml.includes('&lt;script&gt;xss&lt;/script&gt;'));
       assert(histHtml.includes('142') && histHtml.includes('168') && histHtml.includes('35 min'));
@@ -1964,7 +1964,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.7-20261125');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.8-20261125');
       assert(swJsCode.includes('Promise.resolve(self.clients.claim()).catch(() => {})'));
       assert(swJsCode.includes('.catch(() => {})'), 'cache.put() must have .catch()');
 
@@ -1993,7 +1993,7 @@ async function runAllTests() {
       }
       await navRespPromise;
       await flushMicrotasks();
-      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.7-20261125');
+      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.8-20261125');
       assert.strictEqual(cacheBucket.has('https://pulse.local/index.html'), true, '/?tab=fuel must cache under /index.html');
 
       // Top-level dismissBootSplash & forcePulseAppReload

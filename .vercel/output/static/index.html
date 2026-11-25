@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PULSE • Hybrid Athlete OS</title>
-  <link rel="manifest" href="/manifest.json?v=6.7">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.7">
-  <link rel="apple-touch-icon" href="/icon-192.png?v=6.7">
+  <link rel="manifest" href="/manifest.json?v=6.8">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.8">
+  <link rel="apple-touch-icon" href="/icon-192.png?v=6.8">
   <meta name="theme-color" content="#06080e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css?v=6.7">
+  <link rel="stylesheet" href="./css/styles.css?v=6.8">
 </head>
 <body>
 
@@ -45,7 +45,7 @@
       </svg>
     </div>
     <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; letter-spacing:0.22em; color:#fff; margin-top:16px; text-shadow:0 0 18px rgba(0,229,255,0.45);">PULSE</div>
-    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.7</div>
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.8</div>
   </div>
 
   <div class="app-screen">
@@ -119,7 +119,6 @@
         <div id="autonomicSafetyBanner" style="display:none;"></div>
         <div id="autonomicSpikeBanner" style="display:none;"></div>
         <div id="illnessStatusBannerToday" style="display:none;"></div>
-        <div id="autonomicQuickBar" class="autonomic-quick-strip"></div>
 
         <!-- HERO SECTION: CENTERED WHOOP / APPLE READINESS RING -->
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 12px 0 8px;">
@@ -338,13 +337,16 @@
       <!-- ==================== TAB 2: WORKOUT PLAYER & COMPLETED WORKOUTS LOG ==================== -->
       <main id="tab-train" class="tab-panel">
         
-        <!-- SUBVIEW SWITCHER: PRESCRIBED VS COMPLETED HISTORY -->
+        <!-- SUBVIEW SWITCHER: PRESCRIBED VS TIMER VS COMPLETED HISTORY -->
         <div class="train-subview-nav">
           <button class="btn-subview active" id="btnTrainPrescribed" onclick="switchTrainView('prescribed')">
-            Prescribed Session
+            Prescribed
+          </button>
+          <button class="btn-subview" id="btnTrainTimer" onclick="switchTrainView('timer')">
+            ⏱ Timer
           </button>
           <button class="btn-subview" id="btnTrainHistory" onclick="switchTrainView('history')">
-            Completed Log & Benefits (8)
+            History (8)
           </button>
         </div>
 
@@ -476,55 +478,74 @@
           </button>
         </div>
         <div id="weeklyPatternBalance" style="display:none; margin-bottom:10px;"></div>
+        <div id="trainViewTimer" style="display:none; flex-direction:column; gap:10px;">
+
+          <div class="timer-mode-selector">
+            <button class="btn-mode active" id="tmSkip" onclick="setTimerMode('skip')">
+              Speed Rope<br><span style="font-size:11.5px;color:var(--text-muted);">45s on / 15s off</span>
+            </button>
+            <button class="btn-mode" id="tmAmrap" onclick="setTimerMode('amrap')">
+              10m AMRAP<br><span style="font-size:11.5px;color:var(--text-muted);">Max Rounds</span>
+            </button>
+            <button class="btn-mode" id="tmStop" onclick="setTimerMode('stopwatch')">
+              Stopwatch<br><span style="font-size:11.5px;color:var(--text-muted);">Continuous</span>
+            </button>
+          </div>
+
+          <div class="timer-display-box">
+            <div class="timer-phase-tag" id="timerPhase">🟢 WORK INTERVAL 1 OF 6</div>
+            <div class="big-timer-digits" id="bigTimerDigits">00:45</div>
+            <div style="font-size:13px; color:var(--text-muted);" id="timerSubLabel">Stay light on balls of feet • Fast wrist rotation</div>
+          </div>
+
+          <div class="rounds-counter-row">
+            <span style="font-size:13px;font-weight:800;color:var(--text-muted);">INTERVAL ROUNDS:</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button class="btn-round-step" onclick="stepRound(-1)">−</button>
+              <span style="font-size:14px;font-weight:900;color:var(--lime);" id="roundsDisplay">0 Rounds Done</span>
+              <button class="btn-round-step" onclick="stepRound(1)">+</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+            <button class="btn-action-primary timer-paused" id="btnTimerToggle" onclick="toggleTimer()">
+              <span id="timerPlayIcon">▶</span> <span id="timerPlayText">START</span>
+            </button>
+            <button class="btn-action-primary" style="background:var(--surface-elevated); border:1px solid var(--border-bright); color:#fff;" onclick="resetTimer()">
+              <span>↺</span> RESET
+            </button>
+          </div>
+
+          <button class="btn-action-primary" style="background:var(--cyan);color:#000;" onclick="logTimerSession()">
+            <span>✓</span> LOG CONDITIONING SESSION
+          </button>
+
+        </div>
+
         <div id="trainViewHistory" class="history-scroll-box" style="display:none;">
           <!-- Dynamically populated from Garmin activities -->
         </div>
 
       </main>
 
-      <!-- ==================== TAB 3: TIMER (SKIPPING & WORK CAPACITY ENGINE) ==================== -->
-      <main id="tab-timer" class="tab-panel">
-        
-        <div class="timer-mode-selector">
-          <button class="btn-mode active" id="tmSkip" onclick="setTimerMode('skip')">
-            Speed Rope<br><span style="font-size:11.5px;color:var(--text-muted);">45s on / 15s off</span>
-          </button>
-          <button class="btn-mode" id="tmAmrap" onclick="setTimerMode('amrap')">
-            10m AMRAP<br><span style="font-size:11.5px;color:var(--text-muted);">Max Rounds</span>
-          </button>
-          <button class="btn-mode" id="tmStop" onclick="setTimerMode('stopwatch')">
-            Stopwatch<br><span style="font-size:11.5px;color:var(--text-muted);">Continuous</span>
-          </button>
+      <!-- ==================== TAB 3: HEALTH (AUTONOMIC EPISODE & ILLNESS TRACKER) ==================== -->
+      <main id="tab-health" class="tab-panel">
+        <div class="health-tab-header">
+          <strong class="health-tab-title">🛡️ Health &amp; Autonomic Tracker</strong>
+          <div class="health-tab-subtitle">Non-diagnostic funny turn log, prodromal telemetry &amp; sick-day protection</div>
         </div>
 
-        <div class="timer-display-box">
-          <div class="timer-phase-tag" id="timerPhase">🟢 WORK INTERVAL 1 OF 6</div>
-          <div class="big-timer-digits" id="bigTimerDigits">00:45</div>
-          <div style="font-size:13px; color:var(--text-muted);" id="timerSubLabel">Stay light on balls of feet • Fast wrist rotation</div>
+        <div class="autonomic-subview-nav">
+          <button type="button" class="btn-subview active" id="btnAutonomicView_capture" onclick="switchAutonomicView('capture')">Capture</button>
+          <button type="button" class="btn-subview" id="btnAutonomicView_illness" onclick="switchAutonomicView('illness')">Illness</button>
+          <button type="button" class="btn-subview" id="btnAutonomicView_patterns" onclick="switchAutonomicView('patterns')">Patterns</button>
+          <button type="button" class="btn-subview" id="btnAutonomicView_export" onclick="switchAutonomicView('export')">Export</button>
         </div>
 
-        <div class="rounds-counter-row">
-          <span style="font-size:13px;font-weight:800;color:var(--text-muted);">INTERVAL ROUNDS:</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <button class="btn-round-step" onclick="stepRound(-1)">−</button>
-            <span style="font-size:14px;font-weight:900;color:var(--lime);" id="roundsDisplay">0 Rounds Done</span>
-            <button class="btn-round-step" onclick="stepRound(1)">+</button>
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-          <button class="btn-action-primary timer-paused" id="btnTimerToggle" onclick="toggleTimer()">
-            <span id="timerPlayIcon">▶</span> <span id="timerPlayText">START</span>
-          </button>
-          <button class="btn-action-primary" style="background:var(--surface-elevated); border:1px solid var(--border-bright); color:#fff;" onclick="resetTimer()">
-            <span>↺</span> RESET
-          </button>
-        </div>
-
-        <button class="btn-action-primary" style="background:var(--cyan);color:#000;" onclick="logTimerSession()">
-          <span>✓</span> LOG CONDITIONING SESSION
-        </button>
-
+        <div id="autonomicViewCapture" class="autonomic-subview active"></div>
+        <div id="autonomicViewIllness" class="autonomic-subview"></div>
+        <div id="autonomicViewPatterns" class="autonomic-subview"></div>
+        <div id="autonomicViewExport" class="autonomic-subview"></div>
       </main>
 
       <!-- ==================== TAB 4: FUEL & ADAPTIVE NUTRITION ENGINE ==================== -->
@@ -1136,9 +1157,10 @@
         <span>Workout</span>
       </button>
 
-      <button class="nav-btn" id="nav-timer" onclick="switchTab('timer')">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        <span>Timer</span>
+      <button class="nav-btn" id="nav-health" onclick="switchTab('health')">
+        <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        <span class="nav-health-dot" id="navHealthDot" style="display:none;"></span>
+        <span>Health</span>
       </button>
 
       <button class="nav-btn" id="nav-fuel" onclick="switchTab('fuel')">
@@ -1338,7 +1360,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div>
             <strong style="font-size:15px; font-weight:800; color:#fff;">PULSE Settings</strong>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.7</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.8</div>
           </div>
           <span class="btn-modal-close" onclick="closeQuickSettingsModal()" style="cursor:pointer; font-size:18px; color:var(--text-muted); padding:2px 6px;">✕</span>
         </div>
@@ -2258,31 +2280,6 @@
       </div>
     </div>
 
-    <!-- AUTONOMIC EPISODE ("FUNNY TURNS") & ILLNESS RECOVERY MODAL -->
-    <div class="modal-overlay" id="autonomicModal" onclick="if(event.target === this) closeAutonomicModal()">
-      <div class="modal-card autonomic-modal-card" style="max-width:460px; max-height:90vh; overflow-y:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-          <div>
-            <strong style="font-size:15px; color:var(--text);">🛡️ Autonomic &amp; Illness Tracker</strong>
-            <div style="font-size:11.5px; color:var(--text-secondary);">Non-diagnostic episode log, prodromal telemetry &amp; sick-day protection</div>
-          </div>
-          <button type="button" class="autonomic-chip" style="min-height:44px; min-width:44px; flex:0; justify-content:center; padding:6px 10px;" onclick="closeAutonomicModal()" aria-label="Close">✕</button>
-        </div>
-
-        <div class="autonomic-subview-nav">
-          <button type="button" class="btn-subview active" id="btnAutonomicView_capture" onclick="switchAutonomicView('capture')">Capture</button>
-          <button type="button" class="btn-subview" id="btnAutonomicView_illness" onclick="switchAutonomicView('illness')">Illness</button>
-          <button type="button" class="btn-subview" id="btnAutonomicView_patterns" onclick="switchAutonomicView('patterns')">Patterns</button>
-          <button type="button" class="btn-subview" id="btnAutonomicView_export" onclick="switchAutonomicView('export')">Export</button>
-        </div>
-
-        <div id="autonomicViewCapture" class="autonomic-subview active"></div>
-        <div id="autonomicViewIllness" class="autonomic-subview"></div>
-        <div id="autonomicViewPatterns" class="autonomic-subview"></div>
-        <div id="autonomicViewExport" class="autonomic-subview"></div>
-      </div>
-    </div>
-
     <!-- SESSION SUMMARY / PR CELEBRATION MODAL -->
     <div class="modal-overlay" id="sessionSummaryModal" onclick="if(event.target===this) closeSessionSummaryModal()">
       <div class="modal-card" id="sessionSummaryCard" style="max-width:360px;"></div>
@@ -2302,15 +2299,15 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=6.7"></script>
-  <script src="./js/workout-catalog.js?v=6.7"></script>
-  <script src="./js/workout-verdict.js?v=6.7"></script>
-  <script src="./js/workout-player.js?v=6.7"></script>
-  <script src="./js/workout-timers.js?v=6.7"></script>
-  <script src="./js/charts.js?v=6.7"></script>
-  <script src="./js/fuel-engine.js?v=6.7"></script>
-  <script src="./js/telemetry.js?v=6.7"></script>
-  <script src="./js/diagnostics.js?v=6.7"></script>
-  <script src="./js/autonomic-tracker.js?v=6.7"></script>
+  <script src="./js/state.js?v=6.8"></script>
+  <script src="./js/workout-catalog.js?v=6.8"></script>
+  <script src="./js/workout-verdict.js?v=6.8"></script>
+  <script src="./js/workout-player.js?v=6.8"></script>
+  <script src="./js/workout-timers.js?v=6.8"></script>
+  <script src="./js/charts.js?v=6.8"></script>
+  <script src="./js/fuel-engine.js?v=6.8"></script>
+  <script src="./js/telemetry.js?v=6.8"></script>
+  <script src="./js/diagnostics.js?v=6.8"></script>
+  <script src="./js/autonomic-tracker.js?v=6.8"></script>
 </body>
 </html>

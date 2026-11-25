@@ -237,10 +237,10 @@
   function _ensureTimerRunning() {
     const auto = getAutonomicSummary();
     const ep = auto.active_episode;
-    const modal = typeof document !== 'undefined' ? document.getElementById('autonomicModal') : null;
-    const modalOpen = Boolean(modal && modal.classList && modal.classList.contains('open'));
+    const healthTab = typeof document !== 'undefined' ? document.getElementById('tab-health') : null;
+    const healthOpen = Boolean(healthTab && healthTab.classList && healthTab.classList.contains('active'));
     if (ep && (ep.state === 'ACUTE_EPISODE' || ep.state === 'POST_EPISODE_RECOVERY')) {
-      if (!_timerHandle && (modalOpen || ep.state === 'ACUTE_EPISODE')) {
+      if (!_timerHandle && (healthOpen || ep.state === 'ACUTE_EPISODE')) {
         _timerHandle = setInterval(() => {
           const curAuto = getAutonomicSummary();
           const curEp = curAuto.active_episode;
@@ -262,31 +262,51 @@
   function renderHeaderPill(auto) {
     const dot = document.getElementById('autonomicPillDot');
     const txt = document.getElementById('autonomicPillText');
-    if (!dot || !txt) return;
+    const navDot = document.getElementById('navHealthDot');
 
     const ep = auto.active_episode;
     const ill = auto.illness || {};
     const lvl = Number(auto.alert_level || 0);
 
-    dot.className = 'pill-dot';
+    let stateColor = 'teal';
+    let label = 'Calm';
+    let showNavDot = false;
+
     if (ep && ep.state === 'ACUTE_EPISODE') {
-      dot.classList.add('red');
-      txt.innerText = 'Turn Active';
+      stateColor = 'red';
+      label = 'Turn Active';
+      showNavDot = true;
     } else if (ep && ep.state === 'POST_EPISODE_RECOVERY') {
-      dot.classList.add('amber');
-      txt.innerText = 'Recovering';
+      stateColor = 'amber';
+      label = 'Recovering';
+      showNavDot = true;
     } else if (lvl >= 2) {
-      dot.classList.add('red');
-      txt.innerText = 'Level 2 Alert';
+      stateColor = 'red';
+      label = 'Level 2 Alert';
+      showNavDot = true;
     } else if (lvl === 1) {
-      dot.classList.add('amber');
-      txt.innerText = 'Level 1 Alert';
+      stateColor = 'amber';
+      label = 'Level 1 Alert';
+      showNavDot = true;
     } else if (ill.active_today) {
-      dot.classList.add('violet');
-      txt.innerText = 'Sick Mode';
-    } else {
-      dot.classList.add('teal');
-      txt.innerText = 'Calm';
+      stateColor = 'violet';
+      label = 'Sick Mode';
+      showNavDot = true;
+    }
+
+    if (dot && txt) {
+      dot.className = 'pill-dot';
+      dot.classList.add(stateColor);
+      txt.innerText = label;
+    }
+    if (navDot) {
+      navDot.className = 'nav-health-dot';
+      if (showNavDot) {
+        navDot.classList.add(stateColor);
+        navDot.style.display = 'block';
+      } else {
+        navDot.style.display = 'none';
+      }
     }
   }
 
@@ -294,7 +314,6 @@
     const safetyEl = document.getElementById('autonomicSafetyBanner');
     const spikeEl = document.getElementById('autonomicSpikeBanner');
     const illEl = document.getElementById('illnessStatusBannerToday');
-    const quickEl = document.getElementById('autonomicQuickBar');
 
     const sb = auto.safety_banner || {};
     const ep = auto.active_episode;
@@ -387,24 +406,6 @@
         illEl.style.display = 'none';
         illEl.innerHTML = '';
       }
-    }
-
-    if (quickEl) {
-      const epActive = Boolean(ep && (ep.state === 'ACUTE_EPISODE' || ep.state === 'POST_EPISODE_RECOVERY'));
-      const leftLabel = epActive
-        ? (ep.state === 'ACUTE_EPISODE' ? `Turn Active (${_formatElapsed(ep.onset_time)})` : 'Recovery Check-In')
-        : 'Log Funny Turn';
-      const rightLabel = ill.active_today ? `Sick Mode (Day ${Math.max(1, Number(ill.current_streak_days || 1))})` : 'Log Sick Day';
-      quickEl.innerHTML = `
-        <button type="button" class="autonomic-quick-btn ${epActive ? 'is-acute' : ''}" onclick="openAutonomicModal('capture')">
-          <span>${epActive ? '⏱' : '⚡'}</span>
-          <span id="autonomicQuickEpisodeLabel">${_esc(leftLabel)}</span>
-        </button>
-        <button type="button" class="autonomic-quick-btn ${ill.active_today ? 'is-illness' : ''}" onclick="openAutonomicModal('illness')">
-          <span>🤒</span>
-          <span>${_esc(rightLabel)}</span>
-        </button>
-      `;
     }
   }
 
@@ -1007,16 +1008,23 @@
   }
 
   function openAutonomicModal(viewKey) {
-    const modal = document.getElementById('autonomicModal');
-    if (modal && modal.classList) modal.classList.add('open');
+    if (typeof switchTab === 'function') {
+      switchTab('health');
+    } else {
+      const tab = document.getElementById('tab-health');
+      const nav = document.getElementById('nav-health');
+      document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+      if (tab && tab.classList) tab.classList.add('active');
+      if (nav && nav.classList) nav.classList.add('active');
+    }
     if (viewKey) switchAutonomicView(viewKey);
     else renderAutonomicUi();
     if (typeof pulseHaptic === 'function') pulseHaptic(20);
   }
 
   function closeAutonomicModal() {
-    const modal = document.getElementById('autonomicModal');
-    if (modal && modal.classList) modal.classList.remove('open');
+    if (typeof switchTab === 'function') switchTab('today');
     _ensureTimerRunning();
   }
 
@@ -1550,6 +1558,7 @@
     window.getAutonomicSummary = getAutonomicSummary;
     window.renderAutonomicUi = renderAutonomicUi;
     window.openAutonomicModal = openAutonomicModal;
+    window.openHealthTab = openAutonomicModal;
     window.closeAutonomicModal = closeAutonomicModal;
     window.switchAutonomicView = switchAutonomicView;
     window.startAcuteEpisodeNow = startAcuteEpisodeNow;

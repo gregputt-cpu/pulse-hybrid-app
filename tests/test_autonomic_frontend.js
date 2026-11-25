@@ -302,11 +302,17 @@ async function runTests() {
       const autoCss = stylesCss.slice(autoCssIdx);
       assert.strictEqual(hexRx.test(autoCss), false, 'Autonomic CSS rules must contain 0 hardcoded hex colors');
 
-      const modalStart = indexHtml.indexOf('<!-- AUTONOMIC EPISODE ("FUNNY TURNS") & ILLNESS RECOVERY MODAL -->');
-      const modalEnd = indexHtml.indexOf('<!-- SESSION SUMMARY / PR CELEBRATION MODAL -->');
-      assert(modalStart > 0 && modalEnd > modalStart, 'Expected #autonomicModal in index.html');
-      const modalHtml = indexHtml.slice(modalStart, modalEnd);
-      assert.strictEqual(hexRx.test(modalHtml), false, '#autonomicModal HTML must contain 0 hardcoded hex colors');
+      const healthStart = indexHtml.indexOf('<!-- ==================== TAB 3: HEALTH (AUTONOMIC EPISODE & ILLNESS TRACKER) ==================== -->');
+      const healthEnd = indexHtml.indexOf('<!-- ==================== TAB 4: FUEL');
+      assert(healthStart > 0 && healthEnd > healthStart, 'Expected #tab-health panel in index.html');
+      const healthHtml = indexHtml.slice(healthStart, healthEnd);
+      assert.strictEqual(hexRx.test(healthHtml), false, '#tab-health HTML must contain 0 hardcoded hex colors');
+      assert.strictEqual(indexHtml.includes('id="autonomicModal"'), false, 'Legacy #autonomicModal overlay must be removed');
+      assert.strictEqual(indexHtml.includes('id="autonomicQuickBar"'), false, 'Legacy Today #autonomicQuickBar must be removed');
+      assert.strictEqual(indexHtml.includes('id="tab-timer"'), false, 'Legacy #tab-timer panel must be removed');
+      assert.strictEqual(indexHtml.includes('id="nav-timer"'), false, 'Legacy #nav-timer button must be removed');
+      assert(indexHtml.includes('id="tab-health"') && indexHtml.includes('id="nav-health"'), 'Expected #tab-health and #nav-health in index.html');
+      assert(indexHtml.includes('id="trainViewTimer"') && indexHtml.includes('id="btnTrainTimer"'), 'Expected #trainViewTimer inside #tab-train');
       assert.strictEqual(indexHtml.includes('var(--text-dim)'), false, 'index.html must not reference var(--text-dim)');
 
       // AAA Contrast >= 7.0:1 for all 4 semantic foreground/background token pairs
@@ -365,7 +371,10 @@ async function runTests() {
       const dotEl = app.document.getElementById('autonomicPillDot');
       assert(dotEl.classList.contains('red'), 'Header dot must be red on Level 2 alert');
       assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'Level 2 Alert');
-      console.log('PASS [2] Level 1/2 Driving & Solo Exertion Safety Banners, Spike Prompt & Header Pill');
+      const navDotEl = app.document.getElementById('navHealthDot');
+      assert(navDotEl.classList.contains('red'), 'Center Health nav dot must be red on Level 2 alert');
+      assert.strictEqual(navDotEl.style.display, 'block', 'Center Health nav dot must be visible on Level 2 alert');
+      console.log('PASS [2] Level 1/2 Driving & Solo Exertion Safety Banners, Spike Prompt, Header Pill & Nav Dot');
     }
 
     // [3] 1-Tap Offline Episode Capture -> Queued Sync -> Resolution Override
@@ -528,7 +537,69 @@ async function runTests() {
       console.log('PASS [5] Clinical Print/PDF Report XSS Escaping & Clinician Sections');
     }
 
-    console.log('ALL 5 AUTONOMIC & ILLNESS FRONTEND SUITES PASSED');
+    // [6] Option A Navigation: Health Center Tab, Sick Nav Dot & Workout Timer Subview Redirect
+    {
+      app.localStorage.clear();
+      app.ctx.renderAutonomicUi({
+        autonomic: {
+          system_state: 'IDLE',
+          alert_level: 0,
+          safety_banner: { active: false, level: 0, tone: 'calm', reasons: [] },
+          acute_spike: null,
+          active_episode: null,
+          illness: { active_today: false, current_streak_days: 0, recent_logs: [] },
+          patterns: { prodromal_risk: { score: 0, level: 'low', drivers: [] } },
+          recent_episodes: []
+        }
+      });
+      assert.strictEqual(app.document.getElementById('navHealthDot').style.display, 'none', 'Calm state must hide navHealthDot');
+      assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'Calm');
+
+      app.ctx.renderAutonomicUi({
+        autonomic: {
+          system_state: 'IDLE',
+          alert_level: 0,
+          safety_banner: { active: false, level: 0, tone: 'calm', reasons: [] },
+          acute_spike: null,
+          active_episode: null,
+          illness: { active_today: true, current_streak_days: 2, recent_logs: [] },
+          patterns: { prodromal_risk: { score: 25, level: 'low', drivers: [] } },
+          recent_episodes: []
+        }
+      });
+      const sickNavDot = app.document.getElementById('navHealthDot');
+      assert(sickNavDot.classList.contains('violet'), 'Sick Mode must turn navHealthDot violet');
+      assert.strictEqual(sickNavDot.style.display, 'block', 'Sick Mode must show navHealthDot');
+
+      app.ctx.openAutonomicModal('illness');
+      assert(app.document.getElementById('tab-health').classList.contains('active'), 'openAutonomicModal must activate #tab-health');
+      assert(app.document.getElementById('nav-health').classList.contains('active'), 'openAutonomicModal must activate #nav-health');
+      assert(app.document.getElementById('btnAutonomicView_illness').classList.contains('active'), 'Illness subview button must be active');
+      assert(app.document.getElementById('autonomicViewIllness').classList.contains('active'), 'Illness subview panel must be active');
+
+      app.ctx.openHealthTab('patterns');
+      assert(app.document.getElementById('tab-health').classList.contains('active'));
+      assert(app.document.getElementById('btnAutonomicView_patterns').classList.contains('active'));
+      assert(app.document.getElementById('autonomicViewPatterns').classList.contains('active'));
+
+      app.ctx.switchTab('timer');
+      assert(app.document.getElementById('tab-train').classList.contains('active'), 'Legacy switchTab(timer) must route to #tab-train');
+      assert(app.document.getElementById('nav-train').classList.contains('active'), 'Legacy switchTab(timer) must activate #nav-train');
+      assert(app.document.getElementById('btnTrainTimer').classList.contains('active'), 'Legacy switchTab(timer) must activate #btnTrainTimer');
+      assert.strictEqual(app.document.getElementById('trainViewTimer').style.display, 'flex', 'Legacy switchTab(timer) must show #trainViewTimer');
+      assert.strictEqual(app.document.getElementById('trainViewPrescribed').style.display, 'none');
+
+      app.ctx.switchTrainView('prescribed');
+      assert.strictEqual(app.document.getElementById('trainViewTimer').style.display, 'none', 'Switching to prescribed must hide #trainViewTimer');
+      assert.strictEqual(app.document.getElementById('trainViewPrescribed').style.display, 'flex');
+
+      app.ctx.switchTrainView('history');
+      assert.strictEqual(app.document.getElementById('trainViewTimer').style.display, 'none', 'Switching to history must hide #trainViewTimer');
+      assert.strictEqual(app.document.getElementById('trainViewHistory').style.display, 'flex');
+      console.log('PASS [6] Option A Health Center Tab, Sick Nav Dot & Workout Timer Subview Redirect');
+    }
+
+    console.log('ALL 6 AUTONOMIC & ILLNESS FRONTEND SUITES PASSED');
   } finally {
     app.cleanup();
   }

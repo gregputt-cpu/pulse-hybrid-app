@@ -1018,7 +1018,7 @@ function generateWorkoutFromGearAndGoal() {
     }
     window.renderWeeklyPatternBalance = renderWeeklyPatternBalance;
 
-    // WORKOUT TAB SUBVIEW SWITCHER (Prescribed vs Completed History)
+    // WORKOUT TAB SUBVIEW SWITCHER (Prescribed vs Conditioning Timer vs Completed History)
     function switchTrainView(viewKey) {
       currentTrainView = viewKey;
       if (viewKey !== 'prescribed' && typeof _exitWorkoutFocusMode === 'function') {
@@ -1026,29 +1026,38 @@ function generateWorkoutFromGearAndGoal() {
       }
       document.querySelectorAll('.train-subview-nav .btn-subview').forEach(b => b.classList.remove('active'));
       const balEl = document.getElementById('weeklyPatternBalance');
+      const bp = document.getElementById('btnTrainPrescribed');
+      const bt = document.getElementById('btnTrainTimer');
+      const bh = document.getElementById('btnTrainHistory');
+      const vp = document.getElementById('trainViewPrescribed');
+      const vt = document.getElementById('trainViewTimer');
+      const vh = document.getElementById('trainViewHistory');
+      const tb = document.getElementById('trainHistoryToolbar');
+
       if (viewKey === 'prescribed') {
-        const bp = document.getElementById('btnTrainPrescribed');
         if (bp) bp.classList.add('active');
-        const vp = document.getElementById('trainViewPrescribed');
         if (vp) vp.style.display = 'flex';
-        const vh = document.getElementById('trainViewHistory');
+        if (vt) vt.style.display = 'none';
         if (vh) vh.style.display = 'none';
         if (balEl) balEl.style.display = 'none';
-        const tb = document.getElementById('trainHistoryToolbar');
         if (tb) tb.style.display = 'none';
         renderCurrentExercise();
-      } else {
-        const bh = document.getElementById('btnTrainHistory');
-        if (bh) bh.classList.add('active');
-        const vp = document.getElementById('trainViewPrescribed');
+      } else if (viewKey === 'timer') {
+        if (bt) bt.classList.add('active');
         if (vp) vp.style.display = 'none';
-        const vh = document.getElementById('trainViewHistory');
+        if (vt) vt.style.display = 'flex';
+        if (vh) vh.style.display = 'none';
+        if (balEl) balEl.style.display = 'none';
+        if (tb) tb.style.display = 'none';
+      } else {
+        if (bh) bh.classList.add('active');
+        if (vp) vp.style.display = 'none';
+        if (vt) vt.style.display = 'none';
         if (vh) vh.style.display = 'flex';
         if (balEl) {
           balEl.style.display = 'block';
           renderWeeklyPatternBalance();
         }
-        const tb = document.getElementById('trainHistoryToolbar');
         if (tb) tb.style.display = 'flex';
         renderHistoryList();
       }

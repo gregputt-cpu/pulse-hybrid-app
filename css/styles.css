@@ -5100,6 +5100,62 @@ body.workout-focus-mode .rest-bar-box.rest-active {
   }
 }
 
+.nav-btn {
+  position: relative;
+}
+
+.nav-health-dot {
+  position: absolute;
+  top: 8px;
+  right: calc(50% - 17px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.nav-health-dot.red {
+  background: var(--autonomic-red-border);
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.75);
+}
+
+.nav-health-dot.amber {
+  background: var(--autonomic-amber-border);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.65);
+}
+
+.nav-health-dot.violet {
+  background: var(--illness-border);
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.65);
+}
+
+#tab-health {
+  gap: 10px;
+}
+
+.health-tab-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.health-tab-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.health-tab-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 @media (max-width: 380px) {
   .autonomic-quick-strip,
   .autonomic-chip-grid,
@@ -5115,5 +5171,11 @@ body.workout-focus-mode .rest-bar-box.rest-active {
   .autonomic-subview-nav .btn-subview {
     font-size: 12px;
     padding: 0 6px;
+  }
+
+  .train-subview-nav .btn-subview {
+    font-size: 11.5px;
+    padding: 0 6px;
+    white-space: nowrap;
   }
 }

@@ -3711,14 +3711,14 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
         const urlParams = new URLSearchParams(window.location.search);
         const tabParam = urlParams.get('tab');
         const kbParam = urlParams.get('kb');
-        if (tabParam && ['today', 'train', 'timer', 'fuel', 'body'].includes(tabParam)) {
+        if (tabParam && ['today', 'train', 'timer', 'health', 'fuel', 'body'].includes(tabParam)) {
           switchTab(tabParam);
           if (tabParam === 'train' && kbParam && ['flow_2h', 'flow_1h', 'grinds'].includes(kbParam) && typeof setKbSubMode === 'function') {
             setKbSubMode(kbParam);
           }
         } else if (window.location.hash) {
           const tabKey = window.location.hash.replace('#', '');
-          if (['today', 'train', 'timer', 'fuel', 'body'].includes(tabKey)) {
+          if (['today', 'train', 'timer', 'health', 'fuel', 'body'].includes(tabKey)) {
             switchTab(tabKey);
           }
         }
