@@ -19,7 +19,8 @@ const SCRIPT_ORDER = [
   'js/charts.js',
   'js/fuel-engine.js',
   'js/telemetry.js',
-  'js/diagnostics.js'
+  'js/diagnostics.js',
+  'js/autonomic-tracker.js'
 ];
 
 const indexHtml = fs.readFileSync(INDEX_HTML_PATH, 'utf8');

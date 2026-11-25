@@ -6,6 +6,10 @@ from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import db
+try:
+    import autonomic_service
+except Exception:
+    autonomic_service = None
 import time_utils
 from time_utils import UK_TZ, uk_now, uk_today_str
 
@@ -213,6 +217,18 @@ def compute_adaptive_tdee(
         today_str = today_date.isoformat()
 
     win_start = today_date - timedelta(days=14)
+    excluded_dates: set = set()
+    if autonomic_service is not None:
+        try:
+            ill_info = autonomic_service.compute_illness_status(today_str)
+            for ds in ill_info.get("excluded_tdee_dates") or []:
+                try:
+                    excluded_dates.add(datetime.strptime(str(ds)[:10], "%Y-%m-%d").date())
+                except ValueError:
+                    pass
+        except Exception:
+            excluded_dates = set()
+
     daily_weight_lists: Dict[date, List[float]] = {}
     for row in renpho_rows or []:
         if not isinstance(row, dict):
@@ -224,7 +240,7 @@ def compute_adaptive_tdee(
         if dt is None:
             continue
         d = dt.date()
-        if win_start <= d <= today_date:
+        if win_start <= d <= today_date and d not in excluded_dates:
             daily_weight_lists.setdefault(d, []).append(w)
 
     daily_weights: Dict[date, float] = {
@@ -271,7 +287,7 @@ def compute_adaptive_tdee(
     valid_fuel = sorted(
         (d, cals)
         for d, cals in fuel_by_date.items()
-        if min_fuel_date <= d <= max_fuel_date
+        if min_fuel_date <= d <= max_fuel_date and d not in excluded_dates
     )[-14:]
     fuel_days_count = len(valid_fuel)
 
@@ -283,6 +299,7 @@ def compute_adaptive_tdee(
         "fuel_days_required": 5,
         "span_days": span_days,
         "span_days_required": 6,
+        "illness_days_excluded": len(excluded_dates),
         "estimated_tdee": None,
         "avg_intake_kcal": None,
         "weight_trend_kg_per_week": None,
@@ -316,6 +333,7 @@ def compute_adaptive_tdee(
         "fuel_days_required": 5,
         "span_days": span_days,
         "span_days_required": 6,
+        "illness_days_excluded": len(excluded_dates),
         "estimated_tdee": estimated_tdee,
         "avg_intake_kcal": avg_intake_kcal,
         "weight_trend_kg_per_week": round(slope * 7.0, 2),
@@ -571,12 +589,20 @@ def build_analytics_summary(state: Dict[str, Any]) -> Dict[str, Any]:
         now_uk=now_uk,
     )
 
+    autonomic_summary: Optional[Dict[str, Any]] = None
+    if autonomic_service is not None:
+        try:
+            autonomic_summary = autonomic_service.build_autonomic_summary(safe_state, today_str)
+        except Exception:
+            autonomic_summary = None
+
     return {
         "adaptive_tdee": adaptive_tdee,
         "overreaching": overreaching,
         "sync_freshness": compute_sync_freshness(safe_state, now_uk=now_uk),
         "strength_prs": strength_prs,
         "flex_refeed": flex_refeed,
+        "autonomic": autonomic_summary,
     }
 
 
@@ -659,6 +685,14 @@ def recalculate_nutrition(
     nutrition["fat_target_g"] = targets["fat_target_g"]
 
     target_date_str = str(date_str or uk_today_str())[:10]
+    illness_status = None
+    if autonomic_service is not None:
+        try:
+            illness_status = autonomic_service.compute_illness_status(target_date_str)
+        except Exception:
+            illness_status = None
+    illness_active = bool(illness_status and illness_status.get("active_today"))
+
     flex_delta = compute_active_flex_delta(
         state,
         target_date_str=target_date_str,
@@ -667,13 +701,34 @@ def recalculate_nutrition(
         carbs_g=targets["carbs_target_g"],
         fat_g=targets["fat_target_g"],
     )
-    if flex_delta is not None:
+    if illness_active:
+        # Pause Planned Bank deductions during illness while honoring any maintenance goal shift
+        if flex_delta is not None and flex_delta.get("type") == "bank_deduction":
+            flex_delta = None
+        nut_tdee = _finite_float(nutrition.get("tdee"))
+        maint_base = int(round(nut_tdee)) if (nut_tdee is not None and nut_tdee >= 1400) else (base_cals + 400)
+        maint_cals = max(targets["calorie_target"], maint_base + active_cals)
+        extra_kcal = max(0, maint_cals - nutrition["calorie_target"])
+        nutrition["calorie_target"] = maint_cals
+        nutrition["carbs_target_g"] = max(20, targets["carbs_target_g"] + int(round((extra_kcal * 0.60) / 4.0)))
+        nutrition["fat_target_g"] = max(20, targets["fat_target_g"] + int(round((extra_kcal * 0.40) / 9.0)))
+        nutrition["flex_active"] = flex_delta
+        nutrition["illness_active"] = True
+        nutrition["illness_severity"] = (illness_status.get("today_log") or {}).get("severity", "moderate")
+        nutrition["illness_maintenance_kcal"] = maint_cals
+    elif flex_delta is not None:
         nutrition["calorie_target"] = max(1200, targets["calorie_target"] + int(flex_delta["adjustment_kcal"]))
         nutrition["carbs_target_g"] = max(20, targets["carbs_target_g"] + int(flex_delta["carb_delta_g"]))
         nutrition["fat_target_g"] = max(20, targets["fat_target_g"] + int(flex_delta["fat_delta_g"]))
         nutrition["flex_active"] = flex_delta
+        nutrition["illness_active"] = False
+        nutrition.pop("illness_severity", None)
+        nutrition.pop("illness_maintenance_kcal", None)
     else:
         nutrition["flex_active"] = None
+        nutrition["illness_active"] = False
+        nutrition.pop("illness_severity", None)
+        nutrition.pop("illness_maintenance_kcal", None)
 
     def _logged_for_date(ml: Any) -> Optional[Dict[str, Any]]:
         if not isinstance(ml, dict) or not ml:
@@ -1321,6 +1376,21 @@ def compute_flex_refeed_status(
 
     banked_7d_kcal = int(round(max(0.0, banked_7d_sum)))
     active_today_claim, cooldown, scale_shield = _evaluate_flex_cooldowns(history, today_date, now)
+    if autonomic_service is not None:
+        try:
+            ill_status = autonomic_service.compute_illness_status(today_iso)
+            ill_shield = ill_status.get("recovery_scale_shield") or {}
+            if ill_shield.get("active"):
+                cur_hrs = int(scale_shield.get("hours_remaining") or 0) if scale_shield.get("active") else 0
+                if not scale_shield.get("active") or int(ill_shield.get("hours_remaining") or 0) >= cur_hrs:
+                    scale_shield = {
+                        "active": True,
+                        "hours_remaining": int(ill_shield.get("hours_remaining") or 24),
+                        "claim_mode": "illness_recovery",
+                        "note": str(ill_shield.get("note") or ""),
+                    }
+        except Exception:
+            pass
     planned_bank = _evaluate_planned_bank(
         flex_plan,
         by_date=by_date,

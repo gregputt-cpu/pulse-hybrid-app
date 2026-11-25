@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PULSE • Hybrid Athlete OS</title>
-  <link rel="manifest" href="/manifest.json?v=6.5">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.5">
-  <link rel="apple-touch-icon" href="/icon-192.png?v=6.5">
+  <link rel="manifest" href="/manifest.json?v=6.6">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.6">
+  <link rel="apple-touch-icon" href="/icon-192.png?v=6.6">
   <meta name="theme-color" content="#06080e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css?v=6.5">
+  <link rel="stylesheet" href="./css/styles.css?v=6.6">
 </head>
 <body>
 
@@ -45,7 +45,7 @@
       </svg>
     </div>
     <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; letter-spacing:0.22em; color:#fff; margin-top:16px; text-shadow:0 0 18px rgba(0,229,255,0.45);">PULSE</div>
-    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.5</div>
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.6</div>
   </div>
 
   <div class="app-screen">
@@ -66,6 +66,12 @@
       </div>
 
       <div class="header-actions">
+        <!-- Autonomic & Illness Status Pill -->
+        <button class="header-pill-btn" id="autonomicStatusBadge" onclick="openAutonomicModal()" title="Paroxysmal Episode & Illness Recovery Tracker">
+          <span class="pill-dot teal" id="autonomicPillDot"></span>
+          <span id="autonomicPillText">Calm</span>
+        </button>
+
         <!-- Joint Safety Pill (minimalist & reactive) -->
         <button class="header-pill-btn" id="injuryStatusBadge" onclick="openInjuryModal()" title="Joint safety guardrails">
           <span class="pill-dot green" id="injuryPillDot"></span>
@@ -108,6 +114,12 @@
         </div>
 
         <div id="syncFreshnessStrip" class="sync-freshness-strip"></div>
+
+        <!-- AUTONOMIC SAFETY, BIOMETRIC SPIKE & ILLNESS RECOVERY BANNERS -->
+        <div id="autonomicSafetyBanner" style="display:none;"></div>
+        <div id="autonomicSpikeBanner" style="display:none;"></div>
+        <div id="illnessStatusBannerToday" style="display:none;"></div>
+        <div id="autonomicQuickBar" class="autonomic-quick-strip"></div>
 
         <!-- HERO SECTION: CENTERED WHOOP / APPLE READINESS RING -->
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 12px 0 8px;">
@@ -948,6 +960,7 @@
         <div id="biometricSparklinesCard" class="card" style="padding:12px 14px;"></div>
         <div id="adaptiveTdeeCard" class="card"></div>
         <div id="acwrDeloadCard" class="card"></div>
+        <div id="autonomicBodySummaryCard" class="card" style="display:none;"></div>
 
         <!-- ==================== SECTION: COACH GROUNDING REALITY CHECK (EGM ACCORDION) ==================== -->
         <details class="fuel-accordion" data-details-key="body_coach_briefing" style="background:linear-gradient(135deg, rgba(0,240,255,0.06), rgba(15,23,42,0.85)); border:1px solid rgba(0,240,255,0.25); border-radius:14px; overflow:hidden;">
@@ -1325,7 +1338,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div>
             <strong style="font-size:15px; font-weight:800; color:#fff;">PULSE Settings</strong>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.5</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.6</div>
           </div>
           <span class="btn-modal-close" onclick="closeQuickSettingsModal()" style="cursor:pointer; font-size:18px; color:var(--text-muted); padding:2px 6px;">✕</span>
         </div>
@@ -2245,6 +2258,31 @@
       </div>
     </div>
 
+    <!-- AUTONOMIC EPISODE ("FUNNY TURNS") & ILLNESS RECOVERY MODAL -->
+    <div class="modal-overlay" id="autonomicModal" onclick="if(event.target === this) closeAutonomicModal()">
+      <div class="modal-card autonomic-modal-card" style="max-width:460px; max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div>
+            <strong style="font-size:15px; color:var(--text);">🛡️ Autonomic &amp; Illness Tracker</strong>
+            <div style="font-size:11.5px; color:var(--text-secondary);">Non-diagnostic episode log, prodromal telemetry &amp; sick-day protection</div>
+          </div>
+          <button type="button" class="autonomic-chip" style="min-height:44px; min-width:44px; flex:0; justify-content:center; padding:6px 10px;" onclick="closeAutonomicModal()" aria-label="Close">✕</button>
+        </div>
+
+        <div class="autonomic-subview-nav">
+          <button type="button" class="btn-subview active" id="btnAutonomicView_capture" onclick="switchAutonomicView('capture')">Capture</button>
+          <button type="button" class="btn-subview" id="btnAutonomicView_illness" onclick="switchAutonomicView('illness')">Illness</button>
+          <button type="button" class="btn-subview" id="btnAutonomicView_patterns" onclick="switchAutonomicView('patterns')">Patterns</button>
+          <button type="button" class="btn-subview" id="btnAutonomicView_export" onclick="switchAutonomicView('export')">Export</button>
+        </div>
+
+        <div id="autonomicViewCapture" class="autonomic-subview active"></div>
+        <div id="autonomicViewIllness" class="autonomic-subview"></div>
+        <div id="autonomicViewPatterns" class="autonomic-subview"></div>
+        <div id="autonomicViewExport" class="autonomic-subview"></div>
+      </div>
+    </div>
+
     <!-- SESSION SUMMARY / PR CELEBRATION MODAL -->
     <div class="modal-overlay" id="sessionSummaryModal" onclick="if(event.target===this) closeSessionSummaryModal()">
       <div class="modal-card" id="sessionSummaryCard" style="max-width:360px;"></div>
@@ -2264,14 +2302,15 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=6.5"></script>
-  <script src="./js/workout-catalog.js?v=6.5"></script>
-  <script src="./js/workout-verdict.js?v=6.5"></script>
-  <script src="./js/workout-player.js?v=6.5"></script>
-  <script src="./js/workout-timers.js?v=6.5"></script>
-  <script src="./js/charts.js?v=6.5"></script>
-  <script src="./js/fuel-engine.js?v=6.5"></script>
-  <script src="./js/telemetry.js?v=6.5"></script>
-  <script src="./js/diagnostics.js?v=6.5"></script>
+  <script src="./js/state.js?v=6.6"></script>
+  <script src="./js/workout-catalog.js?v=6.6"></script>
+  <script src="./js/workout-verdict.js?v=6.6"></script>
+  <script src="./js/workout-player.js?v=6.6"></script>
+  <script src="./js/workout-timers.js?v=6.6"></script>
+  <script src="./js/charts.js?v=6.6"></script>
+  <script src="./js/fuel-engine.js?v=6.6"></script>
+  <script src="./js/telemetry.js?v=6.6"></script>
+  <script src="./js/diagnostics.js?v=6.6"></script>
+  <script src="./js/autonomic-tracker.js?v=6.6"></script>
 </body>
 </html>

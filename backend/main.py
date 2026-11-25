@@ -29,6 +29,7 @@ from garminconnect import GarminConnectAuthenticationError
 from pydantic import BaseModel, ConfigDict, field_validator
 
 import analytics_service
+import autonomic_service
 import diagnostics_ai
 import exercise_biomechanics
 from diagnostics_ai import SymptomInputModel
@@ -2301,3 +2302,217 @@ def update_fuel_flex_plan(payload: FlexPlanPayload):
     except Exception as exc:
         logger.error(f"[Flex] Plan error: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ==================== PAROXYSMAL EPISODE & ILLNESS RECOVERY TRACKER ====================
+
+class EpisodeCreatePayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: Optional[str] = None
+    onset_time: Optional[str] = None
+    acute_peak_end_time: Optional[str] = None
+    full_recovery_time: Optional[str] = None
+    user_recovered_at: Optional[str] = None
+    severity: Optional[str] = "moderate"
+    symptoms: Optional[List[str]] = None
+    triggers: Optional[List[str]] = None
+    illness_active: Optional[bool] = None
+    notes: Optional[str] = ""
+    spike_auto_detected: Optional[bool] = False
+    client_event_id: Optional[str] = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _clean_notes(cls, v: Any) -> str:
+        return strip_markup(str(v or ""))[:2000]
+
+
+class EpisodeUpdatePayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: Optional[str] = None
+    client_event_id: Optional[str] = None
+    action: Optional[str] = "edit_details"
+    timestamp: Optional[str] = None
+    onset_time: Optional[str] = None
+    acute_peak_end_time: Optional[str] = None
+    full_recovery_time: Optional[str] = None
+    user_recovered_at: Optional[str] = None
+    severity: Optional[str] = None
+    symptoms: Optional[List[str]] = None
+    triggers: Optional[List[str]] = None
+    notes: Optional[str] = None
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _clean_notes(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        return strip_markup(str(v))[:2000]
+
+
+class EpisodeDeletePayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+
+
+class SpikeDismissPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    spike_ts_ms: Optional[int] = None
+
+    @field_validator("spike_ts_ms", mode="before")
+    @classmethod
+    def _check_spike_ts(cls, v: Any) -> Any:
+        return _reject_bool_nonfinite(v, "spike_ts_ms", nonneg=True)
+
+
+class IllnessLogPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    date_str: Optional[str] = None
+    date: Optional[str] = None
+    status: str = "active"
+    severity: str = "moderate"
+    symptoms: Optional[List[str]] = None
+    notes: Optional[str] = ""
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _clean_notes(cls, v: Any) -> str:
+        return strip_markup(str(v or ""))[:1000]
+
+
+@app.get("/api/health/autonomic/status")
+def get_autonomic_status():
+    state = load_live_state()
+    return autonomic_service.build_autonomic_summary(state)
+
+
+@app.get("/api/health/episodes")
+def list_paroxysmal_episodes(days: int = 365):
+    bounded_days = max(1, min(730, int(days or 365)))
+    state = load_live_state()
+    summary = autonomic_service.build_autonomic_summary(state)
+    episodes = db.get_paroxysmal_episodes(days=bounded_days)
+    return {
+        "episodes": episodes,
+        "patterns": summary.get("patterns"),
+        "autonomic": summary,
+    }
+
+
+@app.post("/api/health/episodes")
+def create_paroxysmal_episode_endpoint(payload: EpisodeCreatePayload):
+    state = load_live_state()
+    req_data = payload.model_dump()
+    if req_data.get("onset_time"):
+        parsed = time_utils.parse_uk_ts(req_data["onset_time"])
+        if parsed is None:
+            raise HTTPException(status_code=422, detail="Invalid onset_time timestamp")
+        if parsed.date().isoformat() > uk_today_str():
+            raise HTTPException(status_code=422, detail="Episode onset_time cannot be in the future")
+    episode = autonomic_service.create_episode(req_data, live_state=state)
+    summary = autonomic_service.build_autonomic_summary(state)
+    return {"success": True, "episode": episode, "autonomic": summary}
+
+
+@app.post("/api/health/episodes/update")
+def update_paroxysmal_episode_endpoint(payload: EpisodeUpdatePayload):
+    if not payload.id and not payload.client_event_id:
+        raise HTTPException(status_code=422, detail="Episode id or client_event_id is required")
+    state = load_live_state()
+    updated = autonomic_service.update_episode(payload.model_dump(exclude_none=True), live_state=state)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Paroxysmal episode not found")
+    summary = autonomic_service.build_autonomic_summary(state)
+    return {"success": True, "episode": updated, "autonomic": summary}
+
+
+@app.post("/api/health/episodes/delete")
+def delete_paroxysmal_episode_endpoint(payload: EpisodeDeletePayload):
+    ep_id = str(payload.id or "").strip()
+    if not ep_id:
+        raise HTTPException(status_code=422, detail="Episode id is required")
+    deleted = db.delete_paroxysmal_episode(ep_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Paroxysmal episode not found")
+    state = load_live_state()
+    summary = autonomic_service.build_autonomic_summary(state)
+    return {"success": True, "deleted_id": ep_id, "autonomic": summary}
+
+
+@app.post("/api/health/autonomic/dismiss-spike")
+def dismiss_autonomic_spike(payload: Optional[SpikeDismissPayload] = None):
+    ts_ms = payload.spike_ts_ms if payload else None
+    autonomic_service.dismiss_spike_until(ts_ms)
+    state = load_live_state()
+    summary = autonomic_service.build_autonomic_summary(state)
+    return {"success": True, "autonomic": summary}
+
+
+@app.get("/api/health/episodes/export")
+def export_paroxysmal_episodes(format: str = "json", days: int = 365):
+    bounded_days = max(1, min(730, int(days or 365)))
+    fmt = str(format or "json").strip().lower()
+    episodes = db.get_paroxysmal_episodes(days=bounded_days)
+    illness_logs = db.get_illness_logs(days=min(bounded_days, 180))
+    if fmt == "csv":
+        csv_body = autonomic_service.serialize_episodes_csv(episodes, illness_logs)
+        return Response(
+            content=csv_body,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="pulse-clinical-episodes.csv"'},
+        )
+    state = load_live_state()
+    summary = autonomic_service.build_autonomic_summary(state)
+    return {
+        "generated_at": uk_now().isoformat(),
+        "clinical_disclaimer": autonomic_service.CLINICAL_DISCLAIMER,
+        "differential_pathways": list(autonomic_service.DIFFERENTIAL_PATHWAYS.values()),
+        "patterns": summary.get("patterns"),
+        "illness": summary.get("illness"),
+        "illness_logs": illness_logs,
+        "episodes": episodes,
+    }
+
+
+@app.get("/api/health/illness")
+def get_illness_status_endpoint():
+    return autonomic_service.compute_illness_status()
+
+
+@app.post("/api/health/illness")
+def upsert_illness_log_endpoint(payload: IllnessLogPayload):
+    target_date = _validate_past_or_today_date(payload.date_str or payload.date, allow_none=True)
+    status = str(payload.status or "active").strip().lower()
+    if status in ("clear", "cleared", "none", "resolved", "delete"):
+        db.delete_illness_log(target_date)
+    else:
+        if status not in ("active", "recovering"):
+            raise HTTPException(status_code=422, detail="status must be 'active', 'recovering', or 'clear'")
+        sev = str(payload.severity or "moderate").strip().lower()
+        if sev not in ("mild", "moderate", "severe"):
+            raise HTTPException(status_code=422, detail="severity must be 'mild', 'moderate', or 'severe'")
+        syms = [s for s in (payload.symptoms or []) if str(s).strip() in autonomic_service.VALID_ILLNESS_SYMPTOMS]
+        db.upsert_illness_log(
+            date_str=target_date,
+            status=status,
+            severity=sev,
+            symptoms=syms,
+            notes=payload.notes or "",
+        )
+
+    today_uk = uk_today_str()
+    with state_store.state_lock(LIVE_STATE_PATH):
+        state = load_live_state(raise_on_corrupt=True)
+        analytics_service.recalculate_nutrition(state, today_uk)
+        save_live_state(state)
+
+    summary = autonomic_service.build_autonomic_summary(state, today_uk)
+    flex_refeed = analytics_service.compute_flex_refeed_status(state, today_str=today_uk)
+    return {
+        "success": True,
+        "date_str": target_date,
+        "illness": summary.get("illness"),
+        "autonomic": summary,
+        "flex_refeed": flex_refeed,
+        "state": state,
+    }

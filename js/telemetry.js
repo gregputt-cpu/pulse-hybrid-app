@@ -2762,6 +2762,7 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
               renderAcwrDeloadCard(parsed);
               if (typeof renderFlexRefeedCard === 'function') renderFlexRefeedCard(parsed);
               if (typeof renderPostRefeedScaleShield === 'function') renderPostRefeedScaleShield(parsed);
+              if (typeof renderAutonomicUi === 'function') renderAutonomicUi(parsed);
             }
           }
         } catch (e) {}
@@ -2791,6 +2792,7 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
           renderAcwrDeloadCard(data);
           if (typeof renderFlexRefeedCard === 'function') renderFlexRefeedCard(data);
           if (typeof renderPostRefeedScaleShield === 'function') renderPostRefeedScaleShield(data);
+          if (typeof renderAutonomicUi === 'function') renderAutonomicUi(data);
         }
         return data;
       } catch (e) {
@@ -2799,6 +2801,7 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
         renderAcwrDeloadCard(window.PULSE_ANALYTICS_SUMMARY);
         if (typeof renderFlexRefeedCard === 'function') renderFlexRefeedCard(window.PULSE_ANALYTICS_SUMMARY);
         if (typeof renderPostRefeedScaleShield === 'function') renderPostRefeedScaleShield(window.PULSE_ANALYTICS_SUMMARY);
+        if (typeof renderAutonomicUi === 'function') renderAutonomicUi(window.PULSE_ANALYTICS_SUMMARY);
         return window.PULSE_ANALYTICS_SUMMARY;
       }
     }

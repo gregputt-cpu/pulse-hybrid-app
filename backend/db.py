@@ -153,6 +153,70 @@ def _init_db_unlocked() -> None:
                 updated_at TEXT
             )
         """)
+        bio_cols = {row["name"] for row in cursor.execute("PRAGMA table_info(daily_biometrics)").fetchall()}
+        for col_name, col_type in (
+            ("hrv_last_night", "REAL"),
+            ("hrv_weekly_avg", "REAL"),
+            ("hrv_status", "TEXT"),
+            ("hrv_baseline_low", "REAL"),
+            ("avg_stress", "REAL"),
+            ("sleep_avg_stress", "REAL"),
+            ("sleep_start_ts", "INTEGER"),
+            ("sleep_end_ts", "INTEGER"),
+            ("deep_sleep_sec", "INTEGER"),
+            ("rem_sleep_sec", "INTEGER"),
+            ("light_sleep_sec", "INTEGER"),
+            ("awake_sleep_sec", "INTEGER"),
+        ):
+            if col_name not in bio_cols:
+                cursor.execute(f"ALTER TABLE daily_biometrics ADD COLUMN {col_name} {col_type}")
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS garmin_intraday_telemetry (
+                date_str TEXT PRIMARY KEY,
+                stress_json TEXT,
+                hr_json TEXT,
+                sleep_stress_json TEXT,
+                synced_at TEXT NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS illness_logs (
+                date_str TEXT PRIMARY KEY,
+                status TEXT NOT NULL DEFAULT 'active',
+                severity TEXT NOT NULL DEFAULT 'moderate',
+                symptoms_json TEXT NOT NULL DEFAULT '[]',
+                notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS paroxysmal_episodes (
+                id TEXT PRIMARY KEY,
+                state TEXT NOT NULL,
+                onset_time TEXT NOT NULL,
+                date_str TEXT NOT NULL,
+                acute_peak_end_time TEXT,
+                full_recovery_time TEXT,
+                user_recovered_at TEXT,
+                biometric_recovered_at TEXT,
+                acute_duration_mins INTEGER,
+                total_recovery_duration_mins INTEGER,
+                severity TEXT NOT NULL DEFAULT 'moderate',
+                symptoms_json TEXT NOT NULL DEFAULT '[]',
+                triggers_json TEXT NOT NULL DEFAULT '[]',
+                pathway_tags_json TEXT NOT NULL DEFAULT '[]',
+                illness_active INTEGER NOT NULL DEFAULT 0,
+                notes TEXT NOT NULL DEFAULT '',
+                biometric_snapshot_json TEXT,
+                biometric_snapshot_status TEXT NOT NULL DEFAULT 'pending',
+                spike_auto_detected INTEGER NOT NULL DEFAULT 0,
+                client_event_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS daily_nutrition_logs (
                 date_str TEXT PRIMARY KEY,
@@ -190,6 +254,10 @@ def _init_db_unlocked() -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_biometrics_date ON daily_biometrics(date_str)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_daily_nutrition_date ON daily_nutrition_logs(date_str)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_diagnostics_created ON diagnostic_assessments(created_at DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_illness_date ON illness_logs(date_str DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_paroxysmal_onset ON paroxysmal_episodes(onset_time DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_paroxysmal_date ON paroxysmal_episodes(date_str DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_paroxysmal_client_evt ON paroxysmal_episodes(client_event_id)")
 
         cursor.execute("SELECT value FROM kv_store WHERE key = 'migrated_renpho_muscle_kg_v1'")
         if cursor.fetchone() is None:
@@ -572,6 +640,18 @@ def log_manual_activity(activity: Dict[str, Any]) -> None:
         )
 
 
+def _opt_finite_int(val: Any) -> Optional[int]:
+    if val is None or isinstance(val, bool):
+        return None
+    try:
+        f = float(val)
+    except (ValueError, TypeError):
+        return None
+    if not math.isfinite(f):
+        return None
+    return int(round(f))
+
+
 def upsert_daily_biometrics(
     date_str: str,
     sleep_score: Optional[int] = None,
@@ -580,45 +660,103 @@ def upsert_daily_biometrics(
     training_readiness: Optional[int] = None,
     source: str = "garmin",
     overwrite_nulls: bool = False,
+    *,
+    hrv_last_night: Optional[float] = None,
+    hrv_weekly_avg: Optional[float] = None,
+    hrv_status: Optional[str] = None,
+    hrv_baseline_low: Optional[float] = None,
+    avg_stress: Optional[float] = None,
+    sleep_avg_stress: Optional[float] = None,
+    sleep_start_ts: Optional[int] = None,
+    sleep_end_ts: Optional[int] = None,
+    deep_sleep_sec: Optional[int] = None,
+    rem_sleep_sec: Optional[int] = None,
+    light_sleep_sec: Optional[int] = None,
+    awake_sleep_sec: Optional[int] = None,
 ) -> None:
     if not date_str:
         return
     _ensure_initialized()
     if overwrite_nulls:
         sql = """
-            INSERT INTO daily_biometrics (date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO daily_biometrics (
+                date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at,
+                hrv_last_night, hrv_weekly_avg, hrv_status, hrv_baseline_low, avg_stress, sleep_avg_stress,
+                sleep_start_ts, sleep_end_ts, deep_sleep_sec, rem_sleep_sec, light_sleep_sec, awake_sleep_sec
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(date_str) DO UPDATE SET
                 sleep_score = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.sleep_score ELSE COALESCE(excluded.sleep_score, daily_biometrics.sleep_score) END,
                 resting_hr = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.resting_hr ELSE COALESCE(excluded.resting_hr, daily_biometrics.resting_hr) END,
                 body_battery = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.body_battery ELSE COALESCE(excluded.body_battery, daily_biometrics.body_battery) END,
                 training_readiness = CASE WHEN daily_biometrics.source = 'mnd_estimated' THEN excluded.training_readiness ELSE COALESCE(excluded.training_readiness, daily_biometrics.training_readiness) END,
+                hrv_last_night = COALESCE(excluded.hrv_last_night, daily_biometrics.hrv_last_night),
+                hrv_weekly_avg = COALESCE(excluded.hrv_weekly_avg, daily_biometrics.hrv_weekly_avg),
+                hrv_status = COALESCE(excluded.hrv_status, daily_biometrics.hrv_status),
+                hrv_baseline_low = COALESCE(excluded.hrv_baseline_low, daily_biometrics.hrv_baseline_low),
+                avg_stress = COALESCE(excluded.avg_stress, daily_biometrics.avg_stress),
+                sleep_avg_stress = COALESCE(excluded.sleep_avg_stress, daily_biometrics.sleep_avg_stress),
+                sleep_start_ts = COALESCE(excluded.sleep_start_ts, daily_biometrics.sleep_start_ts),
+                sleep_end_ts = COALESCE(excluded.sleep_end_ts, daily_biometrics.sleep_end_ts),
+                deep_sleep_sec = COALESCE(excluded.deep_sleep_sec, daily_biometrics.deep_sleep_sec),
+                rem_sleep_sec = COALESCE(excluded.rem_sleep_sec, daily_biometrics.rem_sleep_sec),
+                light_sleep_sec = COALESCE(excluded.light_sleep_sec, daily_biometrics.light_sleep_sec),
+                awake_sleep_sec = COALESCE(excluded.awake_sleep_sec, daily_biometrics.awake_sleep_sec),
                 source = excluded.source,
                 updated_at = excluded.updated_at
         """
     else:
         sql = """
-            INSERT INTO daily_biometrics (date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO daily_biometrics (
+                date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at,
+                hrv_last_night, hrv_weekly_avg, hrv_status, hrv_baseline_low, avg_stress, sleep_avg_stress,
+                sleep_start_ts, sleep_end_ts, deep_sleep_sec, rem_sleep_sec, light_sleep_sec, awake_sleep_sec
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(date_str) DO UPDATE SET
                 sleep_score = COALESCE(excluded.sleep_score, daily_biometrics.sleep_score),
                 resting_hr = COALESCE(excluded.resting_hr, daily_biometrics.resting_hr),
                 body_battery = COALESCE(excluded.body_battery, daily_biometrics.body_battery),
                 training_readiness = COALESCE(excluded.training_readiness, daily_biometrics.training_readiness),
+                hrv_last_night = COALESCE(excluded.hrv_last_night, daily_biometrics.hrv_last_night),
+                hrv_weekly_avg = COALESCE(excluded.hrv_weekly_avg, daily_biometrics.hrv_weekly_avg),
+                hrv_status = COALESCE(excluded.hrv_status, daily_biometrics.hrv_status),
+                hrv_baseline_low = COALESCE(excluded.hrv_baseline_low, daily_biometrics.hrv_baseline_low),
+                avg_stress = COALESCE(excluded.avg_stress, daily_biometrics.avg_stress),
+                sleep_avg_stress = COALESCE(excluded.sleep_avg_stress, daily_biometrics.sleep_avg_stress),
+                sleep_start_ts = COALESCE(excluded.sleep_start_ts, daily_biometrics.sleep_start_ts),
+                sleep_end_ts = COALESCE(excluded.sleep_end_ts, daily_biometrics.sleep_end_ts),
+                deep_sleep_sec = COALESCE(excluded.deep_sleep_sec, daily_biometrics.deep_sleep_sec),
+                rem_sleep_sec = COALESCE(excluded.rem_sleep_sec, daily_biometrics.rem_sleep_sec),
+                light_sleep_sec = COALESCE(excluded.light_sleep_sec, daily_biometrics.light_sleep_sec),
+                awake_sleep_sec = COALESCE(excluded.awake_sleep_sec, daily_biometrics.awake_sleep_sec),
                 source = excluded.source,
                 updated_at = excluded.updated_at
         """
+    clean_hrv_status = str(hrv_status).strip()[:32] if hrv_status else None
     with _managed_conn() as conn:
         conn.execute(
             sql,
             (
                 str(date_str)[:10],
-                int(round(sleep_score)) if sleep_score is not None else None,
-                int(round(resting_hr)) if resting_hr is not None else None,
-                int(round(body_battery)) if body_battery is not None else None,
-                int(round(training_readiness)) if training_readiness is not None else None,
+                _opt_finite_int(sleep_score),
+                _opt_finite_int(resting_hr),
+                _opt_finite_int(body_battery),
+                _opt_finite_int(training_readiness),
                 str(source or "garmin"),
                 uk_now().isoformat(),
+                _opt_finite_round(hrv_last_night, 1),
+                _opt_finite_round(hrv_weekly_avg, 1),
+                clean_hrv_status,
+                _opt_finite_round(hrv_baseline_low, 1),
+                _opt_finite_round(avg_stress, 1),
+                _opt_finite_round(sleep_avg_stress, 1),
+                _opt_finite_int(sleep_start_ts),
+                _opt_finite_int(sleep_end_ts),
+                _opt_finite_int(deep_sleep_sec),
+                _opt_finite_int(rem_sleep_sec),
+                _opt_finite_int(light_sleep_sec),
+                _opt_finite_int(awake_sleep_sec),
             ),
         )
 
@@ -668,7 +806,9 @@ def get_daily_biometrics(days: int = 28, conn: Optional[sqlite3.Connection] = No
     with _managed_conn(conn) as active_conn:
         rows = active_conn.execute(
             """
-            SELECT date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at
+            SELECT date_str, sleep_score, resting_hr, body_battery, training_readiness, source, updated_at,
+                   hrv_last_night, hrv_weekly_avg, hrv_status, hrv_baseline_low, avg_stress, sleep_avg_stress,
+                   sleep_start_ts, sleep_end_ts, deep_sleep_sec, rem_sleep_sec, light_sleep_sec, awake_sleep_sec
             FROM daily_biometrics
             WHERE date_str >= ?
             ORDER BY date_str ASC
@@ -970,3 +1110,360 @@ def mark_diagnostic_applied(assessment_id: str, conn: Optional[sqlite3.Connectio
             (now_iso, str(assessment_id)),
         )
         return cur.rowcount > 0
+
+
+# ==================== GARMIN INTRADAY TELEMETRY, ILLNESS & PAROXYSMAL EPISODES ====================
+
+def _safe_json_loads(raw: Any, fallback: Any) -> Any:
+    if not raw:
+        return fallback
+    try:
+        parsed = json.loads(raw)
+        if type(parsed) is type(fallback):
+            return parsed
+    except Exception:
+        pass
+    return fallback
+
+
+def upsert_garmin_intraday(
+    date_str: str,
+    stress_samples: Optional[List[List[int]]] = None,
+    hr_samples: Optional[List[List[int]]] = None,
+    sleep_stress_samples: Optional[List[List[int]]] = None,
+    conn: Optional[sqlite3.Connection] = None,
+) -> None:
+    if not date_str:
+        return
+    _ensure_initialized()
+    d_key = str(date_str)[:10]
+    stress_json = json.dumps(stress_samples, allow_nan=False) if stress_samples is not None else None
+    hr_json = json.dumps(hr_samples, allow_nan=False) if hr_samples is not None else None
+    sleep_stress_json = json.dumps(sleep_stress_samples, allow_nan=False) if sleep_stress_samples is not None else None
+    prune_cutoff = (uk_now().date() - timedelta(days=30)).isoformat()
+    now_iso = uk_now().isoformat()
+    with _managed_conn(conn) as active_conn:
+        active_conn.execute(
+            """
+            INSERT INTO garmin_intraday_telemetry (date_str, stress_json, hr_json, sleep_stress_json, synced_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(date_str) DO UPDATE SET
+                stress_json = COALESCE(excluded.stress_json, garmin_intraday_telemetry.stress_json),
+                hr_json = COALESCE(excluded.hr_json, garmin_intraday_telemetry.hr_json),
+                sleep_stress_json = COALESCE(excluded.sleep_stress_json, garmin_intraday_telemetry.sleep_stress_json),
+                synced_at = excluded.synced_at
+            """,
+            (d_key, stress_json, hr_json, sleep_stress_json, now_iso),
+        )
+        active_conn.execute("DELETE FROM garmin_intraday_telemetry WHERE date_str < ?", (prune_cutoff,))
+
+
+def _row_to_intraday_entry(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "date_str": str(row["date_str"]),
+        "stress_samples": _safe_json_loads(row["stress_json"], []),
+        "hr_samples": _safe_json_loads(row["hr_json"], []),
+        "sleep_stress_samples": _safe_json_loads(row["sleep_stress_json"], []),
+        "synced_at": row["synced_at"],
+    }
+
+
+def get_garmin_intraday(date_str: str, conn: Optional[sqlite3.Connection] = None) -> Optional[Dict[str, Any]]:
+    if not date_str:
+        return None
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute(
+            """
+            SELECT date_str, stress_json, hr_json, sleep_stress_json, synced_at
+            FROM garmin_intraday_telemetry
+            WHERE date_str = ?
+            """,
+            (str(date_str)[:10],),
+        ).fetchone()
+    return _row_to_intraday_entry(row) if row else None
+
+
+def get_garmin_intraday_range(date_strs: List[str], conn: Optional[sqlite3.Connection] = None) -> Dict[str, Dict[str, Any]]:
+    clean_dates = sorted({str(d)[:10] for d in (date_strs or []) if d})
+    if not clean_dates:
+        return {}
+    _ensure_initialized()
+    placeholders = ",".join("?" for _ in clean_dates)
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            f"""
+            SELECT date_str, stress_json, hr_json, sleep_stress_json, synced_at
+            FROM garmin_intraday_telemetry
+            WHERE date_str IN ({placeholders})
+            ORDER BY date_str ASC
+            """,
+            tuple(clean_dates),
+        ).fetchall()
+    return {str(r["date_str"]): _row_to_intraday_entry(r) for r in rows}
+
+
+def _row_to_illness_log(row: sqlite3.Row) -> Dict[str, Any]:
+    return {
+        "date_str": str(row["date_str"]),
+        "status": str(row["status"] or "active"),
+        "severity": str(row["severity"] or "moderate"),
+        "symptoms": [str(x) for x in _safe_json_loads(row["symptoms_json"], [])],
+        "notes": str(row["notes"] or ""),
+        "created_at": str(row["created_at"] or ""),
+        "updated_at": str(row["updated_at"] or ""),
+    }
+
+
+def upsert_illness_log(
+    date_str: str,
+    status: str = "active",
+    severity: str = "moderate",
+    symptoms: Optional[List[str]] = None,
+    notes: str = "",
+    conn: Optional[sqlite3.Connection] = None,
+) -> Dict[str, Any]:
+    d_key = str(date_str or "")[:10]
+    if not d_key:
+        raise ValueError("date_str is required")
+    _ensure_initialized()
+    now_iso = uk_now().isoformat()
+    clean_symptoms = [str(s)[:64] for s in (symptoms or []) if str(s).strip()]
+    clean_status = str(status or "active").strip().lower()
+    if clean_status not in ("active", "recovering"):
+        clean_status = "active"
+    clean_sev = str(severity or "moderate").strip().lower()
+    if clean_sev not in ("mild", "moderate", "severe"):
+        clean_sev = "moderate"
+    clean_notes = str(notes or "")[:1000]
+    with _managed_conn(conn) as active_conn:
+        active_conn.execute(
+            """
+            INSERT INTO illness_logs (date_str, status, severity, symptoms_json, notes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date_str) DO UPDATE SET
+                status = excluded.status,
+                severity = excluded.severity,
+                symptoms_json = excluded.symptoms_json,
+                notes = excluded.notes,
+                updated_at = excluded.updated_at
+            """,
+            (d_key, clean_status, clean_sev, json.dumps(clean_symptoms, allow_nan=False), clean_notes, now_iso, now_iso),
+        )
+        row = active_conn.execute(
+            "SELECT date_str, status, severity, symptoms_json, notes, created_at, updated_at FROM illness_logs WHERE date_str = ?",
+            (d_key,),
+        ).fetchone()
+    return _row_to_illness_log(row)
+
+
+def delete_illness_log(date_str: str, conn: Optional[sqlite3.Connection] = None) -> bool:
+    d_key = str(date_str or "")[:10]
+    if not d_key:
+        return False
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        cur = active_conn.execute("DELETE FROM illness_logs WHERE date_str = ?", (d_key,))
+        return cur.rowcount > 0
+
+
+def get_illness_log(date_str: str, conn: Optional[sqlite3.Connection] = None) -> Optional[Dict[str, Any]]:
+    d_key = str(date_str or "")[:10]
+    if not d_key:
+        return None
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute(
+            "SELECT date_str, status, severity, symptoms_json, notes, created_at, updated_at FROM illness_logs WHERE date_str = ?",
+            (d_key,),
+        ).fetchone()
+    return _row_to_illness_log(row) if row else None
+
+
+def get_illness_logs(days: int = 90, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    cutoff_date = (uk_now().date() - timedelta(days=max(1, int(days)))).isoformat()
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT date_str, status, severity, symptoms_json, notes, created_at, updated_at
+            FROM illness_logs
+            WHERE date_str >= ?
+            ORDER BY date_str DESC
+            """,
+            (cutoff_date,),
+        ).fetchall()
+    return [_row_to_illness_log(r) for r in rows]
+
+
+def _row_to_paroxysmal_episode(row: sqlite3.Row) -> Dict[str, Any]:
+    snapshot_obj = None
+    if row["biometric_snapshot_json"]:
+        try:
+            parsed_snap = json.loads(row["biometric_snapshot_json"])
+            if isinstance(parsed_snap, dict):
+                snapshot_obj = parsed_snap
+        except Exception:
+            snapshot_obj = None
+    return {
+        "id": str(row["id"]),
+        "state": str(row["state"]),
+        "onset_time": str(row["onset_time"]),
+        "date_str": str(row["date_str"]),
+        "acute_peak_end_time": row["acute_peak_end_time"],
+        "full_recovery_time": row["full_recovery_time"],
+        "user_recovered_at": row["user_recovered_at"],
+        "biometric_recovered_at": row["biometric_recovered_at"],
+        "acute_duration_mins": row["acute_duration_mins"],
+        "total_recovery_duration_mins": row["total_recovery_duration_mins"],
+        "severity": str(row["severity"] or "moderate"),
+        "symptoms": [str(x) for x in _safe_json_loads(row["symptoms_json"], [])],
+        "triggers": [str(x) for x in _safe_json_loads(row["triggers_json"], [])],
+        "pathway_tags": [str(x) for x in _safe_json_loads(row["pathway_tags_json"], [])],
+        "illness_active": bool(row["illness_active"]),
+        "notes": str(row["notes"] or ""),
+        "biometric_snapshot": snapshot_obj,
+        "biometric_snapshot_status": str(row["biometric_snapshot_status"] or "pending"),
+        "spike_auto_detected": bool(row["spike_auto_detected"]),
+        "client_event_id": row["client_event_id"],
+        "created_at": str(row["created_at"] or ""),
+        "updated_at": str(row["updated_at"] or ""),
+    }
+
+
+def create_paroxysmal_episode(record: Dict[str, Any], conn: Optional[sqlite3.Connection] = None) -> Dict[str, Any]:
+    if not isinstance(record, dict) or not record.get("id") or not record.get("onset_time"):
+        raise ValueError("Episode record requires id and onset_time")
+    _ensure_initialized()
+    now_iso = uk_now().isoformat()
+    snapshot_json = json.dumps(record["biometric_snapshot"], allow_nan=False) if isinstance(record.get("biometric_snapshot"), dict) else None
+    with _managed_conn(conn) as active_conn:
+        active_conn.execute(
+            """
+            INSERT INTO paroxysmal_episodes (
+                id, state, onset_time, date_str, acute_peak_end_time, full_recovery_time,
+                user_recovered_at, biometric_recovered_at, acute_duration_mins, total_recovery_duration_mins,
+                severity, symptoms_json, triggers_json, pathway_tags_json, illness_active,
+                notes, biometric_snapshot_json, biometric_snapshot_status, spike_auto_detected,
+                client_event_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(record["id"]),
+                str(record.get("state") or "ACUTE_EPISODE"),
+                str(record["onset_time"]),
+                str(record.get("date_str") or str(record["onset_time"])[:10])[:10],
+                record.get("acute_peak_end_time"),
+                record.get("full_recovery_time"),
+                record.get("user_recovered_at"),
+                record.get("biometric_recovered_at"),
+                _opt_finite_int(record.get("acute_duration_mins")),
+                _opt_finite_int(record.get("total_recovery_duration_mins")),
+                str(record.get("severity") or "moderate"),
+                json.dumps(list(record.get("symptoms") or []), allow_nan=False),
+                json.dumps(list(record.get("triggers") or []), allow_nan=False),
+                json.dumps(list(record.get("pathway_tags") or []), allow_nan=False),
+                1 if record.get("illness_active") else 0,
+                str(record.get("notes") or "")[:2000],
+                snapshot_json,
+                str(record.get("biometric_snapshot_status") or "pending"),
+                1 if record.get("spike_auto_detected") else 0,
+                str(record.get("client_event_id") or "") or None,
+                str(record.get("created_at") or now_iso),
+                str(record.get("updated_at") or now_iso),
+            ),
+        )
+        row = active_conn.execute("SELECT * FROM paroxysmal_episodes WHERE id = ?", (str(record["id"]),)).fetchone()
+    return _row_to_paroxysmal_episode(row)
+
+
+def update_paroxysmal_episode(episode_id: str, fields: Dict[str, Any], conn: Optional[sqlite3.Connection] = None) -> Optional[Dict[str, Any]]:
+    if not episode_id or not isinstance(fields, dict):
+        return None
+    _ensure_initialized()
+    col_map = {
+        "state": ("state", lambda v: str(v)),
+        "onset_time": ("onset_time", lambda v: str(v)),
+        "date_str": ("date_str", lambda v: str(v)[:10]),
+        "acute_peak_end_time": ("acute_peak_end_time", lambda v: str(v) if v is not None else None),
+        "full_recovery_time": ("full_recovery_time", lambda v: str(v) if v is not None else None),
+        "user_recovered_at": ("user_recovered_at", lambda v: str(v) if v is not None else None),
+        "biometric_recovered_at": ("biometric_recovered_at", lambda v: str(v) if v is not None else None),
+        "acute_duration_mins": ("acute_duration_mins", lambda v: _opt_finite_int(v)),
+        "total_recovery_duration_mins": ("total_recovery_duration_mins", lambda v: _opt_finite_int(v)),
+        "severity": ("severity", lambda v: str(v or "moderate")),
+        "symptoms": ("symptoms_json", lambda v: json.dumps(list(v or []), allow_nan=False)),
+        "triggers": ("triggers_json", lambda v: json.dumps(list(v or []), allow_nan=False)),
+        "pathway_tags": ("pathway_tags_json", lambda v: json.dumps(list(v or []), allow_nan=False)),
+        "illness_active": ("illness_active", lambda v: 1 if v else 0),
+        "notes": ("notes", lambda v: str(v or "")[:2000]),
+        "biometric_snapshot": ("biometric_snapshot_json", lambda v: json.dumps(v, allow_nan=False) if isinstance(v, dict) else None),
+        "biometric_snapshot_status": ("biometric_snapshot_status", lambda v: str(v or "pending")),
+    }
+    assignments: List[str] = []
+    params: List[Any] = []
+    for key, val in fields.items():
+        if key in col_map:
+            col_name, converter = col_map[key]
+            assignments.append(f"{col_name} = ?")
+            params.append(converter(val))
+    if not assignments:
+        return get_paroxysmal_episode(episode_id, conn=conn)
+    assignments.append("updated_at = ?")
+    params.append(uk_now().isoformat())
+    params.append(str(episode_id))
+    with _managed_conn(conn) as active_conn:
+        cur = active_conn.execute(
+            f"UPDATE paroxysmal_episodes SET {', '.join(assignments)} WHERE id = ?",
+            tuple(params),
+        )
+        if cur.rowcount == 0:
+            return None
+        row = active_conn.execute("SELECT * FROM paroxysmal_episodes WHERE id = ?", (str(episode_id),)).fetchone()
+    return _row_to_paroxysmal_episode(row) if row else None
+
+
+def delete_paroxysmal_episode(episode_id: str, conn: Optional[sqlite3.Connection] = None) -> bool:
+    if not episode_id:
+        return False
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        cur = active_conn.execute("DELETE FROM paroxysmal_episodes WHERE id = ?", (str(episode_id),))
+        return cur.rowcount > 0
+
+
+def get_paroxysmal_episode(episode_id: str, conn: Optional[sqlite3.Connection] = None) -> Optional[Dict[str, Any]]:
+    if not episode_id:
+        return None
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute("SELECT * FROM paroxysmal_episodes WHERE id = ?", (str(episode_id),)).fetchone()
+    return _row_to_paroxysmal_episode(row) if row else None
+
+
+def get_paroxysmal_episode_by_client_event_id(client_event_id: str, conn: Optional[sqlite3.Connection] = None) -> Optional[Dict[str, Any]]:
+    cleaned = str(client_event_id or "").strip()
+    if not cleaned:
+        return None
+    _ensure_initialized()
+    with _managed_conn(conn) as active_conn:
+        row = active_conn.execute(
+            "SELECT * FROM paroxysmal_episodes WHERE client_event_id = ? ORDER BY created_at DESC LIMIT 1",
+            (cleaned,),
+        ).fetchone()
+    return _row_to_paroxysmal_episode(row) if row else None
+
+
+def get_paroxysmal_episodes(days: int = 365, conn: Optional[sqlite3.Connection] = None) -> List[Dict[str, Any]]:
+    _ensure_initialized()
+    cutoff_date = (uk_now().date() - timedelta(days=max(1, int(days)))).isoformat()
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT * FROM paroxysmal_episodes
+            WHERE date_str >= ?
+            ORDER BY onset_time DESC, created_at DESC
+            """,
+            (cutoff_date,),
+        ).fetchall()
+    return [_row_to_paroxysmal_episode(r) for r in rows]

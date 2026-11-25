@@ -1899,6 +1899,24 @@ function generateWorkoutFromGearAndGoal() {
         mode = 'rest_day';
       }
 
+      const _autonomicState = (typeof window !== 'undefined' && window.PULSE_ANALYTICS_SUMMARY && window.PULSE_ANALYTICS_SUMMARY.autonomic)
+        ? window.PULSE_ANALYTICS_SUMMARY.autonomic
+        : null;
+      const _illnessToday = Boolean(_autonomicState && _autonomicState.illness && _autonomicState.illness.active_today);
+      const _postIllnessRamp = Boolean(!_illnessToday && _autonomicState && _autonomicState.illness && _autonomicState.illness.post_illness_ramp_active);
+      const _autonomicHighAlert = Boolean(
+        _autonomicState && (
+          Number(_autonomicState.alert_level || 0) >= 2 ||
+          _autonomicState.system_state === 'ACUTE_EPISODE' ||
+          _autonomicState.system_state === 'POST_EPISODE_RECOVERY'
+        )
+      );
+      if (_illnessToday) {
+        mode = 'rest_day';
+      } else if (_postIllnessRamp && mode !== 'rest_day') {
+        mode = 'liss_cardio';
+      }
+
       const muscleStatus = {
         upperPush: fatigued.h_push ? 'Fatigued (48h volume)' : 'Fresh & Primed',
         upperPull: fatigued.h_pull ? 'Fatigued (48h volume)' : 'Fresh & Primed',
@@ -1941,6 +1959,12 @@ function generateWorkoutFromGearAndGoal() {
           goldfishReason = 'Red-flag biomechanical triage active: ' + (athleteInjuries.last_diagnostic_summary.summary_headline || 'Pause aggravating training and seek clinical evaluation.');
           ctaText = '🛡️ Review Triage';
         }
+        if (_illnessToday) {
+          badge = '🤒 ILLNESS RECOVERY MODE';
+          title = 'Rest & Immune Recovery (No Hard Training)';
+          goldfishReason = 'Illness Recovery Mode is active today. Skip strenuous loading, eat at Maintenance (protein locked), hydrate, and prioritize sleep until symptoms resolve.';
+          ctaText = '🤒 Manage Sick Log';
+        }
       } else if (mode === 'liss_cardio') {
         archetypeKey = 'option_c';
         optionId = 'recovery_flush_walk';
@@ -1950,9 +1974,11 @@ function generateWorkoutFromGearAndGoal() {
           option_b: 'Option B (Work)',
           option_c: '⭐ Zone 2 Flush'
         };
-        badge = '🚶 ZONE 2 LISS RECOMMENDED';
-        title = 'Zone 2 Aerobic Engine & Flush';
-        goldfishReason = `Sleep restored (${sleepScore}, ${sleepDuration}) but cumulative workload (${consecutiveDays} consecutive days, Battery ${effectiveBodyBattery}%) favors low CNS aerobic work. Flushes metabolic waste without joint shear.`;
+        badge = _postIllnessRamp ? '🛡️ POST-ILLNESS RETURN RAMP' : '🚶 ZONE 2 LISS RECOMMENDED';
+        title = _postIllnessRamp ? 'Day-1 Gentle Flush & Mobility (75% Cap)' : 'Zone 2 Aerobic Engine & Flush';
+        goldfishReason = _postIllnessRamp
+          ? 'First day back after illness: keep exertion gentle (Zone 2 flush / mobility, ~75% volume cap) and avoid solo high-intensity pushing while autonomic baseline stabilizes.'
+          : `Sleep restored (${sleepScore}, ${sleepDuration}) but cumulative workload (${consecutiveDays} consecutive days, Battery ${effectiveBodyBattery}%) favors low CNS aerobic work. Flushes metabolic waste without joint shear.`;
         ctaText = 'Open Recommended Workouts →';
         isRest = false;
       } else if (mode === 'mobility_stretch') {
@@ -2055,12 +2081,18 @@ function generateWorkoutFromGearAndGoal() {
       // Second-Session ("Room for More") evaluation
       const completedCheck = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
       const roomForMore = Boolean(
+        !_illnessToday &&
+        !_postIllnessRamp &&
+        !_autonomicHighAlert &&
         completedCheck &&
         completedCheck.isLightOrNonStrength &&
         todayFeeling !== 'beat_up' &&
         effectiveBodyBattery >= 50 &&
         effectiveReadiness >= 55
       );
+      if (_autonomicHighAlert && !_illnessToday) {
+        goldfishReason = `${goldfishReason} ⚠️ Autonomic alert/recovery active — avoid solo high-risk physical exertion until normalized.`.trim();
+      }
 
       let secondSession = null;
       if (roomForMore) {

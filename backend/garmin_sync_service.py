@@ -10,6 +10,10 @@ from garminconnect import Garmin, GarminConnectAuthenticationError, GarminConnec
 from benefits_engine import PhysiologicalBenefitsEngine
 import analytics_service
 try:
+    import autonomic_service
+except Exception:
+    autonomic_service = None
+try:
     import db
 except Exception:
     db = None
@@ -43,6 +47,16 @@ def _finite_pos_float(val):
     try:
         num = float(val)
         return num if math.isfinite(num) and num > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _finite_nonneg_float(val):
+    if val is None or isinstance(val, bool):
+        return None
+    try:
+        num = float(val)
+        return num if math.isfinite(num) and num >= 0 else None
     except (TypeError, ValueError):
         return None
 
@@ -400,7 +414,18 @@ class GarminSyncService:
         hrv_weekly = None
         hrv_status = None
         hrv_last_night = None
+        hrv_baseline_low = None
         avg_stress_level = None
+        sleep_avg_stress = None
+        sleep_start_ts = None
+        sleep_end_ts = None
+        deep_sleep_sec = None
+        rem_sleep_sec = None
+        light_sleep_sec = None
+        awake_sleep_sec = None
+        stress_samples = None
+        hr_samples = None
+        sleep_stress_samples = None
         live_body_battery = None
         auth_failed = False
         last_auth_error = None
@@ -474,6 +499,19 @@ class GarminSyncService:
                     hours = sec // 3600
                     mins = (sec % 3600) // 60
                     sleep_duration = f"{hours}h {mins}m"
+                sleep_avg_stress = _finite_nonneg_float(dto.get('avgSleepStress'))
+                if autonomic_service is not None:
+                    sleep_start_ts = autonomic_service._parse_ts_ms(dto.get('sleepStartTimestampGMT') or dto.get('sleepStartTimestampLocal'))
+                    sleep_end_ts = autonomic_service._parse_ts_ms(dto.get('sleepEndTimestampGMT') or dto.get('sleepEndTimestampLocal'))
+                    if isinstance(sleep, dict) and isinstance(sleep.get('sleepStress'), list):
+                        sleep_stress_samples = autonomic_service.normalize_intraday_series(
+                            sleep.get('sleepStress'),
+                            keep_negative=True,
+                        )
+                deep_sleep_sec = dto.get('deepSleepSeconds')
+                rem_sleep_sec = dto.get('remSleepSeconds')
+                light_sleep_sec = dto.get('lightSleepSeconds')
+                awake_sleep_sec = dto.get('awakeSleepSeconds')
             except Exception as e:
                 print(f"[GarminSync] Warning fetching sleep: {e}")
                 last_error = str(e)
@@ -619,6 +657,11 @@ class GarminSyncService:
                         stress_ep_ts, stress_ep_val = _extract_latest_bb_array(stress_data.get('bodyBatteryValuesArray'))
                         if stress_data.get('avgStressLevel') is not None:
                             avg_stress_level = stress_data.get('avgStressLevel')
+                        if autonomic_service is not None and isinstance(stress_data.get('stressValuesArray'), list):
+                            stress_samples = autonomic_service.normalize_intraday_series(
+                                stress_data.get('stressValuesArray'),
+                                keep_negative=True,
+                            )
                 except Exception as e:
                     print(f"[GarminSync] Warning fetching stress/body battery data: {e}")
                     last_error = str(e)
@@ -640,8 +683,30 @@ class GarminSyncService:
                                 hrv_status = hrv_sum.get('status')
                             if hrv_sum.get('lastNightAvg') is not None:
                                 hrv_last_night = hrv_sum.get('lastNightAvg')
+                            baseline_obj = hrv_sum.get('baseline') or {}
+                            if isinstance(baseline_obj, dict):
+                                raw_low = baseline_obj.get('balancedLow')
+                                if raw_low is None:
+                                    raw_low = baseline_obj.get('lowUpper')
+                                hrv_baseline_low = _finite_pos_float(raw_low)
                 except Exception as e:
                     print(f"[GarminSync] Warning fetching HRV data: {e}")
+                    if is_auth_error(e):
+                        auth_failed = True
+                        last_auth_error = str(e)
+
+            # Fetch intraday Heart Rate series (for +/-60m snapshots & abrupt HR spike detection)
+            if not auth_failed and hasattr(client, 'get_heart_rates') and autonomic_service is not None:
+                try:
+                    hr_data = client.get_heart_rates(target_date_str)
+                    if isinstance(hr_data, dict) and isinstance(hr_data.get('heartRateValues'), list):
+                        hr_samples = autonomic_service.normalize_intraday_series(
+                            hr_data.get('heartRateValues'),
+                            min_val=25,
+                            max_val=240,
+                        )
+                except Exception as e:
+                    print(f"[GarminSync] Warning fetching intraday heart rates: {e}")
                     if is_auth_error(e):
                         auth_failed = True
                         last_auth_error = str(e)
@@ -1076,8 +1141,17 @@ class GarminSyncService:
                     garmin_state['hrv_status'] = hrv_status
                 if hrv_last_night is not None:
                     garmin_state['hrv_last_night'] = hrv_last_night
+                if hrv_baseline_low is not None:
+                    garmin_state['hrv_baseline_low'] = hrv_baseline_low
                 if avg_stress_level is not None:
                     garmin_state['stress_avg'] = avg_stress_level
+
+            if sleep_avg_stress is not None:
+                garmin_state['sleep_avg_stress'] = round(float(sleep_avg_stress), 1)
+            if sleep_start_ts is not None:
+                garmin_state['sleep_start_ts'] = sleep_start_ts
+            if sleep_end_ts is not None:
+                garmin_state['sleep_end_ts'] = sleep_end_ts
 
             existing_activities = garmin_state.get('recent_activities', [])
             existing_map = {str(a.get('id')): a for a in existing_activities if isinstance(a, dict)}
@@ -1248,11 +1322,68 @@ class GarminSyncService:
                         training_readiness=garmin_state.get('training_readiness'),
                         source='garmin_oauth',
                         overwrite_nulls=True,
+                        hrv_last_night=garmin_state.get('hrv_last_night'),
+                        hrv_weekly_avg=garmin_state.get('hrv_weekly_avg'),
+                        hrv_status=garmin_state.get('hrv_status'),
+                        hrv_baseline_low=hrv_baseline_low,
+                        avg_stress=garmin_state.get('stress_avg'),
+                        sleep_avg_stress=sleep_avg_stress,
+                        sleep_start_ts=sleep_start_ts,
+                        sleep_end_ts=sleep_end_ts,
+                        deep_sleep_sec=deep_sleep_sec,
+                        rem_sleep_sec=rem_sleep_sec,
+                        light_sleep_sec=light_sleep_sec,
+                        awake_sleep_sec=awake_sleep_sec,
                     )
+                    if stress_samples is not None or hr_samples is not None or sleep_stress_samples is not None:
+                        db.upsert_garmin_intraday(
+                            target_date_str,
+                            stress_samples=stress_samples,
+                            hr_samples=hr_samples,
+                            sleep_stress_samples=sleep_stress_samples,
+                        )
                 except Exception as dbe:
                     print(f"[GarminSync] Failed saving daily_biometrics: {dbe}")
 
             state_store.save_live_state(state, LIVE_STATE_PATH)
+
+        # Outside state_lock: backfill yesterday intraday if incomplete episode spans yesterday/midnight, then update snapshots
+        if autonomic_service is not None and db is not None and not auth_failed:
+            try:
+                yest_str = (datetime.strptime(target_date_str, "%Y-%m-%d").date() - timedelta(days=1)).isoformat()
+                eps = db.get_paroxysmal_episodes(days=7)
+                needs_yest = any(
+                    ep.get('biometric_snapshot_status') != 'complete'
+                    and str(ep.get('date_str') or '') in (yest_str, target_date_str)
+                    for ep in eps
+                )
+                if needs_yest:
+                    existing_yest = db.get_garmin_intraday(yest_str)
+                    stale_yest = existing_yest is None
+                    if existing_yest and existing_yest.get('synced_at'):
+                        y_dt = time_utils.parse_uk_ts(existing_yest['synced_at'])
+                        if y_dt and (uk_now() - y_dt).total_seconds() > 1800:
+                            stale_yest = True
+                    if stale_yest:
+                        y_stress, y_hr = None, None
+                        try:
+                            ys_raw = client.get_stress_data(yest_str)
+                            if isinstance(ys_raw, dict) and isinstance(ys_raw.get('stressValuesArray'), list):
+                                y_stress = autonomic_service.normalize_intraday_series(ys_raw.get('stressValuesArray'), keep_negative=True)
+                        except Exception:
+                            pass
+                        if hasattr(client, 'get_heart_rates'):
+                            try:
+                                yh_raw = client.get_heart_rates(yest_str)
+                                if isinstance(yh_raw, dict) and isinstance(yh_raw.get('heartRateValues'), list):
+                                    y_hr = autonomic_service.normalize_intraday_series(yh_raw.get('heartRateValues'), min_val=25, max_val=240)
+                            except Exception:
+                                pass
+                        if y_stress is not None or y_hr is not None:
+                            db.upsert_garmin_intraday(yest_str, stress_samples=y_stress, hr_samples=y_hr)
+                autonomic_service.backfill_episode_snapshots(state)
+            except Exception as back_exc:
+                print(f"[GarminSync] Episode snapshot backfill notice: {back_exc}")
 
         self._persist_tokens(client)
         return state

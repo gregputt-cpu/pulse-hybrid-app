@@ -19,7 +19,8 @@ const SCRIPT_ORDER = [
   'js/charts.js',
   'js/fuel-engine.js',
   'js/telemetry.js',
-  'js/diagnostics.js'
+  'js/diagnostics.js',
+  'js/autonomic-tracker.js'
 ];
 
 const indexHtml = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
@@ -1793,11 +1794,11 @@ async function runAllTests() {
       assert(/id="pulseAuthError"[^>]*var\(--crimson-text\)/.test(indexHtml));
 
       for (const s of SCRIPT_ORDER) {
-        assert(indexHtml.includes(`./${s}?v=6.5`), `index.html missing ./${s}?v=6.5`);
+        assert(indexHtml.includes(`./${s}?v=6.6`), `index.html missing ./${s}?v=6.6`);
       }
-      assert(indexHtml.includes('./css/styles.css?v=6.5'));
-      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.5'), 'index.html boot splash must display v6.5');
-      assert(indexHtml.includes('Hybrid Athlete OS • v6.5'), 'index.html Settings modal must display v6.5');
+      assert(indexHtml.includes('./css/styles.css?v=6.6'));
+      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.6'), 'index.html boot splash must display v6.6');
+      assert(indexHtml.includes('Hybrid Athlete OS • v6.6'), 'index.html Settings modal must display v6.6');
       assert.strictEqual(indexHtml.includes('Hybrid Athlete OS • v6.1'), false, 'index.html must not contain stale v6.1 label');
 
       const piiRegex = /190\.5|6'3"|45yo|97\.70|97\.75|80\.99|81\.03|81\.0|98\.4|99\.85|@[^\s"']+\.com|GARMIN_TOKENS(?!_JSON)|renpho_creds(?!\.json)/;
@@ -1963,7 +1964,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.5-20261122');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.6-20261125');
       assert(swJsCode.includes('Promise.resolve(self.clients.claim()).catch(() => {})'));
       assert(swJsCode.includes('.catch(() => {})'), 'cache.put() must have .catch()');
 
@@ -1992,7 +1993,7 @@ async function runAllTests() {
       }
       await navRespPromise;
       await flushMicrotasks();
-      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.5-20261122');
+      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.6-20261125');
       assert.strictEqual(cacheBucket.has('https://pulse.local/index.html'), true, '/?tab=fuel must cache under /index.html');
 
       // Top-level dismissBootSplash & forcePulseAppReload

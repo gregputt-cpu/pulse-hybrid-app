@@ -254,6 +254,17 @@
         proDialMacros: proDial,
         goalKey: gKey
       });
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
+      if (n && n.illness_active === true && Number(n.illness_maintenance_kcal) > 0 && state.date === todayIso) {
+        const maintTarget = Math.max(baseRes.calorie_target, Math.round(Number(n.illness_maintenance_kcal)));
+        const extra = Math.max(0, maintTarget - baseRes.calorie_target);
+        return {
+          calorie_target: maintTarget,
+          protein_target_g: baseRes.protein_target_g,
+          carbs_target_g: Math.max(20, baseRes.carbs_target_g + Math.round((extra * 0.60) / 4)),
+          fat_target_g: Math.max(20, baseRes.fat_target_g + Math.round((extra * 0.40) / 9))
+        };
+      }
       const activeFlex = _getActiveTodayFlex();
       if (activeFlex) {
         return {
@@ -2725,6 +2736,15 @@
     function _updateFuelTodayFlexBanner(flex) {
       const banner = document.getElementById('fuelTodayFlexBanner');
       if (!banner) return;
+      const nutState = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE && window.BAKED_LIVE_STATE.nutrition)
+        ? window.BAKED_LIVE_STATE.nutrition
+        : null;
+      const todayIso = (typeof getLocalDateStr === 'function') ? getLocalDateStr() : '';
+      if (nutState && nutState.illness_active === true && (!window.BAKED_LIVE_STATE.date || window.BAKED_LIVE_STATE.date === todayIso)) {
+        banner.style.display = 'block';
+        banner.innerHTML = `<div class="fuel-today-flex-banner tone-claimed" onclick="if(typeof openAutonomicModal==='function') openAutonomicModal('illness')"><span>🤒 Illness Maintenance Active (Protein Locked · Bank Paused)</span><span class="fuel-today-flex-cta">Manage →</span></div>`;
+        return;
+      }
       if (!flex) {
         banner.style.display = 'none';
         banner.innerHTML = '';
@@ -2938,7 +2958,8 @@
       if (pillEl) {
         if (isActive) {
           pillEl.style.display = 'inline-block';
-          pillEl.innerText = `🛡 Glycogen Shield · ${Number(shield.hours_remaining || 0)}h`;
+          const pillTitle = shield.claim_mode === 'illness_recovery' ? 'Recovery Shield' : 'Glycogen Shield';
+          pillEl.innerText = `🛡 ${pillTitle} · ${Number(shield.hours_remaining || 0)}h`;
           pillEl.title = String(shield.note || '');
         } else {
           pillEl.style.display = 'none';
@@ -2951,9 +2972,11 @@
         bannerEl.innerHTML = '';
         return;
       }
-      const modeName = shield.claim_mode === 'refeed_day'
-        ? 'Maintenance Refeed'
-        : (shield.claim_mode === 'planned_flex' ? 'Planned Flex' : 'Flex Meal');
+      const modeName = shield.claim_mode === 'illness_recovery'
+        ? 'Illness Recovery'
+        : (shield.claim_mode === 'refeed_day'
+          ? 'Maintenance Refeed'
+          : (shield.claim_mode === 'planned_flex' ? 'Planned Flex' : 'Flex Meal'));
       bannerEl.innerHTML = `
         <div class="scale-shield-banner">
           <div class="scale-shield-title">

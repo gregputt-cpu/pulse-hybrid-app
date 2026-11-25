@@ -51,6 +51,23 @@
       --text-muted: #8b9db5;
       --text-dim: #64748b; /* Borders / non-text accents only */
 
+      /* Autonomic Episode & Illness Recovery Tokens */
+      --autonomic-calm-bg: #082321;
+      --autonomic-calm-border: #14b8a6;
+      --autonomic-calm-text: #99f6e4;
+      --autonomic-amber-bg: #261a06;
+      --autonomic-amber-border: #f59e0b;
+      --autonomic-amber-text: #fde68a;
+      --autonomic-red-bg: #290c12;
+      --autonomic-red-border: #f87171;
+      --autonomic-red-text: #fecaca;
+      --illness-bg: #1c1330;
+      --illness-border: #a78bfa;
+      --illness-text: #ede9fe;
+      --autonomic-chip-bg: #111827;
+      --autonomic-chip-active-bg: #0e3a46;
+      --autonomic-surface-hi: #161d2b;
+
       --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -4393,5 +4410,658 @@ body.workout-focus-mode .rest-bar-box.rest-active {
 
   .fuel-macro-hero {
     font-size: 15px;
+  }
+}
+
+/* ==================== AUTONOMIC EPISODE & ILLNESS TRACKER TOKENS (ZERO HARDCODED HEX) ==================== */
+.pill-dot.teal {
+  background: var(--autonomic-calm-border);
+  box-shadow: 0 0 6px rgba(20, 184, 166, 0.55);
+}
+
+.pill-dot.violet {
+  background: var(--illness-border);
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.55);
+}
+
+.pill-dot.amber {
+  background: var(--amber);
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+}
+
+.autonomic-quick-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.autonomic-quick-btn {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border-bright);
+  background: var(--autonomic-surface-hi);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+}
+
+.autonomic-quick-btn:hover {
+  border-color: var(--primary);
+  background: var(--autonomic-chip-active-bg);
+}
+
+.autonomic-quick-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.autonomic-quick-btn.is-acute {
+  background: var(--autonomic-red-bg);
+  border-color: var(--autonomic-red-border);
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-quick-btn.is-illness {
+  background: var(--illness-bg);
+  border-color: var(--illness-border);
+  color: var(--illness-text);
+}
+
+.autonomic-quick-btn.is-calm {
+  background: var(--autonomic-calm-bg);
+  border-color: var(--autonomic-calm-border);
+  color: var(--autonomic-calm-text);
+}
+
+/* Safety & Recovery Banners */
+.autonomic-safety-banner {
+  border-radius: 14px;
+  padding: 14px;
+  border: 1.5px solid var(--border-bright);
+  background: var(--autonomic-surface-hi);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.autonomic-safety-banner.tone-amber {
+  background: var(--autonomic-amber-bg);
+  border-color: var(--autonomic-amber-border);
+  color: var(--autonomic-amber-text);
+}
+
+.autonomic-safety-banner.tone-red {
+  background: var(--autonomic-red-bg);
+  border-color: var(--autonomic-red-border);
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-safety-banner.tone-calm {
+  background: var(--autonomic-calm-bg);
+  border-color: var(--autonomic-calm-border);
+  color: var(--autonomic-calm-text);
+}
+
+.autonomic-safety-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.autonomic-safety-copy {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.autonomic-safety-banner.tone-amber .autonomic-safety-copy {
+  color: var(--autonomic-amber-text);
+}
+
+.autonomic-safety-banner.tone-red .autonomic-safety-copy {
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-safety-banner.tone-calm .autonomic-safety-copy {
+  color: var(--autonomic-calm-text);
+}
+
+.autonomic-safety-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.autonomic-safety-actions > button {
+  min-height: 48px;
+  flex: 1 1 140px;
+}
+
+.autonomic-spike-banner {
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--autonomic-amber-bg);
+  border: 1.5px solid var(--autonomic-amber-border);
+  color: var(--autonomic-amber-text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.illness-today-banner {
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--illness-bg);
+  border: 1.5px solid var(--illness-border);
+  color: var(--illness-text);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* Modal & Subview Switcher */
+.autonomic-subview-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.autonomic-subview-nav .btn-subview {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.autonomic-subview-nav .btn-subview:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.autonomic-subview {
+  display: none;
+}
+
+.autonomic-subview.active {
+  display: block;
+}
+
+.autonomic-modal-card {
+  background: var(--surface-card);
+  border: 1.5px solid var(--border-bright);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Primary 1-Tap Capture & Lifecycle Actions */
+.autonomic-tap-btn {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 2px solid var(--border-bright);
+  background: var(--autonomic-surface-hi);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+}
+
+.autonomic-tap-btn:hover {
+  border-color: var(--primary);
+}
+
+.autonomic-tap-btn:active {
+  transform: scale(0.99);
+}
+
+.autonomic-tap-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.autonomic-tap-btn.is-acute {
+  background: var(--autonomic-red-bg);
+  border-color: var(--autonomic-red-border);
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-tap-btn.is-recovery {
+  background: var(--autonomic-amber-bg);
+  border-color: var(--autonomic-amber-border);
+  color: var(--autonomic-amber-text);
+}
+
+.autonomic-tap-btn.is-calm {
+  background: var(--autonomic-calm-bg);
+  border-color: var(--autonomic-calm-border);
+  color: var(--autonomic-calm-text);
+}
+
+.autonomic-tap-btn.is-illness {
+  background: var(--illness-bg);
+  border-color: var(--illness-border);
+  color: var(--illness-text);
+}
+
+.autonomic-tap-btn.is-outline {
+  background: transparent;
+  border-color: var(--border-bright);
+  color: var(--text);
+}
+
+.autonomic-timer-hero {
+  background: var(--autonomic-surface-hi);
+  border: 1.5px solid var(--border-bright);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.autonomic-timer-digits {
+  font-family: var(--font-mono);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.autonomic-hybrid-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.autonomic-hybrid-badge {
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  background: var(--autonomic-chip-bg);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.autonomic-hybrid-badge.is-done {
+  background: var(--autonomic-calm-bg);
+  border-color: var(--autonomic-calm-border);
+  color: var(--autonomic-calm-text);
+}
+
+/* Low-Cognitive-Load Symptom & Trigger Chips */
+.autonomic-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.autonomic-chip {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--autonomic-chip-bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.autonomic-chip:hover {
+  border-color: var(--border-bright);
+}
+
+.autonomic-chip:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.autonomic-chip.is-selected {
+  background: var(--autonomic-chip-active-bg);
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.autonomic-chip-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-bright);
+  background: var(--surface);
+  color: var(--primary-bright);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.autonomic-chip.is-selected .autonomic-chip-check {
+  background: var(--primary-dim);
+  border-color: var(--primary);
+  color: var(--primary-bright);
+}
+
+.autonomic-day-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.autonomic-day-chip {
+  min-height: 48px;
+  flex: 1 1 88px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--autonomic-chip-bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.autonomic-day-chip:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.autonomic-day-chip.is-selected {
+  background: var(--autonomic-chip-active-bg);
+  border-color: var(--primary);
+  color: var(--primary-bright);
+}
+
+.autonomic-day-chip.is-sick {
+  background: var(--illness-bg);
+  border-color: var(--illness-border);
+  color: var(--illness-text);
+}
+
+/* Analytics & Clinical History */
+.autonomic-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.autonomic-stat-grid.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.autonomic-stat-box {
+  background: var(--autonomic-surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.autonomic-stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.autonomic-stat-val {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+.autonomic-risk-card {
+  border-radius: 14px;
+  padding: 14px;
+  border: 1.5px solid var(--border-bright);
+  background: var(--autonomic-surface-hi);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.autonomic-risk-card.risk-low {
+  background: var(--autonomic-calm-bg);
+  border-color: var(--autonomic-calm-border);
+  color: var(--autonomic-calm-text);
+}
+
+.autonomic-risk-card.risk-elevated {
+  background: var(--autonomic-amber-bg);
+  border-color: var(--autonomic-amber-border);
+  color: var(--autonomic-amber-text);
+}
+
+.autonomic-risk-card.risk-high {
+  background: var(--autonomic-red-bg);
+  border-color: var(--autonomic-red-border);
+  color: var(--autonomic-red-text);
+}
+
+.autonomic-risk-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-bright);
+  background: var(--surface);
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.autonomic-driver-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.autonomic-driver-item {
+  background: var(--autonomic-surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.autonomic-episode-card {
+  background: var(--autonomic-surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.autonomic-episode-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.autonomic-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.autonomic-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--autonomic-chip-bg);
+  border: 1px solid var(--border-bright);
+  color: var(--text-secondary);
+}
+
+.autonomic-spark-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 44px;
+  padding: 4px 0;
+}
+
+.autonomic-spark-bar {
+  flex: 1 1 0;
+  min-width: 6px;
+  border-radius: 4px 4px 2px 2px;
+  background: rgba(20, 184, 166, 0.55);
+  border: 1px solid var(--autonomic-calm-border);
+}
+
+.autonomic-spark-bar.is-high {
+  background: var(--autonomic-red-border);
+  border-color: var(--autonomic-red-border);
+}
+
+.autonomic-spark-bar.is-mid {
+  background: var(--autonomic-amber-border);
+  border-color: var(--autonomic-amber-border);
+}
+
+.autonomic-spark-bar.is-low {
+  background: rgba(20, 184, 166, 0.55);
+  border-color: var(--autonomic-calm-border);
+}
+
+.autonomic-disclaimer-box {
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.autonomic-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.autonomic-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-bright);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.autonomic-input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .autonomic-quick-btn,
+  .autonomic-tap-btn,
+  .autonomic-chip,
+  .autonomic-day-chip {
+    transition: none;
+  }
+
+  .autonomic-tap-btn:active {
+    transform: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .autonomic-quick-strip,
+  .autonomic-chip-grid,
+  .autonomic-stat-grid,
+  .autonomic-stat-grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .autonomic-timer-digits {
+    font-size: 30px;
+  }
+
+  .autonomic-subview-nav .btn-subview {
+    font-size: 12px;
+    padding: 0 6px;
   }
 }
