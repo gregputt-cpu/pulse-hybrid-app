@@ -189,7 +189,44 @@ def test_level1_baseline_alerts():
     )
     assert lvl1_sparse["sleep_data_quality"] == "insufficient"
     assert lvl1_sparse["active"] is False
-    print("PASS [1] Level 1 Baseline Alerts & Negative/Low-Coverage Guards")
+
+    # Mild HRV dip (41.0ms vs 44.0ms baseline, calm sleep stress) -> Watch only (NOT Level 1 caution, NO driving block)
+    for off in range(1, 6):
+        d = (today_date - timedelta(days=off)).isoformat()
+        db.upsert_daily_biometrics(d, sleep_score=80, resting_hr=48, body_battery=75, hrv_last_night=44.0, sleep_avg_stress=16.0)
+    db.upsert_daily_biometrics(
+        today_str,
+        sleep_score=83,
+        resting_hr=49,
+        body_battery=80,
+        hrv_last_night=41.0,
+        hrv_status="BALANCED",
+        hrv_baseline_low=42.0,
+        sleep_avg_stress=17.0,
+        sleep_start_ts=_ms(s_start),
+        sleep_end_ts=_ms(s_end),
+    )
+    db.upsert_garmin_intraday(today_str, sleep_stress_samples=[[_ms(s_start + timedelta(minutes=3 * k)), 16] for k in range(60)])
+    bio_hist_mild = db.get_daily_biometrics(days=14)
+    today_mild = next(r for r in bio_hist_mild if r["date_str"] == today_str)
+    lvl1_mild = autonomic_service.evaluate_level1_baseline(today_mild, bio_hist_mild, db.get_garmin_intraday(today_str), target_date_str=today_str)
+    assert lvl1_mild["active"] is False
+    assert lvl1_mild["hrv_mild_dip"] is True
+    mild_summary = autonomic_service.build_autonomic_summary({}, target_date_str=today_str)
+    assert mild_summary["system_state"] == "IDLE"
+    assert mild_summary["safety_banner"]["tier"] == "watch"
+    assert mild_summary["safety_banner"]["show_on_today"] is False
+    assert mild_summary["safety_banner"]["avoid_driving"] is False
+
+    # Isolated severe HRV drop during Day-1 post-illness ramp -> damped to Watch only (no driving block)
+    yest_str = (today_date - timedelta(days=1)).isoformat()
+    db.upsert_illness_log(yest_str, status="active", severity="moderate")
+    db.upsert_daily_biometrics(today_str, hrv_last_night=34.0, hrv_status="LOW", hrv_baseline_low=44.0, sleep_avg_stress=16.0, sleep_start_ts=_ms(s_start), sleep_end_ts=_ms(s_end))
+    damped_summary = autonomic_service.build_autonomic_summary({}, target_date_str=today_str)
+    assert damped_summary["safety_banner"]["tier"] == "watch"
+    assert damped_summary["safety_banner"]["show_on_today"] is False
+    assert damped_summary["safety_banner"]["avoid_driving"] is False
+    print("PASS [1] Level 1 Tightened HRV Threshold, Mild Dip Watch & Post-Illness Damping")
 
 
 def test_level2_sympathetic_load_workout_and_gaps():
@@ -562,7 +599,23 @@ def test_fastapi_endpoints_and_garmin_sync_backfill():
     assert backfilled["biometric_snapshot_status"] == "complete"
     assert backfilled["state"] == "RESOLVED"
     assert backfilled["biometric_snapshot"]["hr"]["peak"] == 112
-    print("PASS [6] FastAPI /api/health/* Endpoints, Exports, Illness Linking & Garmin Intraday Backfill")
+
+    # 8. /api/health/autonomic/dismiss-caution clears Today caution strip while active episode still overrides
+    st_dc, raw_dc = api_req("POST", "/api/health/autonomic/dismiss-caution", {"date_str": now_uk.date().isoformat()})
+    assert st_dc == 200
+    dc_body = json.loads(raw_dc)
+    assert dc_body["autonomic"]["safety_banner"]["tier"] == "caution"
+    assert dc_body["autonomic"]["safety_banner"]["dismissed_today"] is True
+    assert dc_body["autonomic"]["safety_banner"]["show_on_today"] is False
+    assert dc_body["autonomic"]["safety_banner"]["avoid_driving"] is False
+
+    autonomic_service.create_episode({"id": "ep_active_override_caution", "onset_time": now_uk.isoformat()})
+    _, raw_st = api_req("GET", "/api/health/autonomic/status")
+    st_body = json.loads(raw_st)
+    assert st_body["safety_banner"]["tier"] == "active_safety"
+    assert st_body["safety_banner"]["show_on_today"] is True
+    assert st_body["safety_banner"]["avoid_driving"] is True
+    print("PASS [6] FastAPI /api/health/* Endpoints, Dismiss Caution, Exports & Garmin Intraday Backfill")
 
 
 if __name__ == "__main__":

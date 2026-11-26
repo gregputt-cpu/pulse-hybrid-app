@@ -1,35 +1,48 @@
-(function(){"use strict";const Y="pulse_autonomic_cache_v1",W=[{key:"dizziness_vertigo",label:"Dizziness / Vertigo"},{key:"lightheaded_presyncope",label:"Lightheadedness / Presyncope"},{key:"dissociation",label:"Dissociation / Detachment"},{key:"confusion_brain_fog",label:"Confusion / Brain Fog"},{key:"impending_doom",label:"Impending Doom / Adrenaline"},{key:"visual_changes",label:"Visual Changes"},{key:"blackout",label:"Blackout / Loss of Consciousness"}],J=[{key:"standing_quickly",label:"Standing Up Quickly"},{key:"driving",label:"Driving (ID. Buzz)"},{key:"fasted_state",label:"Fasted State"},{key:"post_exercise",label:"Post-Exercise"},{key:"poor_sleep",label:"Poor Sleep"},{key:"high_workload",label:"High Workload / Screen"},{key:"illness_infection",label:"Illness / Infection"},{key:"dehydration_heat",label:"Dehydration / Heat"},{key:"caffeine_stimulant",label:"Caffeine / Stimulant"}],Q=[{key:"fever_chills",label:"Fever / Chills"},{key:"fatigue_malaise",label:"Deep Fatigue / Malaise"},{key:"respiratory_sinus",label:"Respiratory / Sinus"},{key:"gi_nausea",label:"GI Upset / Nausea"},{key:"headache_aches",label:"Headache / Body Aches"},{key:"elevated_rhr_stress",label:"High RHR / Poor Sleep"}];let w="capture",T=new Set,L=new Set,M="moderate",O="",E=null,R=!1,I=new Set,D=new Set,g="",b="moderate",f=new Set,h="",C=null,z=!1;function l(e){return typeof escapeHtml=="function"?escapeHtml(e):String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}function $(){if(typeof getLocalDateStr=="function")return getLocalDateStr();const e=new Date;return`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,"0")}-${String(e.getDate()).padStart(2,"0")}`}function se(){const e=new Date,t=o=>String(o).padStart(2,"0");return`${e.getFullYear()}-${t(e.getMonth()+1)}-${t(e.getDate())}T${t(e.getHours())}:${t(e.getMinutes())}`}function K(e){const t=new Date;t.setDate(t.getDate()-e);const o=s=>String(s).padStart(2,"0");return`${t.getFullYear()}-${o(t.getMonth()+1)}-${o(t.getDate())}`}function ie(e){const t=String(e||"").split("-").map(Number);if(t.length!==3)return e;const o=new Date(t[0],t[1]-1,t[2]),s=$();if(e===s)return"Today";const a=K(1);return e===a?"Yest":o.toLocaleDateString("en-GB",{weekday:"short",day:"numeric"})}function F(e){const t=Date.parse(String(e||""));if(!Number.isFinite(t))return"00:00";const o=Math.max(0,Math.floor((Date.now()-t)/1e3)),s=Math.floor(o/3600),a=Math.floor(o%3600/60),i=o%60,n=c=>String(c).padStart(2,"0");return s>0?`${s}:${n(a)}:${n(i)}`:`${n(a)}:${n(i)}`}function A(e){if(!e)return"--";const t=Date.parse(String(e));return Number.isFinite(t)?new Date(t).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):String(e).slice(0,16)}function ae(){return{evaluated_at:null,date_str:$(),system_state:"IDLE",alert_level:0,safety_banner:{active:!1,level:0,tone:"calm",title:"Autonomic Baseline Calm",reasons:[],advisory:"Autonomic metrics within normal baseline.",avoid_driving:!1,avoid_solo_exertion:!1},level1:{active:!1,triggers:[],sleep_avg_stress:null,hrv_last_night:null,hrv_7d_baseline:null},level2:{active:!1,current_streak_mins:0,max_streak_mins:0},acute_spike:null,active_episode:null,illness:{active_today:!1,today_log:null,current_streak_days:0,last_illness_date:null,days_since_illness_ended:null,post_illness_ramp_active:!1,recovery_scale_shield:{active:!1,hours_remaining:0,note:""},recent_logs:[]},patterns:{total_episodes:0,count_7d:0,count_30d:0,acute_duration_stats:{count:0,avg:null,median:null,min:null,max:null},total_recovery_stats:{count:0,avg:null,median:null,min:null,max:null},top_symptoms:[],top_triggers:[],illness_co_occurrence_pct:0,time_of_day:[],pathway_counts:[],prodrome_comparison:{},prodromal_risk:{score:0,level:"low",label:"Low / Calm Autonomic Baseline",drivers:[]}},recent_episodes:[],symptom_catalog:W,trigger_catalog:J,illness_symptom_catalog:Q,clinical_disclaimer:"Self-monitoring & Garmin biometric correlation record only. Non-diagnostic."}}function y(){if(typeof window<"u"&&window.PULSE_ANALYTICS_SUMMARY&&window.PULSE_ANALYTICS_SUMMARY.autonomic)return window.PULSE_ANALYTICS_SUMMARY.autonomic;try{const e=localStorage.getItem(Y);if(e){const t=JSON.parse(e);if(t&&typeof t=="object"&&t.system_state)return(!window.PULSE_ANALYTICS_SUMMARY||typeof window.PULSE_ANALYTICS_SUMMARY!="object")&&(window.PULSE_ANALYTICS_SUMMARY={}),window.PULSE_ANALYTICS_SUMMARY.autonomic=t,t}}catch{}return ae()}function X(e,t,o){if(!(!e||typeof e!="object")){typeof window<"u"&&((!window.PULSE_ANALYTICS_SUMMARY||typeof window.PULSE_ANALYTICS_SUMMARY!="object")&&(window.PULSE_ANALYTICS_SUMMARY={}),window.PULSE_ANALYTICS_SUMMARY.autonomic=e,o&&(window.PULSE_ANALYTICS_SUMMARY.flex_refeed=o));try{localStorage.setItem(Y,JSON.stringify(e)),window.PULSE_ANALYTICS_SUMMARY&&localStorage.setItem("pulse_analytics_summary_cache",JSON.stringify(window.PULSE_ANALYTICS_SUMMARY))}catch{}if(t&&typeof applyLiveStateToDom=="function"&&applyLiveStateToDom(t),P(),typeof renderTodayTrainingRecommendations=="function")try{renderTodayTrainingRecommendations()}catch{}if(typeof renderFlexRefeedCard=="function"&&window.PULSE_ANALYTICS_SUMMARY)try{renderFlexRefeedCard(window.PULSE_ANALYTICS_SUMMARY)}catch{}if(typeof renderPostRefeedScaleShield=="function"&&window.PULSE_ANALYTICS_SUMMARY)try{renderPostRefeedScaleShield(window.PULSE_ANALYTICS_SUMMARY)}catch{}}}function ne(e){if(!e){E=null;return}E!==e.id&&(E=e.id,T=new Set(Array.isArray(e.symptoms)?e.symptoms:[]),L=new Set(Array.isArray(e.triggers)?e.triggers:[]),M=e.severity||"moderate",O=e.notes||"")}function N(){C&&(clearInterval(C),C=null)}function Z(){const t=y().active_episode,o=typeof document<"u"?document.getElementById("tab-health"):null,s=!!(o&&o.classList&&o.classList.contains("active"));t&&(t.state==="ACUTE_EPISODE"||t.state==="POST_EPISODE_RECOVERY")?!C&&(s||t.state==="ACUTE_EPISODE")&&(C=setInterval(()=>{const i=y().active_episode;if(!i){N();return}const n=document.getElementById("autonomicLiveTimerDigits");n&&(n.innerText=F(i.onset_time));const c=document.getElementById("autonomicQuickEpisodeLabel");c&&(c.innerText=`Turn Active (${F(i.onset_time)})`)},1e3)):N()}function le(e){const t=document.getElementById("autonomicPillDot"),o=document.getElementById("autonomicPillText"),s=document.getElementById("navHealthDot"),a=e.active_episode,i=e.illness||{},n=Number(e.alert_level||0);let c="teal",d="Calm",r=!1;a&&a.state==="ACUTE_EPISODE"?(c="red",d="Turn Active",r=!0):a&&a.state==="POST_EPISODE_RECOVERY"?(c="amber",d="Recovering",r=!0):n>=2?(c="red",d="Level 2 Alert",r=!0):n===1?(c="amber",d="Level 1 Alert",r=!0):i.active_today&&(c="violet",d="Sick Mode",r=!0),t&&o&&(t.className="pill-dot",t.classList.add(c),o.innerText=d),s&&(s.className="nav-health-dot",r?(s.classList.add(c),s.style.display="block"):s.style.display="none")}function re(e){const t=document.getElementById("autonomicSafetyBanner"),o=document.getElementById("autonomicSpikeBanner"),s=document.getElementById("illnessStatusBannerToday"),a=e.safety_banner||{},i=e.active_episode,n=e.illness||{};if(t)if(a.active){const d=a.tone==="red"?"tone-red":"tone-amber",r=Array.isArray(a.reasons)?a.reasons:[],v=i?`
-            <button type="button" class="autonomic-tap-btn ${i.state==="ACUTE_EPISODE"?"is-acute":"is-recovery"}" onclick="openAutonomicModal('capture')">\u23F1 Open Episode Tracker</button>
-            <button type="button" class="autonomic-tap-btn is-calm" onclick="endEpisodeNow('${l(i.id)}')">\u23F9 End Episode Now</button>
+(function(){"use strict";const H="pulse_autonomic_cache_v1",Q=[{key:"dizziness_vertigo",label:"Dizziness / Vertigo"},{key:"lightheaded_presyncope",label:"Lightheadedness / Presyncope"},{key:"dissociation",label:"Dissociation / Detachment"},{key:"confusion_brain_fog",label:"Confusion / Brain Fog"},{key:"impending_doom",label:"Impending Doom / Adrenaline"},{key:"visual_changes",label:"Visual Changes"},{key:"blackout",label:"Blackout / Loss of Consciousness"}],K=[{key:"standing_quickly",label:"Standing Up Quickly"},{key:"driving",label:"Driving (ID. Buzz)"},{key:"fasted_state",label:"Fasted State"},{key:"post_exercise",label:"Post-Exercise"},{key:"poor_sleep",label:"Poor Sleep"},{key:"high_workload",label:"High Workload / Screen"},{key:"illness_infection",label:"Illness / Infection"},{key:"dehydration_heat",label:"Dehydration / Heat"},{key:"caffeine_stimulant",label:"Caffeine / Stimulant"}],X=[{key:"fever_chills",label:"Fever / Chills"},{key:"fatigue_malaise",label:"Deep Fatigue / Malaise"},{key:"respiratory_sinus",label:"Respiratory / Sinus"},{key:"gi_nausea",label:"GI Upset / Nausea"},{key:"headache_aches",label:"Headache / Body Aches"},{key:"elevated_rhr_stress",label:"High RHR / Poor Sleep"}];let E="capture",L=new Set,I=new Set,M="moderate",B="",A=null,R=!1,D=new Set,N=new Set,g="",b="moderate",f=new Set,h="",P=null,V=!1;function l(e){return typeof escapeHtml=="function"?escapeHtml(e):String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}function w(){if(typeof getLocalDateStr=="function")return getLocalDateStr();const e=new Date;return`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,"0")}-${String(e.getDate()).padStart(2,"0")}`}function ne(){const e=new Date,t=o=>String(o).padStart(2,"0");return`${e.getFullYear()}-${t(e.getMonth()+1)}-${t(e.getDate())}T${t(e.getHours())}:${t(e.getMinutes())}`}function Z(e){const t=new Date;t.setDate(t.getDate()-e);const o=s=>String(s).padStart(2,"0");return`${t.getFullYear()}-${o(t.getMonth()+1)}-${o(t.getDate())}`}function le(e){const t=String(e||"").split("-").map(Number);if(t.length!==3)return e;const o=new Date(t[0],t[1]-1,t[2]),s=w();if(e===s)return"Today";const i=Z(1);return e===i?"Yest":o.toLocaleDateString("en-GB",{weekday:"short",day:"numeric"})}function F(e){const t=Date.parse(String(e||""));if(!Number.isFinite(t))return"00:00";const o=Math.max(0,Math.floor((Date.now()-t)/1e3)),s=Math.floor(o/3600),i=Math.floor(o%3600/60),a=o%60,n=d=>String(d).padStart(2,"0");return s>0?`${s}:${n(i)}:${n(a)}`:`${n(i)}:${n(a)}`}function x(e){if(!e)return"--";const t=Date.parse(String(e));return Number.isFinite(t)?new Date(t).toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):String(e).slice(0,16)}function ce(){return{evaluated_at:null,date_str:w(),system_state:"IDLE",alert_level:0,safety_banner:{active:!1,level:0,tone:"calm",title:"Autonomic Baseline Calm",reasons:[],advisory:"Autonomic metrics within normal baseline.",avoid_driving:!1,avoid_solo_exertion:!1},level1:{active:!1,triggers:[],sleep_avg_stress:null,hrv_last_night:null,hrv_7d_baseline:null},level2:{active:!1,current_streak_mins:0,max_streak_mins:0},acute_spike:null,active_episode:null,illness:{active_today:!1,today_log:null,current_streak_days:0,last_illness_date:null,days_since_illness_ended:null,post_illness_ramp_active:!1,recovery_scale_shield:{active:!1,hours_remaining:0,note:""},recent_logs:[]},patterns:{total_episodes:0,count_7d:0,count_30d:0,acute_duration_stats:{count:0,avg:null,median:null,min:null,max:null},total_recovery_stats:{count:0,avg:null,median:null,min:null,max:null},top_symptoms:[],top_triggers:[],illness_co_occurrence_pct:0,time_of_day:[],pathway_counts:[],prodrome_comparison:{},prodromal_risk:{score:0,level:"low",label:"Low / Calm Autonomic Baseline",drivers:[]}},recent_episodes:[],symptom_catalog:Q,trigger_catalog:K,illness_symptom_catalog:X,clinical_disclaimer:"Self-monitoring & Garmin biometric correlation record only. Non-diagnostic."}}function y(){if(typeof window<"u"&&window.PULSE_ANALYTICS_SUMMARY&&window.PULSE_ANALYTICS_SUMMARY.autonomic)return window.PULSE_ANALYTICS_SUMMARY.autonomic;try{const e=localStorage.getItem(H);if(e){const t=JSON.parse(e);if(t&&typeof t=="object"&&t.system_state)return(!window.PULSE_ANALYTICS_SUMMARY||typeof window.PULSE_ANALYTICS_SUMMARY!="object")&&(window.PULSE_ANALYTICS_SUMMARY={}),window.PULSE_ANALYTICS_SUMMARY.autonomic=t,t}}catch{}return ce()}function ee(e,t,o){if(!(!e||typeof e!="object")){typeof window<"u"&&((!window.PULSE_ANALYTICS_SUMMARY||typeof window.PULSE_ANALYTICS_SUMMARY!="object")&&(window.PULSE_ANALYTICS_SUMMARY={}),window.PULSE_ANALYTICS_SUMMARY.autonomic=e,o&&(window.PULSE_ANALYTICS_SUMMARY.flex_refeed=o));try{localStorage.setItem(H,JSON.stringify(e)),window.PULSE_ANALYTICS_SUMMARY&&localStorage.setItem("pulse_analytics_summary_cache",JSON.stringify(window.PULSE_ANALYTICS_SUMMARY))}catch{}if(t&&typeof applyLiveStateToDom=="function"&&applyLiveStateToDom(t),U(),typeof renderTodayTrainingRecommendations=="function")try{renderTodayTrainingRecommendations()}catch{}if(typeof renderFlexRefeedCard=="function"&&window.PULSE_ANALYTICS_SUMMARY)try{renderFlexRefeedCard(window.PULSE_ANALYTICS_SUMMARY)}catch{}if(typeof renderPostRefeedScaleShield=="function"&&window.PULSE_ANALYTICS_SUMMARY)try{renderPostRefeedScaleShield(window.PULSE_ANALYTICS_SUMMARY)}catch{}}}function re(e){if(!e){A=null;return}A!==e.id&&(A=e.id,L=new Set(Array.isArray(e.symptoms)?e.symptoms:[]),I=new Set(Array.isArray(e.triggers)?e.triggers:[]),M=e.severity||"moderate",B=e.notes||"")}function C(){P&&(clearInterval(P),P=null)}function te(){const t=y().active_episode,o=typeof document<"u"?document.getElementById("tab-health"):null,s=!!(o&&o.classList&&o.classList.contains("active"));t&&(t.state==="ACUTE_EPISODE"||t.state==="POST_EPISODE_RECOVERY")?!P&&(s||t.state==="ACUTE_EPISODE")&&(P=setInterval(()=>{const a=y().active_episode;if(!a){C();return}const n=document.getElementById("autonomicLiveTimerDigits");n&&(n.innerText=F(a.onset_time));const d=document.getElementById("autonomicQuickEpisodeLabel");d&&(d.innerText=`Turn Active (${F(a.onset_time)})`)},1e3)):C()}function de(e){const t=document.getElementById("autonomicPillDot"),o=document.getElementById("autonomicPillText"),s=document.getElementById("navHealthDot"),i=e.active_episode,a=e.illness||{},n=Number(e.alert_level||0),d=e.safety_banner||{},r=d.tier||(i?"active_safety":n>=1?"caution":"none");let c="teal",p="Calm",u=!1;i&&i.state==="ACUTE_EPISODE"?(c="red",p="Turn Active",u=!0):i&&i.state==="POST_EPISODE_RECOVERY"?(c="amber",p="Recovering",u=!0):r==="caution"&&!d.dismissed_today?(c="amber",p="Caution",u=!0):a.active_today?(c="violet",p="Sick Mode",u=!0):(r==="caution"||r==="watch")&&(c="amber",p="HRV Watch",u=!1),t&&o&&(t.className="pill-dot",t.classList.add(c),o.innerText=p),s&&(s.className="nav-health-dot",u?(s.classList.add(c),s.style.display="block"):s.style.display="none")}function pe(e){const t=document.getElementById("autonomicSafetyBanner"),o=document.getElementById("autonomicSpikeBanner"),s=document.getElementById("illnessStatusBannerToday"),i=e.safety_banner||{},a=e.active_episode,n=e.illness||{},d=i.tier||(a||i.avoid_driving?"active_safety":i.active?"caution":"none");if(t)if(d==="active_safety"){const c=i.tone==="red"?"tone-red":"tone-amber",p=Array.isArray(i.reasons)?i.reasons:[],u=a?`
+            <button type="button" class="autonomic-tap-btn ${a.state==="ACUTE_EPISODE"?"is-acute":"is-recovery"}" onclick="openAutonomicModal('capture')">\u23F1 Open Episode Tracker</button>
+            <button type="button" class="autonomic-tap-btn is-calm" onclick="endEpisodeNow('${l(a.id)}')">\u23F9 End Episode Now</button>
           `:'<button type="button" class="autonomic-tap-btn is-acute" onclick="startAcuteEpisodeNow()">\u26A1 Log Funny Turn Now (1-Tap)</button>';t.style.display="block",t.innerHTML=`
-          <div class="autonomic-safety-banner ${d}" role="alert" aria-live="polite">
+          <div class="autonomic-safety-banner ${c}" role="alert" aria-live="polite">
             <div class="autonomic-safety-title">
-              <span>${a.level>=2?"\u{1F6A8}":"\u26A0\uFE0F"} ${l(a.title||"Autonomic Safety Alert")}</span>
-              <span class="autonomic-risk-pill">${a.level>=2?"LEVEL 2":"LEVEL 1"}</span>
+              <span>${i.level>=2?"\u{1F6A8}":"\u26A0\uFE0F"} ${l(i.title||"Autonomic Safety Alert")}</span>
+              <span class="autonomic-risk-pill">${i.level>=2?"LEVEL 2":"LEVEL 1"}</span>
             </div>
-            ${r.length?`<div class="autonomic-safety-copy">${r.map(u=>`\u2022 ${l(u)}`).join("<br>")}</div>`:""}
+            ${p.length?`<div class="autonomic-safety-copy">${p.map(v=>`\u2022 ${l(v)}`).join("<br>")}</div>`:""}
             <div class="autonomic-safety-copy"><strong>Do Not Drive (Volkswagen ID. Buzz) or train solo high-risk</strong> until autonomic metrics normalize and symptoms clear.</div>
             <div class="autonomic-safety-actions">
-              ${v}
+              ${u}
             </div>
           </div>
-        `}else t.style.display="none",t.innerHTML="";const c=e.acute_spike;if(o&&(c&&c.detected&&(!i||i.state!=="ACUTE_EPISODE")?(o.style.display="block",o.innerHTML=`
+        `}else if(d==="caution"&&i.show_on_today!==!1&&!i.dismissed_today){const c=Array.isArray(i.reasons)?i.reasons:[];t.style.display="block",t.innerHTML=`
+          <div class="autonomic-caution-strip" role="status" aria-live="polite">
+            <div class="autonomic-safety-title">
+              <span>\u26A0\uFE0F ${l(i.title||"Autonomic Caution")}</span>
+              <span class="autonomic-risk-pill">CHECK-IN</span>
+            </div>
+            ${c.length?`<div class="autonomic-safety-copy">${c.map(p=>`\u2022 ${l(p)}`).join("<br>")}</div>`:""}
+            <div class="autonomic-safety-copy">${l(i.advisory||"Elevated autonomic strain \u2014 do a quick symptom check before driving or hard solo training.")}</div>
+            <div class="autonomic-caution-actions">
+              <button type="button" class="autonomic-caution-btn" onclick="dismissAutonomicCaution()">\u2713 I Feel Fine \u2014 Dismiss</button>
+              <button type="button" class="autonomic-caution-btn" onclick="openAutonomicModal('patterns')">Health &amp; Patterns \u2192</button>
+            </div>
+          </div>
+        `}else t.style.display="none",t.innerHTML="";const r=e.acute_spike;if(o&&(r&&r.detected&&(!a||a.state!=="ACUTE_EPISODE")?(o.style.display="block",o.innerHTML=`
           <div class="autonomic-spike-banner" role="alert">
             <div class="autonomic-safety-title">
               <span>\u{1F4C8} Unprovoked Biometric Spike Detected</span>
-              <span>${l(A(c.spike_time))}</span>
+              <span>${l(x(r.spike_time))}</span>
             </div>
-            <div class="autonomic-safety-copy">${l(c.reason||"Garmin detected sudden stress or HR deviation outside workouts.")} Are you having a funny turn?</div>
+            <div class="autonomic-safety-copy">${l(r.reason||"Garmin detected sudden stress or HR deviation outside workouts.")} Are you having a funny turn?</div>
             <div class="autonomic-safety-actions" style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
-              <button type="button" class="autonomic-tap-btn is-acute" onclick="startAcuteEpisodeNow(${Number(c.spike_ts_ms)||0}, true)">\u26A1 Yes \u2014 Capture Episode</button>
-              <button type="button" class="autonomic-tap-btn is-outline" onclick="dismissAutonomicSpike(${Number(c.spike_ts_ms)||0})">Dismiss</button>
+              <button type="button" class="autonomic-tap-btn is-acute" onclick="startAcuteEpisodeNow(${Number(r.spike_ts_ms)||0}, true)">\u26A1 Yes \u2014 Capture Episode</button>
+              <button type="button" class="autonomic-tap-btn is-outline" onclick="dismissAutonomicSpike(${Number(r.spike_ts_ms)||0})">Dismiss</button>
             </div>
           </div>
-        `):(o.style.display="none",o.innerHTML="")),s)if(n.active_today){const d=n.today_log||{};s.style.display="block",s.innerHTML=`
+        `):(o.style.display="none",o.innerHTML="")),s)if(n.active_today){const c=n.today_log||{};s.style.display="block",s.innerHTML=`
           <div class="illness-today-banner">
             <div class="autonomic-safety-title">
               <span>\u{1F912} Illness Recovery Mode Active (Day ${Math.max(1,Number(n.current_streak_days||1))})</span>
-              <span>${l(String(d.severity||"moderate").toUpperCase())}</span>
+              <span>${l(String(c.severity||"moderate").toUpperCase())}</span>
             </div>
             <div class="autonomic-safety-copy">Maintenance Fuel &amp; Rest Mode active \u2022 Protein locked \u2022 Sick days excluded from 14d Adaptive TDEE.</div>
             <div class="autonomic-safety-actions">
@@ -37,18 +50,12 @@
             </div>
           </div>
         `}else n.post_illness_ramp_active?(s.style.display="block",s.innerHTML=`
-          <div class="illness-today-banner">
-            <div class="autonomic-safety-title">
-              <span>\u{1F6E1}\uFE0F Day-1 Post-Illness Return Ramp</span>
-              <span>48h Scale Shield</span>
-            </div>
-            <div class="autonomic-safety-copy">First day back after illness: training capped to gentle flush &amp; scale fluctuations protected by 48h Recovery Shield.</div>
-            <div class="autonomic-safety-actions">
-              <button type="button" class="autonomic-tap-btn is-outline" onclick="openAutonomicModal('illness')">View Illness Log</button>
-            </div>
-          </div>
-        `):(s.style.display="none",s.innerHTML="")}function ce(e){const t=document.getElementById("autonomicBodySummaryCard");if(!t)return;const o=e.patterns||{},s=o.prodromal_risk||{level:"low",label:"Low Baseline",score:0,drivers:[]},a=e.level1||{},i=e.level2||{},n=o.total_recovery_stats||{},c=s.level==="high"?"risk-high":s.level==="elevated"?"risk-elevated":"risk-low";t.style.display="block",t.innerHTML=`
-      <div class="autonomic-risk-card ${c}">
+          <button type="button" class="illness-ramp-strip" onclick="openAutonomicModal('illness')">
+            <span>\u{1F6E1}\uFE0F <strong>Day-1 Return Ramp</strong> \xB7 Gentle flush &amp; 48h Scale Shield</span>
+            <span style="font-size:12px; font-weight:800; white-space:nowrap;">View \u2192</span>
+          </button>
+        `):(s.style.display="none",s.innerHTML="")}function me(e){const t=document.getElementById("autonomicBodySummaryCard");if(!t)return;const o=e.patterns||{},s=o.prodromal_risk||{level:"low",label:"Low Baseline",score:0,drivers:[]},i=e.level1||{},a=e.level2||{},n=o.total_recovery_stats||{},d=s.level==="high"?"risk-high":s.level==="elevated"?"risk-elevated":"risk-low";t.style.display="block",t.innerHTML=`
+      <div class="autonomic-risk-card ${d}">
         <div class="autonomic-safety-title">
           <span>\u{1F6E1}\uFE0F Autonomic &amp; Illness Tracker</span>
           <span class="autonomic-risk-pill">${l(String(s.level||"low").toUpperCase())} \u2022 ${Number(s.score||0)}</span>
@@ -65,18 +72,18 @@
           </div>
           <div class="autonomic-stat-box">
             <div class="autonomic-stat-label">4h Stress Streak</div>
-            <div class="autonomic-stat-val">${Number(i.max_streak_mins||0)}m</div>
+            <div class="autonomic-stat-val">${Number(a.max_streak_mins||0)}m</div>
           </div>
         </div>
         <div style="font-size:11.5px; color:var(--text-secondary); margin-top:6px;">
-          Sleep Stress Avg: <strong>${a.sleep_avg_stress!=null?a.sleep_avg_stress:"--"}</strong> \u2022 HRV Night: <strong>${a.hrv_last_night!=null?`${a.hrv_last_night}ms`:"--"}</strong> (7d Base: ${a.hrv_7d_baseline!=null?`${a.hrv_7d_baseline}ms`:"--"})
+          Sleep Stress Avg: <strong>${i.sleep_avg_stress!=null?i.sleep_avg_stress:"--"}</strong> \u2022 HRV Night: <strong>${i.hrv_last_night!=null?`${i.hrv_last_night}ms`:"--"}</strong> (7d Base: ${i.hrv_7d_baseline!=null?`${i.hrv_7d_baseline}ms`:"--"})
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
           <button type="button" class="autonomic-tap-btn is-outline" onclick="openAutonomicModal('patterns')">\u{1F4CA} Patterns &amp; Risk</button>
           <button type="button" class="autonomic-tap-btn is-outline" onclick="openAutonomicModal('export')">\u{1FA7A} Clinical Export</button>
         </div>
       </div>
-    `}function x(e){const t=document.getElementById("autonomicViewCapture");if(!t)return;const o=e.active_episode,s=Array.isArray(e.symptom_catalog)&&e.symptom_catalog.length?e.symptom_catalog:W,a=Array.isArray(e.trigger_catalog)&&e.trigger_catalog.length?e.trigger_catalog:J;if(o&&(o.state==="ACUTE_EPISODE"||o.state==="POST_EPISODE_RECOVERY")){ne(o);const d=o.state==="ACUTE_EPISODE",r=!!o.user_recovered_at,v=!!o.biometric_recovered_at,u=d?`
+    `}function k(e){const t=document.getElementById("autonomicViewCapture");if(!t)return;const o=e.active_episode,s=Array.isArray(e.symptom_catalog)&&e.symptom_catalog.length?e.symptom_catalog:Q,i=Array.isArray(e.trigger_catalog)&&e.trigger_catalog.length?e.trigger_catalog:K;if(o&&(o.state==="ACUTE_EPISODE"||o.state==="POST_EPISODE_RECOVERY")){re(o);const r=o.state==="ACUTE_EPISODE",c=!!o.user_recovered_at,p=!!o.biometric_recovered_at,u=r?`
           <button type="button" class="autonomic-tap-btn is-recovery" onclick="updateActiveEpisode('mark_acute_end')">
             \u23F8 Acute Peak Ended (Start Recovery Timer)
           </button>
@@ -84,27 +91,27 @@
             \u23F9 End &amp; Close Episode Now
           </button>
         `:`
-          ${r?`<div class="autonomic-safety-copy" style="width:100%;">\u2713 Marked normal (${l(A(o.user_recovered_at))}) \u2014 waiting for Garmin stress \u226425, or close immediately below:</div>`:`<button type="button" class="autonomic-tap-btn is-recovery" onclick="updateActiveEpisode('mark_user_recovered')">\u2713 I Feel Normal (Wait for Garmin Stress \u226425)</button>`}
+          ${c?`<div class="autonomic-safety-copy" style="width:100%;">\u2713 Marked normal (${l(x(o.user_recovered_at))}) \u2014 waiting for Garmin stress \u226425, or close immediately below:</div>`:`<button type="button" class="autonomic-tap-btn is-recovery" onclick="updateActiveEpisode('mark_user_recovered')">\u2713 I Feel Normal (Wait for Garmin Stress \u226425)</button>`}
           <button type="button" class="autonomic-tap-btn is-calm" onclick="updateActiveEpisode('confirm_resolved_override')">
             \u23F9 End &amp; Close Episode Now
           </button>
         `;t.innerHTML=`
         <div class="autonomic-timer-hero">
           <div style="font-size:12px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary);">
-            ${d?"ACUTE EPISODE IN PROGRESS":"POST-EPISODE RECOVERY TIMER"}
+            ${r?"ACUTE EPISODE IN PROGRESS":"POST-EPISODE RECOVERY TIMER"}
           </div>
           <div id="autonomicLiveTimerDigits" class="autonomic-timer-digits">${l(F(o.onset_time))}</div>
-          <div style="font-size:12px; color:var(--text-secondary);">Started ${l(A(o.onset_time))}</div>
+          <div style="font-size:12px; color:var(--text-secondary);">Started ${l(x(o.onset_time))}</div>
 
           <div class="autonomic-hybrid-status-row">
-            <div class="autonomic-hybrid-badge ${d?"":"is-done"}">
-              ${d?"\u23F3":"\u2713"} Acute Ended${o.acute_duration_mins!=null?` (${o.acute_duration_mins}m)`:""}
+            <div class="autonomic-hybrid-badge ${r?"":"is-done"}">
+              ${r?"\u23F3":"\u2713"} Acute Ended${o.acute_duration_mins!=null?` (${o.acute_duration_mins}m)`:""}
             </div>
-            <div class="autonomic-hybrid-badge ${r?"is-done":""}">
-              ${r?"\u2713":"\u25CB"} Feel Normal
+            <div class="autonomic-hybrid-badge ${c?"is-done":""}">
+              ${c?"\u2713":"\u25CB"} Feel Normal
             </div>
-            <div class="autonomic-hybrid-badge ${v?"is-done":""}">
-              ${v?"\u2713":"\u25CB"} Garmin Stress \u226425
+            <div class="autonomic-hybrid-badge ${p?"is-done":""}">
+              ${p?"\u2713":"\u25CB"} Garmin Stress \u226425
             </div>
           </div>
 
@@ -120,10 +127,10 @@
         <div style="margin-top:12px;">
           <label class="autonomic-label">Severity</label>
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
-            ${["mild","moderate","severe"].map(m=>`
-              <button type="button" class="autonomic-chip ${M===m?"is-selected":""}" onclick="setActiveDraftSeverity('${m}')">
-                <span class="autonomic-chip-check">${M===m?"\u2713":""}</span>
-                <span>${m.toUpperCase()}</span>
+            ${["mild","moderate","severe"].map(v=>`
+              <button type="button" class="autonomic-chip ${M===v?"is-selected":""}" onclick="setActiveDraftSeverity('${v}')">
+                <span class="autonomic-chip-check">${M===v?"\u2713":""}</span>
+                <span>${v.toUpperCase()}</span>
               </button>
             `).join("")}
           </div>
@@ -132,10 +139,10 @@
         <div style="margin-top:12px;">
           <label class="autonomic-label">Symptoms Experienced (Tap All That Apply)</label>
           <div class="autonomic-chip-grid">
-            ${s.map(m=>{const _=T.has(m.key);return`
-                <button type="button" class="autonomic-chip ${_?"is-selected":""}" onclick="toggleEpisodeDraftSymptom('${l(m.key)}')">
+            ${s.map(v=>{const _=L.has(v.key);return`
+                <button type="button" class="autonomic-chip ${_?"is-selected":""}" onclick="toggleEpisodeDraftSymptom('${l(v.key)}')">
                   <span class="autonomic-chip-check">${_?"\u2713":""}</span>
-                  <span>${l(m.label)}</span>
+                  <span>${l(v.label)}</span>
                 </button>
               `}).join("")}
           </div>
@@ -144,10 +151,10 @@
         <div style="margin-top:12px;">
           <label class="autonomic-label">Context &amp; Triggers</label>
           <div class="autonomic-chip-grid">
-            ${a.map(m=>{const _=L.has(m.key);return`
-                <button type="button" class="autonomic-chip ${_?"is-selected":""}" onclick="toggleEpisodeDraftTrigger('${l(m.key)}')">
+            ${i.map(v=>{const _=I.has(v.key);return`
+                <button type="button" class="autonomic-chip ${_?"is-selected":""}" onclick="toggleEpisodeDraftTrigger('${l(v.key)}')">
                   <span class="autonomic-chip-check">${_?"\u2713":""}</span>
-                  <span>${l(m.label)}</span>
+                  <span>${l(v.label)}</span>
                 </button>
               `}).join("")}
           </div>
@@ -155,14 +162,14 @@
 
         <div style="margin-top:12px;">
           <label class="autonomic-label" for="epDraftNotesInput">Notes (Optional)</label>
-          <textarea id="epDraftNotesInput" class="autonomic-input" rows="2" placeholder="What happened right before, posture, food, warning aura..." oninput="setActiveDraftNotes(this.value)">${l(O)}</textarea>
+          <textarea id="epDraftNotesInput" class="autonomic-input" rows="2" placeholder="What happened right before, posture, food, warning aura..." oninput="setActiveDraftNotes(this.value)">${l(B)}</textarea>
         </div>
 
         <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
           <button type="button" class="autonomic-tap-btn is-calm" onclick="saveActiveEpisodeDetails()">\u2713 Save Symptoms &amp; Notes</button>
           <button type="button" class="autonomic-tap-btn is-danger-ghost" onclick="deleteLoggedEpisode('${l(o.id)}')">\u{1F5D1}\uFE0F Delete / Discard This Episode</button>
         </div>
-      `;return}const n=(e.illness||{}).active_today?'<div class="autonomic-safety-copy" style="margin-top:6px;">\u{1F912} Active illness will automatically link to any logged episode today.</div>':"",c=(Array.isArray(e.recent_episodes)?e.recent_episodes:[]).slice(0,5);t.innerHTML=`
+      `;return}const n=(e.illness||{}).active_today?'<div class="autonomic-safety-copy" style="margin-top:6px;">\u{1F912} Active illness will automatically link to any logged episode today.</div>':"",d=(Array.isArray(e.recent_episodes)?e.recent_episodes:[]).slice(0,5);t.innerHTML=`
       <div class="autonomic-risk-card risk-low" style="text-align:left;">
         <div class="autonomic-safety-title">
           <span>\u26A1 Immediate Capture</span>
@@ -188,7 +195,7 @@
           <div style="display:flex; flex-direction:column; gap:10px;">
             <div>
               <label class="autonomic-label" for="bdOnsetTime">Episode Start (Date &amp; Time)</label>
-              <input id="bdOnsetTime" type="datetime-local" class="autonomic-input" value="${l(se())}">
+              <input id="bdOnsetTime" type="datetime-local" class="autonomic-input" value="${l(ne())}">
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
               <div>
@@ -203,10 +210,10 @@
             <div>
               <label class="autonomic-label">Symptoms</label>
               <div class="autonomic-chip-grid">
-                ${s.map(d=>{const r=I.has(d.key);return`
-                    <button type="button" class="autonomic-chip ${r?"is-selected":""}" onclick="toggleBackdateSymptom('${l(d.key)}')">
-                      <span class="autonomic-chip-check">${r?"\u2713":""}</span>
-                      <span>${l(d.label)}</span>
+                ${s.map(r=>{const c=D.has(r.key);return`
+                    <button type="button" class="autonomic-chip ${c?"is-selected":""}" onclick="toggleBackdateSymptom('${l(r.key)}')">
+                      <span class="autonomic-chip-check">${c?"\u2713":""}</span>
+                      <span>${l(r.label)}</span>
                     </button>
                   `}).join("")}
               </div>
@@ -214,10 +221,10 @@
             <div>
               <label class="autonomic-label">Triggers / Context</label>
               <div class="autonomic-chip-grid">
-                ${a.map(d=>{const r=D.has(d.key);return`
-                    <button type="button" class="autonomic-chip ${r?"is-selected":""}" onclick="toggleBackdateTrigger('${l(d.key)}')">
-                      <span class="autonomic-chip-check">${r?"\u2713":""}</span>
-                      <span>${l(d.label)}</span>
+                ${i.map(r=>{const c=N.has(r.key);return`
+                    <button type="button" class="autonomic-chip ${c?"is-selected":""}" onclick="toggleBackdateTrigger('${l(r.key)}')">
+                      <span class="autonomic-chip-check">${c?"\u2713":""}</span>
+                      <span>${l(r.label)}</span>
                     </button>
                   `}).join("")}
               </div>
@@ -239,23 +246,23 @@
         </div>
       `:""}
 
-      ${c.length?`
+      ${d.length?`
         <div style="margin-top:14px;">
-          <label class="autonomic-label">Recent Logged Episodes (${c.length})</label>
+          <label class="autonomic-label">Recent Logged Episodes (${d.length})</label>
           <div style="display:flex; flex-direction:column; gap:8px;">
-            ${c.map(d=>`
+            ${d.map(r=>`
               <div class="autonomic-episode-card">
                 <div class="autonomic-episode-head">
                   <div>
-                    <strong style="font-size:13px; color:var(--text);">${l(A(d.onset_time))}</strong>
+                    <strong style="font-size:13px; color:var(--text);">${l(x(r.onset_time))}</strong>
                     <div style="font-size:11px; color:var(--text-secondary);">
-                      ${l(d.state)} \u2022 ${l(String(d.severity||"moderate").toUpperCase())}
-                      ${d.total_recovery_duration_mins!=null?` \u2022 ${d.total_recovery_duration_mins}m`:""}
+                      ${l(r.state)} \u2022 ${l(String(r.severity||"moderate").toUpperCase())}
+                      ${r.total_recovery_duration_mins!=null?` \u2022 ${r.total_recovery_duration_mins}m`:""}
                     </div>
                   </div>
                   <div class="autonomic-ep-actions">
-                    ${d.state!=="RESOLVED"?`<button type="button" class="autonomic-mini-btn is-calm" onclick="endEpisodeNow('${l(d.id)}')">\u23F9 End Now</button>`:""}
-                    <button type="button" class="autonomic-mini-btn is-danger" onclick="deleteLoggedEpisode('${l(d.id)}')">\u{1F5D1}\uFE0F Delete</button>
+                    ${r.state!=="RESOLVED"?`<button type="button" class="autonomic-mini-btn is-calm" onclick="endEpisodeNow('${l(r.id)}')">\u23F9 End Now</button>`:""}
+                    <button type="button" class="autonomic-mini-btn is-danger" onclick="deleteLoggedEpisode('${l(r.id)}')">\u{1F5D1}\uFE0F Delete</button>
                   </div>
                 </div>
               </div>
@@ -263,7 +270,7 @@
           </div>
         </div>
       `:""}
-    `}function B(e){const t=document.getElementById("autonomicViewIllness");if(!t)return;const o=e.illness||{},s=Array.isArray(o.recent_logs)?o.recent_logs:[],a={};s.forEach(r=>{r&&r.date_str&&(a[r.date_str]=r)});const i=$();g||(g=i);const n=a[g]||null;n&&f.size===0&&!h&&(b=n.severity||"moderate",h=n.notes||"",f=new Set(Array.isArray(n.symptoms)?n.symptoms:[]));const c=[];for(let r=6;r>=0;r--)c.push(K(r));const d=Array.isArray(e.illness_symptom_catalog)&&e.illness_symptom_catalog.length?e.illness_symptom_catalog:Q;t.innerHTML=`
+    `}function Y(e){const t=document.getElementById("autonomicViewIllness");if(!t)return;const o=e.illness||{},s=Array.isArray(o.recent_logs)?o.recent_logs:[],i={};s.forEach(c=>{c&&c.date_str&&(i[c.date_str]=c)});const a=w();g||(g=a);const n=i[g]||null;n&&f.size===0&&!h&&(b=n.severity||"moderate",h=n.notes||"",f=new Set(Array.isArray(n.symptoms)?n.symptoms:[]));const d=[];for(let c=6;c>=0;c--)d.push(Z(c));const r=Array.isArray(e.illness_symptom_catalog)&&e.illness_symptom_catalog.length?e.illness_symptom_catalog:X;t.innerHTML=`
       <div class="illness-today-banner">
         <div class="autonomic-safety-title">
           <span>\u{1F912} Illness &amp; Sick-Day Mode</span>
@@ -273,17 +280,17 @@
           Logging illness days shifts today's Fuel to <strong>Maintenance (Protein Locked)</strong>, swaps training to <strong>Rest</strong>, excludes sick days (+1d rebound) from <strong>14d Adaptive TDEE</strong>, activates a <strong>48h Recovery Scale Shield</strong> after clearing, and links illness to episode patterns.
         </div>
         <div style="margin-top:10px; display:flex; gap:8px;">
-          ${o.active_today?`<button type="button" class="autonomic-tap-btn is-calm" onclick="saveIllnessLog('${i}', 'clear')">\u2713 I'm Better Today (Clear Today)</button>`:`<button type="button" class="autonomic-tap-btn is-illness" onclick="saveIllnessLog('${i}', 'active')">\u{1F912} Mark Today as Sick</button>`}
+          ${o.active_today?`<button type="button" class="autonomic-tap-btn is-calm" onclick="saveIllnessLog('${a}', 'clear')">\u2713 I'm Better Today (Clear Today)</button>`:`<button type="button" class="autonomic-tap-btn is-illness" onclick="saveIllnessLog('${a}', 'active')">\u{1F912} Mark Today as Sick</button>`}
         </div>
       </div>
 
       <div style="margin-top:12px;">
         <label class="autonomic-label">Quick Backdate / Toggle Recent Days (e.g. Mon / Tue / Wed)</label>
         <div class="autonomic-day-strip">
-          ${c.map(r=>{const v=!!a[r];return`
-              <button type="button" class="autonomic-day-chip ${v?"is-sick":""} ${g===r?"is-selected":""}" onclick="selectIllnessDate('${r}')">
-                <span>${l(ie(r))}</span>
-                <span>${v?"\u{1F912} Sick":"Clear"}</span>
+          ${d.map(c=>{const p=!!i[c];return`
+              <button type="button" class="autonomic-day-chip ${p?"is-sick":""} ${g===c?"is-selected":""}" onclick="selectIllnessDate('${c}')">
+                <span>${l(le(c))}</span>
+                <span>${p?"\u{1F912} Sick":"Clear"}</span>
               </button>
             `}).join("")}
         </div>
@@ -295,16 +302,16 @@
             <strong style="font-size:13px; color:var(--text);">Selected Date: ${l(g)}</strong>
             <div style="font-size:11.5px; color:var(--text-secondary);">${n?`Currently Logged (${l(n.severity)})`:"Not marked as ill"}</div>
           </div>
-          <input type="date" id="illnessDateInput" class="autonomic-input" style="width:auto;" max="${i}" value="${l(g)}" onchange="selectIllnessDate(this.value)">
+          <input type="date" id="illnessDateInput" class="autonomic-input" style="width:auto;" max="${a}" value="${l(g)}" onchange="selectIllnessDate(this.value)">
         </div>
 
         <div style="margin-top:10px;">
           <label class="autonomic-label">Illness Severity</label>
           <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
-            ${["mild","moderate","severe"].map(r=>`
-              <button type="button" class="autonomic-chip ${b===r?"is-selected":""}" onclick="setIllnessSeverity('${r}')">
-                <span class="autonomic-chip-check">${b===r?"\u2713":""}</span>
-                <span>${r.toUpperCase()}</span>
+            ${["mild","moderate","severe"].map(c=>`
+              <button type="button" class="autonomic-chip ${b===c?"is-selected":""}" onclick="setIllnessSeverity('${c}')">
+                <span class="autonomic-chip-check">${b===c?"\u2713":""}</span>
+                <span>${c.toUpperCase()}</span>
               </button>
             `).join("")}
           </div>
@@ -313,10 +320,10 @@
         <div style="margin-top:10px;">
           <label class="autonomic-label">Symptoms</label>
           <div class="autonomic-chip-grid">
-            ${d.map(r=>{const v=f.has(r.key);return`
-                <button type="button" class="autonomic-chip ${v?"is-selected":""}" onclick="toggleIllnessSymptom('${l(r.key)}')">
-                  <span class="autonomic-chip-check">${v?"\u2713":""}</span>
-                  <span>${l(r.label)}</span>
+            ${r.map(c=>{const p=f.has(c.key);return`
+                <button type="button" class="autonomic-chip ${p?"is-selected":""}" onclick="toggleIllnessSymptom('${l(c.key)}')">
+                  <span class="autonomic-chip-check">${p?"\u2713":""}</span>
+                  <span>${l(c.label)}</span>
                 </button>
               `}).join("")}
           </div>
@@ -332,16 +339,26 @@
           <button type="button" class="autonomic-tap-btn is-outline" onclick="saveIllnessLog('${l(g)}', 'clear')">Clear Day</button>
         </div>
       </div>
-    `}function de(e,t){return!Array.isArray(e)||e.length===0?'<div style="font-size:11px; color:var(--text-secondary);">Waiting for Garmin watch sync...</div>':`<div class="autonomic-spark-row">${e.slice(0,32).map(s=>{const a=Number(s.v||0),i=Math.max(12,Math.min(100,Math.round(a/t*100)));return`<div class="autonomic-spark-bar ${a>=75?"is-high":a>25?"is-mid":"is-low"}" style="height:${i}%;" title="${l(`${s.offset_m}m: ${a}`)}"></div>`}).join("")}</div>`}function pe(e){const t=document.getElementById("autonomicViewPatterns");if(!t)return;const o=e.patterns||{},s=o.prodromal_risk||{level:"low",label:"Low Baseline",score:0,drivers:[]},a=Array.isArray(s.drivers)?s.drivers:[],i=e.level1||{},n=e.level2||{},c=o.acute_duration_stats||{},d=o.total_recovery_stats||{},r=Array.isArray(o.top_symptoms)?o.top_symptoms:[],v=Array.isArray(o.top_triggers)?o.top_triggers:[],u=o.prodrome_comparison||{},m=Array.isArray(e.recent_episodes)?e.recent_episodes:[],_=s.level==="high"?"risk-high":s.level==="elevated"?"risk-elevated":"risk-low";t.innerHTML=`
+    `}function ue(e,t){return!Array.isArray(e)||e.length===0?'<div style="font-size:11px; color:var(--text-secondary);">Waiting for Garmin watch sync...</div>':`<div class="autonomic-spark-row">${e.slice(0,32).map(s=>{const i=Number(s.v||0),a=Math.max(12,Math.min(100,Math.round(i/t*100)));return`<div class="autonomic-spark-bar ${i>=75?"is-high":i>25?"is-mid":"is-low"}" style="height:${a}%;" title="${l(`${s.offset_m}m: ${i}`)}"></div>`}).join("")}</div>`}function ve(e){const t=document.getElementById("autonomicViewPatterns");if(!t)return;const o=e.patterns||{},s=o.prodromal_risk||{level:"low",label:"Low Baseline",score:0,drivers:[]},i=Array.isArray(s.drivers)?s.drivers:[],a=e.level1||{},n=e.level2||{},d=o.acute_duration_stats||{},r=o.total_recovery_stats||{},c=Array.isArray(o.top_symptoms)?o.top_symptoms:[],p=Array.isArray(o.top_triggers)?o.top_triggers:[],u=o.prodrome_comparison||{},v=Array.isArray(e.recent_episodes)?e.recent_episodes:[],_=s.level==="high"?"risk-high":s.level==="elevated"?"risk-elevated":"risk-low",$=e.safety_banner||{},T=$.tier||"none",ie=Array.isArray($.reasons)?$.reasons:[],Oe=T==="watch"||T==="caution"?`
+        <div class="autonomic-watch-card">
+          <div class="autonomic-safety-title">
+            <span>${T==="caution"?"\u26A0\uFE0F":"\u{1F50E}"} ${l($.title||"HRV Watch")}</span>
+            ${$.dismissed_today?'<span class="autonomic-risk-pill">Dismissed on Today</span>':""}
+          </div>
+          ${ie.length?`<div class="autonomic-safety-copy">${ie.map(m=>`\u2022 ${l(m)}`).join("<br>")}</div>`:""}
+          <div class="autonomic-safety-copy">${l($.advisory||"")}</div>
+        </div>
+      `:"";t.innerHTML=`
+      ${Oe}
       <div class="autonomic-risk-card ${_}">
         <div class="autonomic-safety-title">
           <span>\u{1F3AF} Heading Toward Episode Risk</span>
           <span class="autonomic-risk-pill">${l(String(s.level||"low").toUpperCase())} (${Number(s.score||0)}/100)</span>
         </div>
         <div class="autonomic-safety-copy" style="margin-top:4px;">${l(s.label||"")}</div>
-        ${a.length?`
+        ${i.length?`
           <div class="autonomic-driver-list">
-            ${a.map(p=>`<div class="autonomic-driver-item">\u2022 ${l(p)}</div>`).join("")}
+            ${i.map(m=>`<div class="autonomic-driver-item">\u2022 ${l(m)}</div>`).join("")}
           </div>
         `:'<div class="autonomic-driver-item" style="margin-top:6px;">No active prodromal red flags detected on current telemetry.</div>'}
       </div>
@@ -349,13 +366,13 @@
       <div class="autonomic-stat-grid cols-3" style="margin-top:10px;">
         <div class="autonomic-stat-box">
           <div class="autonomic-stat-label">Sleep Stress</div>
-          <div class="autonomic-stat-val">${i.sleep_avg_stress!=null?i.sleep_avg_stress:"--"}</div>
+          <div class="autonomic-stat-val">${a.sleep_avg_stress!=null?a.sleep_avg_stress:"--"}</div>
           <div style="font-size:10px; color:var(--text-secondary);">Rest \u226425</div>
         </div>
         <div class="autonomic-stat-box">
           <div class="autonomic-stat-label">Overnight HRV</div>
-          <div class="autonomic-stat-val">${i.hrv_last_night!=null?`${i.hrv_last_night}ms`:"--"}</div>
-          <div style="font-size:10px; color:var(--text-secondary);">7d: ${i.hrv_7d_baseline!=null?`${i.hrv_7d_baseline}ms`:"--"}</div>
+          <div class="autonomic-stat-val">${a.hrv_last_night!=null?`${a.hrv_last_night}ms`:"--"}</div>
+          <div style="font-size:10px; color:var(--text-secondary);">7d: ${a.hrv_7d_baseline!=null?`${a.hrv_7d_baseline}ms`:"--"}</div>
         </div>
         <div class="autonomic-stat-box">
           <div class="autonomic-stat-label">Day &gt;25 Streak</div>
@@ -372,13 +389,13 @@
         </div>
         <div class="autonomic-stat-box">
           <div class="autonomic-stat-label">Avg Acute Peak</div>
-          <div class="autonomic-stat-val">${c.avg!=null?`${Math.round(Number(c.avg))}m`:"--"}</div>
-          <div style="font-size:10px; color:var(--text-secondary);">Med: ${c.median!=null?`${Math.round(Number(c.median))}m`:"--"}</div>
+          <div class="autonomic-stat-val">${d.avg!=null?`${Math.round(Number(d.avg))}m`:"--"}</div>
+          <div style="font-size:10px; color:var(--text-secondary);">Med: ${d.median!=null?`${Math.round(Number(d.median))}m`:"--"}</div>
         </div>
         <div class="autonomic-stat-box">
           <div class="autonomic-stat-label">Avg Full Lag</div>
-          <div class="autonomic-stat-val">${d.avg!=null?`${Math.round(Number(d.avg))}m`:"--"}</div>
-          <div style="font-size:10px; color:var(--text-secondary);">Med: ${d.median!=null?`${Math.round(Number(d.median))}m`:"--"}</div>
+          <div class="autonomic-stat-val">${r.avg!=null?`${Math.round(Number(r.avg))}m`:"--"}</div>
+          <div style="font-size:10px; color:var(--text-secondary);">Med: ${r.median!=null?`${Math.round(Number(r.median))}m`:"--"}</div>
         </div>
       </div>
 
@@ -391,53 +408,53 @@
         </div>
       </div>
 
-      ${r.length||v.length?`
+      ${c.length||p.length?`
         <div class="autonomic-stat-grid cols-2" style="margin-top:10px;">
           <div class="autonomic-episode-card">
             <div style="font-size:12px; font-weight:800; color:var(--text); margin-bottom:4px;">Top Symptoms</div>
-            ${r.slice(0,5).map(p=>`<div style="font-size:11.5px; color:var(--text-secondary);">\u2022 ${l(p.label)} (${p.count}, ${p.pct}%)</div>`).join("")||'<div style="font-size:11.5px; color:var(--text-secondary);">None logged yet</div>'}
+            ${c.slice(0,5).map(m=>`<div style="font-size:11.5px; color:var(--text-secondary);">\u2022 ${l(m.label)} (${m.count}, ${m.pct}%)</div>`).join("")||'<div style="font-size:11.5px; color:var(--text-secondary);">None logged yet</div>'}
           </div>
           <div class="autonomic-episode-card">
             <div style="font-size:12px; font-weight:800; color:var(--text); margin-bottom:4px;">Top Triggers</div>
-            ${v.slice(0,5).map(p=>`<div style="font-size:11.5px; color:var(--text-secondary);">\u2022 ${l(p.label)} (${p.count}, ${p.pct}%)</div>`).join("")||'<div style="font-size:11.5px; color:var(--text-secondary);">None logged yet</div>'}
+            ${p.slice(0,5).map(m=>`<div style="font-size:11.5px; color:var(--text-secondary);">\u2022 ${l(m.label)} (${m.count}, ${m.pct}%)</div>`).join("")||'<div style="font-size:11.5px; color:var(--text-secondary);">None logged yet</div>'}
           </div>
         </div>
       `:""}
 
       <div style="margin-top:12px;">
-        <label class="autonomic-label">Episode Timeline &amp; \xB160m Garmin Snapshots (${m.length})</label>
+        <label class="autonomic-label">Episode Timeline &amp; \xB160m Garmin Snapshots (${v.length})</label>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          ${m.length?m.map(p=>{const S=p.biometric_snapshot||{},G=S.stress||{},oe=S.hr||{};return`
+          ${v.length?v.map(m=>{const z=m.biometric_snapshot||{},q=z.stress||{},ae=z.hr||{};return`
               <div class="autonomic-episode-card">
                 <div class="autonomic-episode-head">
                   <div>
-                    <strong style="font-size:13px; color:var(--text);">${l(A(p.onset_time))}</strong>
+                    <strong style="font-size:13px; color:var(--text);">${l(x(m.onset_time))}</strong>
                     <div style="font-size:11px; color:var(--text-secondary);">
-                      ${l(p.state)} \u2022 ${l(String(p.severity||"moderate").toUpperCase())}
-                      ${p.acute_duration_mins!=null?` \u2022 Peak ${p.acute_duration_mins}m`:""}
-                      ${p.total_recovery_duration_mins!=null?` \u2022 Recovery ${p.total_recovery_duration_mins}m`:""}
-                      ${p.illness_active?" \u2022 \u{1F912} Sick":""}
+                      ${l(m.state)} \u2022 ${l(String(m.severity||"moderate").toUpperCase())}
+                      ${m.acute_duration_mins!=null?` \u2022 Peak ${m.acute_duration_mins}m`:""}
+                      ${m.total_recovery_duration_mins!=null?` \u2022 Recovery ${m.total_recovery_duration_mins}m`:""}
+                      ${m.illness_active?" \u2022 \u{1F912} Sick":""}
                     </div>
                   </div>
                   <div class="autonomic-ep-actions">
-                    ${p.state!=="RESOLVED"?`<button type="button" class="autonomic-mini-btn is-calm" onclick="endEpisodeNow('${l(p.id)}')">\u23F9 End Now</button>`:""}
-                    <button type="button" class="autonomic-mini-btn is-danger" onclick="deleteLoggedEpisode('${l(p.id)}')">\u{1F5D1}\uFE0F Delete</button>
+                    ${m.state!=="RESOLVED"?`<button type="button" class="autonomic-mini-btn is-calm" onclick="endEpisodeNow('${l(m.id)}')">\u23F9 End Now</button>`:""}
+                    <button type="button" class="autonomic-mini-btn is-danger" onclick="deleteLoggedEpisode('${l(m.id)}')">\u{1F5D1}\uFE0F Delete</button>
                   </div>
                 </div>
                 <div class="autonomic-tag-list" style="margin-top:6px;">
-                  ${(p.symptoms||[]).map(q=>`<span class="autonomic-tag">${l(q.replace(/_/g," "))}</span>`).join("")}
-                  ${(p.triggers||[]).map(q=>`<span class="autonomic-tag">${l(q.replace(/_/g," "))}</span>`).join("")}
+                  ${(m.symptoms||[]).map(J=>`<span class="autonomic-tag">${l(J.replace(/_/g," "))}</span>`).join("")}
+                  ${(m.triggers||[]).map(J=>`<span class="autonomic-tag">${l(J.replace(/_/g," "))}</span>`).join("")}
                 </div>
                 <div style="font-size:11px; color:var(--text-secondary); margin-top:6px;">
-                  Snapshot (${l(p.biometric_snapshot_status||"pending")}): Peak Stress <strong>${G.peak!=null?G.peak:"--"}</strong> \u2022 Peak HR <strong>${oe.peak!=null?`${oe.peak} bpm`:"--"}</strong> \u2022 Prior HRV <strong>${S.prior_night_hrv!=null?`${S.prior_night_hrv}ms`:"--"}</strong>
+                  Snapshot (${l(m.biometric_snapshot_status||"pending")}): Peak Stress <strong>${q.peak!=null?q.peak:"--"}</strong> \u2022 Peak HR <strong>${ae.peak!=null?`${ae.peak} bpm`:"--"}</strong> \u2022 Prior HRV <strong>${z.prior_night_hrv!=null?`${z.prior_night_hrv}ms`:"--"}</strong>
                 </div>
-                ${de(G.series,100)}
-                ${p.notes?`<div style="font-size:11.5px; color:var(--text); margin-top:5px;">"${l(p.notes)}"</div>`:""}
+                ${ue(q.series,100)}
+                ${m.notes?`<div style="font-size:11.5px; color:var(--text); margin-top:5px;">"${l(m.notes)}"</div>`:""}
               </div>
             `}).join(""):'<div class="autonomic-episode-card" style="font-size:12px; color:var(--text-secondary);">No funny turns logged yet. Tap Capture to log live or backdate prior turns.</div>'}
         </div>
       </div>
-    `}function me(e){const t=document.getElementById("autonomicViewExport");if(!t)return;const o=Array.isArray(e.differential_pathways)?e.differential_pathways:[],s=e.patterns||{};t.innerHTML=`
+    `}function ye(e){const t=document.getElementById("autonomicViewExport");if(!t)return;const o=Array.isArray(e.differential_pathways)?e.differential_pathways:[],s=e.patterns||{};t.innerHTML=`
       <div class="autonomic-disclaimer-box">
         <strong>Non-Diagnostic Clinical Review Notice:</strong><br>
         ${l(e.clinical_disclaimer||"Self-monitoring record only \u2014 review with GP / Neurology / Cardiology.")}
@@ -461,23 +478,23 @@
       <div style="margin-top:12px;">
         <label class="autonomic-label">Four Differential Pathways Monitored (Open Differential)</label>
         <div style="display:flex; flex-direction:column; gap:8px;">
-          ${o.map(a=>`
+          ${o.map(i=>`
             <div class="autonomic-episode-card">
-              <strong style="font-size:12.5px; color:var(--text);">${l(a.label)}</strong>
-              <div style="font-size:11.5px; color:var(--text-secondary); margin-top:3px;">${l(a.summary)}</div>
+              <strong style="font-size:12.5px; color:var(--text);">${l(i.label)}</strong>
+              <div style="font-size:11.5px; color:var(--text-secondary); margin-top:3px;">${l(i.summary)}</div>
             </div>
           `).join("")}
         </div>
       </div>
-    `}function P(e){if(e&&e.autonomic&&typeof window<"u"){(!window.PULSE_ANALYTICS_SUMMARY||typeof window.PULSE_ANALYTICS_SUMMARY!="object")&&(window.PULSE_ANALYTICS_SUMMARY={}),window.PULSE_ANALYTICS_SUMMARY.autonomic=e.autonomic;try{localStorage.setItem(Y,JSON.stringify(e.autonomic))}catch{}}const t=y();le(t),re(t),ce(t),w==="capture"?x(t):w==="illness"?B(t):w==="patterns"?pe(t):w==="export"&&me(t),Z()}function V(e){const t=["capture","illness","patterns","export"];w=t.includes(e)?e:"capture",t.forEach(o=>{const s=document.getElementById(`btnAutonomicView_${o}`),a=document.getElementById(`autonomicView${o.charAt(0).toUpperCase()}${o.slice(1)}`);s&&s.classList&&s.classList.toggle("active",o===w),a&&a.classList&&a.classList.toggle("active",o===w)}),P()}function H(e){if(typeof switchTab=="function")switchTab("health");else{const t=document.getElementById("tab-health"),o=document.getElementById("nav-health");document.querySelectorAll(".tab-panel").forEach(s=>s.classList.remove("active")),document.querySelectorAll(".nav-btn").forEach(s=>s.classList.remove("active")),t&&t.classList&&t.classList.add("active"),o&&o.classList&&o.classList.add("active")}e?V(e):P(),typeof pulseHaptic=="function"&&pulseHaptic(20)}function ue(){typeof switchTab=="function"&&switchTab("today"),Z()}function U(){return new Date().toISOString()}async function k(e,t,o){let s=!1;try{const i=await(typeof pulseApiFetch=="function"?pulseApiFetch:fetch)(e,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(t),timeoutMs:6e3});if(i&&i.ok){const n=await i.json();return n&&n.autonomic&&X(n.autonomic,n.state||null,n.flex_refeed||null),n}typeof window._shouldQueueOfflineResponse=="function"?s=window._shouldQueueOfflineResponse(i):s=!i||i.status===0||i.status>=500||i.status===401}catch{s=!0}if(s){if(typeof window.enqueueOfflineWrite=="function"&&window.enqueueOfflineWrite(e,t,"POST"),typeof o=="function"){const a=JSON.parse(JSON.stringify(y()));o(a),X(a,null,null)}typeof showToast=="function"&&showToast("Saved locally offline \u2014 will sync automatically when online")}return null}async function ve(e=0,t=!1){if(!z){z=!0;try{const o=Date.now(),s=e&&Number(e)>0?new Date(Number(e)).toISOString():U(),a=`ep_${o}_${Math.random().toString(36).slice(2,8)}`,i=`evt_${o}_${Math.random().toString(36).slice(2,8)}`;await k("/api/health/episodes",{id:a,onset_time:s,severity:"moderate",symptoms:[],triggers:[],spike_auto_detected:!!t,client_event_id:i},c=>{const d={id:a,client_event_id:i,state:"ACUTE_EPISODE",onset_time:s,date_str:$(),acute_peak_end_time:null,full_recovery_time:null,user_recovered_at:null,biometric_recovered_at:null,severity:"moderate",symptoms:[],triggers:c.illness&&c.illness.active_today?["illness_infection"]:[],illness_active:!!(c.illness&&c.illness.active_today),notes:"",biometric_snapshot_status:"pending"};c.active_episode=d,c.system_state="ACUTE_EPISODE",c.alert_level=2,c.safety_banner={active:!0,level:2,tone:"red",title:"ACTIVE EPISODE TRACKING",reasons:["Acute episode capture started (offline queue active)"],advisory:"Avoid driving (Volkswagen ID. Buzz) or solo exertion until recovered.",avoid_driving:!0,avoid_solo_exertion:!0},c.recent_episodes=[d].concat(c.recent_episodes||[])}),E=null,H("capture"),typeof showToast=="function"&&showToast("\u26A1 Episode capture started \u2014 rest safely")}finally{z=!1}}}async function ee(e){const o=y().active_episode;if(!o)return;const s=U(),a={id:o.id,client_event_id:o.client_event_id||void 0,action:e,timestamp:s,symptoms:Array.from(T),triggers:Array.from(L),severity:M,notes:O};await k("/api/health/episodes/update",a,i=>{const n=i.active_episode;n&&(n.symptoms=a.symptoms,n.triggers=a.triggers,n.severity=a.severity,n.notes=a.notes,e==="mark_acute_end"?(n.acute_peak_end_time=s,n.state="POST_EPISODE_RECOVERY",i.system_state="POST_EPISODE_RECOVERY"):e==="mark_user_recovered"?(n.user_recovered_at=s,n.acute_peak_end_time||(n.acute_peak_end_time=s),n.state="POST_EPISODE_RECOVERY",i.system_state="POST_EPISODE_RECOVERY"):e==="confirm_resolved_override"&&(n.acute_peak_end_time||(n.acute_peak_end_time=s),n.user_recovered_at=n.user_recovered_at||s,n.full_recovery_time=s,n.state="RESOLVED",i.active_episode=null,i.system_state=i.level1&&i.level1.active||i.level2&&i.level2.active?"VULNERABILITY_ALERT":"IDLE",i.safety_banner.active=i.system_state==="VULNERABILITY_ALERT"),i.recent_episodes=(i.recent_episodes||[]).map(c=>c.id===n.id?n:c))}),e==="confirm_resolved_override"?(E=null,N(),typeof showToast=="function"&&showToast("\u2713 Episode ended & resolved")):e==="mark_acute_end"?typeof showToast=="function"&&showToast("\u2713 Acute peak marked ended \u2014 recovery timer active"):e==="mark_user_recovered"&&typeof showToast=="function"&&showToast("\u2713 Feeling normal logged \u2014 tap End & Close Episode Now to finish immediately")}async function ye(e){const t=y(),o=e||t.active_episode&&t.active_episode.id;if(!o)return;const s=U();await k("/api/health/episodes/update",{id:o,action:"confirm_resolved_override",timestamp:s},i=>{i.active_episode&&i.active_episode.id===o&&(i.active_episode=null,i.system_state=i.level1&&i.level1.active||i.level2&&i.level2.active?"VULNERABILITY_ALERT":"IDLE",i.safety_banner.active=i.system_state==="VULNERABILITY_ALERT"),i.recent_episodes=(i.recent_episodes||[]).map(n=>n.id!==o?n:{...n,acute_peak_end_time:n.acute_peak_end_time||s,user_recovered_at:n.user_recovered_at||s,full_recovery_time:s,state:"RESOLVED"})}),E=null,N(),typeof showToast=="function"&&showToast("\u2713 Episode ended & resolved")}function ge(){return ee("edit_details").then(()=>{typeof showToast=="function"&&showToast("\u2713 Episode symptoms & triggers saved")})}function _e(e){T.has(e)?T.delete(e):T.add(e),x(y())}function fe(e){L.has(e)?L.delete(e):L.add(e),x(y())}function be(e){M=e,x(y())}function he(e){O=String(e||"")}function Se(){R=!R,x(y())}function we(e){I.has(e)?I.delete(e):I.add(e),x(y())}function Ee(e){D.has(e)?D.delete(e):D.add(e),x(y())}async function $e(){const e=(document.getElementById("bdOnsetTime")||{}).value,t=Math.max(0,Number((document.getElementById("bdAcuteMins")||{}).value||0)),o=Math.max(0,Number((document.getElementById("bdRecoveryMins")||{}).value||0)),s=(document.getElementById("bdSeverity")||{}).value||"moderate",a=(document.getElementById("bdNotes")||{}).value||"",i=e?new Date(e):new Date,n=Number.isFinite(i.getTime())?i.getTime():Date.now(),c=t>0?new Date(n+t*6e4).toISOString():null,d=o>0?new Date(n+o*6e4).toISOString():null,r=Date.now(),u={id:`ep_${r}_${Math.random().toString(36).slice(2,8)}`,onset_time:new Date(n).toISOString(),acute_peak_end_time:c,full_recovery_time:d,severity:s,symptoms:Array.from(I),triggers:Array.from(D),notes:a,client_event_id:`evt_${r}_${Math.random().toString(36).slice(2,8)}`};await k("/api/health/episodes",u,m=>{const _={...u,date_str:u.onset_time.slice(0,10),state:d?"RESOLVED":c?"POST_EPISODE_RECOVERY":"ACUTE_EPISODE",acute_duration_mins:t||null,total_recovery_duration_mins:o||null,biometric_snapshot_status:"pending"};m.recent_episodes=[_].concat(m.recent_episodes||[])}),R=!1,I.clear(),D.clear(),V("patterns"),typeof showToast=="function"&&showToast("\u2713 Past episode saved with Garmin snapshot")}async function Ae(e){e&&(await k("/api/health/episodes/delete",{id:e},t=>{t.recent_episodes=(t.recent_episodes||[]).filter(o=>o.id!==e),t.active_episode&&t.active_episode.id===e&&(t.active_episode=null,t.system_state=t.level1&&t.level1.active||t.level2&&t.level2.active?"VULNERABILITY_ALERT":"IDLE",t.safety_banner&&(t.safety_banner.active=t.system_state==="VULNERABILITY_ALERT"))}),E=null,N(),typeof showToast=="function"&&showToast("\u{1F5D1}\uFE0F Episode deleted"))}async function xe(e){await k("/api/health/autonomic/dismiss-spike",{spike_ts_ms:Number(e)||Date.now()},t=>{t.acute_spike=null})}function ke(e){g=String(e||$()).slice(0,10);const t=y(),s=(t.illness&&Array.isArray(t.illness.recent_logs)?t.illness.recent_logs:[]).find(a=>a.date_str===g);s?(b=s.severity||"moderate",h=s.notes||"",f=new Set(Array.isArray(s.symptoms)?s.symptoms:[])):(b="moderate",h="",f=new Set),B(t)}function Te(e){b=e,B(y())}function Le(e){f.has(e)?f.delete(e):f.add(e),B(y())}function Ie(e){h=String(e||"")}async function De(e,t="active"){const o=String(e||g||$()).slice(0,10),s={date_str:o,status:t,severity:b,symptoms:Array.from(f),notes:h};if(await k("/api/health/illness",s,a=>{a.illness||(a.illness={active_today:!1,recent_logs:[]});const i=Array.isArray(a.illness.recent_logs)?a.illness.recent_logs.filter(n=>n.date_str!==o):[];t!=="clear"&&i.unshift({date_str:o,status:t,severity:b,symptoms:s.symptoms,notes:h}),a.illness.recent_logs=i,o===$()&&(a.illness.active_today=t!=="clear")}),typeof fetchAnalyticsSummary=="function")try{await fetchAnalyticsSummary(!0)}catch{}typeof showToast=="function"&&showToast(t==="clear"?`\u2713 Cleared sick log for ${o}`:`\u{1F912} Saved Sick Day (${o})`)}async function Ne(){try{const a=await(typeof pulseApiFetch=="function"?pulseApiFetch:fetch)("/api/health/episodes/export?format=csv",{timeoutMs:8e3});if(a&&a.ok){const i=await a.text();j("pulse-clinical-episodes.csv",i,"text/csv;charset=utf-8"),typeof showToast=="function"&&showToast("\u2B07 Clinical CSV downloaded");return}}catch{}const e=y().recent_episodes||[],t=[["episode_id","date_uk","onset_time_uk","state","severity","acute_mins","recovery_mins","symptoms","triggers","notes"]];e.forEach(s=>{t.push([s.id,s.date_str,s.onset_time,s.state,s.severity,s.acute_duration_mins??"",s.total_recovery_duration_mins??"",(s.symptoms||[]).join("; "),(s.triggers||[]).join("; "),String(s.notes||"").replace(/"/g,'""')])});const o=t.map(s=>s.map(a=>`"${String(a??"").replace(/"/g,'""')}"`).join(",")).join(`
-`);j("pulse-clinical-episodes-offline.csv",o,"text/csv;charset=utf-8"),typeof showToast=="function"&&showToast("\u2B07 Offline Clinical CSV downloaded")}function j(e,t,o){if(typeof document>"u"||typeof Blob>"u"||!URL||typeof URL.createObjectURL!="function")return;const s=new Blob([t],{type:o}),a=URL.createObjectURL(s),i=document.createElement("a");i.href=a,i.download=e,document.body.appendChild(i),i.click(),document.body.removeChild(i),setTimeout(()=>{try{URL.revokeObjectURL(a)}catch{}},1e3)}function te(e){const t=e||{},o=t.patterns||{},s=o.acute_duration_stats||{},a=o.total_recovery_stats||{},i=Array.isArray(t.episodes)?t.episodes:t.recent_episodes||[],n=Array.isArray(t.illness_logs)?t.illness_logs:t.illness&&t.illness.recent_logs||[],c=t.clinical_disclaimer||"Self-monitoring & Garmin biometric correlation record only. Non-diagnostic.",d=i.map(r=>{const v=r.biometric_snapshot||{},u=v.stress||{},m=v.hr||{},_=(r.symptoms||[]).map(S=>l(S.replace(/_/g," "))).join(", ")||"None recorded",p=(r.triggers||[]).map(S=>l(S.replace(/_/g," "))).join(", ")||"None recorded";return`
+    `}function U(e){if(e&&e.autonomic&&typeof window<"u"){(!window.PULSE_ANALYTICS_SUMMARY||typeof window.PULSE_ANALYTICS_SUMMARY!="object")&&(window.PULSE_ANALYTICS_SUMMARY={}),window.PULSE_ANALYTICS_SUMMARY.autonomic=e.autonomic;try{localStorage.setItem(H,JSON.stringify(e.autonomic))}catch{}}const t=y();de(t),pe(t),me(t),E==="capture"?k(t):E==="illness"?Y(t):E==="patterns"?ve(t):E==="export"&&ye(t),te()}function j(e){const t=["capture","illness","patterns","export"];E=t.includes(e)?e:"capture",t.forEach(o=>{const s=document.getElementById(`btnAutonomicView_${o}`),i=document.getElementById(`autonomicView${o.charAt(0).toUpperCase()}${o.slice(1)}`);s&&s.classList&&s.classList.toggle("active",o===E),i&&i.classList&&i.classList.toggle("active",o===E)}),U()}function G(e){if(typeof switchTab=="function")switchTab("health");else{const t=document.getElementById("tab-health"),o=document.getElementById("nav-health");document.querySelectorAll(".tab-panel").forEach(s=>s.classList.remove("active")),document.querySelectorAll(".nav-btn").forEach(s=>s.classList.remove("active")),t&&t.classList&&t.classList.add("active"),o&&o.classList&&o.classList.add("active")}e?j(e):U(),typeof pulseHaptic=="function"&&pulseHaptic(20)}function ge(){typeof switchTab=="function"&&switchTab("today"),te()}function O(){return new Date().toISOString()}async function S(e,t,o){let s=!1;try{const a=await(typeof pulseApiFetch=="function"?pulseApiFetch:fetch)(e,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(t),timeoutMs:6e3});if(a&&a.ok){const n=await a.json();return n&&n.autonomic&&ee(n.autonomic,n.state||null,n.flex_refeed||null),n}typeof window._shouldQueueOfflineResponse=="function"?s=window._shouldQueueOfflineResponse(a):s=!a||a.status===0||a.status>=500||a.status===401}catch{s=!0}if(s){if(typeof window.enqueueOfflineWrite=="function"&&window.enqueueOfflineWrite(e,t,"POST"),typeof o=="function"){const i=JSON.parse(JSON.stringify(y()));o(i),ee(i,null,null)}typeof showToast=="function"&&showToast("Saved locally offline \u2014 will sync automatically when online")}return null}async function _e(e=0,t=!1){if(!V){V=!0;try{const o=Date.now(),s=e&&Number(e)>0?new Date(Number(e)).toISOString():O(),i=`ep_${o}_${Math.random().toString(36).slice(2,8)}`,a=`evt_${o}_${Math.random().toString(36).slice(2,8)}`;await S("/api/health/episodes",{id:i,onset_time:s,severity:"moderate",symptoms:[],triggers:[],spike_auto_detected:!!t,client_event_id:a},d=>{const r={id:i,client_event_id:a,state:"ACUTE_EPISODE",onset_time:s,date_str:w(),acute_peak_end_time:null,full_recovery_time:null,user_recovered_at:null,biometric_recovered_at:null,severity:"moderate",symptoms:[],triggers:d.illness&&d.illness.active_today?["illness_infection"]:[],illness_active:!!(d.illness&&d.illness.active_today),notes:"",biometric_snapshot_status:"pending"};d.active_episode=r,d.system_state="ACUTE_EPISODE",d.alert_level=2,d.safety_banner={active:!0,level:2,tone:"red",title:"ACTIVE EPISODE TRACKING",reasons:["Acute episode capture started (offline queue active)"],advisory:"Avoid driving (Volkswagen ID. Buzz) or solo exertion until recovered.",avoid_driving:!0,avoid_solo_exertion:!0},d.recent_episodes=[r].concat(d.recent_episodes||[])}),A=null,G("capture"),typeof showToast=="function"&&showToast("\u26A1 Episode capture started \u2014 rest safely")}finally{V=!1}}}async function oe(e){const o=y().active_episode;if(!o)return;const s=O(),i={id:o.id,client_event_id:o.client_event_id||void 0,action:e,timestamp:s,symptoms:Array.from(L),triggers:Array.from(I),severity:M,notes:B};await S("/api/health/episodes/update",i,a=>{const n=a.active_episode;n&&(n.symptoms=i.symptoms,n.triggers=i.triggers,n.severity=i.severity,n.notes=i.notes,e==="mark_acute_end"?(n.acute_peak_end_time=s,n.state="POST_EPISODE_RECOVERY",a.system_state="POST_EPISODE_RECOVERY"):e==="mark_user_recovered"?(n.user_recovered_at=s,n.acute_peak_end_time||(n.acute_peak_end_time=s),n.state="POST_EPISODE_RECOVERY",a.system_state="POST_EPISODE_RECOVERY"):e==="confirm_resolved_override"&&(n.acute_peak_end_time||(n.acute_peak_end_time=s),n.user_recovered_at=n.user_recovered_at||s,n.full_recovery_time=s,n.state="RESOLVED",a.active_episode=null,a.system_state=a.level1&&a.level1.active||a.level2&&a.level2.active?"VULNERABILITY_ALERT":"IDLE",a.safety_banner.active=a.system_state==="VULNERABILITY_ALERT"),a.recent_episodes=(a.recent_episodes||[]).map(d=>d.id===n.id?n:d))}),e==="confirm_resolved_override"?(A=null,C(),typeof showToast=="function"&&showToast("\u2713 Episode ended & resolved")):e==="mark_acute_end"?typeof showToast=="function"&&showToast("\u2713 Acute peak marked ended \u2014 recovery timer active"):e==="mark_user_recovered"&&typeof showToast=="function"&&showToast("\u2713 Feeling normal logged \u2014 tap End & Close Episode Now to finish immediately")}async function fe(e){const t=y(),o=e||t.active_episode&&t.active_episode.id;if(!o)return;const s=O();await S("/api/health/episodes/update",{id:o,action:"confirm_resolved_override",timestamp:s},a=>{a.active_episode&&a.active_episode.id===o&&(a.active_episode=null,a.system_state=a.level1&&a.level1.active||a.level2&&a.level2.active?"VULNERABILITY_ALERT":"IDLE",a.safety_banner.active=a.system_state==="VULNERABILITY_ALERT"),a.recent_episodes=(a.recent_episodes||[]).map(n=>n.id!==o?n:{...n,acute_peak_end_time:n.acute_peak_end_time||s,user_recovered_at:n.user_recovered_at||s,full_recovery_time:s,state:"RESOLVED"})}),A=null,C(),typeof showToast=="function"&&showToast("\u2713 Episode ended & resolved")}function be(){return oe("edit_details").then(()=>{typeof showToast=="function"&&showToast("\u2713 Episode symptoms & triggers saved")})}function he(e){L.has(e)?L.delete(e):L.add(e),k(y())}function we(e){I.has(e)?I.delete(e):I.add(e),k(y())}function Se(e){M=e,k(y())}function $e(e){B=String(e||"")}function Ee(){R=!R,k(y())}function Ae(e){D.has(e)?D.delete(e):D.add(e),k(y())}function xe(e){N.has(e)?N.delete(e):N.add(e),k(y())}async function ke(){const e=(document.getElementById("bdOnsetTime")||{}).value,t=Math.max(0,Number((document.getElementById("bdAcuteMins")||{}).value||0)),o=Math.max(0,Number((document.getElementById("bdRecoveryMins")||{}).value||0)),s=(document.getElementById("bdSeverity")||{}).value||"moderate",i=(document.getElementById("bdNotes")||{}).value||"",a=e?new Date(e):new Date,n=Number.isFinite(a.getTime())?a.getTime():Date.now(),d=t>0?new Date(n+t*6e4).toISOString():null,r=o>0?new Date(n+o*6e4).toISOString():null,c=Date.now(),u={id:`ep_${c}_${Math.random().toString(36).slice(2,8)}`,onset_time:new Date(n).toISOString(),acute_peak_end_time:d,full_recovery_time:r,severity:s,symptoms:Array.from(D),triggers:Array.from(N),notes:i,client_event_id:`evt_${c}_${Math.random().toString(36).slice(2,8)}`};await S("/api/health/episodes",u,v=>{const _={...u,date_str:u.onset_time.slice(0,10),state:r?"RESOLVED":d?"POST_EPISODE_RECOVERY":"ACUTE_EPISODE",acute_duration_mins:t||null,total_recovery_duration_mins:o||null,biometric_snapshot_status:"pending"};v.recent_episodes=[_].concat(v.recent_episodes||[])}),R=!1,D.clear(),N.clear(),j("patterns"),typeof showToast=="function"&&showToast("\u2713 Past episode saved with Garmin snapshot")}async function Te(e){e&&(await S("/api/health/episodes/delete",{id:e},t=>{t.recent_episodes=(t.recent_episodes||[]).filter(o=>o.id!==e),t.active_episode&&t.active_episode.id===e&&(t.active_episode=null,t.system_state=t.level1&&t.level1.active||t.level2&&t.level2.active?"VULNERABILITY_ALERT":"IDLE",t.safety_banner&&(t.safety_banner.active=t.system_state==="VULNERABILITY_ALERT"))}),A=null,C(),typeof showToast=="function"&&showToast("\u{1F5D1}\uFE0F Episode deleted"))}async function Le(e){await S("/api/health/autonomic/dismiss-spike",{spike_ts_ms:Number(e)||Date.now()},t=>{t.acute_spike=null})}async function Ie(){await S("/api/health/autonomic/dismiss-caution",{date_str:w()},e=>{e.safety_banner||(e.safety_banner={}),e.safety_banner.dismissed_today=!0,e.safety_banner.show_on_today=!1,e.safety_banner.active=!1}),typeof showToast=="function"&&showToast("\u2713 Dismissed for today \u2014 watch details stay in Health tab")}function De(e){g=String(e||w()).slice(0,10);const t=y(),s=(t.illness&&Array.isArray(t.illness.recent_logs)?t.illness.recent_logs:[]).find(i=>i.date_str===g);s?(b=s.severity||"moderate",h=s.notes||"",f=new Set(Array.isArray(s.symptoms)?s.symptoms:[])):(b="moderate",h="",f=new Set),Y(t)}function Ne(e){b=e,Y(y())}function Ce(e){f.has(e)?f.delete(e):f.add(e),Y(y())}function Me(e){h=String(e||"")}async function Re(e,t="active"){const o=String(e||g||w()).slice(0,10),s={date_str:o,status:t,severity:b,symptoms:Array.from(f),notes:h};if(await S("/api/health/illness",s,i=>{i.illness||(i.illness={active_today:!1,recent_logs:[]});const a=Array.isArray(i.illness.recent_logs)?i.illness.recent_logs.filter(n=>n.date_str!==o):[];t!=="clear"&&a.unshift({date_str:o,status:t,severity:b,symptoms:s.symptoms,notes:h}),i.illness.recent_logs=a,o===w()&&(i.illness.active_today=t!=="clear")}),typeof fetchAnalyticsSummary=="function")try{await fetchAnalyticsSummary(!0)}catch{}typeof showToast=="function"&&showToast(t==="clear"?`\u2713 Cleared sick log for ${o}`:`\u{1F912} Saved Sick Day (${o})`)}async function Pe(){try{const i=await(typeof pulseApiFetch=="function"?pulseApiFetch:fetch)("/api/health/episodes/export?format=csv",{timeoutMs:8e3});if(i&&i.ok){const a=await i.text();W("pulse-clinical-episodes.csv",a,"text/csv;charset=utf-8"),typeof showToast=="function"&&showToast("\u2B07 Clinical CSV downloaded");return}}catch{}const e=y().recent_episodes||[],t=[["episode_id","date_uk","onset_time_uk","state","severity","acute_mins","recovery_mins","symptoms","triggers","notes"]];e.forEach(s=>{t.push([s.id,s.date_str,s.onset_time,s.state,s.severity,s.acute_duration_mins??"",s.total_recovery_duration_mins??"",(s.symptoms||[]).join("; "),(s.triggers||[]).join("; "),String(s.notes||"").replace(/"/g,'""')])});const o=t.map(s=>s.map(i=>`"${String(i??"").replace(/"/g,'""')}"`).join(",")).join(`
+`);W("pulse-clinical-episodes-offline.csv",o,"text/csv;charset=utf-8"),typeof showToast=="function"&&showToast("\u2B07 Offline Clinical CSV downloaded")}function W(e,t,o){if(typeof document>"u"||typeof Blob>"u"||!URL||typeof URL.createObjectURL!="function")return;const s=new Blob([t],{type:o}),i=URL.createObjectURL(s),a=document.createElement("a");a.href=i,a.download=e,document.body.appendChild(a),a.click(),document.body.removeChild(a),setTimeout(()=>{try{URL.revokeObjectURL(i)}catch{}},1e3)}function se(e){const t=e||{},o=t.patterns||{},s=o.acute_duration_stats||{},i=o.total_recovery_stats||{},a=Array.isArray(t.episodes)?t.episodes:t.recent_episodes||[],n=Array.isArray(t.illness_logs)?t.illness_logs:t.illness&&t.illness.recent_logs||[],d=t.clinical_disclaimer||"Self-monitoring & Garmin biometric correlation record only. Non-diagnostic.",r=a.map(c=>{const p=c.biometric_snapshot||{},u=p.stress||{},v=p.hr||{},_=(c.symptoms||[]).map(T=>l(T.replace(/_/g," "))).join(", ")||"None recorded",$=(c.triggers||[]).map(T=>l(T.replace(/_/g," "))).join(", ")||"None recorded";return`
         <tr>
-          <td><strong>${l(A(r.onset_time))}</strong><br><small>${l(r.severity||"moderate")}${r.illness_active?" \u2022 Sick day":""}</small></td>
-          <td>Peak: ${r.acute_duration_mins!=null?`${r.acute_duration_mins}m`:"--"}<br>Full Rec: ${r.total_recovery_duration_mins!=null?`${r.total_recovery_duration_mins}m`:"--"}</td>
+          <td><strong>${l(x(c.onset_time))}</strong><br><small>${l(c.severity||"moderate")}${c.illness_active?" \u2022 Sick day":""}</small></td>
+          <td>Peak: ${c.acute_duration_mins!=null?`${c.acute_duration_mins}m`:"--"}<br>Full Rec: ${c.total_recovery_duration_mins!=null?`${c.total_recovery_duration_mins}m`:"--"}</td>
           <td>${_}</td>
-          <td>${p}</td>
-          <td>Stress: Pre ${u.pre_avg??"--"} / Peak ${u.peak??"--"} / Post ${u.post_avg??"--"}<br>HR: Pre ${m.pre_avg??"--"} / Peak ${m.peak??"--"} / Post ${m.post_avg??"--"} bpm<br>Prior HRV: ${v.prior_night_hrv??"--"}ms \u2022 Sleep Stress: ${v.prior_night_sleep_stress??"--"}</td>
-          <td>${l(r.notes||"")}</td>
+          <td>${$}</td>
+          <td>Stress: Pre ${u.pre_avg??"--"} / Peak ${u.peak??"--"} / Post ${u.post_avg??"--"}<br>HR: Pre ${v.pre_avg??"--"} / Peak ${v.peak??"--"} / Post ${v.post_avg??"--"} bpm<br>Prior HRV: ${p.prior_night_hrv??"--"}ms \u2022 Sleep Stress: ${p.prior_night_sleep_stress??"--"}</td>
+          <td>${l(c.notes||"")}</td>
         </tr>
       `}).join("");return`<!DOCTYPE html>
 <html lang="en">
@@ -504,12 +521,12 @@
     <button onclick="window.print()" style="padding:10px 16px; font-weight:bold; cursor:pointer;">\u{1F5A8} Print / Save as PDF</button>
   </div>
   <h1>PULSE \u2014 Paroxysmal Episode &amp; Autonomic Clinical Summary</h1>
-  <div class="meta">Generated: ${l(A(t.generated_at||U()))} \u2022 Review Context: GP / Neurology (Ambulatory EEG / MRI) / Cardiology (Holter / Tilt-Table)</div>
-  <div class="disclaimer"><strong>Non-Diagnostic Scope:</strong> ${l(c)} Routine 20\u201340 min resting surface EEG was normal; differential tracking covers Autonomic Dysregulation, Paroxysmal Focal Neurological Signaling, Transient Perfusion/Orthostatic Shifts, and Metabolic/Fuel/Illness Load Triggers.</div>
+  <div class="meta">Generated: ${l(x(t.generated_at||O()))} \u2022 Review Context: GP / Neurology (Ambulatory EEG / MRI) / Cardiology (Holter / Tilt-Table)</div>
+  <div class="disclaimer"><strong>Non-Diagnostic Scope:</strong> ${l(d)} Routine 20\u201340 min resting surface EEG was normal; differential tracking covers Autonomic Dysregulation, Paroxysmal Focal Neurological Signaling, Transient Perfusion/Orthostatic Shifts, and Metabolic/Fuel/Illness Load Triggers.</div>
   <div class="grid">
-    <div class="box"><div class="lbl">Total Episodes</div><div class="val">${Number(o.total_episodes||i.length||0)}</div></div>
+    <div class="box"><div class="lbl">Total Episodes</div><div class="val">${Number(o.total_episodes||a.length||0)}</div></div>
     <div class="box"><div class="lbl">Avg Acute Peak</div><div class="val">${s.avg!=null?`${Math.round(Number(s.avg))} min`:"--"}</div></div>
-    <div class="box"><div class="lbl">Avg Full Recovery</div><div class="val">${a.avg!=null?`${Math.round(Number(a.avg))} min`:"--"}</div></div>
+    <div class="box"><div class="lbl">Avg Full Recovery</div><div class="val">${i.avg!=null?`${Math.round(Number(i.avg))} min`:"--"}</div></div>
     <div class="box"><div class="lbl">Sick Days Logged</div><div class="val">${n.length}</div></div>
   </div>
   <h3>Paroxysmal Episode Timeline &amp; \xB160 Minute Garmin Telemetry</h3>
@@ -524,14 +541,14 @@
         <th>Notes</th>
       </tr>
     </thead>
-    <tbody>${d||'<tr><td colspan="6">No episodes recorded.</td></tr>'}</tbody>
+    <tbody>${r||'<tr><td colspan="6">No episodes recorded.</td></tr>'}</tbody>
   </table>
   ${n.length?`
     <h3 style="margin-top:18px;">Logged Illness / Intercurrent Infection Days</h3>
     <table>
       <thead><tr><th>Date</th><th>Status &amp; Severity</th><th>Symptoms</th><th>Notes</th></tr></thead>
-      <tbody>${n.map(r=>`<tr><td>${l(r.date_str)}</td><td>${l(r.status)} (${l(r.severity)})</td><td>${l((r.symptoms||[]).join(", "))}</td><td>${l(r.notes||"")}</td></tr>`).join("")}</tbody>
+      <tbody>${n.map(c=>`<tr><td>${l(c.date_str)}</td><td>${l(c.status)} (${l(c.severity)})</td><td>${l((c.symptoms||[]).join(", "))}</td><td>${l(c.notes||"")}</td></tr>`).join("")}</tbody>
     </table>
   `:""}
 </body>
-</html>`}async function Me(){let e=null;try{const s=await(typeof pulseApiFetch=="function"?pulseApiFetch:fetch)("/api/health/episodes/export?format=json",{timeoutMs:8e3});s&&s.ok&&(e=await s.json())}catch{}if(!e){const o=y();e={generated_at:U(),clinical_disclaimer:o.clinical_disclaimer,patterns:o.patterns,illness_logs:o.illness&&o.illness.recent_logs||[],episodes:o.recent_episodes||[]}}const t=te(e);if(typeof window<"u"&&typeof window.open=="function"){const o=window.open("","_blank","noopener");if(o&&o.document)return o.document.open(),o.document.write(t),o.document.close(),t}return j("pulse-clinical-report.html",t,"text/html;charset=utf-8"),t}typeof window<"u"&&(window.getAutonomicSummary=y,window.renderAutonomicUi=P,window.openAutonomicModal=H,window.openHealthTab=H,window.closeAutonomicModal=ue,window.switchAutonomicView=V,window.startAcuteEpisodeNow=ve,window.endEpisodeNow=ye,window.updateActiveEpisode=ee,window.saveActiveEpisodeDetails=ge,window.toggleEpisodeDraftSymptom=_e,window.toggleEpisodeDraftTrigger=fe,window.setActiveDraftSeverity=be,window.setActiveDraftNotes=he,window.toggleBackdateEpisodeForm=Se,window.toggleBackdateSymptom=we,window.toggleBackdateTrigger=Ee,window.submitBackdatedEpisode=$e,window.deleteLoggedEpisode=Ae,window.dismissAutonomicSpike=xe,window.selectIllnessDate=ke,window.setIllnessSeverity=Te,window.toggleIllnessSymptom=Le,window.setIllnessNotes=Ie,window.saveIllnessLog=De,window.downloadAutonomicCsv=Ne,window.openClinicalReportPrintView=Me,window.buildClinicalReportHtml=te,window._stopAutonomicTimer=N),typeof document<"u"&&typeof document.addEventListener=="function"&&document.addEventListener("DOMContentLoaded",()=>{try{P()}catch{}},{once:!0})})();
+</html>`}async function Ue(){let e=null;try{const s=await(typeof pulseApiFetch=="function"?pulseApiFetch:fetch)("/api/health/episodes/export?format=json",{timeoutMs:8e3});s&&s.ok&&(e=await s.json())}catch{}if(!e){const o=y();e={generated_at:O(),clinical_disclaimer:o.clinical_disclaimer,patterns:o.patterns,illness_logs:o.illness&&o.illness.recent_logs||[],episodes:o.recent_episodes||[]}}const t=se(e);if(typeof window<"u"&&typeof window.open=="function"){const o=window.open("","_blank","noopener");if(o&&o.document)return o.document.open(),o.document.write(t),o.document.close(),t}return W("pulse-clinical-report.html",t,"text/html;charset=utf-8"),t}typeof window<"u"&&(window.getAutonomicSummary=y,window.renderAutonomicUi=U,window.openAutonomicModal=G,window.openHealthTab=G,window.closeAutonomicModal=ge,window.switchAutonomicView=j,window.startAcuteEpisodeNow=_e,window.endEpisodeNow=fe,window.updateActiveEpisode=oe,window.saveActiveEpisodeDetails=be,window.toggleEpisodeDraftSymptom=he,window.toggleEpisodeDraftTrigger=we,window.setActiveDraftSeverity=Se,window.setActiveDraftNotes=$e,window.toggleBackdateEpisodeForm=Ee,window.toggleBackdateSymptom=Ae,window.toggleBackdateTrigger=xe,window.submitBackdatedEpisode=ke,window.deleteLoggedEpisode=Te,window.dismissAutonomicSpike=Le,window.dismissAutonomicCaution=Ie,window.selectIllnessDate=De,window.setIllnessSeverity=Ne,window.toggleIllnessSymptom=Ce,window.setIllnessNotes=Me,window.saveIllnessLog=Re,window.downloadAutonomicCsv=Pe,window.openClinicalReportPrintView=Ue,window.buildClinicalReportHtml=se,window._stopAutonomicTimer=C),typeof document<"u"&&typeof document.addEventListener=="function"&&document.addEventListener("DOMContentLoaded",()=>{try{U()}catch{}},{once:!0})})();

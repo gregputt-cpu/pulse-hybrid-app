@@ -23,6 +23,21 @@ DRIVING_SAFETY_ADVISORY = (
     "metrics normalize and symptoms fully clear."
 )
 
+CAUTION_CHECKIN_ADVISORY = (
+    "Elevated autonomic strain detected. Do a quick symptom check before driving "
+    "or hard solo training — dismiss for today if you feel completely normal."
+)
+
+WATCH_INFO_ADVISORY = (
+    "Overnight HRV is slightly below your 7-day baseline. "
+    "Informational only — hydrate well and pace load."
+)
+
+WATCH_POST_ILLNESS_ADVISORY = (
+    "Overnight HRV is slightly below baseline — expected lag while recovering from illness. "
+    "Hydrate well and pace load."
+)
+
 SYMPTOM_LABELS: Dict[str, str] = {
     "dizziness_vertigo": "Dizziness / Vertigo",
     "lightheaded_presyncope": "Lightheadedness / Presyncope",
@@ -364,21 +379,27 @@ def evaluate_level1_baseline(
 
     if len(prior_hrv_vals) >= 3:
         rolling_7d_baseline = round(sum(prior_hrv_vals) / len(prior_hrv_vals), 1)
-        threshold_ms = round(max(hrv_baseline_low or 0.0, rolling_7d_baseline * 0.88), 1)
+        pct_floor = round(rolling_7d_baseline * 0.85, 1)
+        low_floor = round(hrv_baseline_low - 5.0, 1) if hrv_baseline_low is not None else None
+        threshold_ms = round(max(pct_floor, low_floor) if low_floor is not None else pct_floor, 1)
     elif hrv_baseline_low is not None:
         rolling_7d_baseline = hrv_baseline_low
-        threshold_ms = hrv_baseline_low
+        threshold_ms = round(hrv_baseline_low - 5.0, 1)
 
     hrv_drop_pct: Optional[float] = None
     if hrv_last_night is not None and rolling_7d_baseline and rolling_7d_baseline > 0:
         hrv_drop_pct = round(((hrv_last_night - rolling_7d_baseline) / rolling_7d_baseline) * 100.0, 1)
 
+    hrv_mild_dip = bool(
+        (hrv_last_night is not None and rolling_7d_baseline is not None and hrv_last_night < rolling_7d_baseline)
+        or (hrv_last_night is not None and hrv_baseline_low is not None and hrv_last_night < hrv_baseline_low)
+        or hrv_status in ("LOW", "POOR")
+    )
+
     hrv_triggered = False
-    if hrv_last_night is not None and threshold_ms is not None and hrv_last_night < threshold_ms:
+    if hrv_last_night is not None and threshold_ms is not None and hrv_last_night <= threshold_ms:
         hrv_triggered = True
-    elif hrv_status in ("LOW", "POOR") and (
-        hrv_last_night is None or rolling_7d_baseline is None or hrv_last_night < rolling_7d_baseline
-    ):
+    elif hrv_last_night is None and hrv_status in ("LOW", "POOR"):
         hrv_triggered = True
 
     triggers: List[str] = []
@@ -401,6 +422,7 @@ def evaluate_level1_baseline(
         "hrv_threshold_ms": threshold_ms,
         "hrv_baseline_low": hrv_baseline_low,
         "hrv_drop_pct": hrv_drop_pct,
+        "hrv_mild_dip": hrv_mild_dip,
         "hrv_status": hrv_status,
         "hrv_prior_nights": len(prior_hrv_vals),
     }
@@ -1153,6 +1175,25 @@ def dismiss_spike_until(spike_ts_ms: Optional[int] = None) -> int:
     return ts_val
 
 
+def _get_caution_dismissed_date() -> Optional[str]:
+    try:
+        raw = db.get_kv("autonomic_caution_dismissed_date")
+        if raw:
+            s = str(raw).strip()[:10]
+            return s if len(s) == 10 else None
+    except Exception:
+        pass
+    return None
+
+
+def dismiss_caution_today(date_str: Optional[str] = None) -> str:
+    d_str = str(date_str or uk_now().date().isoformat()).strip()[:10]
+    if len(d_str) != 10:
+        d_str = uk_now().date().isoformat()
+    db.set_kv("autonomic_caution_dismissed_date", d_str)
+    return d_str
+
+
 def build_autonomic_summary(live_state: Optional[Dict[str, Any]] = None, target_date_str: Optional[str] = None) -> Dict[str, Any]:
     """Assemble full non-diagnostic autonomic monitoring state, illness mode, patterns & safety banner."""
     now_dt = uk_now()
@@ -1210,23 +1251,32 @@ def build_autonomic_summary(live_state: Optional[Dict[str, Any]] = None, target_
         target_date_str=t_str,
     )
 
-    # Determine overall state machine state & alert level
-    if active_episode and active_episode.get("state") == "ACUTE_EPISODE":
-        system_state = "ACUTE_EPISODE"
-    elif active_episode and active_episode.get("state") == "POST_EPISODE_RECOVERY":
-        system_state = "POST_EPISODE_RECOVERY"
-    elif level1["active"] or level2["active"]:
+    # Determine proportional 3-tier alerting & state machine state
+    caution_dismissed_date = _get_caution_dismissed_date()
+    caution_dismissed_today = bool(caution_dismissed_date == t_str[:10])
+    sleep_elevated = "overnight_sleep_stress_elevated" in level1["triggers"]
+    hrv_sig_drop = "overnight_hrv_below_baseline" in level1["triggers"]
+    post_illness_ramp = bool(illness.get("post_illness_ramp_active"))
+
+    if active_episode and active_episode.get("state") in ("ACUTE_EPISODE", "POST_EPISODE_RECOVERY"):
+        banner_tier = "active_safety"
+    elif level2["active"] or sleep_elevated or (hrv_sig_drop and not post_illness_ramp):
+        banner_tier = "caution"
+    elif level1.get("hrv_mild_dip") or (hrv_sig_drop and post_illness_ramp):
+        banner_tier = "watch"
+    else:
+        banner_tier = "none"
+
+    if banner_tier == "active_safety":
+        system_state = active_episode["state"]
+        alert_level = 2 if system_state == "ACUTE_EPISODE" else 1
+    elif banner_tier == "caution":
         system_state = "VULNERABILITY_ALERT"
+        alert_level = 2 if level2["active"] else 1
     else:
         system_state = "IDLE"
+        alert_level = 0
 
-    alert_level = 0
-    if level2["active"] or system_state == "ACUTE_EPISODE":
-        alert_level = 2
-    elif level1["active"] or system_state == "POST_EPISODE_RECOVERY":
-        alert_level = 1
-
-    banner_active = bool(level1["active"] or level2["active"] or system_state in ("ACUTE_EPISODE", "POST_EPISODE_RECOVERY"))
     reasons: List[str] = []
     if system_state == "ACUTE_EPISODE":
         reasons.append("Acute paroxysmal episode currently active")
@@ -1234,26 +1284,56 @@ def build_autonomic_summary(live_state: Optional[Dict[str, Any]] = None, target_
         reasons.append("Post-episode autonomic recovery in progress")
     if level2["active"]:
         reasons.append(f"Daytime stress >25 for {level2['max_streak_mins']}m (4h+ sympathetic load)")
-    if level1["active"]:
-        if "overnight_sleep_stress_elevated" in level1["triggers"]:
+    if banner_tier in ("caution", "watch"):
+        if sleep_elevated:
             reasons.append(f"Overnight sleeping stress avg {level1['sleep_avg_stress']} (above 0-25 rest zone)")
-        if "overnight_hrv_below_baseline" in level1["triggers"]:
-            reasons.append(f"Overnight HRV {level1['hrv_last_night']}ms below 7d baseline ({level1['hrv_7d_baseline']}ms)")
+        if hrv_sig_drop:
+            reasons.append(f"Overnight HRV {level1['hrv_last_night']}ms significantly below 7d baseline ({level1['hrv_7d_baseline']}ms)")
+        elif banner_tier == "watch" and level1.get("hrv_last_night") is not None and level1.get("hrv_7d_baseline") is not None:
+            reasons.append(f"Overnight HRV {level1['hrv_last_night']}ms slightly below 7d baseline ({level1['hrv_7d_baseline']}ms)")
+        elif banner_tier == "watch" and level1.get("hrv_mild_dip"):
+            reasons.append("Overnight HRV slightly below recent baseline (Garmin Watch)")
+
+    show_on_today = bool(
+        banner_tier == "active_safety" or (banner_tier == "caution" and not caution_dismissed_today)
+    )
+    avoid_driving = bool(banner_tier == "active_safety")
+    avoid_solo_exertion = bool(banner_tier == "active_safety")
+
+    if system_state == "ACUTE_EPISODE":
+        banner_title = "ACTIVE EPISODE TRACKING"
+        banner_advisory = DRIVING_SAFETY_ADVISORY
+        banner_tone = "red"
+    elif system_state == "POST_EPISODE_RECOVERY":
+        banner_title = "POST-EPISODE RECOVERY"
+        banner_advisory = DRIVING_SAFETY_ADVISORY
+        banner_tone = "amber"
+    elif banner_tier == "caution":
+        banner_title = "AUTONOMIC CAUTION — Sustained Daytime Load" if level2["active"] else "AUTONOMIC CAUTION — Strained Recovery Baseline"
+        banner_advisory = CAUTION_CHECKIN_ADVISORY
+        banner_tone = "amber"
+    elif banner_tier == "watch":
+        banner_title = "HRV Watch — Mild Overnight Dip"
+        banner_advisory = WATCH_POST_ILLNESS_ADVISORY if (post_illness_ramp or illness.get("active_today")) else WATCH_INFO_ADVISORY
+        banner_tone = "amber"
+    else:
+        banner_title = "Autonomic Baseline Calm"
+        banner_advisory = "Autonomic metrics within normal baseline."
+        banner_tone = "calm"
 
     safety_banner = {
-        "active": banner_active,
+        "active": show_on_today,
+        "tier": banner_tier,
+        "show_on_today": show_on_today,
+        "dismissible": banner_tier == "caution",
+        "dismissed_today": bool(banner_tier == "caution" and caution_dismissed_today),
         "level": alert_level,
-        "tone": "red" if alert_level >= 2 else ("amber" if alert_level == 1 else "calm"),
-        "title": (
-            "LEVEL 2 ALERT — Sustained Sympathetic Load" if level2["active"] and system_state != "ACUTE_EPISODE"
-            else ("ACTIVE EPISODE TRACKING" if system_state == "ACUTE_EPISODE"
-                  else ("POST-EPISODE RECOVERY" if system_state == "POST_EPISODE_RECOVERY"
-                        else ("LEVEL 1 ALERT — Elevated Autonomic Baseline" if level1["active"] else "Autonomic Baseline Calm")))
-        ),
+        "tone": banner_tone,
+        "title": banner_title,
         "reasons": reasons,
-        "advisory": DRIVING_SAFETY_ADVISORY if banner_active else "Autonomic metrics within normal baseline.",
-        "avoid_driving": banner_active,
-        "avoid_solo_exertion": banner_active,
+        "advisory": banner_advisory,
+        "avoid_driving": avoid_driving,
+        "avoid_solo_exertion": avoid_solo_exertion,
     }
 
     return {

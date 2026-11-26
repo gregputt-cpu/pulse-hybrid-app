@@ -334,19 +334,102 @@ async function runTests() {
       console.log('PASS [1] Zero-Hex CSS, WCAG AAA Contrast (>=7:1), >=48px Touch Targets & HTML Hygiene');
     }
 
-    // [2] Level 1 & Level 2 Safety Banners, Spike Prompt & Header Pill Dots
+    // [2] Proportional 3-Tier Alerting: Watch vs Caution Dismiss vs Active Episode Safety Banner
     {
       app.localStorage.clear();
+      // Tier 1: Mild HRV Watch -> hidden on Today, calm note in Health -> Patterns, quiet header pill, no nav dot
+      app.ctx.renderAutonomicUi({
+        autonomic: {
+          system_state: 'IDLE',
+          alert_level: 0,
+          safety_banner: {
+            active: false,
+            tier: 'watch',
+            show_on_today: false,
+            dismissible: false,
+            dismissed_today: false,
+            level: 0,
+            tone: 'amber',
+            title: 'HRV Watch — Mild Overnight Dip',
+            reasons: ['Overnight HRV 41.0ms slightly below 7d baseline (44.0ms)'],
+            advisory: 'Overnight HRV is slightly below your 7-day baseline. Informational only — hydrate well and pace load.',
+            avoid_driving: false,
+            avoid_solo_exertion: false
+          },
+          acute_spike: null,
+          active_episode: null,
+          illness: { active_today: false, current_streak_days: 0, recent_logs: [] },
+          patterns: { prodromal_risk: { score: 15, level: 'low', label: 'Low Baseline', drivers: [] } },
+          recent_episodes: []
+        }
+      });
+      assert.strictEqual(app.document.getElementById('autonomicSafetyBanner').style.display, 'none', 'Tier 1 Watch must NOT show Today banner');
+      assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'HRV Watch');
+      assert.strictEqual(app.document.getElementById('navHealthDot').style.display, 'none', 'Tier 1 Watch must NOT light up navHealthDot');
+      app.ctx.switchAutonomicView('patterns');
+      assert(app.document.getElementById('autonomicViewPatterns').innerHTML.includes('autonomic-watch-card'));
+      assert(app.document.getElementById('autonomicViewPatterns').innerHTML.includes('Overnight HRV 41.0ms slightly below 7d baseline'));
+      app.ctx.switchAutonomicView('capture');
+
+      // Tier 2: Caution Strip -> compact dismissible check-in (NO Do Not Drive) -> Dismiss clears Today
       app.ctx.renderAutonomicUi({
         autonomic: {
           system_state: 'VULNERABILITY_ALERT',
           alert_level: 2,
           safety_banner: {
             active: true,
+            tier: 'caution',
+            show_on_today: true,
+            dismissible: true,
+            dismissed_today: false,
+            level: 2,
+            tone: 'amber',
+            title: 'AUTONOMIC CAUTION — Sustained Daytime Load',
+            reasons: ['Daytime stress >25 for 250m (4h+ sympathetic load)'],
+            advisory: 'Elevated autonomic strain detected. Do a quick symptom check before driving or hard solo training.',
+            avoid_driving: false,
+            avoid_solo_exertion: false
+          },
+          acute_spike: null,
+          active_episode: null,
+          illness: { active_today: false, current_streak_days: 0, recent_logs: [] },
+          patterns: { prodromal_risk: { score: 55, level: 'high', label: 'High Load', drivers: [] } },
+          recent_episodes: []
+        }
+      });
+      const cautionHtml = app.document.getElementById('autonomicSafetyBanner').innerHTML;
+      assert(cautionHtml.includes('autonomic-caution-strip'), 'Tier 2 Caution must use compact caution strip');
+      assert.strictEqual(cautionHtml.includes('Do Not Drive'), false, 'Tier 2 Caution must NOT show Do Not Drive splash');
+      assert(cautionHtml.includes('I Feel Fine'));
+      assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'Caution');
+      assert.strictEqual(app.document.getElementById('navHealthDot').style.display, 'block');
+
+      app.setFetchHandler(async () => makeMockResponse({}, { status: 0 }));
+      await app.ctx.dismissAutonomicCaution();
+      assert.strictEqual(app.document.getElementById('autonomicSafetyBanner').style.display, 'none', 'Dismissing caution must hide Today banner');
+      assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'HRV Watch');
+      const queuedCaution = JSON.parse(app.localStorage.getItem('pulse_offline_write_queue') || '[]');
+      assert.strictEqual(queuedCaution[0].endpoint, '/api/health/autonomic/dismiss-caution');
+
+      // Tier 3: Active Safety Banner during ACUTE_EPISODE -> prominent Red banner + Do Not Drive + End Episode Now
+      app.localStorage.clear();
+      app.ctx.renderAutonomicUi({
+        autonomic: {
+          system_state: 'ACUTE_EPISODE',
+          alert_level: 2,
+          active_episode: { id: 'ep_banner_1', state: 'ACUTE_EPISODE', onset_time: new Date().toISOString() },
+          safety_banner: {
+            active: true,
+            tier: 'active_safety',
+            show_on_today: true,
+            dismissible: false,
+            dismissed_today: false,
             level: 2,
             tone: 'red',
-            title: 'LEVEL 2 ALERT — Sustained Sympathetic Load',
-            reasons: ['Daytime stress >25 for 250m (4h+ sympathetic load)']
+            title: 'ACTIVE EPISODE TRACKING',
+            reasons: ['Acute paroxysmal episode currently active'],
+            avoid_driving: true,
+            avoid_solo_exertion: true
           },
           acute_spike: {
             detected: true,
@@ -355,26 +438,24 @@ async function runTests() {
             reason: 'Unprovoked Stress surge (86/100) outside workout'
           },
           illness: { active_today: false, current_streak_days: 0, recent_logs: [] },
-          patterns: { prodromal_risk: { score: 60, level: 'high', label: 'High Load', drivers: [] } },
+          patterns: { prodromal_risk: { score: 85, level: 'high', label: 'Acute Episode', drivers: [] } },
           recent_episodes: []
         }
       });
 
       const safetyHtml = app.document.getElementById('autonomicSafetyBanner').innerHTML;
-      assert(safetyHtml.includes('tone-red'), 'Level 2 alert banner must use red tone');
-      assert(safetyHtml.includes('Volkswagen ID. Buzz'), 'Safety banner must advise against driving Volkswagen ID. Buzz');
-      assert(safetyHtml.includes('solo high-risk'), 'Safety banner must warn against solo high-risk exertion');
-
-      const spikeHtml = app.document.getElementById('autonomicSpikeBanner').innerHTML;
-      assert(spikeHtml.includes('Unprovoked Stress surge (86/100)'), 'Spike banner must show Garmin spike reason');
+      assert(safetyHtml.includes('tone-red'), 'Tier 3 active episode banner must use red tone');
+      assert(safetyHtml.includes('Volkswagen ID. Buzz'), 'Tier 3 safety banner must advise against driving Volkswagen ID. Buzz');
+      assert(safetyHtml.includes('solo high-risk'), 'Tier 3 safety banner must warn against solo high-risk exertion');
+      assert(safetyHtml.includes('End Episode Now'));
 
       const dotEl = app.document.getElementById('autonomicPillDot');
-      assert(dotEl.classList.contains('red'), 'Header dot must be red on Level 2 alert');
-      assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'Level 2 Alert');
+      assert(dotEl.classList.contains('red'), 'Header dot must be red during active episode');
+      assert.strictEqual(app.document.getElementById('autonomicPillText').innerText, 'Turn Active');
       const navDotEl = app.document.getElementById('navHealthDot');
-      assert(navDotEl.classList.contains('red'), 'Center Health nav dot must be red on Level 2 alert');
-      assert.strictEqual(navDotEl.style.display, 'block', 'Center Health nav dot must be visible on Level 2 alert');
-      console.log('PASS [2] Level 1/2 Driving & Solo Exertion Safety Banners, Spike Prompt, Header Pill & Nav Dot');
+      assert(navDotEl.classList.contains('red'), 'Center Health nav dot must be red during active episode');
+      assert.strictEqual(navDotEl.style.display, 'block', 'Center Health nav dot must be visible during active episode');
+      console.log('PASS [2] Proportional 3-Tier Alerting, Caution Dismiss, Active Episode Safety Banner & Nav Dot');
     }
 
     // [3] 1-Tap Offline Episode Capture -> Queued Sync -> Resolution Override
@@ -498,10 +579,15 @@ async function runTests() {
       assert.strictEqual(rampVerdict.mode, 'liss_cardio', 'Day +1 post-illness must cap training to liss_cardio ramp');
       assert(rampVerdict.badge.includes('POST-ILLNESS RETURN RAMP'));
 
+      app.ctx.renderAutonomicUi(app.ctx.PULSE_ANALYTICS_SUMMARY);
+      const rampBannerHtml = app.document.getElementById('illnessStatusBannerToday').innerHTML;
+      assert(rampBannerHtml.includes('illness-ramp-strip'), 'Day-1 Return Ramp must use compact single-strip banner on Today');
+      assert(rampBannerHtml.includes('Day-1 Return Ramp'));
+
       app.ctx.renderPostRefeedScaleShield(app.ctx.PULSE_ANALYTICS_SUMMARY);
       assert(app.document.getElementById('todayScaleShieldPill').innerText.includes('Recovery Shield'));
       assert(app.document.getElementById('postRefeedScaleShield').innerHTML.includes('Post-Illness Recovery Scale Shield Active'));
-      console.log('PASS [4] Illness Workout Rest/Return Ramp, Maintenance Fuel & 48h Scale Shield');
+      console.log('PASS [4] Illness Workout Rest/Return Ramp, Compact Today Strip, Maintenance Fuel & 48h Scale Shield');
     }
 
     // [5] Clinical Report HTML XSS Escaping & Non-Diagnostic Boundary

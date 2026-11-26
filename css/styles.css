@@ -5087,6 +5087,74 @@ body.workout-focus-mode .rest-bar-box.rest-active {
   color: var(--autonomic-calm-text);
 }
 
+.autonomic-caution-strip {
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--autonomic-amber-bg);
+  border: 1px solid var(--autonomic-amber-border);
+  color: var(--autonomic-amber-text);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.autonomic-caution-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.autonomic-caution-btn {
+  min-height: 44px;
+  flex: 1 1 auto;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--autonomic-amber-border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.autonomic-watch-card {
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--autonomic-amber-border);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.illness-ramp-strip {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--illness-bg);
+  border: 1px solid var(--illness-border);
+  color: var(--illness-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 10px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .autonomic-quick-btn,
   .autonomic-tap-btn,

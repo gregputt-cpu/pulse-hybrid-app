@@ -267,6 +267,8 @@
     const ep = auto.active_episode;
     const ill = auto.illness || {};
     const lvl = Number(auto.alert_level || 0);
+    const sb = auto.safety_banner || {};
+    const tier = sb.tier || (ep ? 'active_safety' : (lvl >= 1 ? 'caution' : 'none'));
 
     let stateColor = 'teal';
     let label = 'Calm';
@@ -280,18 +282,18 @@
       stateColor = 'amber';
       label = 'Recovering';
       showNavDot = true;
-    } else if (lvl >= 2) {
-      stateColor = 'red';
-      label = 'Level 2 Alert';
-      showNavDot = true;
-    } else if (lvl === 1) {
+    } else if (tier === 'caution' && !sb.dismissed_today) {
       stateColor = 'amber';
-      label = 'Level 1 Alert';
+      label = 'Caution';
       showNavDot = true;
     } else if (ill.active_today) {
       stateColor = 'violet';
       label = 'Sick Mode';
       showNavDot = true;
+    } else if (tier === 'caution' || tier === 'watch') {
+      stateColor = 'amber';
+      label = 'HRV Watch';
+      showNavDot = false;
     }
 
     if (dot && txt) {
@@ -318,9 +320,10 @@
     const sb = auto.safety_banner || {};
     const ep = auto.active_episode;
     const ill = auto.illness || {};
+    const tier = sb.tier || (ep ? 'active_safety' : (sb.avoid_driving ? 'active_safety' : (sb.active ? 'caution' : 'none')));
 
     if (safetyEl) {
-      if (sb.active) {
+      if (tier === 'active_safety') {
         const toneCls = sb.tone === 'red' ? 'tone-red' : 'tone-amber';
         const reasons = Array.isArray(sb.reasons) ? sb.reasons : [];
         const ctaHtml = ep
@@ -340,6 +343,23 @@
             <div class="autonomic-safety-copy"><strong>Do Not Drive (Volkswagen ID. Buzz) or train solo high-risk</strong> until autonomic metrics normalize and symptoms clear.</div>
             <div class="autonomic-safety-actions">
               ${ctaHtml}
+            </div>
+          </div>
+        `;
+      } else if (tier === 'caution' && sb.show_on_today !== false && !sb.dismissed_today) {
+        const reasons = Array.isArray(sb.reasons) ? sb.reasons : [];
+        safetyEl.style.display = 'block';
+        safetyEl.innerHTML = `
+          <div class="autonomic-caution-strip" role="status" aria-live="polite">
+            <div class="autonomic-safety-title">
+              <span>⚠️ ${_esc(sb.title || 'Autonomic Caution')}</span>
+              <span class="autonomic-risk-pill">CHECK-IN</span>
+            </div>
+            ${reasons.length ? `<div class="autonomic-safety-copy">${reasons.map((r) => `• ${_esc(r)}`).join('<br>')}</div>` : ''}
+            <div class="autonomic-safety-copy">${_esc(sb.advisory || 'Elevated autonomic strain — do a quick symptom check before driving or hard solo training.')}</div>
+            <div class="autonomic-caution-actions">
+              <button type="button" class="autonomic-caution-btn" onclick="dismissAutonomicCaution()">✓ I Feel Fine — Dismiss</button>
+              <button type="button" class="autonomic-caution-btn" onclick="openAutonomicModal('patterns')">Health &amp; Patterns →</button>
             </div>
           </div>
         `;
@@ -391,16 +411,10 @@
       } else if (ill.post_illness_ramp_active) {
         illEl.style.display = 'block';
         illEl.innerHTML = `
-          <div class="illness-today-banner">
-            <div class="autonomic-safety-title">
-              <span>🛡️ Day-1 Post-Illness Return Ramp</span>
-              <span>48h Scale Shield</span>
-            </div>
-            <div class="autonomic-safety-copy">First day back after illness: training capped to gentle flush &amp; scale fluctuations protected by 48h Recovery Shield.</div>
-            <div class="autonomic-safety-actions">
-              <button type="button" class="autonomic-tap-btn is-outline" onclick="openAutonomicModal('illness')">View Illness Log</button>
-            </div>
-          </div>
+          <button type="button" class="illness-ramp-strip" onclick="openAutonomicModal('illness')">
+            <span>🛡️ <strong>Day-1 Return Ramp</strong> · Gentle flush &amp; 48h Scale Shield</span>
+            <span style="font-size:12px; font-weight:800; white-space:nowrap;">View →</span>
+          </button>
         `;
       } else {
         illEl.style.display = 'none';
@@ -816,8 +830,24 @@
     const comp = pat.prodrome_comparison || {};
     const eps = Array.isArray(auto.recent_episodes) ? auto.recent_episodes : [];
     const riskCls = risk.level === 'high' ? 'risk-high' : (risk.level === 'elevated' ? 'risk-elevated' : 'risk-low');
+    const sb = auto.safety_banner || {};
+    const sbTier = sb.tier || 'none';
+    const sbReasons = Array.isArray(sb.reasons) ? sb.reasons : [];
+    const watchCardHtml = (sbTier === 'watch' || sbTier === 'caution')
+      ? `
+        <div class="autonomic-watch-card">
+          <div class="autonomic-safety-title">
+            <span>${sbTier === 'caution' ? '⚠️' : '🔎'} ${_esc(sb.title || 'HRV Watch')}</span>
+            ${sb.dismissed_today ? '<span class="autonomic-risk-pill">Dismissed on Today</span>' : ''}
+          </div>
+          ${sbReasons.length ? `<div class="autonomic-safety-copy">${sbReasons.map((r) => `• ${_esc(r)}`).join('<br>')}</div>` : ''}
+          <div class="autonomic-safety-copy">${_esc(sb.advisory || '')}</div>
+        </div>
+      `
+      : '';
 
     container.innerHTML = `
+      ${watchCardHtml}
       <div class="autonomic-risk-card ${riskCls}">
         <div class="autonomic-safety-title">
           <span>🎯 Heading Toward Episode Risk</span>
@@ -1330,6 +1360,18 @@
     });
   }
 
+  async function dismissAutonomicCaution() {
+    await _postWithOfflineFallback('/api/health/autonomic/dismiss-caution', { date_str: _todayUkIso() }, (cur) => {
+      if (!cur.safety_banner) cur.safety_banner = {};
+      cur.safety_banner.dismissed_today = true;
+      cur.safety_banner.show_on_today = false;
+      cur.safety_banner.active = false;
+    });
+    if (typeof showToast === 'function') {
+      showToast('✓ Dismissed for today — watch details stay in Health tab');
+    }
+  }
+
   function selectIllnessDate(dateStr) {
     _illnessSelectedDate = String(dateStr || _todayUkIso()).slice(0, 10);
     const auto = getAutonomicSummary();
@@ -1575,6 +1617,7 @@
     window.submitBackdatedEpisode = submitBackdatedEpisode;
     window.deleteLoggedEpisode = deleteLoggedEpisode;
     window.dismissAutonomicSpike = dismissAutonomicSpike;
+    window.dismissAutonomicCaution = dismissAutonomicCaution;
     window.selectIllnessDate = selectIllnessDate;
     window.setIllnessSeverity = setIllnessSeverity;
     window.toggleIllnessSymptom = toggleIllnessSymptom;

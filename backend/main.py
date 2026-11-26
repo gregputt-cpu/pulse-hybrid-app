@@ -2439,6 +2439,11 @@ def delete_paroxysmal_episode_endpoint(payload: EpisodeDeletePayload):
     return {"success": True, "deleted_id": ep_id, "autonomic": summary}
 
 
+class CautionDismissPayload(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    date_str: Optional[str] = None
+
+
 @app.post("/api/health/autonomic/dismiss-spike")
 def dismiss_autonomic_spike(payload: Optional[SpikeDismissPayload] = None):
     ts_ms = payload.spike_ts_ms if payload else None
@@ -2446,6 +2451,14 @@ def dismiss_autonomic_spike(payload: Optional[SpikeDismissPayload] = None):
     state = load_live_state()
     summary = autonomic_service.build_autonomic_summary(state)
     return {"success": True, "autonomic": summary}
+
+
+@app.post("/api/health/autonomic/dismiss-caution")
+def dismiss_autonomic_caution(payload: Optional[CautionDismissPayload] = None):
+    d_str = autonomic_service.dismiss_caution_today(payload.date_str if payload else None)
+    state = load_live_state()
+    summary = autonomic_service.build_autonomic_summary(state)
+    return {"success": True, "dismissed_date": d_str, "autonomic": summary}
 
 
 @app.get("/api/health/episodes/export")
