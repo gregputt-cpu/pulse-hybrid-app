@@ -568,6 +568,143 @@ def promote_recent_warmup_sets(
         return cur.rowcount or len(ids_to_promote)
 
 
+def update_strength_log_set(
+    exercise_id: str,
+    session_date_str: str,
+    old_weight: Optional[float],
+    old_reps: Optional[int],
+    new_weight: float,
+    new_reps: int,
+    new_e1rm: float,
+    set_time_hhmm: Optional[str] = None,
+    is_warmup: Optional[bool] = None,
+    conn: Optional[sqlite3.Connection] = None,
+) -> int:
+    """Update the best-matching same-day strength_logs row for an edited set. Returns updated row id or 0."""
+    if not exercise_id or not session_date_str:
+        return 0
+    _ensure_initialized()
+    target_mins: Optional[int] = None
+    if set_time_hhmm:
+        parts = str(set_time_hhmm).strip().split(":")
+        if len(parts) >= 2:
+            try:
+                target_mins = int(parts[0]) * 60 + int(parts[1][:2])
+            except (TypeError, ValueError):
+                target_mins = None
+
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            "SELECT id, timestamp, weight, reps FROM strength_logs WHERE exercise_id = ? ORDER BY id ASC",
+            (exercise_id,),
+        ).fetchall()
+
+        candidates: List[Tuple[Tuple[int, int, int], int]] = []
+        for r in rows:
+            dt = _parse_uk_ts(r["timestamp"])
+            if dt is None or dt.date().isoformat() != session_date_str[:10]:
+                continue
+            row_w = float(r["weight"] or 0.0)
+            row_reps = int(r["reps"] or 0)
+            weight_match = old_weight is not None and abs(row_w - float(old_weight)) <= 0.5
+            reps_match = old_reps is not None and row_reps == int(old_reps)
+            row_mins = dt.hour * 60 + dt.minute
+            time_diff = abs(row_mins - target_mins) if target_mins is not None else 9999
+            time_match = target_mins is not None and time_diff <= 3
+            if weight_match and reps_match and time_match:
+                tier = 0
+            elif weight_match and reps_match:
+                tier = 1
+            elif time_match:
+                tier = 2
+            else:
+                tier = 3
+            candidates.append(((tier, time_diff, int(r["id"])), int(r["id"])))
+
+        if not candidates:
+            return 0
+        candidates.sort(key=lambda item: item[0])
+        target_id = candidates[0][1]
+
+        if is_warmup is None:
+            active_conn.execute(
+                "UPDATE strength_logs SET weight = ?, reps = ?, e1rm = ? WHERE id = ?",
+                (float(new_weight), int(new_reps), float(new_e1rm), target_id),
+            )
+        else:
+            active_conn.execute(
+                "UPDATE strength_logs SET weight = ?, reps = ?, e1rm = ?, is_warmup = ? WHERE id = ?",
+                (float(new_weight), int(new_reps), float(new_e1rm), 1 if is_warmup else 0, target_id),
+            )
+        return target_id
+
+
+def update_workout_session_set(
+    session_id: Optional[str],
+    session_date_str: str,
+    detail_key: str,
+    updated_fields: Dict[str, Any],
+    conn: Optional[sqlite3.Connection] = None,
+) -> bool:
+    """Update a set inside workout_sessions.payload_json for the matching session."""
+    if not detail_key:
+        return False
+    _ensure_initialized()
+    cleaned_sid = str(session_id or "").strip()
+    date_prefix = str(session_date_str or "")[:10]
+
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            "SELECT id, timestamp, payload_json FROM workout_sessions ORDER BY id DESC"
+        ).fetchall()
+
+        target_row_id: Optional[int] = None
+        target_payload: Optional[Dict[str, Any]] = None
+        fallback_row: Optional[Tuple[int, Dict[str, Any]]] = None
+
+        for r in rows:
+            raw_json = r["payload_json"]
+            if not raw_json:
+                continue
+            try:
+                payload = json.loads(raw_json)
+            except Exception:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            details = payload.get("details")
+            if not isinstance(details, dict) or detail_key not in details:
+                continue
+
+            p_id = str(payload.get("id") or "")
+            p_evt = str(payload.get("client_event_id") or "")
+            if cleaned_sid and (p_id == cleaned_sid or p_evt == cleaned_sid):
+                target_row_id = int(r["id"])
+                target_payload = payload
+                break
+
+            dt = _parse_uk_ts(r["timestamp"]) or _parse_uk_ts(payload.get("date"))
+            row_date = dt.date().isoformat() if dt is not None else str(payload.get("date") or "")[:10]
+            if fallback_row is None and (not date_prefix or row_date == date_prefix):
+                fallback_row = (int(r["id"]), payload)
+
+        if target_payload is None and fallback_row is not None:
+            target_row_id, target_payload = fallback_row
+
+        if target_row_id is None or target_payload is None:
+            return False
+
+        entry = target_payload["details"].get(detail_key)
+        if not isinstance(entry, dict):
+            return False
+        entry.update(updated_fields)
+        active_conn.execute(
+            "UPDATE workout_sessions SET payload_json = ? WHERE id = ?",
+            (json.dumps(target_payload, allow_nan=False), target_row_id),
+        )
+        return True
+
+
 def get_strength_history(days: int = 30, conn: Optional[sqlite3.Connection] = None) -> Dict[str, List[Dict[str, Any]]]:
     _ensure_initialized()
     with _managed_conn(conn) as active_conn:

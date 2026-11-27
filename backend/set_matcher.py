@@ -112,7 +112,7 @@ def _is_strength_pulse_session(sess: Dict[str, Any]) -> bool:
             continue
         if s.get("logged") is False:
             continue
-        ex_id = str(s.get("exercise_id") or re.sub(r"_\d+$", "", str(k or "")) or "")
+        ex_id = str(s.get("exercise_id") or re.sub(r"_(?:wu)?\d+$", "", str(k or "")) or "")
         if ex_id and not ex_id.startswith("kb_flow_") and not re.match(r"^(?:zone2_flush|speed_rope|emom_|amrap_|for_time_)", ex_id):
             return True
     return False
@@ -265,7 +265,8 @@ def enrich_garmin_activity_with_pulse_sets(
     for k, item in details.items():
         if not isinstance(item, dict) or item.get("logged") is False:
             continue
-        ex_id = str(item.get("exercise_id") or re.sub(r"_\d+$", "", str(k or "")) or "exercise")
+        k_str = str(k or "")
+        ex_id = str(item.get("exercise_id") or re.sub(r"_(?:wu)?\d+$", "", k_str) or "exercise")
         if ex_id not in sets_by_ex:
             sets_by_ex[ex_id] = {
                 "ex_id": ex_id,
@@ -273,15 +274,29 @@ def enrich_garmin_activity_with_pulse_sets(
                 "items": [],
             }
             ex_order.append(ex_id)
-        num_m = re.search(r"_(\d+)$", str(k))
-        set_num = int(item.get("set_num") or (int(num_m.group(1)) if num_m else len(sets_by_ex[ex_id]["items"]) + 1))
-        sets_by_ex[ex_id]["items"].append({"key": str(k), "raw": item, "set_num": set_num})
+        wu_m = re.search(r"_wu(\d+)$", k_str)
+        is_explicit_wu = bool(item.get("explicit_warmup")) or bool(wu_m)
+        num_m = re.search(r"_(\d+)$", k_str)
+        if is_explicit_wu:
+            wu_num = int(item.get("warmup_num") or (int(wu_m.group(1)) if wu_m else len(sets_by_ex[ex_id]["items"]) + 1))
+            set_num = 0
+            sort_key = (0, wu_num)
+        else:
+            set_num = int(item.get("set_num") or (int(num_m.group(1)) if num_m else len(sets_by_ex[ex_id]["items"]) + 1))
+            sort_key = (1, set_num)
+        sets_by_ex[ex_id]["items"].append({
+            "key": k_str,
+            "raw": item,
+            "set_num": set_num,
+            "is_explicit_warmup": is_explicit_wu,
+            "sort_key": sort_key,
+        })
 
     pulse_sets: List[Dict[str, Any]] = []
     prev_min_ms = 0
     for ex_id in ex_order:
         grp = sets_by_ex[ex_id]
-        grp["items"].sort(key=lambda x: x["set_num"])
+        grp["items"].sort(key=lambda x: x["sort_key"])
         for item in grp["items"]:
             raw_p = item["raw"]
             win_start, win_end = _parse_pulse_log_window_ms(raw_p.get("time"), base_date_str, prev_min_ms)
@@ -298,6 +313,7 @@ def enrich_garmin_activity_with_pulse_sets(
                 "exercise_id": ex_id,
                 "exercise_name": grp["ex_name"],
                 "set_num": item["set_num"],
+                "is_explicit_warmup": item["is_explicit_warmup"],
                 "weight_kg": w_kg,
                 "reps": reps_val,
                 "time_str": str(raw_p.get("time") or ""),
@@ -434,13 +450,17 @@ def enrich_garmin_activity_with_pulse_sets(
     for gi, g in enumerate(g_sets):
         p = matched_by_g[gi]
         if p is not None:
-            roles[gi] = "working"
             grp = group_by_ex[p["exercise_id"]]
-            grp["working_sets"].append((gi, g, p))
-            if gi < grp["first_matched_idx"]:
-                grp["first_matched_idx"] = gi
-            if gi > grp["last_matched_idx"]:
-                grp["last_matched_idx"] = gi
+            if p.get("is_explicit_warmup"):
+                roles[gi] = "warmup"
+                grp["warmup_sets"].append((gi, g))
+            else:
+                roles[gi] = "working"
+                grp["working_sets"].append((gi, g, p))
+                if gi < grp["first_matched_idx"]:
+                    grp["first_matched_idx"] = gi
+                if gi > grp["last_matched_idx"]:
+                    grp["last_matched_idx"] = gi
 
     for grp in ordered_groups:
         pos_w = sorted(g["weight_kg"] for _, g, _ in grp["working_sets"] if g["weight_kg"] > 0)

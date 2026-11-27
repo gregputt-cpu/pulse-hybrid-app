@@ -318,6 +318,9 @@ async function run() {
   assert(histHtml.includes('Barbell Flat Bench Press • WARM-UP (G6): 20kg'), 'Should show exercise name directly on G6 warm-up card');
   assert(histHtml.includes('Barbell Back Squat • Set 1 (G2): 70kg × 6r'), 'Should show exercise name directly on working set card');
   assert(histHtml.includes('Watch 50kg vs App 70kg'), 'Should flag Bench Set 1 weight mismatch');
+  assert(histHtml.includes('⚡ Use Watch 50kg'), 'Should render one-tap Use Watch 50kg quick fix button');
+  assert(histHtml.includes('🔥 WU 20kg × 10r ⌚'), 'Green MATCHED WITH PULSE box must include matched Garmin warm-up pills');
+  assert(histHtml.includes('openEditHistorySetModal('), 'Green MATCHED WITH PULSE set chips must open inline set editor');
   assert(histHtml.includes('⌚ 9r vs 📱 8r'), 'Should show rep delta when watch reps differ');
   assert(histHtml.includes('⌚ 6r ✓'), 'Should show exact watch rep match');
 
@@ -404,6 +407,105 @@ async function run() {
   assert(!app.eval("sessionLoggedSets['barbell_squat_2'].is_warmup"), 'Set 2 must be logged as working');
   const set2Body = JSON.parse(app.fetchCalls[1].init.body);
   assert.strictEqual(set2Body.is_warmup, false, 'Set 2 must explicitly send is_warmup: false to backend');
+
+  // [6] quickApplyWatchWeightToPulseSet() sends /api/session/edit_set & updates localStorage + DOM
+  app.localStorage.setItem('pulse_session_history', JSON.stringify([sess]));
+  app.eval(`
+    window.BAKED_LIVE_STATE = { session_history: [${JSON.stringify(sess)}] };
+    recentActivitiesData = [${JSON.stringify(actWithReps)}];
+  `);
+  app.clearFetchCalls();
+  app.setFetchHandler(async (url, init) => {
+    if (url.includes('/api/session/edit_set')) {
+      const b = JSON.parse(init.body);
+      const updatedSess = JSON.parse(JSON.stringify(sess));
+      updatedSess.details[b.detail_key].weight = b.weight;
+      updatedSess.details[b.detail_key].reps = b.reps;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          session: updatedSess,
+          updated_set: updatedSess.details[b.detail_key],
+          state: { session_history: [updatedSess], garmin: { recent_activities: [actWithReps] } }
+        })
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({ success: true }) };
+  });
+  await app.ctx.quickApplyWatchWeightToPulseSet('1795762560016_kyyecl', '2026-11-27', 'barbell_bench_press_1', 50, 8);
+  assert(app.fetchCalls.some(c => c.url.includes('/api/session/edit_set')), 'Must call POST /api/session/edit_set');
+  const editedLocalHist = JSON.parse(app.localStorage.getItem('pulse_session_history'));
+  assert.strictEqual(editedLocalHist[0].details.barbell_bench_press_1.weight, 50, 'Local session history must update Bench Set 1 to 50kg');
+
+  // [7] Workout Player + Warm-up Set button, logWarmupSet() & explicit _wu1 alignment
+  app.localStorage.clear();
+  app.eval(`
+    activeWorkoutPlan = [{ id: 'barbell_bench_press', name: 'Barbell Flat Bench Press', targetWeight: 70, targetReps: 8, setsCount: 4, rest: '90s', requiredGear: ['barbell'] }];
+    currentExIdx = 0;
+    sessionLoggedSets = {};
+  `);
+  app.ctx.renderCurrentExercise();
+  assert(app.document.getElementById('setWarmupToolbar').innerHTML.includes('+ Warm-up Set'), 'renderCurrentExercise must render + Warm-up Set toolbar');
+  assert.strictEqual(app.document.getElementById('setRows').children.length, 4, 'setRows must contain only set rows before adding warmup');
+  app.ctx.addWarmupSetForCurrentExercise();
+  const wuRowEl = app.document.getElementById('setRows').children.find(c => c.id === 'setRow_0_wu1');
+  assert(wuRowEl, 'addWarmupSetForCurrentExercise must render setRow_0_wu1');
+  assert(wuRowEl.innerHTML.includes('value="20"'), 'First barbell warmup must pre-fill 20kg');
+  app.eval(`
+    document.getElementById = (function(orig) {
+      const extra = {};
+      return function(id) {
+        if (id === 'wIn_0_wu1') return extra[id] || (extra[id] = { value: '20' });
+        if (id === 'rIn_0_wu1') return extra[id] || (extra[id] = { value: '12' });
+        if (id === 'wIn_0_1') return extra[id] || (extra[id] = { value: '20' });
+        if (id === 'rIn_0_1') return extra[id] || (extra[id] = { value: '8' });
+        return orig.call(document, id);
+      };
+    })(document.getElementById);
+  `);
+  app.clearFetchCalls();
+  const btnWu = app.document.createElement('button');
+  app.ctx.logWarmupSet(btnWu, 1, 'barbell_bench_press', 70, 8);
+  await flushMicrotasks();
+  assert.strictEqual(app.eval("sessionLoggedSets['barbell_bench_press_wu1'].explicit_warmup"), true);
+  assert.strictEqual(app.eval("sessionLoggedSets['barbell_bench_press_wu1'].is_warmup"), true);
+  assert.strictEqual(app.eval("sessionLoggedSets['barbell_bench_press_wu1'].weight"), 20);
+  assert.strictEqual(app.eval("sessionLoggedSets['barbell_bench_press_wu1'].reps"), 12);
+  const wuSyncBody = JSON.parse(app.fetchCalls[0].init.body);
+  assert.strictEqual(wuSyncBody.is_warmup, true, 'logWarmupSet must send is_warmup: true');
+
+  // Logging Set 1 at 20kg must NOT promote explicit_warmup _wu1!
+  const btnSet1AfterWu = app.document.createElement('button');
+  app.ctx.logSet(btnSet1AfterWu, 1, 'barbell_bench_press', 70, 8);
+  assert.strictEqual(app.eval("sessionLoggedSets['barbell_bench_press_wu1'].is_warmup"), true, 'Explicit warmup must never be promoted by logSet');
+
+  // alignGarminSetsWithPulse matches explicit _wu1 as role: 'warmup'
+  const actExplicitWu = {
+    id: 'garmin_wu_test',
+    name: 'Strength_training',
+    rawDate: '2026-11-27 06:31:17',
+    date: '2026-11-27 06:31:17',
+    exercise_sets: [
+      { set_type: 'ACTIVE', reps: 12, weight: 20000, duration: 31 },
+      { set_type: 'REST', reps: null, weight: null, duration: 90 },
+      { set_type: 'ACTIVE', reps: 8, weight: 50000, duration: 30 }
+    ]
+  };
+  const sessExplicitWu = {
+    id: 'sess_wu_fe',
+    date: '2026-11-27T06:35:00Z',
+    details: {
+      barbell_bench_press_wu1: { exercise_id: 'barbell_bench_press', set_num: 0, warmup_num: 1, weight: 20, reps: 12, logged: true, explicit_warmup: true, is_warmup: true, time: '06:32' },
+      barbell_bench_press_1: { exercise_id: 'barbell_bench_press', set_num: 1, weight: 50, reps: 8, logged: true, time: '06:34' }
+    }
+  };
+  const alignedWu = app.ctx.alignGarminSetsWithPulse(actExplicitWu, sessExplicitWu);
+  assert.strictEqual(alignedWu.warmupCount, 1);
+  assert.strictEqual(alignedWu.matchedCount, 1);
+  assert.strictEqual(alignedWu.annotatedSets[0].role, 'warmup');
+  assert.strictEqual(alignedWu.annotatedSets[0].pulseSet.key, 'barbell_bench_press_wu1');
 
   console.log('ALL GARMIN SET MATCHING FRONTEND TESTS PASSED');
 }

@@ -165,17 +165,17 @@
           seenSessionKeys.add(k);
           rawSessions.push(s);
         };
-        const histRaw = localStorage.getItem('pulse_session_history');
-        if (histRaw) {
-          const history = JSON.parse(histRaw);
-          if (Array.isArray(history)) history.forEach(pushRawSession);
-        }
         const bakedState = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : null;
         if (bakedState && Array.isArray(bakedState.session_history)) {
           bakedState.session_history.forEach(pushRawSession);
         }
         if (bakedState && bakedState.last_workout_session) {
           pushRawSession(bakedState.last_workout_session);
+        }
+        const histRaw = localStorage.getItem('pulse_session_history');
+        if (histRaw) {
+          const history = JSON.parse(histRaw);
+          if (Array.isArray(history)) history.forEach(pushRawSession);
         }
 
         if (rawSessions.length > 0) {

@@ -1106,6 +1106,108 @@
       slot.innerHTML = `<span class="pr-badge">${escapeHtml(label)}</span>`;
     }
 
+    function _getWarmupCountForExercise(ex) {
+      if (!ex) return 0;
+      let maxLoggedWu = 0;
+      if (typeof sessionLoggedSets === 'object' && sessionLoggedSets) {
+        const prefix = `${ex.id}_wu`;
+        Object.keys(sessionLoggedSets).forEach((k) => {
+          if (!k.startsWith(prefix)) return;
+          const idx = parseInt(k.slice(prefix.length), 10);
+          if (!isNaN(idx) && idx > maxLoggedWu) maxLoggedWu = idx;
+        });
+      }
+      return Math.min(3, Math.max(Number(ex.warmupSetsCount || 0), maxLoggedWu));
+    }
+
+    function _defaultWarmupWeightForExercise(ex, wuIdx) {
+      const cleanW = _coerceSetWeightNumber(ex ? ex.targetWeight : 0);
+      if (isNaN(cleanW) || cleanW <= 0 || /^(body|bw)/i.test(String(ex?.targetWeight || ''))) {
+        return 'Body';
+      }
+      if (wuIdx <= 1) {
+        if (cleanW >= 40) return 20;
+        return Math.max(2.5, Math.round((cleanW * 0.5) / 2.5) * 2.5);
+      }
+      return Math.max(2.5, Math.round((cleanW * 0.65) / 2.5) * 2.5);
+    }
+
+    function addWarmupSetForCurrentExercise() {
+      if (!Array.isArray(activeWorkoutPlan) || !activeWorkoutPlan[currentExIdx]) return;
+      const ex = activeWorkoutPlan[currentExIdx];
+      const cur = _getWarmupCountForExercise(ex);
+      if (cur >= 3) {
+        if (typeof showToast === 'function') showToast('Max 3 warm-up sets per exercise');
+        return;
+      }
+      ex.warmupSetsCount = cur + 1;
+      renderCurrentExercise();
+      saveActiveSessionToLocalStorage();
+      if (typeof beep === 'function') beep(620, 0.05);
+    }
+
+    function logWarmupSet(btn, wuIdx, exId, targetW, targetR) {
+      const row = btn.closest('.set-log-row');
+      const parsedTargetW = _coerceSetWeightNumber(targetW);
+      const numTargetW = (!isNaN(parsedTargetW) && parsedTargetW >= 0) ? parsedTargetW : 0;
+
+      const wEl = document.getElementById(`wIn_${currentExIdx}_wu${wuIdx}`);
+      const rEl = document.getElementById(`rIn_${currentExIdx}_wu${wuIdx}`);
+      const parsedW = _coerceSetWeightNumber(wEl ? wEl.value : 0);
+      const loggedW = (!isNaN(parsedW) && parsedW >= 0) ? parsedW : 0;
+      const parsedR = parseInt(rEl ? rEl.value : '8', 10);
+      const loggedR = (!isNaN(parsedR) && parsedR >= 0) ? parsedR : 8;
+
+      btn.classList.add('done');
+      btn.innerText = '✓ Logged';
+      if (row) {
+        row.classList.remove('missed');
+        row.classList.add('logged');
+      }
+
+      const warmupE1RM = calcE1RM(loggedW, loggedR);
+      const banner = document.getElementById('autoregBanner');
+      const tag = document.getElementById('autoregTag');
+      const msg = document.getElementById('autoregMessage');
+      const metric = document.getElementById('e1rmMetric');
+      const transfer = document.getElementById('transferMessage');
+      if (banner) banner.classList.add('active');
+      if (metric) metric.innerText = loggedW > 0 ? `Warmup: ${loggedW}kg × ${loggedR} (e1RM ${warmupE1RM}kg)` : `Warmup: BW × ${loggedR}`;
+      if (tag) {
+        tag.innerText = '🔥 WARMUP SET RECORDED';
+        tag.style.color = 'var(--amber)';
+      }
+      if (msg) msg.innerText = `Warmup ${wuIdx} logged (${loggedW > 0 ? `${loggedW}kg` : 'BW'} × ${loggedR}). Excluded from PR ceilings and double-progression.`;
+      if (transfer) transfer.innerText = `➔ Tissue Readiness: Progressive ramp prepares joints and CNS for working sets.`;
+      _renderPrBadgeSlot(false);
+
+      sessionLoggedSets[`${exId}_wu${wuIdx}`] = {
+        exercise_id: exId,
+        set_num: 0,
+        warmup_num: wuIdx,
+        weight: loggedW,
+        reps: loggedR,
+        target_w: numTargetW,
+        target_r: targetR,
+        logged: true,
+        is_warmup: true,
+        explicit_warmup: true,
+        status: 'warmup',
+        e1rm: warmupE1RM,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      saveActiveSessionToLocalStorage();
+      Promise.resolve(syncSetToBackend(exId, numTargetW, targetR, loggedW, loggedR, { isWarmup: true })).catch(() => {});
+      if (typeof beep === 'function') beep(640, 0.08);
+      const activeExObj = activeWorkoutPlan[currentExIdx];
+      startRestCountdown(Math.min(60, parseRestSeconds(activeExObj && activeExObj.rest)), 'Set 1');
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addWarmupSetForCurrentExercise = addWarmupSetForCurrentExercise;
+      window.logWarmupSet = logWarmupSet;
+    }
+
     // EXERCISE STEPPER & AUTOREGULATION LOGGING
     function renderCurrentExercise() {
       if (!Array.isArray(activeWorkoutPlan) || activeWorkoutPlan.length === 0) return;
@@ -1269,10 +1371,63 @@
       setRowsContainer.style.overflowY = 'visible';
       setRowsContainer.innerHTML = '';
 
+      const wuToolbarEl = document.getElementById('setWarmupToolbar');
       if (fmt.isTimed) {
+        if (wuToolbarEl) {
+          wuToolbarEl.style.display = 'none';
+          wuToolbarEl.innerHTML = '';
+        }
         initInlineTimerForExercise(ex, fmt);
         renderInlineConditioningPlayer(ex, fmt);
         return;
+      }
+
+      const cleanWeightNumBase = typeof ex.targetWeight === 'number'
+        ? ex.targetWeight
+        : parseFloat(String(ex.targetWeight).replace(/^2\s*[×x]\s*/i, '').replace(/kg$/i, '')) || 0;
+      const targetRepsNum = typeof ex.targetReps === 'number' ? ex.targetReps : 8;
+      const escAttrFnTop = (typeof escapeAttr === 'function') ? escapeAttr : escapeHtml;
+
+      const wuCount = _getWarmupCountForExercise(ex);
+      if (wuToolbarEl) {
+        wuToolbarEl.style.display = 'flex';
+        wuToolbarEl.innerHTML = `
+<span style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">${wuCount > 0 ? `${wuCount} Warm-up + ${ex.setsCount} Working` : `${ex.setsCount} Working Sets`}</span>
+<button type="button" id="btnAddWarmupSet" onclick="addWarmupSetForCurrentExercise()" style="padding:4px 9px; border-radius:6px; border:1px solid rgba(245,158,11,0.45); background:rgba(245,158,11,0.12); color:#fbbf24; font-size:11px; font-weight:800; cursor:pointer;">+ Warm-up Set</button>
+        `;
+      }
+
+      for (let wu = 1; wu <= wuCount; wu++) {
+        const wuKey = `${ex.id}_wu${wu}`;
+        const savedWu = sessionLoggedSets[wuKey];
+        const isWuLogged = Boolean(savedWu && savedWu.logged);
+        const wuDefaultW = _defaultWarmupWeightForExercise(ex, wu);
+        const displayWuW = savedWu ? savedWu.weight : wuDefaultW;
+        const displayWuR = savedWu ? savedWu.reps : 8;
+        const wuWIsNum = (typeof displayWuW === 'number' && Number.isFinite(displayWuW)) || /^(\s*2\s*[×x]\s*)?\d+(?:\.\d+)?(\s*kg)?$/i.test(String(displayWuW ?? '').trim());
+        const wuRow = document.createElement('div');
+        wuRow.className = `set-log-row ${isWuLogged ? 'logged' : ''}`;
+        wuRow.id = `setRow_${currentExIdx}_wu${wu}`;
+        wuRow.style.borderColor = 'rgba(245,158,11,0.38)';
+        wuRow.innerHTML = `
+<span class="set-idx" style="color:#fbbf24;">🔥 WU ${wu}</span>
+<div class="set-inputs">
+<div class="set-input-group">
+              ${wuWIsNum ? `<button type="button" class="set-stepper-btn" onclick="stepSetInput(${currentExIdx}, 'wu${wu}', 'weight', -2.5)" title="-2.5 kg">−</button>` : ''}
+<input type="text" inputmode="decimal" class="set-input-box" value="${escapeHtml(displayWuW)}" id="wIn_${currentExIdx}_wu${wu}" oninput="_updatePlateCalcForExercise(activeWorkoutPlan[${currentExIdx}], this.value)">
+              ${wuWIsNum ? `<button type="button" class="set-stepper-btn" onclick="stepSetInput(${currentExIdx}, 'wu${wu}', 'weight', 2.5)" title="+2.5 kg">+</button>` : ''}
+<span style="font-size:12px;color:var(--text-muted);">${typeof wuDefaultW === 'number' ? 'kg' : ''} ×</span>
+</div>
+<div class="set-input-group">
+<button type="button" class="set-stepper-btn" onclick="stepSetInput(${currentExIdx}, 'wu${wu}', 'reps', -1)" title="-1 rep">−</button>
+<input type="number" inputmode="numeric" class="set-input-box" value="${escapeHtml(displayWuR)}" id="rIn_${currentExIdx}_wu${wu}">
+<button type="button" class="set-stepper-btn" onclick="stepSetInput(${currentExIdx}, 'wu${wu}', 'reps', 1)" title="+1 rep">+</button>
+<span style="font-size:12px;color:var(--text-muted);">reps</span>
+</div>
+</div>
+<button type="button" class="btn-log-set ${isWuLogged ? 'done' : ''}" data-wu-num="${wu}" data-ex-id="${escAttrFnTop(ex.id)}" data-target-w="${cleanWeightNumBase}" data-target-r="${targetRepsNum}" onclick="logWarmupSet(this, Number(this.dataset.wuNum), this.dataset.exId, Number(this.dataset.targetW), Number(this.dataset.targetR))">${isWuLogged ? '✓ Logged' : '✓ Log WU'}</button>
+        `;
+        setRowsContainer.appendChild(wuRow);
       }
 
       for (let s = 1; s <= ex.setsCount; s++) {
@@ -2004,7 +2159,7 @@
       if (belowWarmupThreshold && typeof sessionLoggedSets === 'object' && sessionLoggedSets) {
         Object.keys(sessionLoggedSets).forEach((k) => {
           const prev = sessionLoggedSets[k];
-          if (!prev || !prev.logged || prev.exercise_id !== exId || Number(prev.set_num) === Number(setNum)) return;
+          if (!prev || !prev.logged || prev.explicit_warmup || prev.exercise_id !== exId || Number(prev.set_num) === Number(setNum)) return;
           const prevW = _coerceSetWeightNumber(prev.weight);
           if (!isNaN(prevW) && Math.abs(prevW - loggedW) <= 0.5) {
             priorSameWeightKeys.push(k);

@@ -1511,6 +1511,248 @@ def sync_session(payload: Dict[str, Any]):
     return {"success": True, "status": "success", "session": entry}
 
 
+class EditSessionSetPayload(BaseModel):
+    session_id: Optional[str] = None
+    session_date: Optional[str] = None
+    detail_key: str
+    exercise_id: Optional[str] = None
+    weight: Union[float, int, str]
+    reps: Union[int, float, str]
+
+
+def _recompute_strength_prescription(
+    state: Dict[str, Any],
+    exercise_id: str,
+    new_weight: float,
+    new_reps: int,
+    target_reps: Optional[int],
+) -> None:
+    if not exercise_id:
+        return
+    prescriptions = state.setdefault("strength_prescriptions", {})
+    sp = prescriptions.get(exercise_id)
+    if not isinstance(sp, dict):
+        sp = {}
+        prescriptions[exercise_id] = sp
+
+    db_best = db.get_exercise_best_e1rm(exercise_id)
+    hist_rows = db.get_strength_history(days=365).get(exercise_id, [])
+    latest_row = hist_rows[-1] if hist_rows else None
+
+    if latest_row is not None:
+        latest_w = float(latest_row.get("weight") or 0.0)
+        latest_r = int(latest_row.get("reps") or 0)
+        latest_e1rm = round(float(latest_row.get("e1rm") or 0.0), 1)
+    else:
+        latest_w = float(new_weight)
+        latest_r = int(new_reps)
+        latest_e1rm = round(latest_w * (1.0 + latest_r / 30.0), 1)
+
+    raw_prev_best = sp.get("prev_best_e1rm")
+    prev_best = (
+        round(float(raw_prev_best), 1)
+        if not isinstance(raw_prev_best, bool)
+        and isinstance(raw_prev_best, (int, float))
+        and math.isfinite(float(raw_prev_best))
+        and float(raw_prev_best) > 0
+        else None
+    )
+    e1rm_candidates = [
+        float(v)
+        for v in (db_best, prev_best, latest_e1rm)
+        if v is not None and not isinstance(v, bool) and math.isfinite(float(v)) and float(v) > 0
+    ]
+    best_e1rm = round(max(e1rm_candidates), 1) if e1rm_candidates else latest_e1rm
+
+    sp["last_logged_weight"] = latest_w
+    sp["last_logged_reps"] = latest_r
+    sp["last_e1rm"] = latest_e1rm
+    sp["e1rm"] = best_e1rm
+    sp["is_pr"] = bool(latest_w > 0 and latest_r > 0 and prev_best is not None and latest_e1rm > prev_best)
+    sp["last_updated"] = uk_now().isoformat()
+
+    eff_target_r = target_reps or _coerce_int_reps(sp.get("reps")) or latest_r
+    pct_diff = ((latest_r - eff_target_r) / eff_target_r) if eff_target_r > 0 else 0.0
+    is_severe_underperf = (
+        (latest_r == 0)
+        or (eff_target_r - latest_r >= 3)
+        or (eff_target_r > 0 and latest_r <= int(eff_target_r * 0.65))
+        or (pct_diff <= -0.20)
+    )
+    if eff_target_r and latest_r >= eff_target_r:
+        sp["progression_ready"] = True
+        sp["status"] = "progressed"
+        if latest_w > 0:
+            sp["weight"] = round(latest_w + 2.5, 1)
+            sp["reps"] = eff_target_r
+        else:
+            sp["reps"] = latest_r + 1
+    elif is_severe_underperf and latest_w > 0:
+        sp["progression_ready"] = False
+        sp["status"] = "deloaded"
+        sp["weight"] = min(latest_w, max(2.5, round((latest_w * 0.85) / 2.5) * 2.5))
+        sp["reps"] = eff_target_r
+    else:
+        sp["progression_ready"] = False
+        sp["status"] = "holding"
+        if latest_w > 0:
+            sp["weight"] = latest_w
+        sp["reps"] = eff_target_r
+
+
+@app.post("/api/session/edit_set")
+def edit_session_set(payload: EditSessionSetPayload):
+    new_w = _coerce_weight_kg(payload.weight)
+    new_r = _coerce_int_reps(payload.reps)
+    if new_w is None or new_r is None or new_w < 0 or new_w > 500 or new_r < 0 or new_r > 200:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid set metrics: weight must be [0, 500] kg (or Bodyweight) and reps [0, 200]",
+        )
+    detail_key = str(payload.detail_key or "").strip()
+    if not detail_key:
+        raise HTTPException(status_code=422, detail="detail_key is required")
+
+    preloaded_db_sessions = []
+    try:
+        preloaded_db_sessions = db.get_workout_sessions(days=14)
+    except Exception:
+        preloaded_db_sessions = []
+
+    req_sid = str(payload.session_id or "").strip()
+    req_date = str(payload.session_date or "").strip()[:10]
+
+    with state_store.state_lock(LIVE_STATE_PATH):
+        state = load_live_state(raise_on_corrupt=True)
+        history = state.get("session_history") if isinstance(state.get("session_history"), list) else []
+        last_sess = state.get("last_workout_session") if isinstance(state.get("last_workout_session"), dict) else None
+
+        target_sess = None
+        for s in history:
+            if not isinstance(s, dict) or not isinstance(s.get("details"), dict):
+                continue
+            if detail_key not in s["details"]:
+                continue
+            s_id = str(s.get("id") or s.get("client_event_id") or "")
+            s_date = str(s.get("date") or "")[:10]
+            if req_sid and s_id == req_sid:
+                target_sess = s
+                break
+            if not req_sid and (not req_date or s_date == req_date):
+                target_sess = s
+                break
+        if target_sess is None and req_sid and req_date:
+            for s in history:
+                if isinstance(s, dict) and isinstance(s.get("details"), dict) and detail_key in s["details"] and str(s.get("date") or "")[:10] == req_date:
+                    target_sess = s
+                    break
+        if target_sess is None and last_sess and isinstance(last_sess.get("details"), dict) and detail_key in last_sess["details"]:
+            target_sess = last_sess
+
+        if target_sess is None:
+            raise HTTPException(status_code=404, detail=f"Session set '{detail_key}' not found")
+
+        old_entry = target_sess["details"].get(detail_key)
+        if not isinstance(old_entry, dict):
+            raise HTTPException(status_code=404, detail=f"Session set '{detail_key}' is invalid")
+
+        old_w = _coerce_weight_kg(old_entry.get("weight"))
+        old_r = _coerce_int_reps(old_entry.get("reps"))
+        target_r = _coerce_int_reps(old_entry.get("target_r"))
+        set_time = str(old_entry.get("time") or "")
+        ex_id = str(payload.exercise_id or old_entry.get("exercise_id") or re.sub(r"_(?:wu)?\d+$", "", detail_key))
+        sess_dt = time_utils.parse_uk_ts(target_sess.get("date"))
+        sess_date_str = req_date or (sess_dt.date().isoformat() if sess_dt is not None else str(target_sess.get("date") or "")[:10])
+        is_explicit_wu = bool(old_entry.get("explicit_warmup")) or bool(re.search(r"_wu\d+$", detail_key))
+
+        new_e1rm = round(new_w * (1.0 + new_r / 30.0), 1)
+        new_weight_val: Any = int(new_w) if float(new_w).is_integer() else round(new_w, 1)
+        updated_fields: Dict[str, Any] = {
+            "weight": new_weight_val,
+            "reps": int(new_r),
+            "e1rm": new_e1rm,
+        }
+        if not is_explicit_wu:
+            updated_fields["is_warmup"] = False
+            if target_r is not None and target_r > 0:
+                updated_fields["status"] = "missed" if (new_r < target_r or new_r == 0) else "logged"
+            else:
+                updated_fields["status"] = "logged"
+
+        old_entry.update(updated_fields)
+
+        if last_sess is not None and last_sess is not target_sess and isinstance(last_sess.get("details"), dict):
+            ls_id = str(last_sess.get("id") or last_sess.get("client_event_id") or "")
+            ts_id = str(target_sess.get("id") or target_sess.get("client_event_id") or "")
+            if ((ts_id and ls_id == ts_id) or str(last_sess.get("date") or "")[:10] == sess_date_str) and isinstance(last_sess["details"].get(detail_key), dict):
+                last_sess["details"][detail_key].update(updated_fields)
+
+        try:
+            db.update_workout_session_set(
+                req_sid or str(target_sess.get("id") or target_sess.get("client_event_id") or ""),
+                sess_date_str,
+                detail_key,
+                updated_fields,
+            )
+        except Exception as e:
+            logger.warning(f"Could not update workout_sessions in db: {e}")
+
+        try:
+            db.update_strength_log_set(
+                ex_id,
+                sess_date_str,
+                old_w,
+                old_r,
+                new_w,
+                new_r,
+                new_e1rm,
+                set_time_hhmm=set_time,
+                is_warmup=True if is_explicit_wu else False,
+            )
+        except Exception as e:
+            logger.warning(f"Could not update strength_logs in db: {e}")
+
+        if not is_explicit_wu:
+            _recompute_strength_prescription(state, ex_id, new_w, new_r, target_r)
+
+        candidate_sessions = set_matcher.collect_candidate_pulse_sessions(
+            state,
+            preloaded_db_sessions=preloaded_db_sessions,
+        )
+        garmin_state = state.get("garmin") or {}
+        live_weight_kg = _finite_pos_weight(state)
+        seen_act_objs = set()
+        for act in list(garmin_state.get("today_activities") or []) + list((garmin_state.get("recent_activities") or [])[:10]):
+            if not isinstance(act, dict) or id(act) in seen_act_objs:
+                continue
+            seen_act_objs.add(id(act))
+            if str(act.get("date") or "").startswith(sess_date_str) and isinstance(act.get("exercise_sets"), list):
+                if set_matcher.enrich_garmin_activity_with_pulse_sets(act, candidate_sessions) and "strength" in str(act.get("name") or "").lower():
+                    bio_title = f"{act.get('sub_title') or ''} {act.get('matched_exercises_summary') or ''}".strip()
+                    act["benefits"] = benefits_engine.generate_benefits(
+                        act.get("name") or "Strength_training",
+                        bio_title,
+                        act.get("duration_min") or 0,
+                        act.get("calories") or 0,
+                        act.get("avg_hr") or 0,
+                        act.get("max_hr") or 0,
+                        act.get("aerobic_te") or 0.0,
+                        act.get("anaerobic_te") or 0.0,
+                        weight_kg=live_weight_kg,
+                    )
+
+        save_live_state(state)
+
+    return {
+        "success": True,
+        "status": "success",
+        "session": target_sess,
+        "updated_set": old_entry,
+        "prescription": (state.get("strength_prescriptions") or {}).get(ex_id),
+        "state": state,
+    }
+
+
 @app.post("/api/sync_activity")
 def sync_activity(payload: ActivitySyncPayload):
     _reject_non_finite_json(payload.benefits, "benefits")

@@ -395,6 +395,144 @@ def test_backend_set_matcher_and_benefits_and_migration() -> None:
     print("PASS [4] backend set_matcher, benefits_engine & repeated-warmup migration")
 
 
+def test_edit_session_set_and_explicit_warmup_matching() -> None:
+    _reset()
+    today_str = uk_today_str()
+    # Seed strength_logs with Bench Set 1 at 70kg x 8 (false PR) + Sets 2-4 at 50kg x 8
+    with closing(db.get_connection()) as conn:
+        for t_min, w_val in ((35, 70.0), (36, 50.0), (38, 50.0), (40, 50.0)):
+            ts = f"{today_str}T06:{t_min:02d}:15+00:00"
+            e1rm = round(w_val * (1.0 + 8 / 30.0), 1)
+            conn.execute(
+                "INSERT INTO strength_logs (timestamp, exercise_id, weight, reps, e1rm, is_warmup) VALUES (?, 'barbell_bench_press', ?, 8, ?, 0)",
+                (ts, w_val, e1rm),
+            )
+        conn.commit()
+
+    act = {
+        "id": 25212575636,
+        "name": "Strength_training",
+        "sub_title": "Strength",
+        "date": f"{today_str} 06:17:28",
+        "duration_min": 38.3,
+        "calories": 315,
+        "avg_hr": 106,
+        "max_hr": 149,
+        "aerobic_te": 1.4,
+        "anaerobic_te": 1.0,
+        "activity_type_key": "strength_training",
+        "source": "garmin_oauth",
+        "exercise_sets": [
+            {"set_type": "ACTIVE", "reps": 12, "weight": 20000.0, "duration": 31.121, "start_time": f"{today_str}T06:31:17.0"},
+            {"set_type": "REST", "reps": None, "weight": None, "duration": 96.367},
+            {"set_type": "ACTIVE", "reps": 8, "weight": 50000.0, "duration": 38.822, "start_time": f"{today_str}T06:33:24.0"},
+            {"set_type": "REST", "reps": None, "weight": None, "duration": 118.387},
+            {"set_type": "ACTIVE", "reps": 8, "weight": 50000.0, "duration": 27.236, "start_time": f"{today_str}T06:36:01.0"},
+            {"set_type": "REST", "reps": None, "weight": None, "duration": 72.571},
+            {"set_type": "ACTIVE", "reps": 8, "weight": 50000.0, "duration": 26.654, "start_time": f"{today_str}T06:37:41.0"},
+            {"set_type": "REST", "reps": None, "weight": None, "duration": 78.283},
+            {"set_type": "ACTIVE", "reps": 8, "weight": 50000.0, "duration": 28.17, "start_time": f"{today_str}T06:39:26.0"},
+        ],
+    }
+    sess = {
+        "id": "sess_edit_1",
+        "client_event_id": "sess_edit_1",
+        "date": f"{today_str}T06:40:00+00:00",
+        "title": "BARBELL OPTION A",
+        "preset": "custom",
+        "calories": 300,
+        "details": {
+            "barbell_bench_press_1": {"exercise_id": "barbell_bench_press", "set_num": 1, "weight": 70, "reps": 8, "target_w": 70, "target_r": 8, "logged": True, "time": "06:35"},
+            "barbell_bench_press_2": {"exercise_id": "barbell_bench_press", "set_num": 2, "weight": 50, "reps": 8, "target_w": 70, "target_r": 8, "logged": True, "time": "06:36"},
+            "barbell_bench_press_3": {"exercise_id": "barbell_bench_press", "set_num": 3, "weight": 50, "reps": 8, "target_w": 70, "target_r": 8, "logged": True, "time": "06:38"},
+            "barbell_bench_press_4": {"exercise_id": "barbell_bench_press", "set_num": 4, "weight": 50, "reps": 8, "target_w": 70, "target_r": 8, "logged": True, "time": "06:40"},
+        },
+    }
+    db.log_workout_session(sess)
+    state = state_store.load_live_state(str(ISOLATED_LIVE_STATE_PATH))
+    state["session_history"] = [sess]
+    state["last_workout_session"] = dict(sess)
+    state.setdefault("strength_prescriptions", {})["barbell_bench_press"] = {
+        "weight": 72.5,
+        "reps": 8,
+        "last_logged_weight": 70,
+        "last_logged_reps": 8,
+        "last_e1rm": 88.7,
+        "e1rm": 88.7,
+        "prev_best_e1rm": 79.3,
+        "is_pr": True,
+        "status": "progressed",
+        "progression_ready": True,
+    }
+    state.setdefault("garmin", {})["today_activities"] = [act]
+    state["garmin"]["recent_activities"] = [act]
+    state_store.save_live_state(state, str(ISOLATED_LIVE_STATE_PATH))
+
+    st_ed, r_ed = asyncio.run(
+        _asgi_call(
+            "POST",
+            "/api/session/edit_set",
+            {
+                "session_id": "sess_edit_1",
+                "session_date": today_str,
+                "detail_key": "barbell_bench_press_1",
+                "exercise_id": "barbell_bench_press",
+                "weight": 50,
+                "reps": 8,
+            },
+        )
+    )
+    assert st_ed == 200 and r_ed["success"] is True, r_ed
+    assert r_ed["updated_set"]["weight"] == 50
+    assert r_ed["updated_set"]["e1rm"] == 63.3
+
+    saved = state_store.load_live_state(str(ISOLATED_LIVE_STATE_PATH))
+    assert saved["session_history"][0]["details"]["barbell_bench_press_1"]["weight"] == 50
+    assert saved["last_workout_session"]["details"]["barbell_bench_press_1"]["weight"] == 50
+    sp_bench = saved["strength_prescriptions"]["barbell_bench_press"]
+    assert sp_bench["e1rm"] == 79.3 and sp_bench["is_pr"] is False
+    assert sp_bench["weight"] == 52.5 and sp_bench["last_logged_weight"] == 50.0
+
+    # DB strength_logs and workout_sessions both updated
+    bench_hist = db.get_strength_history(days=7)["barbell_bench_press"]
+    assert all(float(x["weight"]) == 50.0 for x in bench_hist), bench_hist
+    db_sess = db.get_workout_sessions(days=7)[0]["payload"]
+    assert db_sess["details"]["barbell_bench_press_1"]["weight"] == 50
+
+    # Garmin weight_mismatch cleared after edit
+    active_sets = [s for s in saved["garmin"]["today_activities"][0]["exercise_sets"] if s.get("set_type") == "ACTIVE"]
+    assert active_sets[1]["pulse_weight_kg"] == 50.0
+    assert "weight_mismatch" not in active_sets[1]
+
+    # Explicit Pulse _wu1 warmup set matching
+    act_wu = {
+        "id": 999001,
+        "name": "Strength_training",
+        "date": f"{today_str} 06:31:17",
+        "duration_min": 10.0,
+        "source": "garmin_oauth",
+        "exercise_sets": [
+            {"set_type": "ACTIVE", "reps": 12, "weight": 20000.0, "duration": 31.0, "start_time": f"{today_str}T06:31:17.0"},
+            {"set_type": "REST", "reps": None, "weight": None, "duration": 90.0},
+            {"set_type": "ACTIVE", "reps": 8, "weight": 50000.0, "duration": 30.0, "start_time": f"{today_str}T06:33:18.0"},
+        ],
+    }
+    sess_wu = {
+        "id": "sess_wu_1",
+        "date": f"{today_str}T06:35:00+00:00",
+        "details": {
+            "barbell_bench_press_wu1": {"exercise_id": "barbell_bench_press", "set_num": 0, "warmup_num": 1, "weight": 20, "reps": 12, "logged": True, "is_warmup": True, "explicit_warmup": True, "time": "06:32"},
+            "barbell_bench_press_1": {"exercise_id": "barbell_bench_press", "set_num": 1, "weight": 50, "reps": 8, "logged": True, "time": "06:34"},
+        },
+    }
+    assert set_matcher.enrich_garmin_activity_with_pulse_sets(act_wu, [sess_wu]) is True
+    wu_active = [s for s in act_wu["exercise_sets"] if s.get("set_type") == "ACTIVE"]
+    assert wu_active[0]["role"] == "warmup" and wu_active[0]["pulse_reps"] == 12
+    assert wu_active[1]["role"] == "working" and wu_active[1]["pulse_reps"] == 8
+    print("PASS [5] /api/session/edit_set & explicit _wu1 matching")
+
+
 if __name__ == "__main__":
     test_backend_set_matcher_and_benefits_and_migration()
+    test_edit_session_set_and_explicit_warmup_matching()
     print("ALL GARMIN SET MATCHING BACKEND TESTS PASSED")

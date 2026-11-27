@@ -510,23 +510,29 @@ function alignGarminSetsWithPulse(act, matchedPulse) {
   const setsByExMap = {};
   Object.entries(matchedPulse.details).forEach(([k, s]) => {
     if (!s || !s.logged) return;
-    const exId = String(s.exercise_id || String(k || '').replace(/_\d+$/, '') || 'exercise');
+    const exId = String(s.exercise_id || String(k || '').replace(/_(?:wu)?\d+$/, '') || 'exercise');
     if (!setsByExMap[exId]) {
       const exObj = allEx.find(e => e.id === exId);
       const exName = exObj ? exObj.name : exId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       setsByExMap[exId] = { exId, exName, items: [] };
       exOrder.push(exId);
     }
+    const wuMatch = String(k).match(/_wu(\d+)$/);
+    const isExplicitWarmup = Boolean(s.explicit_warmup) || Boolean(wuMatch);
     const numMatch = String(k).match(/_(\d+)$/);
-    const setNum = Number(s.set_num || (numMatch ? numMatch[1] : setsByExMap[exId].items.length + 1));
-    setsByExMap[exId].items.push({ key: k, raw: s, setNum });
+    const wuNum = Number(s.warmup_num || (wuMatch ? wuMatch[1] : setsByExMap[exId].items.length + 1));
+    const setNum = isExplicitWarmup
+      ? 0
+      : Number(s.set_num || (numMatch ? numMatch[1] : setsByExMap[exId].items.length + 1));
+    const sortKey = isExplicitWarmup ? wuNum : (1000 + setNum);
+    setsByExMap[exId].items.push({ key: k, raw: s, setNum, isExplicitWarmup, sortKey });
   });
 
   const pulseSets = [];
   let prevMinMs = 0;
   exOrder.forEach((exId) => {
     const grp = setsByExMap[exId];
-    grp.items.sort((a, b) => a.setNum - b.setNum);
+    grp.items.sort((a, b) => a.sortKey - b.sortKey);
     grp.items.forEach((item) => {
       const s = item.raw;
       const win = _parsePulseLogWindowMs(s.time, baseDateStr, prevMinMs);
@@ -539,6 +545,7 @@ function alignGarminSetsWithPulse(act, matchedPulse) {
         exerciseId: exId,
         exerciseName: grp.exName,
         setNum: item.setNum,
+        isExplicitWarmup: item.isExplicitWarmup,
         weightKg: wKg,
         weightLabel: wKg > 0 ? `${wKg}kg` : 'BW',
         reps: repsVal,
@@ -686,12 +693,17 @@ function alignGarminSetsWithPulse(act, matchedPulse) {
       ? { garminKg: g.weightKg, pulseKg: p.weightKg }
       : null;
     const repDelta = (g.reps !== null && p.reps > 0) ? (g.reps - p.reps) : null;
-    const item = { ...g, garminIdx: gi, role: 'working', pulseSet: p, weightMismatch, repDelta };
+    const role = p.isExplicitWarmup ? 'warmup' : 'working';
+    const item = { ...g, garminIdx: gi, role, exerciseId: p.exerciseId, exerciseName: p.exerciseName, pulseSet: p, weightMismatch, repDelta };
     const grp = groupByExId[p.exerciseId];
     if (grp) {
-      grp.workingSets.push(item);
-      if (gi < grp.firstMatchedIdx) grp.firstMatchedIdx = gi;
-      if (gi > grp.lastMatchedIdx) grp.lastMatchedIdx = gi;
+      if (p.isExplicitWarmup) {
+        grp.warmupSets.push(item);
+      } else {
+        grp.workingSets.push(item);
+        if (gi < grp.firstMatchedIdx) grp.firstMatchedIdx = gi;
+        if (gi > grp.lastMatchedIdx) grp.lastMatchedIdx = gi;
+      }
     }
     return item;
   });
@@ -946,6 +958,13 @@ function renderHistoryList() {
     const matchedPulse = pulseMatchMap
       ? (pulseMatchMap.get(String(act.id)) || null)
       : ((typeof getMatchedPulseSessionForGarmin === 'function') ? getMatchedPulseSessionForGarmin(act, activities) : null);
+    const decodedSets = decodeGarminStrengthSets(act);
+    const alignedSets = (decodedSets && matchedPulse)
+      ? alignGarminSetsWithPulse(act, matchedPulse)
+      : (decodedSets ? _buildAlignedFromBackendEnrichedSets(act, decodedSets) : null);
+    const pulseSessId = matchedPulse ? String(matchedPulse.id || matchedPulse.client_event_id || '') : '';
+    const pulseSessDate = matchedPulse ? String(matchedPulse.dateStr || String(matchedPulse.date || '').slice(0, 10)) : '';
+
     let pulseDetailsHtml = '';
     let pulseLoggedSummaries = [];
     if (matchedPulse) {
@@ -965,33 +984,89 @@ function renderHistoryList() {
       let exerciseRows = '';
       if (matchedPulse.details && typeof matchedPulse.details === 'object') {
         const setsByEx = {};
+        const exOrder = [];
         const allEx = (typeof getAllExercises === 'function') ? getAllExercises() : [];
         Object.entries(matchedPulse.details).forEach(([k, s]) => {
           if (!s || !s.logged) return;
-          const exId = s.exercise_id || String(k || '').replace(/_\d+$/, '') || 'exercise';
+          const exId = s.exercise_id || String(k || '').replace(/_(?:wu)?\d+$/, '') || 'exercise';
           if (!setsByEx[exId]) {
             const exObj = allEx.find(e => e.id === exId);
             setsByEx[exId] = {
+              exId,
               name: exObj ? exObj.name : exId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-              sets: []
+              sets: [],
+              plainSets: []
             };
+            exOrder.push(exId);
           }
-          const wStr = (s.weight !== undefined && s.weight !== null && s.weight !== 'Bodyweight') ? `${s.weight}kg` : (s.weight === 'Bodyweight' ? 'BW' : '');
-          const rStr = `${s.reps || 0}r`;
-          setsByEx[exId].sets.push(wStr ? `${wStr} × ${rStr}` : rStr);
+          const wuM = String(k).match(/_wu(\d+)$/);
+          const isExplicitWu = Boolean(s.explicit_warmup) || Boolean(wuM);
+          const numM = String(k).match(/_(\d+)$/);
+          const wuNum = Number(s.warmup_num || (wuM ? wuM[1] : setsByEx[exId].sets.length + 1));
+          const setNum = isExplicitWu ? 0 : Number(s.set_num || (numM ? numM[1] : setsByEx[exId].sets.length + 1));
+          const sortKey = isExplicitWu ? wuNum : (1000 + setNum);
+          const isBw = s.weight === 'Bodyweight' || s.weight === 'Body' || s.weight === 0 || s.weight === '0';
+          const wNum = isBw ? 0 : Number(String(s.weight ?? '').replace(/^2\s*[×x]\s*/i, '').replace(/kg$/i, ''));
+          const wStr = (!isBw && s.weight !== undefined && s.weight !== null && s.weight !== '') ? `${s.weight}kg` : (isBw ? 'BW' : '');
+          const rNum = Number(s.reps || 0);
+          const rStr = `${rNum}r`;
+          const labelStr = wStr ? `${wStr} × ${rStr}` : rStr;
+          setsByEx[exId].sets.push({
+            detailKey: k,
+            sortKey,
+            isExplicitWu,
+            wNum: Number.isFinite(wNum) ? wNum : 0,
+            rNum: Number.isFinite(rNum) ? rNum : 0,
+            labelStr
+          });
+          setsByEx[exId].plainSets.push(isExplicitWu ? `WU ${labelStr}` : labelStr);
         });
 
-        const exEntries = Object.values(setsByEx);
-        pulseLoggedSummaries = exEntries.map(e => `${esc(e.name)} (${esc(e.sets.join(', '))})`);
+        const exEntries = exOrder.map(id => setsByEx[id]);
+        pulseLoggedSummaries = exEntries.map(e => `${esc(e.name)} (${esc(e.plainSets.join(', '))})`);
         if (exEntries.length > 0) {
           exerciseRows = `
 <div style="margin-top:6px; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:4px; font-size:10.5px;">
-              ${exEntries.map(e => `
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:4px 7px;">
-<span style="font-weight:700; color:#fff;">${esc(e.name)}:</span>
-<span style="color:var(--cyan); font-family:var(--font-mono); font-size:10px; margin-left:4px;">${esc(e.sets.join(', '))}</span>
+              ${exEntries.map(e => {
+                e.sets.sort((a, b) => a.sortKey - b.sortKey);
+                const alignedGrp = (alignedSets && Array.isArray(alignedSets.exerciseGroups))
+                  ? alignedSets.exerciseGroups.find(g => g.exerciseId === e.exId)
+                  : null;
+                const mismatchByKey = {};
+                if (alignedGrp && Array.isArray(alignedGrp.workingSets)) {
+                  alignedGrp.workingSets.forEach(ws => {
+                    if (ws.weightMismatch && ws.pulseSet && ws.pulseSet.key) {
+                      mismatchByKey[ws.pulseSet.key] = ws.weightMismatch.garminKg;
+                    }
+                  });
+                }
+                const unloggedWuChips = (alignedGrp && Array.isArray(alignedGrp.warmupSets))
+                  ? alignedGrp.warmupSets.filter(w => !w.pulseSet).map(w => {
+                      const wuWt = w.weightKg > 0 ? `${w.weightKg}kg` : 'BW';
+                      const wuReps = w.reps !== null ? ` × ${w.reps}r` : '';
+                      return `<span title="Warm-up recorded on Garmin watch" style="display:inline-flex; align-items:center; gap:2px; font-size:9.5px; font-family:var(--font-mono); font-weight:700; padding:1px 5px; border-radius:4px; background:rgba(245,158,11,0.16); border:1px solid rgba(245,158,11,0.45); color:#fbbf24;">🔥 WU ${esc(wuWt)}${esc(wuReps)} ⌚</span>`;
+                    }).join('')
+                  : '';
+
+                const setChipsHtml = e.sets.map(st => {
+                  const watchKgOpt = mismatchByKey[st.detailKey] !== undefined ? String(mismatchByKey[st.detailKey]) : '';
+                  const isMismatch = watchKgOpt !== '';
+                  const chipStyle = st.isExplicitWu
+                    ? 'background:rgba(245,158,11,0.16); border:1px solid rgba(245,158,11,0.45); color:#fbbf24;'
+                    : (isMismatch
+                      ? 'background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.55); color:#fde68a;'
+                      : 'background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.22); color:var(--cyan);');
+                  const prefix = st.isExplicitWu ? '🔥 WU ' : '';
+                  return `<button type="button" data-sess-id="${esc(pulseSessId)}" data-sess-date="${esc(pulseSessDate)}" data-detail-key="${esc(st.detailKey)}" data-ex-name="${esc(e.name)}" data-weight="${esc(st.wNum)}" data-reps="${esc(st.rNum)}" data-watch-weight="${esc(watchKgOpt)}" onclick="openEditHistorySetModal(this.dataset.sessId, this.dataset.sessDate, this.dataset.detailKey, this.dataset.exName, Number(this.dataset.weight), Number(this.dataset.reps), this.dataset.watchWeight)" title="Tap to edit weight or reps" style="cursor:pointer; font-family:var(--font-mono); font-size:10px; font-weight:700; padding:1px 5px; border-radius:4px; ${chipStyle}">${prefix}${esc(st.labelStr)} ✎</button>`;
+                }).join('');
+
+                return `
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px;">
+<div style="font-weight:700; color:#fff; margin-bottom:4px;">${esc(e.name)}</div>
+<div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">${unloggedWuChips}${setChipsHtml}</div>
 </div>
-              `).join('')}
+              `;
+              }).join('')}
 </div>
           `;
         }
@@ -1023,10 +1098,6 @@ function renderHistoryList() {
       `;
     }
 
-    const decodedSets = decodeGarminStrengthSets(act);
-    const alignedSets = (decodedSets && matchedPulse)
-      ? alignGarminSetsWithPulse(act, matchedPulse)
-      : (decodedSets ? _buildAlignedFromBackendEnrichedSets(act, decodedSets) : null);
     let garminStrengthSetsHtml = '';
     if (decodedSets) {
       const avgRestBadge = decodedSets.avgRestSec > 0 ? ` • Avg Rest ${decodedSets.avgRestSec}s` : '';
@@ -1069,7 +1140,10 @@ ${clockRange ? `${esc(clockRange)} • ` : ''}${s.durationSec}s TUT${restTxt}
                 : `<span style="color:#fbbf24; font-weight:700;">⌚ ${esc(s.reps)}r vs 📱 ${esc(p.reps)}r</span>`)
               : '';
             const mismatchPill = s.weightMismatch
-              ? `<div style="margin-top:2px; color:#fbbf24; font-weight:700;">⚠️ Watch ${esc(s.weightMismatch.garminKg)}kg vs App ${esc(s.weightMismatch.pulseKg)}kg</div>`
+              ? `<div style="margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; color:#fbbf24; font-weight:700;">
+<span>⚠️ Watch ${esc(s.weightMismatch.garminKg)}kg vs App ${esc(s.weightMismatch.pulseKg)}kg</span>
+${(matchedPulse && p.key) ? `<button type="button" data-sess-id="${esc(pulseSessId)}" data-sess-date="${esc(pulseSessDate)}" data-detail-key="${esc(p.key)}" data-watch-wt="${esc(s.weightMismatch.garminKg)}" data-reps="${esc(p.reps)}" onclick="quickApplyWatchWeightToPulseSet(this.dataset.sessId, this.dataset.sessDate, this.dataset.detailKey, Number(this.dataset.watchWt), Number(this.dataset.reps))" style="cursor:pointer; font-family:var(--font-mono); font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:4px; background:rgba(245,158,11,0.22); border:1px solid rgba(245,158,11,0.55); color:#fde68a;">⚡ Use Watch ${esc(s.weightMismatch.garminKg)}kg</button>` : ''}
+</div>`
               : '';
             return `
 <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.24); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
@@ -1936,6 +2010,222 @@ async function renderStrengthProgressionChart(opts = {}) {
   `;
 }
 
+// ==================== HISTORY SET EDITOR MODAL & QUICK WATCH FIX ====================
+let _editHistorySetCtx = null;
+
+function _ensureEditHistorySetModal() {
+  if (typeof document === 'undefined') return null;
+  let modal = document.getElementById('editHistorySetModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'editHistorySetModal';
+  modal.className = 'modal-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.innerHTML = `
+<div class="modal-card" style="max-width:360px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <h3 id="editHistSetTitle" style="margin:0; font-size:15px; font-weight:800; color:#fff;">Edit Logged Set</h3>
+    <button type="button" onclick="closeEditHistorySetModal()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:2px 6px;">✕</button>
+  </div>
+  <div id="editHistSetSub" style="font-size:11.5px; color:var(--text-muted); margin-bottom:12px;"></div>
+  <div id="editHistWatchHint" style="display:none; margin-bottom:10px; padding:7px 9px; border-radius:7px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); font-size:11px; color:#fde68a; justify-content:space-between; align-items:center; gap:8px;">
+    <span id="editHistWatchHintText"></span>
+    <button type="button" id="btnEditHistUseWatch" onclick="applyWatchWeightInEditModal()" style="padding:3px 8px; border-radius:5px; border:1px solid rgba(245,158,11,0.6); background:rgba(245,158,11,0.24); color:#fde68a; font-size:10.5px; font-weight:800; cursor:pointer;"></button>
+  </div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+    <div>
+      <label style="display:block; font-size:10.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Weight (kg)</label>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <button type="button" class="set-stepper-btn" onclick="stepEditHistorySetModal('weight', -2.5)">−</button>
+        <input id="editHistWeightInput" type="number" step="0.5" min="0" max="500" class="set-input-box" style="width:100%; text-align:center;" />
+        <button type="button" class="set-stepper-btn" onclick="stepEditHistorySetModal('weight', 2.5)">+</button>
+      </div>
+    </div>
+    <div>
+      <label style="display:block; font-size:10.5px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;">Reps</label>
+      <div style="display:flex; align-items:center; gap:4px;">
+        <button type="button" class="set-stepper-btn" onclick="stepEditHistorySetModal('reps', -1)">−</button>
+        <input id="editHistRepsInput" type="number" step="1" min="0" max="200" class="set-input-box" style="width:100%; text-align:center;" />
+        <button type="button" class="set-stepper-btn" onclick="stepEditHistorySetModal('reps', 1)">+</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex; gap:8px; justify-content:flex-end;">
+    <button type="button" onclick="closeEditHistorySetModal()" style="padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); color:#cbd5e1; font-size:12px; font-weight:700; cursor:pointer;">Cancel</button>
+    <button type="button" id="btnSaveEditedHistorySet" onclick="saveEditedHistorySet()" style="padding:8px 14px; border-radius:8px; border:none; background:var(--primary); color:#000; font-size:12px; font-weight:800; cursor:pointer;">Save Changes</button>
+  </div>
+</div>`;
+  if (document.body) document.body.appendChild(modal);
+  return modal;
+}
+
+function openEditHistorySetModal(sessionId, sessionDate, detailKey, exName, curWeight, curReps, watchWeightOpt) {
+  const modal = _ensureEditHistorySetModal();
+  if (!modal) return;
+  const parsedWatch = (watchWeightOpt !== undefined && watchWeightOpt !== null && String(watchWeightOpt).trim() !== '' && Number.isFinite(Number(watchWeightOpt)))
+    ? Number(watchWeightOpt)
+    : null;
+  _editHistorySetCtx = {
+    sessionId: String(sessionId || ''),
+    sessionDate: String(sessionDate || ''),
+    detailKey: String(detailKey || ''),
+    exName: String(exName || 'Exercise'),
+    watchWeightKg: parsedWatch
+  };
+  const titleEl = document.getElementById('editHistSetTitle');
+  const subEl = document.getElementById('editHistSetSub');
+  const wInput = document.getElementById('editHistWeightInput');
+  const rInput = document.getElementById('editHistRepsInput');
+  const hintBox = document.getElementById('editHistWatchHint');
+  const hintTxt = document.getElementById('editHistWatchHintText');
+  const watchBtn = document.getElementById('btnEditHistUseWatch');
+
+  if (titleEl) titleEl.innerText = `Edit ${exName || 'Set'}`;
+  if (subEl) subEl.innerText = `${detailKey} • ${sessionDate || 'Today'}`;
+  if (wInput) wInput.value = String(Number.isFinite(Number(curWeight)) ? Number(curWeight) : 0);
+  if (rInput) rInput.value = String(Number.isFinite(Number(curReps)) ? Number(curReps) : 0);
+  if (hintBox && hintTxt && watchBtn) {
+    if (parsedWatch !== null && parsedWatch > 0) {
+      hintBox.style.display = 'flex';
+      hintTxt.innerText = `Garmin watch recorded ${parsedWatch}kg`;
+      watchBtn.innerText = `Use ${parsedWatch}kg`;
+    } else {
+      hintBox.style.display = 'none';
+    }
+  }
+  modal.classList.add('open');
+}
+
+function closeEditHistorySetModal() {
+  const modal = document.getElementById('editHistorySetModal');
+  if (modal) modal.classList.remove('open');
+  _editHistorySetCtx = null;
+}
+
+function stepEditHistorySetModal(field, delta) {
+  const id = field === 'weight' ? 'editHistWeightInput' : 'editHistRepsInput';
+  const el = document.getElementById(id);
+  if (!el) return;
+  const cur = Number(el.value || 0);
+  const next = field === 'weight'
+    ? Math.max(0, Math.round((cur + Number(delta || 0)) * 10) / 10)
+    : Math.max(0, Math.round(cur + Number(delta || 0)));
+  el.value = String(next);
+  if (typeof beep === 'function') beep(520, 0.04);
+}
+
+function applyWatchWeightInEditModal() {
+  if (!_editHistorySetCtx || _editHistorySetCtx.watchWeightKg === null) return;
+  const wInput = document.getElementById('editHistWeightInput');
+  if (wInput) wInput.value = String(_editHistorySetCtx.watchWeightKg);
+}
+
+function _applyEditedSetLocallyAndRefresh(data, ctx, newWeight, newReps) {
+  try {
+    const rawHist = localStorage.getItem('pulse_session_history');
+    if (rawHist) {
+      const hist = JSON.parse(rawHist);
+      if (Array.isArray(hist)) {
+        let changed = false;
+        hist.forEach(s => {
+          if (!s || !s.details || typeof s.details !== 'object') return;
+          const sid = String(s.id || s.client_event_id || '');
+          const sDate = String(s.date || '').slice(0, 10);
+          const idMatch = ctx.sessionId && sid === ctx.sessionId;
+          const dateMatch = (!ctx.sessionId || !sid) && ctx.sessionDate && sDate === ctx.sessionDate;
+          if ((idMatch || dateMatch || s.details[ctx.detailKey]) && s.details[ctx.detailKey]) {
+            if (idMatch || !ctx.sessionId || sDate === ctx.sessionDate) {
+              Object.assign(s.details[ctx.detailKey], (data && data.updated_set) ? data.updated_set : { weight: newWeight, reps: newReps });
+              changed = true;
+            }
+          }
+        });
+        if (changed) localStorage.setItem('pulse_session_history', JSON.stringify(hist));
+      }
+    }
+  } catch (e) {}
+
+  if (data && data.state) {
+    window.BAKED_LIVE_STATE = data.state;
+    if (typeof applyLiveStateToDom === 'function') {
+      applyLiveStateToDom(data.state);
+    } else if (typeof renderHistoryList === 'function') {
+      renderHistoryList();
+    }
+  } else if (typeof renderHistoryList === 'function') {
+    renderHistoryList();
+  }
+  if (typeof renderStrengthProgressionChart === 'function') {
+    renderStrengthProgressionChart({ force: true });
+  }
+  if (typeof fetchAnalyticsSummary === 'function') {
+    fetchAnalyticsSummary(true);
+  }
+}
+
+async function _submitHistorySetEdit(ctx, newWeight, newReps) {
+  const fetcher = (typeof pulseApiFetch === 'function') ? pulseApiFetch : fetch;
+  const res = await fetcher('/api/session/edit_set', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: ctx.sessionId || null,
+      session_date: ctx.sessionDate || null,
+      detail_key: ctx.detailKey,
+      weight: newWeight,
+      reps: newReps
+    }),
+    timeoutMs: 8000,
+    promptAuthOn401: true
+  });
+  if (!res || !res.ok) {
+    let msg = 'Could not save set edit';
+    try { const err = await res.json(); if (err && err.detail) msg = err.detail; } catch (e) {}
+    if (typeof showToast === 'function') showToast(`⚠️ ${msg}`);
+    return false;
+  }
+  const data = await res.json();
+  _applyEditedSetLocallyAndRefresh(data, ctx, newWeight, newReps);
+  if (typeof beep === 'function') beep(760, 0.08);
+  if (typeof showToast === 'function') showToast(`✓ Updated set to ${newWeight}kg × ${newReps}r`);
+  return true;
+}
+
+async function saveEditedHistorySet() {
+  if (!_editHistorySetCtx) return;
+  const wEl = document.getElementById('editHistWeightInput');
+  const rEl = document.getElementById('editHistRepsInput');
+  const newW = Number(wEl ? wEl.value : 0);
+  const newR = Math.round(Number(rEl ? rEl.value : 0));
+  if (!Number.isFinite(newW) || newW < 0 || newW > 500 || !Number.isFinite(newR) || newR < 0 || newR > 200) {
+    if (typeof showToast === 'function') showToast('Enter valid weight (0–500kg) and reps (0–200)');
+    return;
+  }
+  const btn = document.getElementById('btnSaveEditedHistorySet');
+  if (btn) btn.disabled = true;
+  const ctxCopy = { ..._editHistorySetCtx };
+  try {
+    const ok = await _submitHistorySetEdit(ctxCopy, newW, newR);
+    if (ok) closeEditHistorySetModal();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function quickApplyWatchWeightToPulseSet(sessionId, sessionDate, detailKey, watchWeightKg, pulseReps) {
+  if (!detailKey || !Number.isFinite(Number(watchWeightKg))) return;
+  await _submitHistorySetEdit(
+    {
+      sessionId: String(sessionId || ''),
+      sessionDate: String(sessionDate || ''),
+      detailKey: String(detailKey)
+    },
+    Number(watchWeightKg),
+    Math.round(Number(pulseReps || 0))
+  );
+}
+
 // ==================== GLOBAL ASSIGNMENTS & AUTO-INIT ====================
 if (typeof window !== 'undefined') {
   window.getGarminHrZoneBreakdown = getGarminHrZoneBreakdown;
@@ -1945,6 +2235,12 @@ if (typeof window !== 'undefined') {
   window.renderHistoryList = renderHistoryList;
   window.renderRenphoTrendChart = renderRenphoTrendChart;
   window.renderStrengthProgressionChart = renderStrengthProgressionChart;
+  window.openEditHistorySetModal = openEditHistorySetModal;
+  window.closeEditHistorySetModal = closeEditHistorySetModal;
+  window.stepEditHistorySetModal = stepEditHistorySetModal;
+  window.applyWatchWeightInEditModal = applyWatchWeightInEditModal;
+  window.saveEditedHistorySet = saveEditedHistorySet;
+  window.quickApplyWatchWeightToPulseSet = quickApplyWatchWeightToPulseSet;
 }
 
 let _pulseChartsInitInFlight = false;
