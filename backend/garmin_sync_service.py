@@ -18,6 +18,7 @@ try:
 except Exception:
     db = None
 import state_store
+import set_matcher
 import time_utils
 from time_utils import UK_TZ, uk_now, uk_today_str
 
@@ -85,6 +86,73 @@ def _is_manual_watch_duplicate(manual_entry, watch_entries):
         if m_dt is not None and w_dt is not None and abs((w_dt - m_dt).total_seconds()) <= 7200:
             return True
     return False
+
+
+def _compact_garmin_exercise_sets(raw_sets):
+    sets_list = raw_sets.get('exerciseSets', []) if isinstance(raw_sets, dict) else (raw_sets if isinstance(raw_sets, list) else [])
+    compact_sets = []
+    for s in sets_list:
+        if not isinstance(s, dict):
+            continue
+        set_type = s.get('setType') or s.get('set_type')
+        raw_reps = s['repetitionCount'] if s.get('repetitionCount') is not None else s.get('reps')
+        reps = None
+        if raw_reps is not None and not isinstance(raw_reps, bool):
+            try:
+                reps_f = float(raw_reps)
+                if math.isfinite(reps_f):
+                    reps = int(round(reps_f))
+            except (TypeError, ValueError):
+                reps = None
+
+        exercise_name = None
+        exercise_category = None
+        exercises = s.get('exercises')
+        if isinstance(exercises, list) and exercises:
+            valid_ex = [ex for ex in exercises if isinstance(ex, dict)]
+            if valid_ex:
+                def _ex_prob(ex):
+                    p = ex.get('probability')
+                    if p is None or isinstance(p, bool):
+                        return -1.0
+                    try:
+                        pf = float(p)
+                        return pf if math.isfinite(pf) else -1.0
+                    except (TypeError, ValueError):
+                        return -1.0
+                best_ex = max(valid_ex, key=_ex_prob)
+                exercise_category = best_ex.get('category') or None
+                exercise_name = best_ex.get('name') or exercise_category or None
+
+        if not exercise_name:
+            exercise_name = s.get('exerciseName') or s.get('category') or s.get('exercise_name')
+        if not exercise_category:
+            exercise_category = s.get('category') or s.get('exercise_category')
+
+        start_time = s.get('startTime') or s.get('start_time')
+        item = {
+            "set_type": set_type,
+            "reps": reps,
+            "weight": s.get('weight'),
+            "exercise_name": exercise_name,
+            "duration": s.get('duration'),
+        }
+        if exercise_category:
+            item["exercise_category"] = exercise_category
+        if start_time:
+            item["start_time"] = start_time
+        compact_sets.append(item)
+    return compact_sets
+
+
+def _exercise_sets_need_refresh(existing_entry, exercise_sets):
+    if not exercise_sets:
+        return True
+    try:
+        schema_v = int((existing_entry or {}).get('exercise_sets_schema_v') or 1)
+    except (TypeError, ValueError):
+        schema_v = 1
+    return schema_v < 2
 
 
 class GarminSyncService:
@@ -892,6 +960,10 @@ class GarminSyncService:
                 hr_samples = existing.get('hr_samples') if existing else None
                 hr_zones = existing.get('hr_zones') if existing else None
                 exercise_sets = existing.get('exercise_sets') if existing else None
+                try:
+                    exercise_sets_schema_v = int(existing.get('exercise_sets_schema_v') or 1) if (existing and exercise_sets) else 0
+                except (TypeError, ValueError):
+                    exercise_sets_schema_v = 1 if exercise_sets else 0
 
                 if idx < 3 and not hr_samples and not detail_auth_failed:
                     try:
@@ -947,24 +1019,15 @@ class GarminSyncService:
                             auth_failed = True
                             last_auth_error = str(e)
 
-                if 'strength' in str(act_name).lower() and idx < 3 and not exercise_sets and not detail_auth_failed:
+                if 'strength' in str(act_name).lower() and idx < 3 and _exercise_sets_need_refresh(existing, exercise_sets) and not detail_auth_failed:
                     try:
                         raw_sets = client.get_activity_exercise_sets(act_id)
-                        compact_sets = []
-                        sets_list = raw_sets.get('exerciseSets', []) if isinstance(raw_sets, dict) else (raw_sets if isinstance(raw_sets, list) else [])
-                        for s in sets_list:
-                            if isinstance(s, dict):
-                                compact_sets.append({
-                                    "set_type": s.get('setType'),
-                                    "reps": s.get('reps'),
-                                    "weight": s.get('weight'),
-                                    "exercise_name": s.get('exerciseName') or s.get('category'),
-                                    "duration": s.get('duration')
-                                })
+                        compact_sets = _compact_garmin_exercise_sets(raw_sets)
                         if compact_sets:
                             exercise_sets = compact_sets
-                        elif isinstance(raw_sets, (list, dict)) and raw_sets:
+                        elif isinstance(raw_sets, (list, dict)) and raw_sets and not exercise_sets:
                             exercise_sets = raw_sets
+                        exercise_sets_schema_v = 2
                     except Exception as e:
                         print(f"[GarminSync] Warning fetching exercise sets for {act_id}: {e}")
                         if is_auth_error(e):
@@ -1006,8 +1069,48 @@ class GarminSyncService:
                     entry["hr_zones"] = hr_zones
                 if exercise_sets:
                     entry["exercise_sets"] = exercise_sets
+                if exercise_sets_schema_v >= 2:
+                    entry["exercise_sets_schema_v"] = exercise_sets_schema_v
 
                 today_activity_list.append(entry)
+
+        backfilled_recent_sets = {}
+        if activities_ok and not detail_auth_failed:
+            backfill_count = 0
+            for ra in recent_raw_activities:
+                if backfill_count >= 2 or detail_auth_failed:
+                    break
+                if not isinstance(ra, dict):
+                    continue
+                r_id = str(ra.get('activityId') or '')
+                r_start = str(ra.get('startTimeLocal') or '')
+                if not r_id or r_start.startswith(target_date_str):
+                    continue
+                r_type_key = (ra.get('activityType') or {}).get('typeKey') or ''
+                if 'strength' not in str(r_type_key).lower():
+                    continue
+                existing_r = snapshot_map.get(r_id)
+                if not _exercise_sets_need_refresh(existing_r, existing_r.get('exercise_sets') if existing_r else None):
+                    continue
+                try:
+                    raw_sets = client.get_activity_exercise_sets(r_id)
+                    compact_sets = _compact_garmin_exercise_sets(raw_sets)
+                    backfilled_recent_sets[r_id] = (compact_sets, 2)
+                    backfill_count += 1
+                except Exception as e:
+                    print(f"[GarminSync] Warning backfilling exercise sets for {r_id}: {e}")
+                    if is_auth_error(e):
+                        detail_auth_failed = True
+                        auth_failed = True
+                        last_auth_error = str(e)
+
+        # Preload recent DB workout sessions outside state_lock for Pulse<->Garmin set matching
+        preloaded_db_sessions = []
+        if db is not None:
+            try:
+                preloaded_db_sessions = db.get_workout_sessions(days=14)
+            except Exception as dbe:
+                print(f"[GarminSync] Notice loading workout_sessions for set matching: {dbe}")
 
         # Acquire state lock ONLY for the fast in-memory merge + atomic save
         with state_store.state_lock(LIVE_STATE_PATH):
@@ -1246,6 +1349,12 @@ class GarminSyncService:
                         continue
                     existing = existing_map.get(r_id)
                     if existing:
+                        if r_id in backfilled_recent_sets:
+                            bf_sets, bf_v = backfilled_recent_sets[r_id]
+                            existing = dict(existing)
+                            existing["exercise_sets_schema_v"] = bf_v
+                            if bf_sets:
+                                existing["exercise_sets"] = bf_sets
                         all_activities.append(existing)
                     else:
                         r_type = ra.get('activityType') or {}
@@ -1291,6 +1400,11 @@ class GarminSyncService:
                             "distance_miles": r_dist_miles,
                             "source": "garmin_oauth",
                         }
+                        if r_id in backfilled_recent_sets:
+                            bf_sets, bf_v = backfilled_recent_sets[r_id]
+                            r_entry["exercise_sets_schema_v"] = bf_v
+                            if bf_sets:
+                                r_entry["exercise_sets"] = bf_sets
                         all_activities.append(r_entry)
                     seen_ids.add(r_id)
 
@@ -1309,6 +1423,37 @@ class GarminSyncService:
             else:
                 if isinstance(garmin_state.get('recent_activities'), list):
                     garmin_state['recent_activities'] = garmin_state['recent_activities'][:100]
+
+            # Match Garmin strength exercise_sets with logged Pulse sessions & persist matched exercises
+            candidate_pulse_sessions = set_matcher.collect_candidate_pulse_sessions(
+                state,
+                preloaded_db_sessions=preloaded_db_sessions,
+            )
+            if candidate_pulse_sessions:
+                seen_act_objs = set()
+                acts_to_enrich = list(garmin_state.get('today_activities') or []) + list((garmin_state.get('recent_activities') or [])[:10])
+                for act in acts_to_enrich:
+                    if not isinstance(act, dict) or id(act) in seen_act_objs:
+                        continue
+                    seen_act_objs.add(id(act))
+                    if act.get('source') != 'garmin_oauth' or not isinstance(act.get('exercise_sets'), list):
+                        continue
+                    was_enriched = set_matcher.enrich_garmin_activity_with_pulse_sets(act, candidate_pulse_sessions)
+                    is_nat_strength = 'strength' in str(act.get('name') or '').lower()
+                    cur_bio = str(((act.get('benefits') or {}).get('biomechanics')) or '').lower()
+                    if is_nat_strength and (was_enriched or 'martial arts striking' in cur_bio):
+                        bio_title = f"{act.get('sub_title') or ''} {act.get('matched_exercises_summary') or ''}".strip()
+                        act['benefits'] = self.benefits_engine.generate_benefits(
+                            act.get('name') or 'Strength_training',
+                            bio_title,
+                            act.get('duration_min') or 0,
+                            act.get('calories') or 0,
+                            act.get('avg_hr') or 0,
+                            act.get('max_hr') or 0,
+                            act.get('aerobic_te') or 0.0,
+                            act.get('anaerobic_te') or 0.0,
+                            weight_kg=live_weight_kg,
+                        )
 
             analytics_service.recalculate_nutrition(state, target_date_str)
 

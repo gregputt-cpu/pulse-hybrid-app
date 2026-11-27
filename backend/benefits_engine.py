@@ -28,6 +28,7 @@ class PhysiologicalBenefitsEngine:
         if w is None:
             w = self._valid_weight(self.weight_kg)
         text = f"{activity_name or ''} {sub_title or ''}".lower()
+        is_native_strength = 'strength' in str(activity_name or '').lower()
 
         # Determine movement archetype using word-boundary regexes
         is_jump = bool(re.search(r'\b(?:jump|jumps|plyo|plyometrics|hop|hops|skip|skipping|tuck|box\s*jump)\b', text))
@@ -37,7 +38,8 @@ class PhysiologicalBenefitsEngine:
         is_squat = bool(re.search(r'\b(?:squat|squats|leg\s*press|lunge|lunges|quad|quads)\b', text))
         is_deadlift = bool(re.search(r'\b(?:deadlift|deadlifts|rdl|rdls|hinge|hamstring|hamstrings)\b', text))
         is_press = bool(re.search(r'\b(?:bench|press|pushup|pushups|push-up|push-ups|dip|dips|overhead)\b', text))
-        is_combat = bool(re.search(r'\b(?:body\s*combat|bodycombat|les\s*mills|muay\s*thai|kickbox|kickboxing|shadow\s*box|combat|boxing|martial|mma|karate|taekwondo)\b', text))
+        is_pull = bool(re.search(r'\b(?:row|rows|pendlay|pullup|pullups|pull-up|pull-ups|chin|chins|lat|lats)\b', text))
+        is_combat = (not is_native_strength) and bool(re.search(r'\b(?:body\s*combat|bodycombat|les\s*mills|muay\s*thai|kickbox|kickboxing|shadow\s*box|combat|boxing|martial|mma|karate|taekwondo)\b', text))
         is_kettlebell = bool(re.search(r'\b(?:kettlebell|kettlebells|kb|swing|swings|snatch)\b', text))
 
         # 1. Muscles Worked (deduplicated preserving order)
@@ -52,6 +54,8 @@ class PhysiologicalBenefitsEngine:
             muscles.extend(["Biceps Femoris & Semitendinosus", "Gluteal Complex", "Thoracolumbar Fascia & Erector Spinae", "Latissimus Dorsi & Trapezius"])
         if is_press:
             muscles.extend(["Pectoralis Major/Minor", "Anterior Deltoids", "Triceps Brachii", "Serratus Anterior"])
+        if is_pull:
+            muscles.extend(["Latissimus Dorsi", "Rhomboids & Mid/Lower Trapezius", "Posterior Deltoids", "Biceps Brachii"])
         if not muscles:
             muscles = ["Cardiovascular Myocardium", "Slow-Twitch Oxidative Fibers", "Core Stabilizers", "Lower Extremity Postural Chain"]
         unique_muscles = list(dict.fromkeys(muscles))
@@ -61,6 +65,9 @@ class PhysiologicalBenefitsEngine:
             biomechanics = ("High-velocity martial arts striking with rapid kinetic-chain force transfer from rear-foot pivot "
                             "through pelvic rotation to anterior deltoid/serratus punch extension and hip-flexor kick chambers. "
                             "Drives VO2 stroke volume and lactate clearance with zero axial spinal compression.")
+        elif is_native_strength or is_squat or is_deadlift or is_press or is_pull:
+            biomechanics = ("Multi-joint mechanical tension and neuromuscular force production across loaded barbell/resistance patterns. "
+                            "Stimulates myofibrillar hypertrophy, bone mineral density, and kinetic-chain stability.")
         elif is_jump:
             if w is not None:
                 min_force = round(w * 3.5, 1)

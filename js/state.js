@@ -1264,7 +1264,7 @@
       }
     }
 
-    async function syncSetToBackend(exId, targetW, targetR, loggedW, loggedR) {
+    async function syncSetToBackend(exId, targetW, targetR, loggedW, loggedR, opts = {}) {
       const eventId = _makeQueueItemId();
       const payload = {
         exercise_id: exId,
@@ -1275,6 +1275,9 @@
         client_event_id: eventId,
         client_date: getLocalDateStr()
       };
+      if (opts && typeof opts.isWarmup === 'boolean') {
+        payload.is_warmup = opts.isWarmup;
+      }
 
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
         enqueueOfflineWrite('/api/sync_set', payload, 'POST');

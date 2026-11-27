@@ -76,10 +76,19 @@ def _extract_garmin_exercise_ids(act: Dict[str, Any]) -> List[str]:
     for item in ex_sets:
         if not isinstance(item, dict):
             continue
-        raw_name = str(item.get("exercise_id") or item.get("category") or item.get("name") or "").strip().lower().replace(" ", "_")
-        norm = normalize_exercise_id(raw_name)
-        if norm in EXERCISE_BIOMECHANICS and norm not in out:
-            out.append(norm)
+        for raw_candidate in (
+            item.get("exercise_id"),
+            item.get("exercise_name"),
+            item.get("exercise_category"),
+            item.get("category"),
+            item.get("name"),
+        ):
+            raw_name = str(raw_candidate or "").strip().lower().replace(" ", "_")
+            if not raw_name:
+                continue
+            norm = normalize_exercise_id(raw_name)
+            if norm in EXERCISE_BIOMECHANICS and norm not in out:
+                out.append(norm)
     return out
 
 

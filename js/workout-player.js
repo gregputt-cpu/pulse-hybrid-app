@@ -1999,7 +1999,19 @@
       btn.innerText = 'Logged';
 
       const isBodyweight = (loggedW === 0) || !numTargetW || numTargetW <= 0 || /^(body|bw)/i.test(String(activeExObj?.targetWeight || ''));
-      const isWarmup = (numTargetW > 0) && !isBodyweight && (loggedW > 0) && (loggedW < 0.75 * numTargetW);
+      const belowWarmupThreshold = (numTargetW > 0) && !isBodyweight && (loggedW > 0) && (loggedW < 0.75 * numTargetW);
+      const priorSameWeightKeys = [];
+      if (belowWarmupThreshold && typeof sessionLoggedSets === 'object' && sessionLoggedSets) {
+        Object.keys(sessionLoggedSets).forEach((k) => {
+          const prev = sessionLoggedSets[k];
+          if (!prev || !prev.logged || prev.exercise_id !== exId || Number(prev.set_num) === Number(setNum)) return;
+          const prevW = _coerceSetWeightNumber(prev.weight);
+          if (!isNaN(prevW) && Math.abs(prevW - loggedW) <= 0.5) {
+            priorSameWeightKeys.push(k);
+          }
+        });
+      }
+      const isWarmup = belowWarmupThreshold && priorSameWeightKeys.length === 0;
 
       const banner = document.getElementById('autoregBanner');
       const tag = document.getElementById('autoregTag');
@@ -2074,6 +2086,17 @@
         }
       }
 
+      if (belowWarmupThreshold && priorSameWeightKeys.length > 0) {
+        priorSameWeightKeys.forEach((k) => {
+          const prev = sessionLoggedSets[k];
+          if (prev && prev.is_warmup) {
+            prev.is_warmup = false;
+            const prevR = Number(prev.reps || 0);
+            prev.status = (prevR < targetR || prevR === 0) ? 'missed' : 'logged';
+          }
+        });
+      }
+
       sessionLoggedSets[`${exId}_${setNum}`] = {
         exercise_id: exId,
         set_num: setNum,
@@ -2089,7 +2112,8 @@
       saveActiveSessionToLocalStorage();
       window._pulsePrReqSeq = (window._pulsePrReqSeq || 0) + 1;
       const myReqSeq = window._pulsePrReqSeq;
-      Promise.resolve(syncSetToBackend(exId, numTargetW, targetR, loggedW, loggedR)).then((res) => {
+      const syncOpts = belowWarmupThreshold ? { isWarmup: false } : undefined;
+      Promise.resolve(syncSetToBackend(exId, numTargetW, targetR, loggedW, loggedR, syncOpts)).then((res) => {
         if (myReqSeq !== window._pulsePrReqSeq) return;
         if (!res || !res.ok || !res.result) return;
         if (res.result.status === 'warmup') return;

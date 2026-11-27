@@ -156,56 +156,74 @@
           });
         }
 
+        const rawSessions = [];
+        const seenSessionKeys = new Set();
+        const pushRawSession = (s) => {
+          if (!s || !s.date) return;
+          const k = String(s.id || s.client_event_id || s.date);
+          if (seenSessionKeys.has(k)) return;
+          seenSessionKeys.add(k);
+          rawSessions.push(s);
+        };
         const histRaw = localStorage.getItem('pulse_session_history');
         if (histRaw) {
           const history = JSON.parse(histRaw);
-          if (Array.isArray(history)) {
-            history.forEach((s) => {
-              if (!s || !s.date) return;
-              const dateStr = _extractMatchDateStr(s.date, false);
-              if (!dateStr) return;
-              const endTimeMs = _extractClockMs(s.date);
-              const detailEntries = (s.details && typeof s.details === 'object') ? Object.entries(s.details) : [];
-              const exIds = detailEntries
-                .filter(([, v]) => v && (v.logged === undefined || v.logged !== false))
-                .map(([k, v]) => String((v && v.exercise_id) || String(k || '').replace(/_\d+$/, '') || ''))
-                .filter(Boolean);
-              const hasKbFlowDetail = exIds.some((id) => id.startsWith('kb_flow_')) ||
-                detailEntries.some(([, d]) => d && d.format === 'kb_flow') ||
-                /kb\s*flow|rotational\s*combat|kettlebell\s*flow/i.test(String(s.title || ''));
-              const hasNonCondStrength = exIds.some((id) => id && !id.startsWith('kb_flow_') && !/^(zone2_flush|speed_rope|emom_|amrap_|for_time_)/.test(id));
-              const isConditioningOnly = s.preset === 'combat' || String(s.preset || '').startsWith('timer_') || (hasKbFlowDetail && !hasNonCondStrength);
+          if (Array.isArray(history)) history.forEach(pushRawSession);
+        }
+        const bakedState = (typeof window !== 'undefined' && window.BAKED_LIVE_STATE) ? window.BAKED_LIVE_STATE : null;
+        if (bakedState && Array.isArray(bakedState.session_history)) {
+          bakedState.session_history.forEach(pushRawSession);
+        }
+        if (bakedState && bakedState.last_workout_session) {
+          pushRawSession(bakedState.last_workout_session);
+        }
 
-              const collapsesIntoCond = candidates.some((c) => {
-                if (c._kind !== 'conditioning' || c.dateStr !== dateStr) return false;
-                if (c.endTimeMs > 0 && endTimeMs > 0 && Math.abs(c.endTimeMs - endTimeMs) > 20 * 60 * 1000) return false;
-                if (hasNonCondStrength) return false;
-                return isConditioningOnly || (c.exId && exIds.includes(c.exId)) || (hasKbFlowDetail && c.isKbFlow);
-              });
-              if (collapsesIntoCond) return;
+        if (rawSessions.length > 0) {
+          rawSessions.forEach((s) => {
+            if (!s || !s.date) return;
+            const dateStr = _extractMatchDateStr(s.date, false);
+            if (!dateStr) return;
+            const endTimeMs = _extractClockMs(s.date);
+            const detailEntries = (s.details && typeof s.details === 'object') ? Object.entries(s.details) : [];
+            const exIds = detailEntries
+              .filter(([, v]) => v && (v.logged === undefined || v.logged !== false))
+              .map(([k, v]) => String((v && v.exercise_id) || String(k || '').replace(/_\d+$/, '') || ''))
+              .filter(Boolean);
+            const hasKbFlowDetail = exIds.some((id) => id.startsWith('kb_flow_')) ||
+              detailEntries.some(([, d]) => d && d.format === 'kb_flow') ||
+              /kb\s*flow|rotational\s*combat|kettlebell\s*flow/i.test(String(s.title || ''));
+            const hasNonCondStrength = exIds.some((id) => id && !id.startsWith('kb_flow_') && !/^(zone2_flush|speed_rope|emom_|amrap_|for_time_)/.test(id));
+            const isConditioningOnly = s.preset === 'combat' || String(s.preset || '').startsWith('timer_') || (hasKbFlowDetail && !hasNonCondStrength);
 
-              const detailDurSec = detailEntries.reduce((acc, [, d]) => acc + Number((d && d.durationSec) || 0), 0);
-              const durationMin = Number(s.durationMin || s.duration_min || 0) || (detailDurSec > 0 ? (detailDurSec / 60) : 0);
-              const startTimeMs = (endTimeMs > 0 && durationMin > 0) ? (endTimeMs - durationMin * 60000) : endTimeMs;
-              const matchKeyId = String(s.id || s.client_event_id || s.date);
-              candidates.push({
-                ...s,
-                dateStr,
-                endTimeMs,
-                startTimeMs,
-                durationMin,
-                calories: Number(s.calories || 0) || 0,
-                _kind: 'session',
-                _matchKey: `sess:${matchKeyId}`,
-                exId: exIds[0] || '',
-                exIds,
-                isKbFlow: hasKbFlowDetail,
-                isSkipOrJump: !hasKbFlowDetail && exIds.some((id) => id.includes('rope') || id.includes('skip')),
-                isConditioningOnly,
-                isStrength: !isConditioningOnly && !hasKbFlowDetail
-              });
+            const collapsesIntoCond = candidates.some((c) => {
+              if (c._kind !== 'conditioning' || c.dateStr !== dateStr) return false;
+              if (c.endTimeMs > 0 && endTimeMs > 0 && Math.abs(c.endTimeMs - endTimeMs) > 20 * 60 * 1000) return false;
+              if (hasNonCondStrength) return false;
+              return isConditioningOnly || (c.exId && exIds.includes(c.exId)) || (hasKbFlowDetail && c.isKbFlow);
             });
-          }
+            if (collapsesIntoCond) return;
+
+            const detailDurSec = detailEntries.reduce((acc, [, d]) => acc + Number((d && d.durationSec) || 0), 0);
+            const durationMin = Number(s.durationMin || s.duration_min || 0) || (detailDurSec > 0 ? (detailDurSec / 60) : 0);
+            const startTimeMs = (endTimeMs > 0 && durationMin > 0) ? (endTimeMs - durationMin * 60000) : endTimeMs;
+            const matchKeyId = String(s.id || s.client_event_id || s.date);
+            candidates.push({
+              ...s,
+              dateStr,
+              endTimeMs,
+              startTimeMs,
+              durationMin,
+              calories: Number(s.calories || 0) || 0,
+              _kind: 'session',
+              _matchKey: `sess:${matchKeyId}`,
+              exId: exIds[0] || '',
+              exIds,
+              isKbFlow: hasKbFlowDetail,
+              isSkipOrJump: !hasKbFlowDetail && exIds.some((id) => id.includes('rope') || id.includes('skip')),
+              isConditioningOnly,
+              isStrength: !isConditioningOnly && !hasKbFlowDetail
+            });
+          });
         }
       } catch (e) {}
       return candidates;
@@ -231,7 +249,8 @@
       const actEndMs = (actStartMs > 0 && actDurMin > 0) ? (actStartMs + actDurMin * 60000) : actStartMs;
 
       const isHiit = actKey.includes('hiit') || /\bhiit\b/.test(actName) || /\bhiit\b/.test(actSub);
-      const isStrength = actKey.includes('strength') || actName.includes('strength') || /\bstrength\b/.test(actSub);
+      const isNativeStrength = actKey.includes('strength') || actName.includes('strength') || (Array.isArray(act.exercise_sets) && act.exercise_sets.length > 0);
+      const isStrength = isNativeStrength || /\bstrength\b/.test(actSub);
       const isJumpRope = actKey === 'jump_rope' || actName.includes('jump_rope') || /jump\s*rope|skipping|\bskip\b/i.test(`${actName} ${actSub} ${actNotes}`);
       const isCardio = actKey.includes('cardio') || actName.includes('cardio') || actSub.includes('cardio') || isHiit || actKey === 'fitness_equipment';
 
@@ -263,6 +282,7 @@
         actEndMs,
         calories: Number(act.calories || act.workout_calories || 0) || 0,
         isHiit,
+        isNativeStrength,
         isStrength,
         isJumpRope,
         isCardio,
@@ -294,7 +314,7 @@
         if (!(info.isStrength || info.isKbAnnotated)) {
           return { score: -Infinity, endDiffMs: Infinity };
         }
-        if (info.isWarmupAnnotated || info.isBodyCombatAnnotated || (info.isJumpRope && !info.isStrength && !info.isKbAnnotated)) {
+        if (!info.isNativeStrength && (info.isWarmupAnnotated || info.isBodyCombatAnnotated || (info.isJumpRope && !info.isStrength && !info.isKbAnnotated))) {
           return { score: -Infinity, endDiffMs: Infinity };
         }
       } else {
@@ -303,7 +323,7 @@
         }
       }
 
-      if (info.hasCustomAnnotation && info.isWarmupAnnotated && !/warm[\s-]*up|mobility|stretch/i.test(String(cand.title || ''))) {
+      if (!info.isNativeStrength && info.hasCustomAnnotation && info.isWarmupAnnotated && !/warm[\s-]*up|mobility|stretch/i.test(String(cand.title || ''))) {
         return { score: -Infinity, endDiffMs: Infinity };
       }
 
@@ -1216,7 +1236,8 @@
       const text = rawText.toLowerCase();
       const parsed = parseWorkoutNoteDetails(rawText, act);
       const isHybridPlyoStrength = parsed.hasJumpRope && (parsed.hasKbSwing || parsed.hasHinge || parsed.hasSquat || parsed.hasPush || parsed.hasPull);
-      const isBodyCombat = parsed.hasBodyCombat;
+      const isNativeStrengthAct = /strength/i.test(`${act.activity_type_key || ''} ${act.name || ''}`) || (Array.isArray(act.exercise_sets) && act.exercise_sets.length > 0);
+      const isBodyCombat = parsed.hasBodyCombat && !isNativeStrengthAct;
       const isStrength = text.includes('strength') || text.includes('barbell') || text.includes('lift') || text.includes('weight') || text.includes('gym') || text.includes('option_a') || text.includes('option a') || text.includes('hypertrophy') || text.includes('rdl') || text.includes('press') || parsed.hasHinge || parsed.hasSquat || parsed.hasPush || parsed.hasPull;
       const isJump = text.includes('jump') || text.includes('plyo') || text.includes('tuck') || text.includes('hop') || parsed.hasJumpRope;
       const isWalk = text.includes('walk') || text.includes('stroll');
@@ -3051,6 +3072,9 @@ ${isRed && lds && lds.summary_headline ? esc(lds.summary_headline) : 'Workouts a
                 total_sets: a.total_sets,
                 total_reps: a.total_reps,
                 exercise_sets: a.exercise_sets,
+                matched_exercises_summary: a.matched_exercises_summary,
+                matched_exercise_ids: a.matched_exercise_ids,
+                matched_pulse_title: a.matched_pulse_title,
                 hr_samples: a.hr_samples,
                 hr_zones: a.hr_zones,
                 steps: a.steps,

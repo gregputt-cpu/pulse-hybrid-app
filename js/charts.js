@@ -311,10 +311,78 @@ function generateTeDualGaugesHtml(act) {
   `;
 }
 
-// DECODER FOR GARMIN FĒNIX 8 EXERCISE SETS (milligrams/grams -> kg, TUT & rest intervals)
+function _parseActivityTimestampMs(raw) {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+    return raw > 1e12 ? raw : raw * 1000;
+  }
+  if (!raw || typeof raw !== 'string') return 0;
+  const trimmed = raw.trim();
+  if (!trimmed) return 0;
+  const norm = (trimmed.includes(' ') && !trimmed.includes('T')) ? trimmed.replace(' ', 'T') : trimmed;
+  const ms = new Date(norm).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function _formatClockHHMM(ms) {
+  if (!ms || !Number.isFinite(ms)) return '';
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function _coerceSetWeightKg(raw) {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  const s = String(raw ?? '').trim().toLowerCase();
+  if (!s || /^(body(?:weight)?|bw)$/.test(s)) return 0;
+  const cleaned = s.replace(/^2\s*[×x]\s*/i, '').replace(/kg$/i, '').trim();
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function _parsePulseLogWindowMs(timeStr, baseDateStr, prevMinMs) {
+  if (!timeStr || typeof timeStr !== 'string') return { startMs: 0, endMs: 0 };
+  const trimmed = timeStr.trim();
+  const hm = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (hm && baseDateStr && /^\d{4}-\d{2}-\d{2}$/.test(baseDateStr)) {
+    const [y, m, d] = baseDateStr.split('-').map(Number);
+    let ms = new Date(y, m - 1, d, Number(hm[1]), Number(hm[2]), 0, 0).getTime();
+    if (prevMinMs > 0 && (prevMinMs - ms) > 6 * 3600 * 1000) {
+      ms += 24 * 3600 * 1000;
+    }
+    return { startMs: ms, endMs: ms + 59999 };
+  }
+  const parsed = _parseActivityTimestampMs(trimmed);
+  return parsed > 0 ? { startMs: parsed, endMs: parsed + 59999 } : { startMs: 0, endMs: 0 };
+}
+
+function _garminCategoryMatchesPulseEx(garminLabel, pulseExId) {
+  const g = String(garminLabel || '').toLowerCase();
+  const p = String(pulseExId || '').toLowerCase();
+  if (!g || !p) return 0;
+  const patterns = [
+    { g: /squat|lunge|split_squat|thruster/, p: /squat|lunge/ },
+    { g: /bench|chest_press|floor_press|push_up|pushup|dip/, p: /bench|floor_press|pushup|dip|chest/ },
+    { g: /deadlift|rdl|good_morning|hip_hinge|swing/, p: /rdl|deadlift|swing|hinge/ },
+    { g: /row|pull_up|pullup|chin_up|lat_pull|curl/, p: /row|pullup|chin|curl/ },
+    { g: /shoulder_press|overhead_press|military_press|z_press/, p: /press|z_press|ohp/ }
+  ];
+  let gHit = -1;
+  let pHit = -1;
+  patterns.forEach((pat, idx) => {
+    if (pat.g.test(g) && gHit === -1) gHit = idx;
+    if (pat.p.test(p) && pHit === -1) pHit = idx;
+  });
+  if (gHit === -1 || pHit === -1) return 0;
+  return gHit === pHit ? 1 : -1;
+}
+
+// DECODER FOR GARMIN FĒNIX 8 EXERCISE SETS (milligrams/grams -> kg, TUT, clock windows & rest intervals)
 function decodeGarminStrengthSets(act) {
   const rawSets = act && Array.isArray(act.exercise_sets) ? act.exercise_sets : [];
   if (!rawSets.length) return null;
+
+  const actStartMs = _parseActivityTimestampMs(act.rawDate || act.date);
+  let cursorMs = actStartMs;
 
   const activeSets = [];
   const restDurations = [];
@@ -322,23 +390,39 @@ function decodeGarminStrengthSets(act) {
   for (let i = 0; i < rawSets.length; i++) {
     const s = rawSets[i];
     if (!s || typeof s !== 'object') continue;
-    const sType = String(s.set_type || '').toUpperCase();
-    const dur = Math.round(Number(s.duration || 0));
+    const sType = String(s.set_type || s.setType || '').toUpperCase();
+    const durRaw = Number(s.duration || 0);
+    const dur = Math.round(durRaw);
 
     if (sType === 'REST') {
       if (dur > 0) restDurations.push(dur);
+      if (cursorMs > 0 && durRaw > 0) {
+        cursorMs += durRaw * 1000;
+      }
       continue;
     }
     if (sType !== 'ACTIVE') continue;
+
+    const explicitStartMs = _parseActivityTimestampMs(s.start_time || s.startTime);
+    const startMs = explicitStartMs > 0 ? explicitStartMs : cursorMs;
+    const endMs = (startMs > 0 && durRaw > 0) ? (startMs + durRaw * 1000) : startMs;
+    if (startMs > 0) {
+      cursorMs = endMs;
+    }
 
     const rawWt = Number(s.weight || 0);
     const weightKg = rawWt >= 1000
       ? Math.round((rawWt / 1000) * 10) / 10
       : (rawWt > 0 ? Math.round(rawWt * 10) / 10 : 0);
 
+    const rawReps = (s.reps !== undefined && s.reps !== null) ? s.reps : s.repetitionCount;
+    const parsedReps = (rawReps !== undefined && rawReps !== null && rawReps !== '' && !isNaN(Number(rawReps)) && Number(rawReps) >= 0)
+      ? Math.round(Number(rawReps))
+      : null;
+
     // Look ahead for immediate REST interval following this active set
     let restAfterSec = 0;
-    if (i + 1 < rawSets.length && rawSets[i + 1] && String(rawSets[i + 1].set_type || '').toUpperCase() === 'REST') {
+    if (i + 1 < rawSets.length && rawSets[i + 1] && String(rawSets[i + 1].set_type || rawSets[i + 1].setType || '').toUpperCase() === 'REST') {
       restAfterSec = Math.round(Number(rawSets[i + 1].duration || 0));
     }
 
@@ -348,9 +432,21 @@ function decodeGarminStrengthSets(act) {
       weightLabel: weightKg > 0 ? `${weightKg}kg` : 'Bodyweight',
       shortWeightLabel: weightKg > 0 ? `${weightKg}kg` : 'BW',
       durationSec: dur,
-      reps: s.reps != null && Number(s.reps) > 0 ? Number(s.reps) : null,
+      reps: parsedReps,
+      exerciseId: s.exercise_id ? String(s.exercise_id) : '',
       exerciseName: s.exercise_name ? String(s.exercise_name).replace(/_/g, ' ') : '',
-      restAfterSec
+      exerciseCategory: s.exercise_category || s.category ? String(s.exercise_category || s.category).replace(/_/g, ' ') : '',
+      role: s.role ? String(s.role) : '',
+      pulseSetNum: (s.pulse_set_num !== undefined && s.pulse_set_num !== null) ? Number(s.pulse_set_num) : null,
+      pulseWeightKg: (s.pulse_weight_kg !== undefined && s.pulse_weight_kg !== null) ? Number(s.pulse_weight_kg) : null,
+      pulseReps: (s.pulse_reps !== undefined && s.pulse_reps !== null) ? Number(s.pulse_reps) : null,
+      pulseTime: s.pulse_time ? String(s.pulse_time) : '',
+      weightMismatch: (s.weight_mismatch && typeof s.weight_mismatch === 'object') ? s.weight_mismatch : null,
+      restAfterSec,
+      startMs,
+      endMs,
+      startClock: startMs > 0 ? _formatClockHHMM(startMs) : '',
+      endClock: endMs > 0 ? _formatClockHHMM(endMs) : ''
     });
   }
 
@@ -364,30 +460,29 @@ function decodeGarminStrengthSets(act) {
     : 0;
   const totalTutSec = activeSets.reduce((sum, s) => sum + s.durationSec, 0);
 
-  // Build concise working weight summary (e.g. 1×20kg warm-up • 6×70kg working sets • 1×BW (203s core hold))
-  const groupOrder = [];
-  const groupMap = {};
+  // Build contiguous weight-block summary (avoids mislabeling lighter exercises as warm-ups)
+  const blocks = [];
   activeSets.forEach(s => {
     const key = s.weightKg > 0 ? String(s.weightKg) : 'BW';
-    if (!groupMap[key]) {
-      groupMap[key] = { key, weightKg: s.weightKg, count: 0, totalDur: 0 };
-      groupOrder.push(groupMap[key]);
+    const last = blocks[blocks.length - 1];
+    if (last && last.key === key) {
+      last.count += 1;
+      last.totalDur += s.durationSec;
+    } else {
+      blocks.push({ key, weightKg: s.weightKg, count: 1, totalDur: s.durationSec });
     }
-    groupMap[key].count += 1;
-    groupMap[key].totalDur += s.durationSec;
   });
 
-  const workingSummaryParts = groupOrder.map(g => {
-    if (g.weightKg === 0) {
-      return `${g.count}×BW (${g.totalDur >= 60 ? `${g.totalDur}s core hold` : `${g.totalDur}s`})`;
+  const workingSummaryParts = blocks.map((b, idx) => {
+    if (b.weightKg === 0) {
+      return `${b.count}×BW (${b.totalDur >= 60 ? `${b.totalDur}s core hold` : `${b.totalDur}s`})`;
     }
-    if (peakWeightKg > 0 && g.weightKg < peakWeightKg) {
-      return `${g.count}×${g.weightKg}kg warm-up`;
+    const nextB = blocks[idx + 1];
+    const isLeadingLightWarmup = Boolean(nextB && nextB.weightKg > 0 && b.count <= 2 && b.weightKg <= 0.78 * nextB.weightKg);
+    if (isLeadingLightWarmup) {
+      return `${b.count}×${b.weightKg}kg warm-up`;
     }
-    if (peakWeightKg > 0 && g.weightKg === peakWeightKg) {
-      return `${g.count}×${g.weightKg}kg working ${g.count === 1 ? 'set' : 'sets'}`;
-    }
-    return `${g.count}×${g.weightKg}kg`;
+    return `${b.count}×${b.weightKg}kg`;
   });
 
   return {
@@ -401,6 +496,420 @@ function decodeGarminStrengthSets(act) {
   };
 }
 window.decodeGarminStrengthSets = decodeGarminStrengthSets;
+
+function alignGarminSetsWithPulse(act, matchedPulse) {
+  const decoded = decodeGarminStrengthSets(act);
+  if (!decoded || !decoded.activeSets.length) return null;
+  if (!matchedPulse || !matchedPulse.details || typeof matchedPulse.details !== 'object') return null;
+
+  const allEx = (typeof getAllExercises === 'function') ? getAllExercises() : [];
+  const baseDateMatch = String(act.rawDate || act.date || matchedPulse.date || '').match(/\d{4}-\d{2}-\d{2}/);
+  const baseDateStr = baseDateMatch ? baseDateMatch[0] : '';
+
+  const exOrder = [];
+  const setsByExMap = {};
+  Object.entries(matchedPulse.details).forEach(([k, s]) => {
+    if (!s || !s.logged) return;
+    const exId = String(s.exercise_id || String(k || '').replace(/_\d+$/, '') || 'exercise');
+    if (!setsByExMap[exId]) {
+      const exObj = allEx.find(e => e.id === exId);
+      const exName = exObj ? exObj.name : exId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      setsByExMap[exId] = { exId, exName, items: [] };
+      exOrder.push(exId);
+    }
+    const numMatch = String(k).match(/_(\d+)$/);
+    const setNum = Number(s.set_num || (numMatch ? numMatch[1] : setsByExMap[exId].items.length + 1));
+    setsByExMap[exId].items.push({ key: k, raw: s, setNum });
+  });
+
+  const pulseSets = [];
+  let prevMinMs = 0;
+  exOrder.forEach((exId) => {
+    const grp = setsByExMap[exId];
+    grp.items.sort((a, b) => a.setNum - b.setNum);
+    grp.items.forEach((item) => {
+      const s = item.raw;
+      const win = _parsePulseLogWindowMs(s.time, baseDateStr, prevMinMs);
+      if (win.startMs > 0) prevMinMs = win.startMs;
+      const wKg = _coerceSetWeightKg(s.weight);
+      const repsVal = (s.reps !== undefined && s.reps !== null && !isNaN(Number(s.reps))) ? Math.round(Number(s.reps)) : 0;
+      pulseSets.push({
+        idx: pulseSets.length,
+        key: item.key,
+        exerciseId: exId,
+        exerciseName: grp.exName,
+        setNum: item.setNum,
+        weightKg: wKg,
+        weightLabel: wKg > 0 ? `${wKg}kg` : 'BW',
+        reps: repsVal,
+        timeStr: s.time || '',
+        logMinStartMs: win.startMs,
+        logMinEndMs: win.endMs,
+        isWarmupFlag: Boolean(s.is_warmup || s.status === 'warmup')
+      });
+    });
+  });
+
+  if (!pulseSets.length) return null;
+
+  const gSets = decoded.activeSets;
+  const N = gSets.length;
+  const M = pulseSets.length;
+
+  function _pairScore(g, p) {
+    let score = 0;
+    if (g.endMs > 0 && p.logMinStartMs > 0) {
+      let distMs = 0;
+      if (g.endMs < p.logMinStartMs) distMs = p.logMinStartMs - g.endMs;
+      else if (g.endMs > p.logMinEndMs) distMs = g.endMs - p.logMinEndMs;
+      const distSec = distMs / 1000;
+      if (distSec > 900) return -Infinity;
+      if (distSec <= 15) score += 55;
+      else if (distSec <= 45) score += 48;
+      else if (distSec <= 90) score += 38;
+      else if (distSec <= 180) score += 24;
+      else if (distSec <= 360) score += 10;
+      else score += -5 - (distSec - 360) / 30;
+      if (g.startMs > 0 && p.logMinEndMs < (g.startMs - 30000)) {
+        score -= 6;
+      }
+    } else {
+      score += 20;
+    }
+
+    if (g.weightKg === 0 && p.weightKg === 0) {
+      score += 30;
+    } else if (g.weightKg > 0 && p.weightKg > 0) {
+      const diff = Math.abs(g.weightKg - p.weightKg);
+      const ratio = Math.min(g.weightKg, p.weightKg) / Math.max(g.weightKg, p.weightKg);
+      if (diff <= 0.5) score += 40;
+      else if (diff <= 2.5) score += 26;
+      else if (ratio >= 0.85) score += 14;
+      else if (ratio >= 0.65) score += 2;
+      else score -= 28;
+    } else {
+      score -= 15;
+    }
+
+    if (g.reps !== null && p.reps > 0) {
+      const repDiff = Math.abs(g.reps - p.reps);
+      if (repDiff === 0) score += 20;
+      else if (repDiff === 1) score += 12;
+      else if (repDiff === 2) score += 5;
+      else if (repDiff >= 5) score -= 6;
+    }
+
+    const catHint = _garminCategoryMatchesPulseEx(`${g.exerciseCategory} ${g.exerciseName}`, p.exerciseId);
+    if (catHint > 0) score += 12;
+    else if (catHint < 0) score -= 8;
+
+    return score;
+  }
+
+  // Monotonic DP: dp[i][j] = max score aligning gSets[0..i-1] with pulseSets[0..j-1]
+  const SKIP_PULSE_PENALTY = -18;
+  const dp = Array.from({ length: N + 1 }, () => new Array(M + 1).fill(0));
+  const choice = Array.from({ length: N + 1 }, () => new Array(M + 1).fill(0)); // 1=skipG, 2=skipP, 3=match
+
+  for (let i = 1; i <= N; i++) {
+    dp[i][0] = 0;
+    choice[i][0] = 1;
+  }
+  for (let j = 1; j <= M; j++) {
+    dp[0][j] = dp[0][j - 1] + SKIP_PULSE_PENALTY;
+    choice[0][j] = 2;
+  }
+
+  for (let i = 1; i <= N; i++) {
+    for (let j = 1; j <= M; j++) {
+      const sSkipG = dp[i - 1][j];
+      const sSkipP = dp[i][j - 1] + SKIP_PULSE_PENALTY;
+      const ps = _pairScore(gSets[i - 1], pulseSets[j - 1]);
+      const sMatch = ps > 0 ? (dp[i - 1][j - 1] + ps) : -Infinity;
+
+      if (sMatch >= sSkipG && sMatch >= sSkipP) {
+        dp[i][j] = sMatch;
+        choice[i][j] = 3;
+      } else if (sSkipG >= sSkipP) {
+        dp[i][j] = sSkipG;
+        choice[i][j] = 1;
+      } else {
+        dp[i][j] = sSkipP;
+        choice[i][j] = 2;
+      }
+    }
+  }
+
+  const matchedByGarminIdx = new Array(N).fill(null);
+  const unmatchedPulse = [];
+  let i = N;
+  let j = M;
+  while (i > 0 || j > 0) {
+    const ch = choice[i][j];
+    if (i > 0 && j > 0 && ch === 3) {
+      matchedByGarminIdx[i - 1] = pulseSets[j - 1];
+      i--;
+      j--;
+    } else if (i > 0 && (j === 0 || ch === 1)) {
+      i--;
+    } else {
+      unmatchedPulse.unshift(pulseSets[j - 1]);
+      j--;
+    }
+  }
+
+  // Group matched sets by Pulse exercise
+  const groupByExId = {};
+  const orderedGroups = [];
+  exOrder.forEach((exId) => {
+    const grp = {
+      exerciseId: exId,
+      exerciseName: setsByExMap[exId].exName,
+      warmupSets: [],
+      workingSets: [],
+      extraSets: [],
+      firstMatchedIdx: Infinity,
+      lastMatchedIdx: -1,
+      workingWeightKg: 0,
+      firstPulseIsWarmup: setsByExMap[exId].items[0] ? Boolean(setsByExMap[exId].items[0].raw.is_warmup || setsByExMap[exId].items[0].raw.status === 'warmup') : false
+    };
+    groupByExId[exId] = grp;
+    orderedGroups.push(grp);
+  });
+
+  const annotatedSets = gSets.map((g, gi) => {
+    const p = matchedByGarminIdx[gi];
+    if (!p) {
+      return { ...g, garminIdx: gi, role: 'unmatched', pulseSet: null, weightMismatch: null, repDelta: null };
+    }
+    const weightMismatch = (g.weightKg > 0 && p.weightKg > 0 && Math.abs(g.weightKg - p.weightKg) > 2.5)
+      ? { garminKg: g.weightKg, pulseKg: p.weightKg }
+      : null;
+    const repDelta = (g.reps !== null && p.reps > 0) ? (g.reps - p.reps) : null;
+    const item = { ...g, garminIdx: gi, role: 'working', pulseSet: p, weightMismatch, repDelta };
+    const grp = groupByExId[p.exerciseId];
+    if (grp) {
+      grp.workingSets.push(item);
+      if (gi < grp.firstMatchedIdx) grp.firstMatchedIdx = gi;
+      if (gi > grp.lastMatchedIdx) grp.lastMatchedIdx = gi;
+    }
+    return item;
+  });
+
+  orderedGroups.forEach((grp) => {
+    const posWeights = grp.workingSets.map(x => x.weightKg).filter(w => w > 0);
+    if (posWeights.length > 0) {
+      const sorted = [...posWeights].sort((a, b) => a - b);
+      grp.workingWeightKg = sorted[Math.floor(sorted.length / 2)];
+    } else if (grp.workingSets.length > 0) {
+      grp.workingWeightKg = grp.workingSets[0].pulseSet.weightKg;
+    }
+  });
+
+  const unmatchedSets = [];
+  annotatedSets.forEach((item, gi) => {
+    if (item.pulseSet) return;
+    // Check if strictly inside an exercise's working span at matching load -> extra_set
+    const enclosingGrp = orderedGroups.find(grp =>
+      grp.workingSets.length > 0 &&
+      gi > grp.firstMatchedIdx &&
+      gi < grp.lastMatchedIdx &&
+      (grp.workingWeightKg === 0 || Math.abs(item.weightKg - grp.workingWeightKg) <= 2.5)
+    );
+    if (enclosingGrp) {
+      item.role = 'extra_set';
+      item.exerciseId = enclosingGrp.exerciseId;
+      item.exerciseName = enclosingGrp.exerciseName;
+      enclosingGrp.extraSets.push(item);
+      return;
+    }
+
+    // Check if immediately preceding an exercise's first matched set (no other exercise matched between gi and firstMatchedIdx)
+    const nextGrp = orderedGroups
+      .filter(grp => grp.workingSets.length > 0 && grp.firstMatchedIdx > gi)
+      .sort((a, b) => a.firstMatchedIdx - b.firstMatchedIdx)[0];
+    if (nextGrp) {
+      const hasInterveningMatch = annotatedSets.slice(gi + 1, nextGrp.firstMatchedIdx).some(s => Boolean(s.pulseSet));
+      const isLighterLoad = (item.weightKg > 0 && nextGrp.workingWeightKg > 0 && item.weightKg <= 0.78 * nextGrp.workingWeightKg) ||
+        (item.weightKg === 0 && nextGrp.workingWeightKg > 0);
+      if (!hasInterveningMatch && isLighterLoad) {
+        item.role = 'warmup';
+        item.exerciseId = nextGrp.exerciseId;
+        item.exerciseName = nextGrp.exerciseName;
+        nextGrp.warmupSets.push(item);
+        return;
+      }
+    }
+
+    item.role = 'unmatched';
+    unmatchedSets.push(item);
+  });
+
+  const activeGroups = orderedGroups.filter(grp => grp.warmupSets.length > 0 || grp.workingSets.length > 0 || grp.extraSets.length > 0);
+  const summaryParts = activeGroups.map((grp) => {
+    const wuCount = grp.warmupSets.length;
+    const wkList = grp.workingSets.concat(grp.extraSets);
+    const wkCount = wkList.length;
+    const wkWeight = grp.workingWeightKg > 0 ? `${grp.workingWeightKg}kg` : 'BW';
+    const repsList = grp.workingSets.map(x => (x.pulseSet && x.pulseSet.reps > 0) ? x.pulseSet.reps : null).filter(r => r !== null);
+    const repsSuffix = repsList.length ? ` (${repsList.join(',')}r)` : '';
+    const parts = [];
+    if (wuCount > 0) parts.push(`${wuCount} WU`);
+    if (wkCount > 0) parts.push(`${wkCount}×${wkWeight}${repsSuffix}`);
+    return `${grp.exerciseName}: ${parts.join(' + ')}`;
+  });
+
+  // Ensure every working annotatedSet carries its resolved exerciseName
+  annotatedSets.forEach((item) => {
+    if (item.pulseSet) {
+      item.exerciseId = item.pulseSet.exerciseId;
+      item.exerciseName = item.pulseSet.exerciseName;
+    }
+  });
+
+  const matchedCount = annotatedSets.filter(s => s.role === 'working').length;
+  const warmupCount = annotatedSets.filter(s => s.role === 'warmup').length;
+  const extraCount = annotatedSets.filter(s => s.role === 'extra_set').length;
+  const hasPerSetGarminReps = annotatedSets.some(s => s.reps !== null);
+  const perSetRepSum = annotatedSets.reduce((sum, s) => sum + (s.reps || 0), 0);
+  const garminTotalReps = Number(act.total_reps || 0) > 0
+    ? Number(act.total_reps)
+    : (hasPerSetGarminReps ? perSetRepSum : null);
+  const pulseTotalReps = pulseSets.reduce((sum, p) => sum + (p.reps || 0), 0);
+  const inferredWarmupReps = (garminTotalReps !== null && garminTotalReps > pulseTotalReps && (warmupCount + extraCount + unmatchedSets.length) > 0)
+    ? (garminTotalReps - pulseTotalReps)
+    : 0;
+
+  return {
+    decoded,
+    annotatedSets,
+    exerciseGroups: activeGroups,
+    unmatchedSets,
+    unmatchedPulse,
+    matchedCount,
+    warmupCount,
+    extraCount,
+    hasPerSetGarminReps,
+    garminTotalReps,
+    pulseTotalReps,
+    inferredWarmupReps,
+    matchedSummary: summaryParts.join(' • ')
+  };
+}
+window.alignGarminSetsWithPulse = alignGarminSetsWithPulse;
+
+function _buildAlignedFromBackendEnrichedSets(act, decoded) {
+  if (!decoded || !Array.isArray(decoded.activeSets) || !decoded.activeSets.length) return null;
+  const hasEnriched = decoded.activeSets.some(s => s.exerciseId && s.role);
+  if (!hasEnriched) return null;
+
+  const groupMap = {};
+  const orderedGroups = [];
+  const unmatchedSets = [];
+  const annotatedSets = [];
+
+  decoded.activeSets.forEach((s, gi) => {
+    const exId = s.exerciseId || '';
+    const exName = s.exerciseName || (exId ? exId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '');
+    const role = s.role || (exId ? 'working' : 'unmatched');
+
+    let pulseSet = null;
+    let repDelta = null;
+    if (role === 'working' && exId) {
+      const pReps = s.pulseReps !== null ? s.pulseReps : (s.reps !== null ? s.reps : 0);
+      pulseSet = {
+        exerciseId: exId,
+        exerciseName: exName,
+        setNum: s.pulseSetNum || 1,
+        weightKg: s.pulseWeightKg !== null ? s.pulseWeightKg : s.weightKg,
+        reps: pReps,
+        timeStr: s.pulseTime || ''
+      };
+      if (s.reps !== null && pReps > 0) {
+        repDelta = s.reps - pReps;
+      }
+    }
+
+    const normMismatch = s.weightMismatch
+      ? {
+          garminKg: s.weightMismatch.garminKg ?? s.weightMismatch.garmin_kg,
+          pulseKg: s.weightMismatch.pulseKg ?? s.weightMismatch.pulse_kg
+        }
+      : null;
+
+    const item = {
+      ...s,
+      garminIdx: gi,
+      role,
+      exerciseId: exId,
+      exerciseName: exName,
+      pulseSet,
+      repDelta,
+      weightMismatch: normMismatch
+    };
+    annotatedSets.push(item);
+
+    if (exId && (role === 'warmup' || role === 'working' || role === 'extra_set')) {
+      if (!groupMap[exId]) {
+        groupMap[exId] = {
+          exerciseId: exId,
+          exerciseName: exName,
+          warmupSets: [],
+          workingSets: [],
+          extraSets: [],
+          workingWeightKg: 0
+        };
+        orderedGroups.push(groupMap[exId]);
+      }
+      if (role === 'warmup') groupMap[exId].warmupSets.push(item);
+      else if (role === 'extra_set') groupMap[exId].extraSets.push(item);
+      else groupMap[exId].workingSets.push(item);
+    } else {
+      unmatchedSets.push(item);
+    }
+  });
+
+  const summaryParts = orderedGroups.map((grp) => {
+    const posW = grp.workingSets.map(x => x.weightKg).filter(w => w > 0).sort((a, b) => a - b);
+    grp.workingWeightKg = posW.length ? posW[Math.floor(posW.length / 2)] : (grp.workingSets[0]?.pulseSet?.weightKg || 0);
+    const wuCount = grp.warmupSets.length;
+    const wkCount = grp.workingSets.length + grp.extraSets.length;
+    const wkWeight = grp.workingWeightKg > 0 ? `${grp.workingWeightKg}kg` : 'BW';
+    const repsList = grp.workingSets.map(x => (x.pulseSet && x.pulseSet.reps > 0) ? x.pulseSet.reps : null).filter(r => r !== null);
+    const repsSuffix = repsList.length ? ` (${repsList.join(',')}r)` : '';
+    const parts = [];
+    if (wuCount > 0) parts.push(`${wuCount} WU`);
+    if (wkCount > 0) parts.push(`${wkCount}×${wkWeight}${repsSuffix}`);
+    return `${grp.exerciseName}: ${parts.join(' + ')}`;
+  });
+
+  const matchedCount = annotatedSets.filter(s => s.role === 'working').length;
+  const warmupCount = annotatedSets.filter(s => s.role === 'warmup').length;
+  const extraCount = annotatedSets.filter(s => s.role === 'extra_set').length;
+  const hasPerSetGarminReps = annotatedSets.some(s => s.reps !== null);
+  const perSetRepSum = annotatedSets.reduce((sum, s) => sum + (s.reps || 0), 0);
+  const garminTotalReps = Number(act.total_reps || 0) > 0 ? Number(act.total_reps) : (hasPerSetGarminReps ? perSetRepSum : null);
+  const pulseTotalReps = annotatedSets.reduce((sum, s) => sum + (s.pulseSet ? (s.pulseSet.reps || 0) : 0), 0);
+  const inferredWarmupReps = (garminTotalReps !== null && garminTotalReps > pulseTotalReps && (warmupCount + extraCount + unmatchedSets.length) > 0)
+    ? (garminTotalReps - pulseTotalReps)
+    : 0;
+
+  return {
+    decoded,
+    annotatedSets,
+    exerciseGroups: orderedGroups,
+    unmatchedSets,
+    unmatchedPulse: [],
+    matchedCount,
+    warmupCount,
+    extraCount,
+    hasPerSetGarminReps,
+    garminTotalReps,
+    pulseTotalReps,
+    inferredWarmupReps,
+    matchedSummary: act.matched_exercises_summary || summaryParts.join(' • ')
+  };
+}
 
 // RENDER COMPLETED WORKOUTS & PHYSIOLOGICAL BENEFITS LIST (EGM OVERHAUL WITH GARMIN CHARTS)
 function renderHistoryList() {
@@ -515,26 +1024,147 @@ function renderHistoryList() {
     }
 
     const decodedSets = decodeGarminStrengthSets(act);
+    const alignedSets = (decodedSets && matchedPulse)
+      ? alignGarminSetsWithPulse(act, matchedPulse)
+      : (decodedSets ? _buildAlignedFromBackendEnrichedSets(act, decodedSets) : null);
     let garminStrengthSetsHtml = '';
     if (decodedSets) {
-      const peakBadge = decodedSets.peakWeightKg > 0
-        ? `Peak Load ${decodedSets.peakWeightKg}kg (${decodedSets.peakWeightCount} working ${decodedSets.peakWeightCount === 1 ? 'set' : 'sets'})`
-        : 'Bodyweight / Core';
       const avgRestBadge = decodedSets.avgRestSec > 0 ? ` • Avg Rest ${decodedSets.avgRestSec}s` : '';
-      const pulseCrossRefHtml = pulseLoggedSummaries.length > 0
-        ? `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
+      let headerMeta = '';
+      let summaryLine = decodedSets.workingSummary;
+      let setsGridHtml = '';
+
+      if (alignedSets) {
+        const matchParts = [`${alignedSets.matchedCount} Matched`];
+        if (alignedSets.warmupCount > 0) {
+          matchParts.push(`${alignedSets.warmupCount} Warm-up${alignedSets.warmupCount === 1 ? '' : 's'}`);
+        }
+        if (alignedSets.extraCount > 0) {
+          matchParts.push(`${alignedSets.extraCount} Extra`);
+        }
+        headerMeta = `${decodedSets.activeCount} Active Sets • ${matchParts.join(' + ')}${avgRestBadge}`;
+        summaryLine = alignedSets.matchedSummary || decodedSets.workingSummary;
+
+        const renderAlignedSetCard = (s, fallbackExName = '') => {
+          const clockRange = (s.startClock && s.endClock) ? `${s.startClock}–${s.endClock}` : '';
+          const restTxt = s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : '';
+          const setExName = s.exerciseName || fallbackExName || (s.pulseSet && s.pulseSet.exerciseName) || '';
+          if (s.role === 'warmup') {
+            return `
+<div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.32); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:4px; flex-wrap:wrap;">
+<strong style="color:#fbbf24;">🔥 ${setExName ? `${esc(setExName)} • ` : ''}WARM-UP (G${s.setNum}): ${s.weightKg === 0 ? 'BW' : esc(s.weightLabel)}</strong>
+${s.reps !== null ? `<span style="color:#fbbf24; font-weight:700;">⌚ ${esc(s.reps)}r</span>` : `<span style="color:#fbbf24; font-weight:700;">Unlogged</span>`}
+</div>
+<div style="color:var(--text-muted); margin-top:2px;">
+${clockRange ? `${esc(clockRange)} • ` : ''}${s.durationSec}s TUT${restTxt}
+</div>
+</div>`;
+          }
+          if (s.pulseSet) {
+            const p = s.pulseSet;
+            const repPill = s.reps !== null
+              ? (s.repDelta === 0
+                ? `<span style="color:#10b981; font-weight:700;">⌚ ${esc(s.reps)}r ✓</span>`
+                : `<span style="color:#fbbf24; font-weight:700;">⌚ ${esc(s.reps)}r vs 📱 ${esc(p.reps)}r</span>`)
+              : '';
+            const mismatchPill = s.weightMismatch
+              ? `<div style="margin-top:2px; color:#fbbf24; font-weight:700;">⚠️ Watch ${esc(s.weightMismatch.garminKg)}kg vs App ${esc(s.weightMismatch.pulseKg)}kg</div>`
+              : '';
+            return `
+<div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.24); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:4px; flex-wrap:wrap;">
+<strong style="color:#fff;">${setExName ? `${esc(setExName)} • ` : ''}Set ${esc(p.setNum)} (G${s.setNum}): ${s.weightKg === 0 ? 'BW' : esc(s.weightLabel)} × ${esc(p.reps)}r</strong>
+${repPill}
+</div>
+<div style="color:var(--text-muted); margin-top:2px;">
+${clockRange ? `${esc(clockRange)} • ` : ''}${s.durationSec}s TUT${restTxt}${p.timeStr ? ` • 📱 ${esc(p.timeStr)}` : ''}
+</div>
+${mismatchPill}
+</div>`;
+          }
+          return `
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+<strong style="color:#cbd5e1;">${setExName ? `${esc(setExName)} • ` : ''}${s.role === 'extra_set' ? 'Extra Set' : 'Unmatched'} (G${s.setNum}): ${s.weightKg === 0 ? 'BW Hold' : esc(s.weightLabel)}</strong>
+${s.reps !== null ? `<span style="color:var(--primary); font-weight:700;">⌚ ${esc(s.reps)}r</span>` : ''}
+</div>
+<div style="color:var(--text-muted); margin-top:2px;">
+${clockRange ? `${esc(clockRange)} • ` : ''}${s.durationSec}s TUT${restTxt}
+</div>
+</div>`;
+        };
+
+        const groupBlocksHtml = alignedSets.exerciseGroups.map(grp => {
+          const allGrpSets = [...grp.warmupSets, ...grp.workingSets, ...grp.extraSets]
+            .sort((a, b) => a.garminIdx - b.garminIdx);
+          return `
+<div style="margin-bottom:8px;">
+<div style="font-size:10.5px; font-weight:800; color:#e2e8f0; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+<span>🏋️ ${esc(grp.exerciseName)}</span>
+<span style="font-size:9.5px; color:var(--text-muted); font-family:var(--font-mono);">${grp.warmupSets.length > 0 ? `${grp.warmupSets.length} WU + ` : ''}${grp.workingSets.length + grp.extraSets.length} working</span>
+</div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(185px, 1fr)); gap:5px;">
+${allGrpSets.map(s => renderAlignedSetCard(s, grp.exerciseName)).join('')}
+</div>
+</div>`;
+        }).join('');
+
+        const unmatchedHtml = alignedSets.unmatchedSets.length > 0 ? `
+<div style="margin-bottom:6px;">
+<div style="font-size:10px; font-weight:800; color:var(--text-muted); margin-bottom:4px;">Other Watch Sets</div>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(185px, 1fr)); gap:5px;">
+${alignedSets.unmatchedSets.map(renderAlignedSetCard).join('')}
+</div>
+</div>` : '';
+
+        const repReconParts = [];
+        if (alignedSets.garminTotalReps !== null) repReconParts.push(`⌚ ${alignedSets.garminTotalReps} Garmin reps`);
+        repReconParts.push(`📱 ${alignedSets.pulseTotalReps} Pulse reps`);
+        if (alignedSets.inferredWarmupReps > 0) {
+          repReconParts.push(`🔥 ~${alignedSets.inferredWarmupReps} warm-up/unlogged reps`);
+        }
+        const repReconHtml = `
+<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5; font-family:var(--font-mono);">
+<strong style="color:#10b981;">🔗 Rep Reconciliation:</strong> ${esc(repReconParts.join(' • '))}
+</div>`;
+
+        setsGridHtml = `${groupBlocksHtml}${unmatchedHtml}${repReconHtml}`;
+      } else {
+        const peakBadge = decodedSets.peakWeightKg > 0
+          ? `Peak Load ${decodedSets.peakWeightKg}kg (${decodedSets.peakWeightCount} working ${decodedSets.peakWeightCount === 1 ? 'set' : 'sets'})`
+          : 'Bodyweight / Core';
+        headerMeta = `${decodedSets.activeCount} Active Sets • ${peakBadge}${avgRestBadge}`;
+        const pulseCrossRefHtml = pulseLoggedSummaries.length > 0
+          ? `<div style="margin-top:6px; padding:6px 8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; font-size:10.5px; color:#d1fae5;">
 <strong style="color:#10b981;">🔗 Pulse Rep Cross-Reference:</strong> ${pulseLoggedSummaries.join(' • ')}
 </div>`
-        : '';
+          : '';
+        setsGridHtml = `
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
+                ${decodedSets.activeSets.map(s => `
+<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : esc(s.weightLabel)}</strong>
+                      ${s.reps !== null ? `<span style="color:var(--primary); font-weight:700;">${esc(s.reps)} reps</span>` : ''}
+</div>
+<div style="color:var(--text-muted); margin-top:2px;">
+                      ${s.startClock ? `${esc(s.startClock)} • ` : ''}${s.durationSec}s TUT${s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : ''}
+</div>
+</div>
+                `).join('')}
+</div>
+              ${pulseCrossRefHtml}`;
+      }
 
       garminStrengthSetsHtml = `
 <div style="margin:6px 0 8px; background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.24); border-radius:9px; padding:8px 10px;">
           
 <div style="font-size:10.5px; font-weight:800; color:var(--cyan); letter-spacing:0.02em;">
-            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${decodedSets.activeCount} Active Sets • ${esc(peakBadge)}${esc(avgRestBadge)}</span>
+            ⌚ GARMIN FĒNIX 8 SET TELEMETRY: <span style="color:#fff;">${esc(headerMeta)}</span>
 </div>
 <div style="font-size:10px; color:var(--text-muted); margin-top:3px; font-family:var(--font-mono);">
-            ${esc(decodedSets.workingSummary)}
+            ${esc(summaryLine)}
 </div>
           
 <details style="margin-top:6px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.07); border-radius:7px; overflow:hidden;">
@@ -543,20 +1173,7 @@ function renderHistoryList() {
 <span style="color:var(--text-muted);">▾</span>
 </summary>
 <div style="padding:8px 9px; border-top:1px solid rgba(255,255,255,0.06);">
-<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:5px;">
-                ${decodedSets.activeSets.map(s => `
-<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:5px 7px; font-size:10px; font-family:var(--font-mono);">
-<div style="display:flex; justify-content:space-between; align-items:center;">
-<strong style="color:#fff;">Set ${s.setNum}: ${s.weightKg === 0 ? 'BW Hold' : esc(s.weightLabel)}</strong>
-                      ${s.reps ? `<span style="color:var(--primary); font-weight:700;">${esc(s.reps)} reps</span>` : ''}
-</div>
-<div style="color:var(--text-muted); margin-top:2px;">
-                      ${s.durationSec}s TUT${s.restAfterSec > 0 ? ` • ${s.restAfterSec}s Rest` : ''}
-</div>
-</div>
-                `).join('')}
-</div>
-              ${pulseCrossRefHtml}
+              ${setsGridHtml}
 </div>
 </details>
 </div>

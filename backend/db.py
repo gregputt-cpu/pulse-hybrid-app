@@ -272,6 +272,49 @@ def _init_db_unlocked() -> None:
                 (uk_now().isoformat(),),
             )
 
+        cursor.execute("SELECT value FROM kv_store WHERE key = 'migrated_repeated_warmup_sets_v1'")
+        if cursor.fetchone() is None:
+            warmup_rows = cursor.execute(
+                """
+                SELECT id, timestamp, exercise_id, weight
+                FROM strength_logs
+                WHERE COALESCE(is_warmup, 0) = 1 AND weight IS NOT NULL AND weight > 0
+                ORDER BY id ASC
+                """
+            ).fetchall()
+            clusters: Dict[Tuple[str, str], List[Tuple[int, float, datetime]]] = {}
+            for wr in warmup_rows:
+                dt = _parse_uk_ts(wr["timestamp"])
+                if dt is None:
+                    continue
+                ex_id = str(wr["exercise_id"] or "")
+                if not ex_id:
+                    continue
+                clusters.setdefault((ex_id, dt.date().isoformat()), []).append((int(wr["id"]), float(wr["weight"]), dt))
+
+            promote_ids: List[int] = []
+            for items in clusters.values():
+                for idx_a, (id_a, w_a, dt_a) in enumerate(items):
+                    has_cluster_mate = any(
+                        idx_b != idx_a
+                        and abs(w_a - w_b) <= 0.5
+                        and abs((dt_a - dt_b).total_seconds()) <= 2700
+                        for idx_b, (_, w_b, dt_b) in enumerate(items)
+                    )
+                    if has_cluster_mate:
+                        promote_ids.append(id_a)
+
+            if promote_ids:
+                placeholders = ",".join("?" for _ in promote_ids)
+                cursor.execute(
+                    f"UPDATE strength_logs SET is_warmup = 0 WHERE id IN ({placeholders})",
+                    tuple(promote_ids),
+                )
+            cursor.execute(
+                "INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES ('migrated_repeated_warmup_sets_v1', '1', ?)",
+                (uk_now().isoformat(),),
+            )
+
 
 def _opt_finite_round(val: Any, digits: int = 2) -> Optional[float]:
     if val is None or isinstance(val, bool):
@@ -488,6 +531,41 @@ def log_strength_set(
         cursor = conn.cursor()
         cursor.execute(query, (timestamp, exercise_id, float(weight), int(reps), float(e1rm), 1 if is_warmup else 0))
         return cursor.lastrowid
+
+
+def promote_recent_warmup_sets(
+    exercise_id: str,
+    weight: float,
+    within_minutes: int = 45,
+    conn: Optional[sqlite3.Connection] = None,
+) -> int:
+    """Promote recent same-weight warmup rows for exercise_id to working sets (is_warmup=0)."""
+    if not exercise_id:
+        return 0
+    _ensure_initialized()
+    cutoff_dt = uk_now() - timedelta(minutes=max(1, int(within_minutes)))
+    with _managed_conn(conn) as active_conn:
+        rows = active_conn.execute(
+            """
+            SELECT id, timestamp
+            FROM strength_logs
+            WHERE exercise_id = ? AND COALESCE(is_warmup, 0) = 1 AND ABS(weight - ?) <= 0.5
+            """,
+            (exercise_id, float(weight)),
+        ).fetchall()
+        ids_to_promote = []
+        for r in rows:
+            dt = _parse_uk_ts(r["timestamp"])
+            if dt is not None and dt >= cutoff_dt:
+                ids_to_promote.append(int(r["id"]))
+        if not ids_to_promote:
+            return 0
+        placeholders = ",".join("?" for _ in ids_to_promote)
+        cur = active_conn.execute(
+            f"UPDATE strength_logs SET is_warmup = 0 WHERE id IN ({placeholders})",
+            tuple(ids_to_promote),
+        )
+        return cur.rowcount or len(ids_to_promote)
 
 
 def get_strength_history(days: int = 30, conn: Optional[sqlite3.Connection] = None) -> Dict[str, List[Dict[str, Any]]]:

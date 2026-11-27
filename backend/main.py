@@ -39,6 +39,7 @@ from garmin_sync_service import GarminSyncService
 from mnd_sync_service import MyNetDiarySyncService
 from renpho_sync_service import RenphoSyncService
 import db
+import set_matcher
 import state_store
 import time_utils
 from time_utils import uk_now, uk_today_str
@@ -284,6 +285,7 @@ class SetLogPayload(BaseModel):
     target_reps: Optional[Union[int, str]] = None
     logged_weight: Optional[Union[float, int, str]] = None
     logged_reps: Optional[Union[int, float, str]] = None
+    is_warmup: Optional[bool] = None
     client_event_id: Optional[str] = None
     id: Optional[str] = None
 
@@ -1374,7 +1376,10 @@ def sync_set(payload: SetLogPayload):
             prev_best = round(max(priors), 1) if priors else None
 
         eff_target_w = target_w if (target_w is not None and target_w > 0) else _coerce_weight_kg(existing_sp.get("weight"))
-        is_warmup = bool(eff_target_w is not None and eff_target_w > 0 and w > 0 and w < 0.75 * eff_target_w)
+        if payload.is_warmup is not None:
+            is_warmup = bool(payload.is_warmup)
+        else:
+            is_warmup = bool(eff_target_w is not None and eff_target_w > 0 and w > 0 and w < 0.75 * eff_target_w)
         if is_warmup:
             db.log_strength_set(payload.exercise_id, w, r, e1rm, is_warmup=True)
             return {
@@ -1387,6 +1392,9 @@ def sync_set(payload: SetLogPayload):
                     "prev_best_e1rm": prev_best,
                 },
             }
+
+        if payload.is_warmup is False and w > 0:
+            db.promote_recent_warmup_sets(payload.exercise_id, w, within_minutes=45)
 
         sp = existing_sp
         if payload.logged_weight is not None:
@@ -1477,6 +1485,27 @@ def sync_session(payload: Dict[str, Any]):
             history.insert(0, entry)
             state["session_history"] = history[:50]
             state["last_workout_session"] = entry
+            garmin_state = state.get("garmin") or {}
+            live_weight_kg = _finite_pos_weight(state)
+            seen_act_objs = set()
+            for act in list(garmin_state.get("today_activities") or []) + list((garmin_state.get("recent_activities") or [])[:10]):
+                if not isinstance(act, dict) or id(act) in seen_act_objs:
+                    continue
+                seen_act_objs.add(id(act))
+                if str(act.get("date") or "").startswith(date_str_day) and isinstance(act.get("exercise_sets"), list):
+                    if set_matcher.enrich_garmin_activity_with_pulse_sets(act, [entry]) and "strength" in str(act.get("name") or "").lower():
+                        bio_title = f"{act.get('sub_title') or ''} {act.get('matched_exercises_summary') or ''}".strip()
+                        act["benefits"] = benefits_engine.generate_benefits(
+                            act.get("name") or "Strength_training",
+                            bio_title,
+                            act.get("duration_min") or 0,
+                            act.get("calories") or 0,
+                            act.get("avg_hr") or 0,
+                            act.get("max_hr") or 0,
+                            act.get("aerobic_te") or 0.0,
+                            act.get("anaerobic_te") or 0.0,
+                            weight_kg=live_weight_kg,
+                        )
             save_live_state(state)
 
     return {"success": True, "status": "success", "session": entry}
