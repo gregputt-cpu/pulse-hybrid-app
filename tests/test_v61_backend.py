@@ -720,6 +720,42 @@ def test_4_mnd_and_renpho_sync() -> None:
     assert updated_bg["mnd_logged"]["calories"] == 2111
     assert updated_bg["mnd_logged"]["water_l"] == 2.4
 
+    # 3b. Comma-formatted numbers (e.g. '1,168' kcal / mg sodium) in MND response
+    assert mnd_sync_service._parse_mnd_float("1,168") == 1168.0
+    assert mnd_sync_service._parse_mnd_float("1,234.5 mg") == 1234.5
+    assert mnd_sync_service._parse_mnd_float(None, 0.0) == 0.0
+    comma_meals_payload = {
+        "meals": [
+            {
+                "mealTypeId": 1,
+                "foodEntries": [
+                    {
+                        "calories": "1,168",
+                        "foodLabel": {
+                            "cleanFoodName": "High Protein Feast",
+                            "protein": {"values": {"rawValue": "42.5"}},
+                            "totalCarbs": {"values": {"rawValue": "1,020"}},
+                            "totalFat": {"values": {"rawValue": "30"}},
+                            "fiber": {"values": {"rawValue": "12"}},
+                            "sodium": {"values": {"rawValue": "1,168"}},
+                        },
+                    }
+                ],
+            }
+        ],
+        "appleData": {"consumedCalories": "1,168"},
+    }
+    comma_totals, comma_meals = mnd_svc._parse_mnd_response(
+        comma_meals_payload,
+        {"totalSodium": "2,350", "water": "2.5"},
+    )
+    assert comma_totals["calories"] == 1168
+    assert comma_totals["protein"] == 42
+    assert comma_totals["carbs"] == 1020
+    assert comma_totals["sodium"] == 2350
+    assert comma_totals["water"] == 2.5
+    assert comma_meals["breakfast"]["items"][0]["cals"] == 1168
+
     # 4. overwrite_nulls=True scoped to source='mnd_estimated'
     db.upsert_daily_biometrics(yesterday_str, sleep_score=78, resting_hr=52, body_battery=80, training_readiness=75, source="mnd_estimated")
     db.upsert_daily_biometrics(yesterday_str, sleep_score=None, resting_hr=49, body_battery=None, training_readiness=None, source="garmin_oauth", overwrite_nulls=True)

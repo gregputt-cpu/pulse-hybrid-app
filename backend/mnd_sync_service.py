@@ -52,6 +52,32 @@ DEFAULT_HEADERS = {
     'Referer': 'https://www.mynetdiary.com/logonPage.do'
 }
 
+
+def _parse_mnd_float(val: Any, default: float = 0.0) -> float:
+    """Parse MyNetDiary numbers safely, including comma-formatted strings like '1,168' or unit-suffixed strings."""
+    if val is None or isinstance(val, bool):
+        return default
+    if isinstance(val, (int, float)):
+        f = float(val)
+        return f if math.isfinite(f) else default
+    s = str(val).strip()
+    if not s:
+        return default
+    cleaned = s.replace(',', '')
+    try:
+        f = float(cleaned)
+        return f if math.isfinite(f) else default
+    except (ValueError, TypeError):
+        m = re.search(r'-?\d+(?:\.\d+)?', cleaned)
+        if m:
+            try:
+                f = float(m.group(0))
+                return f if math.isfinite(f) else default
+            except (ValueError, TypeError):
+                pass
+        return default
+
+
 class MyNetDiarySyncService:
     def __init__(self):
         try:
@@ -338,10 +364,10 @@ class MyNetDiarySyncService:
         recent_days = sorted(list(set(list(by_id.get(103, {}).keys()) + [target_date_str])), reverse=True)[:5]
         bridged_activities = []
         for d_str in recent_days:
-            d_active_cals = int(round(get_val(103, d_str) or 0))
-            d_active_mins = float(get_val(107, d_str) or 0)
-            d_dist_miles = float(get_val(114, d_str) or 0)
-            d_steps = int(round(get_val(61, d_str) or 0))
+            d_active_cals = int(round(_parse_mnd_float(get_val(103, d_str))))
+            d_active_mins = _parse_mnd_float(get_val(107, d_str))
+            d_dist_miles = _parse_mnd_float(get_val(114, d_str))
+            d_steps = int(round(_parse_mnd_float(get_val(61, d_str))))
             ex_notes = exercises_ByDate.get(d_str, '')
 
             # Check if ex_notes contains workout calories, e.g. "(including 581 workout calories)"
@@ -373,10 +399,7 @@ class MyNetDiarySyncService:
                     m_c = re.search(r'(\d+)\s*(?:cal|calories|kcal)', str(it.get('amountInputString', '')) + ' ' + str(it.get('notes', '')))
                     cals = int(m_c.group(1)) if m_c else 0
                 else:
-                    try:
-                        cals = int(round(float(cals)))
-                    except (ValueError, TypeError):
-                        cals = 0
+                    cals = int(round(_parse_mnd_float(cals)))
 
                 if cals <= 10:
                     continue
@@ -594,22 +617,22 @@ class MyNetDiarySyncService:
         t = totals if isinstance(totals, dict) else {}
         return {
             "date": date_str,
-            "calories": int(round(float(t.get("calories", 0) or 0))),
-            "protein": int(round(float(t.get("protein") if t.get("protein") is not None else t.get("protein_g", 0) or 0))),
-            "carbs": int(round(float(t.get("carbs") if t.get("carbs") is not None else t.get("carbs_g", 0) or 0))),
-            "fat": int(round(float(t.get("fat") if t.get("fat") is not None else t.get("fat_g", 0) or 0))),
-            "fiber": int(round(float(t.get("fiber") if t.get("fiber") is not None else t.get("fiber_g", 0) or 0))),
-            "sodium": int(round(float(t.get("sodium") if t.get("sodium") is not None else t.get("sodium_mg", 0) or 0))),
-            "sugar_g": float(t.get("sugar_g", 0.0) or 0.0),
-            "sat_fat_g": float(t.get("sat_fat_g", 0.0) or 0.0),
+            "calories": int(round(_parse_mnd_float(t.get("calories")))),
+            "protein": int(round(_parse_mnd_float(t.get("protein") if t.get("protein") is not None else t.get("protein_g")))),
+            "carbs": int(round(_parse_mnd_float(t.get("carbs") if t.get("carbs") is not None else t.get("carbs_g")))),
+            "fat": int(round(_parse_mnd_float(t.get("fat") if t.get("fat") is not None else t.get("fat_g")))),
+            "fiber": int(round(_parse_mnd_float(t.get("fiber") if t.get("fiber") is not None else t.get("fiber_g")))),
+            "sodium": int(round(_parse_mnd_float(t.get("sodium") if t.get("sodium") is not None else t.get("sodium_mg")))),
+            "sugar_g": _parse_mnd_float(t.get("sugar_g")),
+            "sat_fat_g": _parse_mnd_float(t.get("sat_fat_g")),
             "fetched_at_ts": time.time(),
             "items": [
                 {
                     "name": it.get("name", ""),
-                    "cals": int(it.get("cals", 0) or 0),
-                    "p": int(it.get("p", 0) or 0),
-                    "c": int(it.get("c", 0) or 0),
-                    "f": int(it.get("f", 0) or 0),
+                    "cals": int(round(_parse_mnd_float(it.get("cals")))),
+                    "p": int(round(_parse_mnd_float(it.get("p")))),
+                    "c": int(round(_parse_mnd_float(it.get("c")))),
+                    "f": int(round(_parse_mnd_float(it.get("f")))),
                 }
                 for m in (meals or {}).values()
                 if isinstance(m, dict)
@@ -748,10 +771,10 @@ class MyNetDiarySyncService:
                 try:
                     db.upsert_daily_nutrition(
                         d_rec["date"],
-                        int(d_rec.get("calories") or 0),
-                        int(d_rec.get("protein") or 0),
-                        int(d_rec.get("carbs") or 0),
-                        int(round(float(d_rec.get("fat") or 0))),
+                        int(round(_parse_mnd_float(d_rec.get("calories")))),
+                        int(round(_parse_mnd_float(d_rec.get("protein")))),
+                        int(round(_parse_mnd_float(d_rec.get("carbs")))),
+                        int(round(_parse_mnd_float(d_rec.get("fat")))),
                         source="mnd",
                         preserve_manual=True,
                     )
@@ -963,15 +986,9 @@ class MyNetDiarySyncService:
                 if isinstance(entry, dict):
                     raw_val = entry.get('values', {}).get('rawValue')
                     if raw_val is not None:
-                        try:
-                            return float(raw_val)
-                        except (ValueError, TypeError):
-                            pass
+                        return _parse_mnd_float(raw_val)
                 elif entry is not None:
-                    try:
-                        return float(entry)
-                    except (ValueError, TypeError):
-                        pass
+                    return _parse_mnd_float(entry)
             return 0.0
 
         total_sugar = 0.0
@@ -1017,7 +1034,7 @@ class MyNetDiarySyncService:
                 label = item.get('foodLabel') or {}
                 item_vals = item.get('values') or {}
                 name = label.get('cleanFoodName') or label.get('foodName') or item.get('inputString') or item.get('name', 'Food Item')
-                cals = int(round(float(item.get('calories') or 0)))
+                cals = int(round(_parse_mnd_float(item.get('calories'))))
 
                 def _safe_nut(label_key, val_code):
                     node = label.get(label_key)
@@ -1027,11 +1044,11 @@ class MyNetDiarySyncService:
                         return raw
                     return item_vals.get(val_code) or 0
 
-                p = int(round(float(_safe_nut('protein', '203') or 0)))
-                c = int(round(float(_safe_nut('totalCarbs', '205') or 0)))
-                f = int(round(float(_safe_nut('totalFat', '204') or 0)))
-                totals['fiber'] += int(round(float(_safe_nut('fiber', '291') or 0)))
-                totals['sodium'] += int(round(float(_safe_nut('sodium', '307') or 0)))
+                p = int(round(_parse_mnd_float(_safe_nut('protein', '203'))))
+                c = int(round(_parse_mnd_float(_safe_nut('totalCarbs', '205'))))
+                f = int(round(_parse_mnd_float(_safe_nut('totalFat', '204'))))
+                totals['fiber'] += int(round(_parse_mnd_float(_safe_nut('fiber', '291'))))
+                totals['sodium'] += int(round(_parse_mnd_float(_safe_nut('sodium', '307'))))
 
                 sugar_g = _get_nut(label, "sugars", "sugar", "totalSugars", "269")
                 if sugar_g == 0.0 and isinstance(item.get('values'), dict):
@@ -1077,21 +1094,17 @@ class MyNetDiarySyncService:
         if isinstance(meals_data, dict):
             apple = meals_data.get('appleData') or {}
             if isinstance(apple, dict) and apple.get('consumedCalories') is not None:
-                totals['calories'] = int(apple['consumedCalories'])
+                totals['calories'] = int(round(_parse_mnd_float(apple['consumedCalories'])))
             elif isinstance(meals_data.get('dayTotals'), dict) and (meals_data['dayTotals'].get('eaten') or {}).get('value') is not None:
-                v = str(meals_data['dayTotals']['eaten']['value']).replace(',', '')
-                try:
-                    totals['calories'] = int(float(v))
-                except Exception:
-                    pass
+                totals['calories'] = int(round(_parse_mnd_float(meals_data['dayTotals']['eaten']['value'])))
         if isinstance(analysis_data, dict):
             for k in ['totalSodium', 'sodium']:
-                if k in analysis_data and analysis_data[k]:
-                    totals['sodium'] = round(float(analysis_data[k]))
+                if k in analysis_data and analysis_data[k] is not None:
+                    totals['sodium'] = int(round(_parse_mnd_float(analysis_data[k])))
                     break
             for k in ['water', 'waterAmount']:
-                if k in analysis_data and analysis_data[k]:
-                    totals['water'] = round(float(analysis_data[k]), 1)
+                if k in analysis_data and analysis_data[k] is not None:
+                    totals['water'] = round(_parse_mnd_float(analysis_data[k]), 1)
                     break
 
         return totals, meals
@@ -1099,7 +1112,7 @@ class MyNetDiarySyncService:
     @staticmethod
     def _normalize_meal_sig(name: str, cals: Any, protein: Any) -> tuple:
         norm = re.sub(r'\s+', ' ', str(name or '').strip().lower())
-        return (norm, int(round(float(cals or 0))), int(round(float(protein or 0))))
+        return (norm, int(round(_parse_mnd_float(cals))), int(round(_parse_mnd_float(protein))))
 
     def _compose_mnd_with_overlays(self, cloud_totals, cloud_meals, app_logged, app_deleted):
         merged_totals = copy.deepcopy(cloud_totals) if isinstance(cloud_totals, dict) else {}
@@ -1110,10 +1123,7 @@ class MyNetDiarySyncService:
 
         def _get_total(plain_k, g_k):
             v = merged_totals.get(g_k) if merged_totals.get(g_k) is not None else merged_totals.get(plain_k)
-            try:
-                return int(round(float(v or 0)))
-            except (TypeError, ValueError):
-                return 0
+            return int(round(_parse_mnd_float(v)))
 
         tot_cals = _get_total('calories', 'calories')
         tot_p = _get_total('protein', 'protein_g')
@@ -1129,20 +1139,20 @@ class MyNetDiarySyncService:
             cat_block = {
                 'name': raw_cat.get('name') or ('Snacks & Hydration' if cat == 'snacks' else cat.capitalize()),
                 'time': raw_cat.get('time') or 'Pending',
-                'calories': int(round(float(raw_cat.get('calories') or 0))),
-                'protein': int(round(float(raw_cat.get('protein') or 0))),
-                'carbs': int(round(float(raw_cat.get('carbs') or 0))),
-                'fat': int(round(float(raw_cat.get('fat') or 0))),
+                'calories': int(round(_parse_mnd_float(raw_cat.get('calories')))),
+                'protein': int(round(_parse_mnd_float(raw_cat.get('protein')))),
+                'carbs': int(round(_parse_mnd_float(raw_cat.get('carbs')))),
+                'fat': int(round(_parse_mnd_float(raw_cat.get('fat')))),
                 'items': [],
             }
             for it in (raw_cat.get('items') or []):
                 if not isinstance(it, dict) or not it.get('name'):
                     continue
                 it_copy = dict(it)
-                it_cals = int(round(float(it_copy.get('cals') or 0)))
-                it_p = int(round(float(it_copy.get('p') or 0)))
-                it_c = int(round(float(it_copy.get('c') or 0)))
-                it_f = int(round(float(it_copy.get('f') or 0)))
+                it_cals = int(round(_parse_mnd_float(it_copy.get('cals'))))
+                it_p = int(round(_parse_mnd_float(it_copy.get('p'))))
+                it_c = int(round(_parse_mnd_float(it_copy.get('c'))))
+                it_f = int(round(_parse_mnd_float(it_copy.get('f'))))
                 it_copy['cals'] = it_cals
                 it_copy['p'] = it_p
                 it_copy['c'] = it_c
@@ -1170,8 +1180,8 @@ class MyNetDiarySyncService:
             if isinstance(raw_sig, (list, tuple)) and len(raw_sig) >= 3:
                 t_sig = (
                     re.sub(r'\s+', ' ', str(raw_sig[0] or '').strip().lower()),
-                    int(round(float(raw_sig[1] or 0))),
-                    int(round(float(raw_sig[2] or 0))),
+                    int(round(_parse_mnd_float(raw_sig[1]))),
+                    int(round(_parse_mnd_float(raw_sig[2]))),
                 )
             elif tombstone.get('name'):
                 t_sig = self._normalize_meal_sig(
@@ -1209,10 +1219,10 @@ class MyNetDiarySyncService:
                         break
 
             if removed_item is not None and removed_cat is not None:
-                rm_cals = int(round(float(removed_item.get('cals') or 0)))
-                rm_p = int(round(float(removed_item.get('p') or 0)))
-                rm_c = int(round(float(removed_item.get('c') or 0)))
-                rm_f = int(round(float(removed_item.get('f') or 0)))
+                rm_cals = int(round(_parse_mnd_float(removed_item.get('cals'))))
+                rm_p = int(round(_parse_mnd_float(removed_item.get('p'))))
+                rm_c = int(round(_parse_mnd_float(removed_item.get('c'))))
+                rm_f = int(round(_parse_mnd_float(removed_item.get('f'))))
                 removed_cat['calories'] = max(0, int(removed_cat.get('calories') or 0) - rm_cals)
                 removed_cat['protein'] = max(0, int(removed_cat.get('protein') or 0) - rm_p)
                 removed_cat['carbs'] = max(0, int(removed_cat.get('carbs') or 0) - rm_c)
@@ -1239,10 +1249,10 @@ class MyNetDiarySyncService:
             cat = str(raw_it.get('category') or 'snacks').lower()
             if cat not in buckets:
                 cat = 'snacks'
-            cals = max(0, int(round(float(raw_it.get('cals') or 0))))
-            p = max(0, int(round(float(raw_it.get('p') or 0))))
-            carb = max(0, int(round(float(raw_it.get('c') or 0))))
-            f = max(0, int(round(float(raw_it.get('f') or 0))))
+            cals = max(0, int(round(_parse_mnd_float(raw_it.get('cals')))))
+            p = max(0, int(round(_parse_mnd_float(raw_it.get('p')))))
+            carb = max(0, int(round(_parse_mnd_float(raw_it.get('c')))))
+            f = max(0, int(round(_parse_mnd_float(raw_it.get('f')))))
             it_id = str(raw_it.get('id') or '').strip()
             sig = self._normalize_meal_sig(raw_it.get('name', ''), cals, p)
 
@@ -1399,21 +1409,21 @@ class MyNetDiarySyncService:
                     if b_steps > 0 or not garmin_state.get('steps'):
                         garmin_state['steps'] = b_steps
 
-                manual_today_burn = sum(int(round(float(a.get('calories') or 0))) for a in retained_manuals)
+                manual_today_burn = sum(int(round(_parse_mnd_float(a.get('calories')))) for a in retained_manuals)
                 existing_watch_cals = max(
                     0,
-                    int(round(float(garmin_state.get('active_calories') or 0))) - manual_today_burn,
+                    int(round(_parse_mnd_float(garmin_state.get('active_calories')))) - manual_today_burn,
                 )
                 bridge_active = garmin_bridge.get('active_calories')
                 if bridge_active is not None:
-                    b_act = int(bridge_active)
+                    b_act = int(round(_parse_mnd_float(bridge_active)))
                     watch_base = b_act if (b_act > 0 or existing_watch_cals == 0) else existing_watch_cals
                     garmin_state['active_calories'] = watch_base + manual_today_burn
                 elif manual_today_burn > 0 and garmin_state.get('active_calories') is None:
                     garmin_state['active_calories'] = manual_today_burn
 
                 if garmin_bridge.get('distance_miles') is not None:
-                    b_dist = float(garmin_bridge['distance_miles'])
+                    b_dist = _parse_mnd_float(garmin_bridge['distance_miles'])
                     if b_dist > 0 or not garmin_state.get('distance_miles'):
                         garmin_state['distance_miles'] = b_dist
                 if garmin_bridge.get('active_minutes') is not None:
@@ -1580,18 +1590,18 @@ class MyNetDiarySyncService:
             except Exception:
                 existing_nut_source = None
 
-        cloud_water_l = round(float(totals.get('water') or 0.0), 2) if isinstance(totals, dict) else 0.0
+        cloud_water_l = round(_parse_mnd_float(totals.get('water')), 2) if isinstance(totals, dict) else 0.0
         raw_cloud_logged = {
             'date': today_str,
-            'calories': int(round(float((totals or {}).get('calories') or 0))),
-            'protein_g': int(round(float((totals or {}).get('protein') or 0))),
-            'carbs_g': int(round(float((totals or {}).get('carbs') or 0))),
-            'fat_g': int(round(float((totals or {}).get('fat') or 0))),
-            'fiber_g': int(round(float((totals or {}).get('fiber') or 0))),
-            'sodium_mg': int(round(float((totals or {}).get('sodium') or 0))),
+            'calories': int(round(_parse_mnd_float((totals or {}).get('calories')))),
+            'protein_g': int(round(_parse_mnd_float((totals or {}).get('protein')))),
+            'carbs_g': int(round(_parse_mnd_float((totals or {}).get('carbs')))),
+            'fat_g': int(round(_parse_mnd_float((totals or {}).get('fat')))),
+            'fiber_g': int(round(_parse_mnd_float((totals or {}).get('fiber')))),
+            'sodium_mg': int(round(_parse_mnd_float((totals or {}).get('sodium')))),
             'water_l': cloud_water_l,
-            'sugar_g': float((totals or {}).get('sugar_g') or 0.0),
-            'sat_fat_g': float((totals or {}).get('sat_fat_g') or 0.0),
+            'sugar_g': _parse_mnd_float((totals or {}).get('sugar_g')),
+            'sat_fat_g': _parse_mnd_float((totals or {}).get('sat_fat_g')),
             'last_pulled': now_iso,
             'source': 'live_mynetdiary_cloud',
         }
@@ -1607,9 +1617,9 @@ class MyNetDiarySyncService:
             and prev_ml.get('calories') is not None
             and (not prev_ml_date or prev_ml_date == today_str)
         )
-        manual_nutrition_water_l = float(prev_ml.get('water_l') or 0.0) if is_manual_locked_today else 0.0
+        manual_nutrition_water_l = _parse_mnd_float(prev_ml.get('water_l')) if is_manual_locked_today else 0.0
         merged_water_l = round(
-            max(float(composed_totals.get('water') or 0.0), db_water_l, manual_nutrition_water_l),
+            max(_parse_mnd_float(composed_totals.get('water')), db_water_l, manual_nutrition_water_l),
             2,
         )
 
@@ -1629,15 +1639,15 @@ class MyNetDiarySyncService:
         else:
             mnd_payload = {
                 'date': today_str,
-                'calories': int(composed_totals.get('calories') or 0),
-                'protein_g': int(composed_totals.get('protein') or 0),
-                'carbs_g': int(composed_totals.get('carbs') or 0),
-                'fat_g': int(composed_totals.get('fat') or 0),
-                'fiber_g': int(composed_totals.get('fiber') or 0),
-                'sodium_mg': int(composed_totals.get('sodium') or 0),
+                'calories': int(round(_parse_mnd_float(composed_totals.get('calories')))),
+                'protein_g': int(round(_parse_mnd_float(composed_totals.get('protein')))),
+                'carbs_g': int(round(_parse_mnd_float(composed_totals.get('carbs')))),
+                'fat_g': int(round(_parse_mnd_float(composed_totals.get('fat')))),
+                'fiber_g': int(round(_parse_mnd_float(composed_totals.get('fiber')))),
+                'sodium_mg': int(round(_parse_mnd_float(composed_totals.get('sodium')))),
                 'water_l': merged_water_l,
-                'sugar_g': composed_totals.get('sugar_g', 0.0),
-                'sat_fat_g': composed_totals.get('sat_fat_g', 0.0),
+                'sugar_g': _parse_mnd_float(composed_totals.get('sugar_g')),
+                'sat_fat_g': _parse_mnd_float(composed_totals.get('sat_fat_g')),
                 'last_pulled': state.get('mnd_last_synced') or now_iso,
                 'source': 'mnd_overlay' if has_active_overlays else 'live_mynetdiary_cloud',
             }
@@ -1654,10 +1664,10 @@ class MyNetDiarySyncService:
             try:
                 db.upsert_daily_nutrition(
                     today_str,
-                    int(effective_ml.get('calories') or 0),
-                    int(effective_ml.get('protein_g') or 0),
-                    int(effective_ml.get('carbs_g') or 0),
-                    int(round(float(effective_ml.get('fat_g') or 0))),
+                    int(round(_parse_mnd_float(effective_ml.get('calories')))),
+                    int(round(_parse_mnd_float(effective_ml.get('protein_g')))),
+                    int(round(_parse_mnd_float(effective_ml.get('carbs_g')))),
+                    int(round(_parse_mnd_float(effective_ml.get('fat_g')))),
                     source='mnd_overlay' if has_active_overlays else 'mnd',
                     preserve_manual=True,
                 )
