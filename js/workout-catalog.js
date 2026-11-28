@@ -643,11 +643,12 @@
         const saved = localStorage.getItem('pulse_kb_submode');
         if (saved === 'flow_2h' || saved === 'flow_1h' || saved === 'grinds') return saved;
       } catch(e) {}
-      return 'flow_2h';
+      return 'grinds';
     }
 
     function setKbSubMode(mode) {
-      const valid = (mode === 'flow_2h' || mode === 'flow_1h' || mode === 'grinds') ? mode : 'flow_2h';
+      const valid = (mode === 'flow_2h' || mode === 'flow_1h' || mode === 'grinds') ? mode : 'grinds';
+      if (typeof window !== 'undefined') window._userManualKbSubMode = true;
       try { localStorage.setItem('pulse_kb_submode', valid); } catch(e) {}
       loadDailyArchetype('option_kb');
     }

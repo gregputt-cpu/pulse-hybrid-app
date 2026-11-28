@@ -198,6 +198,10 @@ def test_1_exercise_biomechanics_parity():
     assert exercise_biomechanics.normalize_exercise_id("emom_hybrid_10") == "emom_hybrid_10"
     assert exercise_biomechanics.normalize_exercise_id("kb_flow_2h_pyramid_1_5") == "kb_flow_2h_pyramid_1_5"
     assert "kb_goblet_lunge" in exercise_biomechanics.LEGACY_EXERCISE_ALIASES
+    assert exercise_biomechanics.is_exercise_contraindicated_py("kb_flow_2h_gladiator_post", ["elbows"]) is False
+    for j in exercise_biomechanics.ALL_ADAPTOR_JOINTS:
+        assert exercise_biomechanics.is_exercise_contraindicated_py("kb_flow_2h_out_about", [j]) is True
+        assert exercise_biomechanics.is_exercise_contraindicated_py("kb_flow_1h_armor_chain", [j]) is True
     print("PASS [1] 54-Exercise Catalog Parity & ID Normalization")
 
 

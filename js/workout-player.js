@@ -1220,7 +1220,12 @@
       }
 
       _renderPrBadgeSlot(false);
-      const isPickOneMenu = (currentArchetypeKey === 'option_b') || (currentArchetypeKey === 'option_kb' && getKbSubMode() !== 'grinds');
+      const isPickOneMenu = (currentArchetypeKey === 'option_b') || (
+        currentArchetypeKey === 'option_kb' &&
+        getKbSubMode() !== 'grinds' &&
+        !(typeof window !== 'undefined' && window._activePlanIsFallbackSequence) &&
+        activeWorkoutPlan.some(item => item && (item.format === 'kb_flow' || String(item.id || '').startsWith('kb_flow_')))
+      );
       const ex = activeWorkoutPlan[currentExIdx];
       const fmt = getExerciseFormatConfig(ex);
       if (inlineTimerState && inlineTimerState.exId && inlineTimerState.exId !== ex.id) {
@@ -1336,6 +1341,32 @@
 </span>
 </div>
       ` : '';
+
+      const swapBannerEl = document.getElementById('exJointSwapBanner');
+      if (swapBannerEl) {
+        const planBanner = (typeof window !== 'undefined') ? window._activePlanRestrictionBanner : null;
+        const perExSwap = ex && ex.jointSwapInfo ? ex.jointSwapInfo : null;
+        if ((planBanner && planBanner.message) || perExSwap) {
+          const parts = [];
+          if (planBanner && planBanner.message) {
+            const switchBtn = (planBanner.type === 'flow_filtered')
+              ? `<button type="button" onclick="setKbSubMode('grinds')" style="padding:3px 8px; font-size:10.5px; font-weight:800; border-radius:6px; border:1px solid rgba(0,229,255,0.4); background:rgba(0,229,255,0.14); color:#00e5ff; cursor:pointer; white-space:nowrap;">🏋️ Switch to Heavy Grinds</button>`
+              : '';
+            parts.push(`<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;"><span>${escapeHtml(planBanner.message)}</span>${switchBtn}</div>`);
+          }
+          if (perExSwap) {
+            const domainText = (typeof _formatJointDomainList === 'function')
+              ? _formatJointDomainList(perExSwap.domains)
+              : (Array.isArray(perExSwap.domains) ? perExSwap.domains.join(' / ') : 'Joint');
+            parts.push(`<div>🛡️ Adapted for ${escapeHtml(domainText)} restriction • Replaced ${escapeHtml(perExSwap.replacedName || perExSwap.replacedId)}</div>`);
+          }
+          swapBannerEl.innerHTML = parts.join('');
+          swapBannerEl.style.display = 'block';
+        } else {
+          swapBannerEl.innerHTML = '';
+          swapBannerEl.style.display = 'none';
+        }
+      }
 
       if (isFlowOrCond) {
         if (cueEl) cueEl.style.display = 'none';

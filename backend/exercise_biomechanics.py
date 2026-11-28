@@ -142,13 +142,24 @@ JOINT_CONTRAINDICATIONS: Dict[str, Set[str]] = {
     },
 }
 
+KB_FLOW_CONTRAINDICATIONS: Dict[str, Set[str]] = {
+    "kb_flow_2h_out_about": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+    "kb_flow_2h_tactical_upper": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+    "kb_flow_2h_gladiator_post": {"lumbar", "shoulders", "knees", "wrists", "ankles"},
+    "kb_flow_2h_pyramid_1_5": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+    "kb_flow_1h_armor_chain": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+    "kb_flow_1h_viking_warrior": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+    "kb_flow_1h_dan_john_grind": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+    "kb_flow_1h_combat_core": {"lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"},
+}
+
 JOINT_SAFE_SWAPS: Dict[str, List[str]] = {
-    "lumbar": ["glute_bridge_hold", "hip_thrust_weighted", "inverted_row", "db_press", "zone2_flush", "deadbug_hold", "thoracic_openers"],
-    "shoulders": ["barbell_floor_press", "db_close_grip_press", "band_pull_aparts", "glute_bridge_hold", "deadbug_hold", "zone2_flush"],
-    "knees": ["knee_tke", "glute_bridge_hold", "hip_thrust_weighted", "zone2_flush", "deadbug_hold"],
-    "elbows": ["glute_bridge_hold", "hip_thrust_weighted", "zone2_flush", "deadbug_hold", "thoracic_openers"],
-    "wrists": ["barbell_floor_press", "glute_bridge_hold", "hip_thrust_weighted", "deadbug_hold", "zone2_flush"],
-    "ankles": ["zone2_flush", "glute_bridge_hold", "hip_thrust_weighted", "deadbug_hold", "thoracic_openers"],
+    "lumbar": ["glute_bridge_hold", "hip_thrust_weighted", "inverted_row", "db_press", "kb_goblet_floor_press", "half_kneeling_kb_press", "band_pull_aparts", "zone2_flush", "deadbug_hold", "thoracic_openers"],
+    "shoulders": ["barbell_floor_press", "db_close_grip_press", "kb_heavy_rdl", "goblet_squat", "kb_swings", "kb_gorilla_row", "kb_suitcase_carry", "band_pull_aparts", "glute_bridge_hold", "deadbug_hold", "zone2_flush"],
+    "knees": ["kb_heavy_rdl", "kb_swings", "kb_goblet_floor_press", "kb_gorilla_row", "kb_suitcase_carry", "knee_tke", "glute_bridge_hold", "hip_thrust_weighted", "zone2_flush", "deadbug_hold"],
+    "elbows": ["kb_swings", "goblet_squat", "kb_heavy_rdl", "kb_front_rack_squat", "kb_gorilla_row", "kb_suitcase_carry", "single_leg_rdl", "db_close_grip_press", "hip_thrust_weighted", "band_pull_aparts", "glute_bridge_hold", "zone2_flush", "deadbug_hold", "thoracic_openers"],
+    "wrists": ["kb_heavy_rdl", "kb_swings", "kb_gorilla_row", "kb_suitcase_carry", "barbell_floor_press", "glute_bridge_hold", "hip_thrust_weighted", "deadbug_hold", "zone2_flush"],
+    "ankles": ["kb_goblet_floor_press", "kb_gorilla_row", "kb_heavy_rdl", "db_press", "zone2_flush", "glute_bridge_hold", "hip_thrust_weighted", "deadbug_hold", "thoracic_openers"],
 }
 
 JOINT_MOBILITY_FALLBACKS: Tuple[str, ...] = (
@@ -278,7 +289,7 @@ EXERCISE_BIOMECHANICS: Dict[str, Dict[str, Any]] = {item["id"]: item for item in
         ["glutes", "hamstrings", "quadriceps", "calves"], ["shoulders", "core", "forearms"], ["lumbar", "knees", "ankles", "wrists"],
         "full_body_metabolic", ["deep_hip_hinge", "ballistic_impact", "explosive_calf_achilles"], "high", "moderate"),
     _ex("kb_flow_2h_out_about", "2H Out & About 9-Move Flow (30m AMRAP)", "cardio",
-        ["glutes", "hamstrings", "shoulders"], ["core", "forearms", "quadriceps"], ["lumbar", "shoulders", "knees", "wrists", "ankles"],
+        ["glutes", "hamstrings", "shoulders"], ["core", "forearms", "quadriceps"], ["lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"],
         "full_body_metabolic", ["deep_hip_hinge", "ballistic_impact"], "moderate", "moderate"),
     _ex("kb_flow_2h_tactical_upper", "2H Tactical Upper & Push-Up Engine Flow", "cardio",
         ["pectorals", "shoulders", "glutes"], ["triceps", "core", "lats"], ["lumbar", "shoulders", "elbows", "wrists", "knees", "ankles"],
@@ -287,7 +298,7 @@ EXERCISE_BIOMECHANICS: Dict[str, Dict[str, Any]] = {item["id"]: item for item in
         ["hamstrings", "glutes", "lats"], ["spinal_erectors", "core", "forearms"], ["lumbar", "shoulders", "knees", "wrists", "ankles"],
         "posterior_chain", ["deep_hip_hinge", "ballistic_impact"], "moderate", "moderate"),
     _ex("kb_flow_2h_pyramid_1_5", "2H 1-to-5 Pyramid Ladder Flow", "cardio",
-        ["glutes", "hamstrings", "quadriceps"], ["shoulders", "core"], ["lumbar", "shoulders", "knees", "wrists", "ankles"],
+        ["glutes", "hamstrings", "quadriceps"], ["shoulders", "core"], ["lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"],
         "full_body_metabolic", ["deep_hip_hinge", "ballistic_impact"], "moderate", "moderate"),
     _ex("kb_flow_1h_armor_chain", "1H Armor & Athletic Chain (5L → 5R)", "cardio",
         ["glutes", "shoulders", "core"], ["hamstrings", "forearms", "quadriceps"], ["lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"],
@@ -296,10 +307,10 @@ EXERCISE_BIOMECHANICS: Dict[str, Dict[str, Any]] = {item["id"]: item for item in
         ["glutes", "shoulders", "hamstrings"], ["forearms", "core"], ["lumbar", "shoulders", "elbows", "wrists", "knees", "ankles"],
         "full_body_unilateral", ["deep_hip_hinge", "ballistic_impact", "overhead_pressing"], "moderate", "moderate"),
     _ex("kb_flow_1h_dan_john_grind", "1H Dan John Armor + Grind (L → R)", "cardio",
-        ["quadriceps", "shoulders", "glutes"], ["core", "forearms"], ["lumbar", "shoulders", "knees", "wrists", "ankles"],
+        ["quadriceps", "shoulders", "glutes"], ["core", "forearms"], ["lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"],
         "full_body_unilateral", ["overhead_pressing", "deep_knee_flexion"], "low", "moderate"),
     _ex("kb_flow_1h_combat_core", "1H Rotational Combat & Core (5L → 5R)", "cardio",
-        ["core", "glutes", "shoulders"], ["obliques", "forearms", "hamstrings"], ["lumbar", "shoulders", "knees", "wrists", "ankles"],
+        ["core", "glutes", "shoulders"], ["obliques", "forearms", "hamstrings"], ["lumbar", "shoulders", "knees", "elbows", "wrists", "ankles"],
         "rotational_core", ["deep_hip_hinge"], "moderate", "moderate"),
     _ex("pushups_renegade", "Floor Push-ups (Tempo 3-0-1)", "horizontal_push",
         ["pectorals", "triceps"], ["anterior_deltoids", "core"], ["wrists", "elbows"],
@@ -427,10 +438,12 @@ def is_exercise_contraindicated_py(
     if norm in set(restricted_exercise_ids or ()):
         return True
     is_kb_flow = norm.startswith("kb_flow_2h_") or norm.startswith("kb_flow_1h_")
+    kb_flow_joints = KB_FLOW_CONTRAINDICATIONS.get(norm) if is_kb_flow else None
     for joint in active_joints or ():
         if joint not in ALL_ADAPTOR_JOINTS:
             continue
-        if is_kb_flow or norm in JOINT_CONTRAINDICATIONS.get(joint, ()):
+        blocked_by_flow = (joint in kb_flow_joints) if kb_flow_joints is not None else is_kb_flow
+        if blocked_by_flow or norm in JOINT_CONTRAINDICATIONS.get(joint, ()):
             return True
     for restr in movement_restrictions or ():
         if norm in MOVEMENT_RESTRICTION_EXERCISES.get(restr, ()):

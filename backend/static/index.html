@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>PULSE • Hybrid Athlete OS</title>
-  <link rel="manifest" href="/manifest.json?v=6.11">
-  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.11">
-  <link rel="apple-touch-icon" href="/icon-192.png?v=6.11">
+  <link rel="manifest" href="/manifest.json?v=6.12">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg?v=6.12">
+  <link rel="apple-touch-icon" href="/icon-192.png?v=6.12">
   <meta name="theme-color" content="#06080e">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/styles.css?v=6.11">
+  <link rel="stylesheet" href="./css/styles.css?v=6.12">
 </head>
 <body>
 
@@ -45,7 +45,7 @@
       </svg>
     </div>
     <div style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; letter-spacing:0.22em; color:#fff; margin-top:16px; text-shadow:0 0 18px rgba(0,229,255,0.45);">PULSE</div>
-    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.11</div>
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.24em; color:#00e5ff; margin-top:4px;">HYBRID ATHLETE OS • v6.12</div>
   </div>
 
   <div class="app-screen">
@@ -372,9 +372,9 @@
 
           <!-- KB SUB-MODE SWITCHER (Shown when Option KB is active) -->
           <div id="kbSubModeBar" style="display:none; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:6px; background:rgba(0,229,255,0.05); border:1px solid rgba(0,229,255,0.22); padding:4px; border-radius:8px;">
-            <button type="button" id="btnKbSub_flow_2h" onclick="setKbSubMode('flow_2h')" class="btn-subview active" style="font-size:10px; padding:5px 4px; text-align:center;">🌊 2H Flow</button>
+            <button type="button" id="btnKbSub_flow_2h" onclick="setKbSubMode('flow_2h')" class="btn-subview" style="font-size:10px; padding:5px 4px; text-align:center;">🌊 2H Flow</button>
             <button type="button" id="btnKbSub_flow_1h" onclick="setKbSubMode('flow_1h')" class="btn-subview" style="font-size:10px; padding:5px 4px; text-align:center;">⚡ 1H Flow</button>
-            <button type="button" id="btnKbSub_grinds" onclick="setKbSubMode('grinds')" class="btn-subview" style="font-size:10px; padding:5px 4px; text-align:center;">🏋️ Heavy Grinds</button>
+            <button type="button" id="btnKbSub_grinds" onclick="setKbSubMode('grinds')" class="btn-subview active" style="font-size:10px; padding:5px 4px; text-align:center;">🏋️ Heavy Grinds</button>
           </div>
 
           <div class="train-header-row" style="background:var(--surface-elevated); border:1px solid var(--border); padding:5px 8px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
@@ -406,6 +406,7 @@
               <span style="color:var(--lime);font-weight:800;" id="exRestTarget">Rest: 90s</span>
             </div>
             <div id="exPlateCalcRow" class="plate-calc-pill" style="display:none;"></div>
+            <div id="exJointSwapBanner" style="display:none; margin:6px 0; padding:7px 10px; border-radius:8px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.38); color:#fcd34d; font-size:11px; font-weight:700; line-height:1.35;"></div>
 
             <div id="exActionBtnsRow" style="display:flex; gap:8px; margin:8px 0;">
               <button type="button" onclick="openSwapModal('swap')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#fff; border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer; flex:1; display:flex; align-items:center; justify-content:center; gap:5px;">⇄ Swap Exercise</button>
@@ -1361,7 +1362,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div>
             <strong style="font-size:15px; font-weight:800; color:#fff;">PULSE Settings</strong>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.11</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Hybrid Athlete OS • v6.12</div>
           </div>
           <span class="btn-modal-close" onclick="closeQuickSettingsModal()" style="cursor:pointer; font-size:18px; color:var(--text-muted); padding:2px 6px;">✕</span>
         </div>
@@ -2300,15 +2301,15 @@
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
-  <script src="./js/state.js?v=6.11"></script>
-  <script src="./js/workout-catalog.js?v=6.11"></script>
-  <script src="./js/workout-verdict.js?v=6.11"></script>
-  <script src="./js/workout-player.js?v=6.11"></script>
-  <script src="./js/workout-timers.js?v=6.11"></script>
-  <script src="./js/charts.js?v=6.11"></script>
-  <script src="./js/fuel-engine.js?v=6.11"></script>
-  <script src="./js/telemetry.js?v=6.11"></script>
-  <script src="./js/diagnostics.js?v=6.11"></script>
-  <script src="./js/autonomic-tracker.js?v=6.11"></script>
+  <script src="./js/state.js?v=6.12"></script>
+  <script src="./js/workout-catalog.js?v=6.12"></script>
+  <script src="./js/workout-verdict.js?v=6.12"></script>
+  <script src="./js/workout-player.js?v=6.12"></script>
+  <script src="./js/workout-timers.js?v=6.12"></script>
+  <script src="./js/charts.js?v=6.12"></script>
+  <script src="./js/fuel-engine.js?v=6.12"></script>
+  <script src="./js/telemetry.js?v=6.12"></script>
+  <script src="./js/diagnostics.js?v=6.12"></script>
+  <script src="./js/autonomic-tracker.js?v=6.12"></script>
 </body>
 </html>

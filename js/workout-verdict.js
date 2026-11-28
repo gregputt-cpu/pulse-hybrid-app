@@ -28,13 +28,39 @@
       ])
     };
 
+    const KB_FLOW_CONTRAINDICATIONS = {
+      kb_flow_2h_out_about: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']),
+      kb_flow_2h_tactical_upper: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']),
+      kb_flow_2h_gladiator_post: new Set(['lumbar', 'shoulders', 'knees', 'wrists', 'ankles']),
+      kb_flow_2h_pyramid_1_5: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']),
+      kb_flow_1h_armor_chain: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']),
+      kb_flow_1h_viking_warrior: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']),
+      kb_flow_1h_dan_john_grind: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles']),
+      kb_flow_1h_combat_core: new Set(['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'])
+    };
+
+    const _JOINT_DOMAIN_LABELS = {
+      lumbar: 'Lower Back',
+      shoulders: 'Shoulder',
+      knees: 'Knee',
+      elbows: 'Elbow',
+      wrists: 'Wrist',
+      ankles: 'Ankle'
+    };
+
+    function _formatJointDomainList(domains) {
+      const arr = Array.isArray(domains) ? domains.filter(Boolean) : [];
+      if (!arr.length) return 'Joint';
+      return arr.map(d => _JOINT_DOMAIN_LABELS[d] || (d.charAt(0).toUpperCase() + d.slice(1))).join(' / ');
+    }
+
     const JOINT_SAFE_SWAPS = {
-      lumbar: ['glute_bridge_hold', 'hip_thrust_weighted', 'inverted_row', 'db_press', 'zone2_flush', 'deadbug_hold', 'thoracic_openers'],
-      shoulders: ['barbell_floor_press', 'db_close_grip_press', 'band_pull_aparts', 'glute_bridge_hold', 'deadbug_hold', 'zone2_flush'],
-      knees: ['knee_tke', 'glute_bridge_hold', 'hip_thrust_weighted', 'zone2_flush', 'deadbug_hold'],
-      elbows: ['glute_bridge_hold', 'hip_thrust_weighted', 'zone2_flush', 'deadbug_hold', 'thoracic_openers'],
-      wrists: ['barbell_floor_press', 'glute_bridge_hold', 'hip_thrust_weighted', 'deadbug_hold', 'zone2_flush'],
-      ankles: ['zone2_flush', 'glute_bridge_hold', 'hip_thrust_weighted', 'deadbug_hold', 'thoracic_openers']
+      lumbar: ['glute_bridge_hold', 'hip_thrust_weighted', 'inverted_row', 'db_press', 'kb_goblet_floor_press', 'half_kneeling_kb_press', 'band_pull_aparts', 'zone2_flush', 'deadbug_hold', 'thoracic_openers'],
+      shoulders: ['barbell_floor_press', 'db_close_grip_press', 'kb_heavy_rdl', 'goblet_squat', 'kb_swings', 'kb_gorilla_row', 'kb_suitcase_carry', 'band_pull_aparts', 'glute_bridge_hold', 'deadbug_hold', 'zone2_flush'],
+      knees: ['kb_heavy_rdl', 'kb_swings', 'kb_goblet_floor_press', 'kb_gorilla_row', 'kb_suitcase_carry', 'knee_tke', 'glute_bridge_hold', 'hip_thrust_weighted', 'zone2_flush', 'deadbug_hold'],
+      elbows: ['kb_swings', 'goblet_squat', 'kb_heavy_rdl', 'kb_front_rack_squat', 'kb_gorilla_row', 'kb_suitcase_carry', 'single_leg_rdl', 'db_close_grip_press', 'hip_thrust_weighted', 'band_pull_aparts', 'glute_bridge_hold', 'zone2_flush', 'deadbug_hold', 'thoracic_openers'],
+      wrists: ['kb_heavy_rdl', 'kb_swings', 'kb_gorilla_row', 'kb_suitcase_carry', 'barbell_floor_press', 'glute_bridge_hold', 'hip_thrust_weighted', 'deadbug_hold', 'zone2_flush'],
+      ankles: ['kb_goblet_floor_press', 'kb_gorilla_row', 'kb_heavy_rdl', 'db_press', 'zone2_flush', 'glute_bridge_hold', 'hip_thrust_weighted', 'deadbug_hold', 'thoracic_openers']
     };
 
     const JOINT_MOBILITY_FALLBACKS = ['deadbug_hold', 'glute_bridge_hold', 'zone2_flush', 'thoracic_openers'];
@@ -73,7 +99,9 @@
       const domains = [];
       for (const domain of Object.keys(JOINT_CONTRAINDICATIONS)) {
         if (!inj[domain]) continue;
-        let blocked = isKbFlow || JOINT_CONTRAINDICATIONS[domain].has(exId);
+        const kbFlowJoints = isKbFlow ? KB_FLOW_CONTRAINDICATIONS[exId] : null;
+        const blockedByFlow = isKbFlow ? (kbFlowJoints ? kbFlowJoints.has(domain) : true) : false;
+        let blocked = blockedByFlow || JOINT_CONTRAINDICATIONS[domain].has(exId);
         if (!blocked && constraintsMap && constraintsMap[domain] && typeof constraintsMap[domain] === 'object') {
           const c = constraintsMap[domain];
           if (Array.isArray(c.restricted_exercise_ids) && c.restricted_exercise_ids.includes(exId)) {
@@ -97,10 +125,11 @@
       return getContraindicatingDomains(exOrId, injuries).length > 0;
     }
 
-    function applyJointSafeSwaps(candidateList, targetCount = 5, injuries = null, gear = null) {
+    function applyJointSafeSwaps(candidateList, targetCount = 5, injuries = null, gear = null, opts = null) {
       if (!Array.isArray(candidateList)) return [];
       const inj = injuries || (typeof athleteInjuries !== 'undefined' ? athleteInjuries : {});
       const gCfg = gear || (typeof gearConfig !== 'undefined' ? gearConfig : null);
+      const prefGear = (opts && opts.preferredGear) ? String(opts.preferredGear) : null;
       const allEx = (typeof getAllExercises === 'function')
         ? getAllExercises()
         : (typeof masterExercises !== 'undefined' ? masterExercises : []);
@@ -121,15 +150,17 @@
             if (!preferredOrder.includes(sid)) preferredOrder.push(sid);
           });
         });
-        const tryPool = (requireGear) => {
+        const tryPool = (requireGear, preferMatchGear) => {
           for (const sid of preferredOrder) {
             if (usedIds.has(sid)) continue;
             const cand = allEx.find(e => e.id === sid);
             if (!cand) continue;
+            if (preferMatchGear && (!Array.isArray(cand.requiredGear) || !cand.requiredGear.includes(prefGear))) continue;
             if (isExerciseContraindicated(cand, inj)) continue;
             if (requireGear && !_hasRequiredGearForExercise(cand, gCfg)) continue;
             return cand;
           }
+          if (preferMatchGear) return null;
           for (const fid of JOINT_MOBILITY_FALLBACKS) {
             if (usedIds.has(fid)) continue;
             const cand = allEx.find(e => e.id === fid) || { id: fid, name: fid, family: 'mobility', setsCount: 3, rest: '60s', requiredGear: [] };
@@ -139,12 +170,15 @@
           }
           return null;
         };
-        return tryPool(true) || tryPool(false);
+        if (prefGear) {
+          return tryPool(true, true) || tryPool(true, false) || tryPool(false, true) || tryPool(false, false);
+        }
+        return tryPool(true, false) || tryPool(false, false);
       };
 
-      const formatItem = (exObj, originalItem, swapReason) => {
+      const formatItem = (exObj, originalItem, swapReason, jointSwapMeta) => {
         if (isIdMode) return exObj.id;
-        if (originalItem && typeof originalItem === 'object' && originalItem.id === exObj.id) {
+        if (originalItem && typeof originalItem === 'object' && originalItem.id === exObj.id && !swapReason) {
           return originalItem;
         }
         const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(exObj.id, exObj) : null;
@@ -152,7 +186,8 @@
           ...exObj,
           targetWeight: rx ? rx.weight : (typeof exObj.getBaseWeight === 'function' ? exObj.getBaseWeight() : (exObj.targetWeight ?? 'Body')),
           targetReps: rx ? rx.reps : (typeof exObj.getBaseReps === 'function' ? exObj.getBaseReps() : (exObj.targetReps ?? 8)),
-          rationale: swapReason ? `${swapReason} ${exObj.rationale || ''}`.trim() : (exObj.rationale || '')
+          rationale: swapReason ? `${swapReason} ${exObj.rationale || ''}`.trim() : (exObj.rationale || ''),
+          ...(jointSwapMeta ? { jointSwapInfo: jointSwapMeta } : {})
         };
       };
 
@@ -162,7 +197,7 @@
         const bad = isExerciseContraindicated(ex, inj);
         if (!bad && !usedIds.has(ex.id)) {
           usedIds.add(ex.id);
-          result.push(formatItem(ex, item, null));
+          result.push(formatItem(ex, item, null, null));
           continue;
         }
         if (bad) {
@@ -171,7 +206,12 @@
           if (replacement && !usedIds.has(replacement.id)) {
             usedIds.add(replacement.id);
             const tag = `[🛡️ ${domains.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join('/')}-Safe Swap]`;
-            result.push(formatItem(replacement, item, tag));
+            const swapMeta = {
+              domains,
+              replacedId: ex.id,
+              replacedName: ex.name || ex.id
+            };
+            result.push(formatItem(replacement, item, tag, swapMeta));
           }
         }
       }
@@ -182,7 +222,7 @@
           const cand = allEx.find(e => e.id === fid) || { id: fid, name: fid, family: 'mobility', setsCount: 3, rest: '60s', requiredGear: [] };
           if (!isExerciseContraindicated(cand, inj)) {
             usedIds.add(cand.id);
-            result.push(isIdMode ? cand.id : formatItem(cand, null, '[🛡️ Joint-Safe Mobility]'));
+            result.push(isIdMode ? cand.id : formatItem(cand, null, '[🛡️ Joint-Safe Mobility]', null));
           }
         }
       }
@@ -191,6 +231,8 @@
     }
 
     if (typeof window !== 'undefined') {
+      window.KB_FLOW_CONTRAINDICATIONS = KB_FLOW_CONTRAINDICATIONS;
+      window._formatJointDomainList = _formatJointDomainList;
       window.getContraindicatingDomains = getContraindicatingDomains;
       window.MOVEMENT_RESTRICTION_EXERCISES = MOVEMENT_RESTRICTION_EXERCISES;
       window.isExerciseContraindicated = isExerciseContraindicated;
@@ -202,9 +244,12 @@
       currentArchetypeKey = key || 'option_a';
       const kbSubMode = getKbSubMode();
       const verdict = (typeof computeTodayWorkoutVerdict === 'function') ? computeTodayWorkoutVerdict() : null;
-      const todayGearMode = (typeof getTodayGearMode === 'function') ? getTodayGearMode() : 'gym';
       const todayTimeMode = (typeof getTodayTimeMode === 'function') ? getTodayTimeMode() : '45m';
       const targetCount = todayTimeMode === '20m' ? 3 : 5;
+      if (typeof window !== 'undefined') {
+        window._activePlanIsFallbackSequence = false;
+        window._activePlanRestrictionBanner = null;
+      }
 
       const exerciseMatrix = {
         liss_cardio: {
@@ -248,12 +293,15 @@
       const focusMode = (verdict && verdict.mode && exerciseMatrix[verdict.mode]) ? verdict.mode : 'full_body_strength';
       const matrixForMode = exerciseMatrix[focusMode] || exerciseMatrix.full_body_strength;
       let rawExIds = matrixForMode[currentArchetypeKey] || matrixForMode.option_a || ['zone2_flush', 'knee_tke', 'deadbug_hold'];
+      let isKbFlowRequest = false;
 
       if (currentArchetypeKey === 'option_kb') {
         if (kbSubMode === 'flow_2h') {
           rawExIds = ['kb_flow_2h_out_about', 'kb_flow_2h_tactical_upper', 'kb_flow_2h_gladiator_post', 'kb_flow_2h_pyramid_1_5'];
+          isKbFlowRequest = true;
         } else if (kbSubMode === 'flow_1h') {
           rawExIds = ['kb_flow_1h_armor_chain', 'kb_flow_1h_viking_warrior', 'kb_flow_1h_dan_john_grind', 'kb_flow_1h_combat_core'];
+          isKbFlowRequest = true;
         }
       } else if (currentArchetypeKey === 'option_b') {
         if (focusMode === 'liss_cardio' || focusMode === 'mobility_stretch' || focusMode === 'rest_day') {
@@ -263,39 +311,94 @@
         }
       }
 
-      const preferredIds = rawExIds.map((origExId, idx) => resolvePreferredExerciseId(origExId, null, `${currentArchetypeKey}_${idx}`));
-      const safeExIds = applyJointSafeSwaps(preferredIds, targetCount, athleteInjuries, typeof gearConfig !== 'undefined' ? gearConfig : null);
-
       const allExercises = getAllExercises();
-
-      activeWorkoutPlan = safeExIds.map((finalExId) => {
-        const found = allExercises.find(e => e.id === finalExId);
-        let ex = found ? { ...found } : {
-          id: finalExId,
-          name: finalExId.replace(/_/g, ' ').toUpperCase(),
+      const resolveExObj = (id) => {
+        const found = allExercises.find(e => e.id === id);
+        return found ? { ...found } : {
+          id,
+          name: String(id).replace(/_/g, ' ').toUpperCase(),
           family: 'functional',
           setsCount: 3,
           rest: '75s',
           cue: '',
-          rationale: ''
+          rationale: '',
+          requiredGear: []
         };
+      };
 
-        let modified = { ...ex };
-        if (typeof getPrescribedLoad === 'function') {
-          const rx = getPrescribedLoad(ex.id, ex);
-          modified.targetWeight = rx.weight;
-          modified.targetReps = rx.reps;
+      const preferredIds = rawExIds.map((origExId, idx) => resolvePreferredExerciseId(origExId, null, `${currentArchetypeKey}_${idx}`));
+      const gCfg = typeof gearConfig !== 'undefined' ? gearConfig : null;
+      const swapOpts = currentArchetypeKey === 'option_kb'
+        ? { preferredGear: 'kb' }
+        : (currentArchetypeKey === 'option_a' ? { preferredGear: 'barbell' } : null);
+
+      let plannedObjs = [];
+      if (isKbFlowRequest) {
+        const safeFlowIds = [];
+        const blockedDomains = [];
+        preferredIds.forEach((fid) => {
+          const doms = getContraindicatingDomains(fid, athleteInjuries);
+          if (doms.length === 0) {
+            safeFlowIds.push(fid);
+          } else {
+            doms.forEach((d) => { if (!blockedDomains.includes(d)) blockedDomains.push(d); });
+          }
+        });
+
+        if (safeFlowIds.length > 0) {
+          plannedObjs = safeFlowIds.map((fid) => {
+            const ex = resolveExObj(fid);
+            const rx = (typeof getPrescribedLoad === 'function') ? getPrescribedLoad(ex.id, ex) : null;
+            return {
+              ...ex,
+              targetWeight: rx ? rx.weight : (typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : (ex.targetWeight ?? 'Body')),
+              targetReps: rx ? rx.reps : (typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : (ex.targetReps ?? 8))
+            };
+          });
+          if (safeFlowIds.length < preferredIds.length && typeof window !== 'undefined') {
+            const filteredCount = preferredIds.length - safeFlowIds.length;
+            window._activePlanRestrictionBanner = {
+              type: 'flow_filtered',
+              domains: blockedDomains,
+              filteredCount,
+              subMode: kbSubMode,
+              message: `🛡️ Adapted for ${_formatJointDomainList(blockedDomains)} restriction • ${filteredCount} KB Flow${filteredCount === 1 ? '' : 's'} hidden (showing joint-safe flow)`
+            };
+          }
         } else {
-          modified.targetWeight = typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : (ex.targetWeight !== undefined ? ex.targetWeight : 'Body');
-          modified.targetReps = typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : (ex.targetReps !== undefined ? ex.targetReps : 8);
+          const fallbackRawIds = matrixForMode.option_kb || ['kb_front_rack_squat', 'kb_clean_and_strict_press', 'kb_heavy_rdl', 'kb_gorilla_row', 'kb_suitcase_carry'];
+          const fallbackObjs = fallbackRawIds.map((origId, idx) => resolveExObj(resolvePreferredExerciseId(origId, null, `option_kb_${idx}`)));
+          plannedObjs = applyJointSafeSwaps(fallbackObjs, targetCount, athleteInjuries, gCfg, { preferredGear: 'kb' });
+          if (typeof window !== 'undefined') {
+            window._activePlanIsFallbackSequence = true;
+            window._activePlanRestrictionBanner = {
+              type: 'flow_fallback',
+              domains: blockedDomains,
+              subMode: kbSubMode,
+              message: `🛡️ ${kbSubMode === 'flow_1h' ? '1H' : '2H'} KB Flows restricted (${_formatJointDomainList(blockedDomains)}) • Loaded Joint-Safe KB Grinds instead`
+            };
+          }
+        }
+      } else {
+        const candidateObjs = preferredIds.map((fid) => resolveExObj(fid));
+        plannedObjs = applyJointSafeSwaps(candidateObjs, targetCount, athleteInjuries, gCfg, swapOpts);
+      }
+
+      activeWorkoutPlan = plannedObjs.map((ex) => {
+        let modified = { ...ex };
+        if (modified.targetWeight === undefined || modified.targetReps === undefined) {
+          if (typeof getPrescribedLoad === 'function') {
+            const rx = getPrescribedLoad(ex.id, ex);
+            modified.targetWeight = rx.weight;
+            modified.targetReps = rx.reps;
+          } else {
+            modified.targetWeight = typeof ex.getBaseWeight === 'function' ? ex.getBaseWeight() : (ex.targetWeight !== undefined ? ex.targetWeight : 'Body');
+            modified.targetReps = typeof ex.getBaseReps === 'function' ? ex.getBaseReps() : (ex.targetReps !== undefined ? ex.targetReps : 8);
+          }
         }
 
         if (currentArchetypeKey === 'option_kb' && ex.format !== 'kb_flow' && Array.isArray(ex.requiredGear) && ex.requiredGear.includes('kb') && typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) {
           modified.targetWeight = gearConfig.kb.weight;
-        }
-
-        if (isExerciseContraindicated(finalExId, athleteInjuries)) {
-          modified.rationale = `[🛡️ Joint-Safe Selection] ${modified.rationale || ''}`.trim();
         }
         return modified;
       });
@@ -333,7 +436,9 @@
       const gearStatusEl = document.getElementById('trainGearStatus');
       if (gearStatusEl) {
         if (currentArchetypeKey === 'option_kb') {
-          const kbModeDesc = kbSubMode === 'flow_2h' ? '2H KB Flow (30m AMRAP)' : (kbSubMode === 'flow_1h' ? '1H KB Flow (30m AMRAP)' : `Heavy KB (${(typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})`);
+          const kbModeDesc = (typeof window !== 'undefined' && window._activePlanIsFallbackSequence)
+            ? 'Joint-Safe KB Adaptation (Flows Restricted)'
+            : (kbSubMode === 'flow_2h' ? '2H KB Flow (30m AMRAP)' : (kbSubMode === 'flow_1h' ? '1H KB Flow (30m AMRAP)' : `Heavy KB (${(typeof gearConfig !== 'undefined' && gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})`));
           gearStatusEl.innerText = kbModeDesc;
         }
         else if (currentArchetypeKey === 'option_a') gearStatusEl.innerText = "Barbell & Dip Station";
@@ -645,7 +750,10 @@
       }
 
       if (presetKey === 'kb_heavy') {
-        try { localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy'); } catch(e) {}
+        try {
+          localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy');
+          localStorage.setItem('pulse_kb_submode', 'grinds');
+        } catch(e) {}
         if (!(opts && opts.fromBoot)) loadDailyArchetype('option_kb');
       }
 
@@ -721,7 +829,10 @@
 
       if (!hasBarbell && hasKb && focus === 'strength') {
         currentPreset = 'kb_heavy';
-        try { localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy'); } catch(e) {}
+        try {
+          localStorage.setItem('pulse_tomorrow_gear', 'kb_heavy');
+          localStorage.setItem('pulse_kb_submode', 'grinds');
+        } catch(e) {}
         loadDailyArchetype('option_kb');
         showToast(`✓ Generated Heavy Kettlebell Strength workout (${(gearConfig.kb && gearConfig.kb.weight) || '24–32kg'})!`);
       } else {
@@ -1719,6 +1830,11 @@ function generateWorkoutFromGearAndGoal() {
         if (key === 'gear' || key === 'pulse_today_gear') localStorage.setItem('pulse_today_gear', val);
         if (key === 'time' || key === 'pulse_today_time') localStorage.setItem('pulse_today_time', val);
       } catch(e) {}
+      const isGearSwitch = (key === 'gear' || key === 'pulse_today_gear');
+      if (isGearSwitch && typeof window !== 'undefined') {
+        window._userManualArchetype = false;
+        window._userManualKbSubMode = false;
+      }
       if (typeof renderTodayTrainingRecommendations === 'function') {
         renderTodayTrainingRecommendations();
       }
@@ -1727,8 +1843,14 @@ function generateWorkoutFromGearAndGoal() {
         if (typeof updateArchetypeStarBadge === 'function') {
           updateArchetypeStarBadge(v.archetypeKey, v.optionLabels);
         }
+        if (v.archetypeKey === 'option_kb' && v.recommendedKbSubMode && (isGearSwitch || !(typeof window !== 'undefined' && window._userManualKbSubMode))) {
+          try { localStorage.setItem('pulse_kb_submode', v.recommendedKbSubMode); } catch(e) {}
+        }
         if (typeof loadDailyArchetype === 'function') {
-          loadDailyArchetype(currentArchetypeKey || v.archetypeKey);
+          const targetArch = (isGearSwitch || !(typeof window !== 'undefined' && window._userManualArchetype))
+            ? v.archetypeKey
+            : (currentArchetypeKey || v.archetypeKey);
+          loadDailyArchetype(targetArch);
         }
       }
     }
@@ -1897,8 +2019,11 @@ function generateWorkoutFromGearAndGoal() {
         mode = 'full_body_strength';
       }
 
-      const _hasActiveInjuryJoint = typeof athleteInjuries !== 'undefined' && athleteInjuries
-        && ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'].some((k) => Boolean(athleteInjuries[k]));
+      const _allJointKeys = ['lumbar', 'shoulders', 'knees', 'elbows', 'wrists', 'ankles'];
+      const activeRestrictionJoints = (typeof athleteInjuries !== 'undefined' && athleteInjuries)
+        ? _allJointKeys.filter((k) => Boolean(athleteInjuries[k]))
+        : [];
+      const _hasActiveInjuryJoint = activeRestrictionJoints.length > 0;
       const _isRedFlagRest = Boolean(
         _hasActiveInjuryJoint
         && athleteInjuries.last_diagnostic_summary
@@ -1944,9 +2069,12 @@ function generateWorkoutFromGearAndGoal() {
 
       const gearTitleMap = {
         gym: 'Barbell & Heavy Station',
-        kb: 'Heavy Kettlebell Complex',
+        kb: 'Heavy Kettlebell Grinds',
         bodyweight: 'Work Capacity & Bodyweight'
       };
+      const restrictionAdaptNote = activeRestrictionJoints.length > 0
+        ? `Adapted for active ${_formatJointDomainList(activeRestrictionJoints)} guardrail — contraindicated lifts auto-swap to joint-safe alternatives.`
+        : '';
 
       if (mode === 'rest_day') {
         archetypeKey = 'option_c';
@@ -2015,7 +2143,7 @@ function generateWorkoutFromGearAndGoal() {
         };
         badge = '🦵 LOWER & HINGE RECOMMENDED';
         title = `Lower Posterior Chain & Hinge (${gearTitleMap[todayGearMode] || 'Gym'})`;
-        goldfishReason = `Upper pushing and pulling volume fatigued from past 48h. Posterior chain and knee-friendly hinges are fresh, primed, and cleared for mechanical loading.`;
+        goldfishReason = `Upper pushing and pulling volume fatigued from past 48h. Posterior chain and knee-friendly hinges are fresh, primed, and ${activeRestrictionJoints.length > 0 ? restrictionAdaptNote : 'cleared for mechanical loading.'}`;
         ctaText = 'Open Recommended Workouts →';
         isRest = false;
       } else if (mode === 'upper_push_pull') {
@@ -2029,7 +2157,7 @@ function generateWorkoutFromGearAndGoal() {
         };
         badge = '💪 UPPER PUSH & PULL RECOMMENDED';
         title = `Upper Body Push & Pull (${gearTitleMap[todayGearMode] || 'Gym'})`;
-        goldfishReason = `Lower body and hinge patterns carrying 48h fatigue. Upper pectorals, lats, and triceps are primed for high myofibrillar tension.`;
+        goldfishReason = `Lower body and hinge patterns carrying 48h fatigue. Upper pectorals, lats, and triceps are primed for high myofibrillar tension.${activeRestrictionJoints.length > 0 ? ` ${restrictionAdaptNote}` : ''}`;
         ctaText = 'Open Recommended Workouts →';
         isRest = false;
       } else {
@@ -2044,7 +2172,7 @@ function generateWorkoutFromGearAndGoal() {
         };
         badge = todayGearMode === 'kb' ? '⭐ HEAVY KETTLEBELL RECOMMENDED' : (todayGearMode === 'bodyweight' ? '⭐ WORK CAPACITY RECOMMENDED' : '⭐ HEAVY BARBELL RECOMMENDED');
         title = `Full Body Strength & Muscle Anchor (${gearTitleMap[todayGearMode] || 'Gym'})`;
-        goldfishReason = `High systemic readiness (${effectiveReadiness}), solid body battery (${effectiveBodyBattery}%), and quality rest (${sleepScore}, ${sleepDuration}). Fully cleared for peak mechanical tension.`;
+        goldfishReason = `High systemic readiness (${effectiveReadiness}), solid body battery (${effectiveBodyBattery}%), and quality rest (${sleepScore}, ${sleepDuration}). ${activeRestrictionJoints.length > 0 ? restrictionAdaptNote : 'Fully cleared for peak mechanical tension.'}`;
         ctaText = 'Open Recommended Workouts →';
         isRest = false;
       }
@@ -2133,10 +2261,20 @@ function generateWorkoutFromGearAndGoal() {
         }
       }
 
+      const finalArchetypeKey = roomForMore && secondSession ? secondSession.archetypeKey : archetypeKey;
+      const recommendedKbSubMode = (finalArchetypeKey === 'option_kb' && (
+        mode === 'full_body_strength' ||
+        mode === 'lower_hinge' ||
+        mode === 'upper_push_pull' ||
+        (roomForMore && secondSession && secondSession.archetypeKey === 'option_kb')
+      )) ? 'grinds' : 'flow_2h';
+
       return {
         mode,
-        archetypeKey: roomForMore && secondSession ? secondSession.archetypeKey : archetypeKey,
-        recommendedArchetype: roomForMore && secondSession ? secondSession.archetypeKey : archetypeKey,
+        archetypeKey: finalArchetypeKey,
+        recommendedArchetype: finalArchetypeKey,
+        recommendedKbSubMode,
+        activeRestrictionJoints,
         optionId,
         badge,
         title,
@@ -2186,9 +2324,21 @@ function generateWorkoutFromGearAndGoal() {
       if (typeof updateArchetypeStarBadge === 'function') {
         updateArchetypeStarBadge(verdict.archetypeKey, verdict.optionLabels);
       }
-      if (!window._userManualArchetype && typeof loadDailyArchetype === 'function' && currentArchetypeKey !== verdict.archetypeKey) {
-        loadDailyArchetype(verdict.archetypeKey);
+      if (!window._userManualArchetype && typeof loadDailyArchetype === 'function') {
+        if (verdict.archetypeKey === 'option_kb' && !window._userManualKbSubMode && verdict.recommendedKbSubMode) {
+          try { localStorage.setItem('pulse_kb_submode', verdict.recommendedKbSubMode); } catch(e) {}
+        }
+        if (currentArchetypeKey !== verdict.archetypeKey) {
+          loadDailyArchetype(verdict.archetypeKey);
+        }
       }
+
+      const restrictionBannerHtml = (verdict.activeRestrictionJoints && verdict.activeRestrictionJoints.length > 0 && !verdict.isRest) ? `
+<div style="margin-top:8px; padding:6px 10px; border-radius:8px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:11px; color:#fcd34d; font-weight:700;">
+<span>🛡️ ${escapeHtml(_formatJointDomainList(verdict.activeRestrictionJoints))} Guardrail Active • Contraindicated lifts auto-swapped</span>
+<span onclick="switchTab('body')" style="text-decoration:underline; cursor:pointer; white-space:nowrap; color:#fde68a;">Manage →</span>
+</div>
+      ` : '';
 
       const completed = (typeof getTodayCompletedWorkout === 'function') ? getTodayCompletedWorkout() : null;
 
@@ -2586,6 +2736,7 @@ function generateWorkoutFromGearAndGoal() {
               ${sec.reason}
 </div>
 
+            ${restrictionBannerHtml}
             ${stepBarHtml}
             ${intradayEveningHtml}
             ${plateauDualHtml}
@@ -2720,6 +2871,7 @@ function generateWorkoutFromGearAndGoal() {
               ${verdict.goldfishReason}
 </div>
 
+            ${restrictionBannerHtml}
             ${stepBarHtml}
             ${intradayEveningHtml}
             ${plateauDualHtml}
@@ -2734,6 +2886,10 @@ function generateWorkoutFromGearAndGoal() {
 
     function openWorkoutTabFromVerdict() {
       const verdict = computeTodayWorkoutVerdict();
+      window._userManualKbSubMode = false;
+      if (verdict.archetypeKey === 'option_kb' && verdict.recommendedKbSubMode) {
+        try { localStorage.setItem('pulse_kb_submode', verdict.recommendedKbSubMode); } catch(e) {}
+      }
       switchTab('train');
       switchTrainView('prescribed');
       loadDailyArchetype(verdict.archetypeKey);

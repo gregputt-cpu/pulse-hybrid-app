@@ -1794,11 +1794,11 @@ async function runAllTests() {
       assert(/id="pulseAuthError"[^>]*var\(--crimson-text\)/.test(indexHtml));
 
       for (const s of SCRIPT_ORDER) {
-        assert(indexHtml.includes(`./${s}?v=6.11`), `index.html missing ./${s}?v=6.11`);
+        assert(indexHtml.includes(`./${s}?v=6.12`), `index.html missing ./${s}?v=6.12`);
       }
-      assert(indexHtml.includes('./css/styles.css?v=6.11'));
-      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.11'), 'index.html boot splash must display v6.11');
-      assert(indexHtml.includes('Hybrid Athlete OS • v6.11'), 'index.html Settings modal must display v6.11');
+      assert(indexHtml.includes('./css/styles.css?v=6.12'));
+      assert(indexHtml.includes('HYBRID ATHLETE OS • v6.12'), 'index.html boot splash must display v6.12');
+      assert(indexHtml.includes('Hybrid Athlete OS • v6.12'), 'index.html Settings modal must display v6.12');
       assert.strictEqual(/Hybrid Athlete OS • v6\.1\b/.test(indexHtml), false, 'index.html must not contain stale v6.1 label');
 
       const piiRegex = /190\.5|6'3"|45yo|97\.70|97\.75|80\.99|81\.03|81\.0|98\.4|99\.85|@[^\s"']+\.com|GARMIN_TOKENS(?!_JSON)|renpho_creds(?!\.json)/;
@@ -1964,7 +1964,7 @@ async function runAllTests() {
       vm.createContext(swContext);
       vm.runInContext(swJsCode, swContext, { filename: 'sw.js' });
 
-      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.11-20261127');
+      assert.strictEqual(vm.runInContext('CACHE_NAME', swContext), 'pulse-hybrid-v6.12-20261128');
       assert(swJsCode.includes('Promise.resolve(self.clients.claim()).catch(() => {})'));
       assert(swJsCode.includes('.catch(() => {})'), 'cache.put() must have .catch()');
 
@@ -1993,7 +1993,7 @@ async function runAllTests() {
       }
       await navRespPromise;
       await flushMicrotasks();
-      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.11-20261127');
+      const cacheBucket = swCaches._stores.get('pulse-hybrid-v6.12-20261128');
       assert.strictEqual(cacheBucket.has('https://pulse.local/index.html'), true, '/?tab=fuel must cache under /index.html');
 
       // Top-level dismissBootSplash & forcePulseAppReload
@@ -2747,6 +2747,63 @@ async function runAllTests() {
 
       app.localStorage.clear();
       console.log('PASS [27] Fuel Tab 3-Subview Consolidation, Action-First Macros, Multi-Metric Chart & Dynamic Strategy Copy');
+    }
+
+    // [28] Today <-> Workout Consistency, KB Sub-Mode Alignment & Joint-Safe Banners
+    {
+      app.localStorage.clear();
+      app.eval(`
+        window.BAKED_LIVE_STATE = window.BAKED_LIVE_STATE || {};
+        window.BAKED_LIVE_STATE.garmin = { training_readiness: 88, body_battery: 92, sleep_score: 83, sleep_duration: '8h 19m', steps: 176 };
+        window.PULSE_ANALYTICS_SUMMARY = {};
+        window._userManualArchetype = false;
+        window._userManualKbSubMode = false;
+        recentActivitiesData = [];
+        athleteInjuries = normalizeAthleteInjuries({ lumbar: false, shoulders: false, knees: false, elbows: true, wrists: false, ankles: false });
+      `);
+      app.ctx.setTodayContext('gear', 'kb');
+      app.ctx.setTodayContext('time', '45m');
+
+      const verdict = app.ctx.computeTodayWorkoutVerdict();
+      assert.strictEqual(verdict.archetypeKey, 'option_kb');
+      assert.strictEqual(verdict.recommendedKbSubMode, 'grinds');
+      assert.deepStrictEqual(Array.from(verdict.activeRestrictionJoints), ['elbows']);
+      assert.strictEqual(verdict.goldfishReason.includes('Fully cleared'), false, 'Today copy must reflect active restriction guardrail');
+
+      app.ctx.openWorkoutTabFromVerdict();
+      assert.strictEqual(app.localStorage.getItem('pulse_kb_submode'), 'grinds', 'openWorkoutTabFromVerdict must align Option KB to grinds');
+      const grindPlan = app.eval('activeWorkoutPlan');
+      assert.strictEqual(grindPlan.length, 5, 'Option KB grinds 45m plan should load 5 exercises');
+      assert(
+        grindPlan.every((ex) => !['glute_bridge_hold', 'zone2_flush', 'deadbug_hold', 'thoracic_openers'].includes(ex.id)),
+        `Option KB grinds must use KB-safe exercises rather than rehab drills, got ${JSON.stringify(grindPlan.map((e) => e.id))}`
+      );
+      const swappedIdx = grindPlan.findIndex((ex) => ex && ex.jointSwapInfo);
+      assert(swappedIdx >= 0, 'Swapped press exercise must retain jointSwapInfo');
+      app.ctx.jumpToExercise(swappedIdx);
+      const swapBanner = app.document.getElementById('exJointSwapBanner');
+      assert.strictEqual(swapBanner.style.display, 'block');
+      assert(swapBanner.innerHTML.includes('Elbow'), `Swap banner must mention Elbow restriction, got ${swapBanner.innerHTML}`);
+
+      // Switching to 2H Flow keeps elbow-safe Gladiator Posterior flow without rehab padding
+      app.ctx.setKbSubMode('flow_2h');
+      const flow2hPlan = app.eval('activeWorkoutPlan');
+      assert(flow2hPlan.some((ex) => ex.id === 'kb_flow_2h_gladiator_post'), '2H Flow should retain elbow-safe Gladiator Posterior flow');
+      assert(flow2hPlan.every((ex) => ex.format === 'kb_flow'), '2H Flow menu must not mix in non-flow rehab cards');
+      assert.strictEqual(app.document.getElementById('exJointSwapBanner').style.display, 'block');
+
+      // Switching to 1H Flow (all 4 elbow-contraindicated) falls back cleanly to non-Pick-1 KB Grinds
+      app.ctx.setKbSubMode('flow_1h');
+      const flow1hFallback = app.eval('activeWorkoutPlan');
+      assert.strictEqual(flow1hFallback.length, 5);
+      assert(flow1hFallback.every((ex) => ex.format !== 'kb_flow'));
+      assert(app.document.getElementById('stepCounter').innerText.startsWith('Exercise 1 of '), 'Fallback sequence must not display Pick 1 header');
+      assert(app.document.getElementById('trainGearStatus').innerText.includes('Restricted'));
+      assert.strictEqual(app.document.getElementById('exJointSwapBanner').style.display, 'block');
+
+      app.eval('athleteInjuries = normalizeAthleteInjuries({});');
+      app.localStorage.clear();
+      console.log('PASS [28] Today <-> Workout Consistency, KB Sub-Mode Alignment & Joint-Safe Banners');
     }
   } finally {
     app.cleanupTimers();
